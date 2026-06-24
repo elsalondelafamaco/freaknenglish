@@ -59,29 +59,56 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-brand-cream: var(--brand-cream);
+  --color-brand-cream-soft: var(--brand-cream-soft);
+  --color-brand-yellow: var(--brand-yellow);
+  --color-brand-yellow-soft: var(--brand-yellow-soft);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-ink-soft: var(--brand-ink-soft);
+  --color-brand-muted: var(--brand-muted);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-line: var(--brand-line);
+  --color-brand-success: var(--brand-success);
+
+  --font-display: "Bricolage Grotesque", "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 1rem;
+
+  /* Freakn brand */
+  --brand-cream: oklch(0.985 0.05 95);        /* #FEF6C7 hero bg */
+  --brand-cream-soft: oklch(0.99 0.025 95);   /* lighter */
+  --brand-yellow: oklch(0.9 0.18 100);        /* #EBD81A marker/logo */
+  --brand-yellow-soft: oklch(0.95 0.13 100);  /* #FFF4A3 price highlight */
+  --brand-ink: oklch(0.15 0 0);               /* near black text/cta */
+  --brand-ink-soft: oklch(0.32 0 0);
+  --brand-muted: oklch(0.55 0 0);
+  --brand-surface: oklch(0.98 0 0);
+  --brand-line: oklch(0.92 0 0);
+  --brand-success: oklch(0.7 0.16 145);
+
   --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+  --foreground: var(--brand-ink);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
+  --card-foreground: var(--brand-ink);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
+  --popover-foreground: var(--brand-ink);
+  --primary: var(--brand-ink);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: var(--brand-cream);
+  --secondary-foreground: var(--brand-ink);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: var(--brand-muted);
+  --accent: var(--brand-yellow);
+  --accent-foreground: var(--brand-ink);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
+  --border: var(--brand-line);
+  --input: var(--brand-line);
+  --ring: var(--brand-ink);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -140,5 +167,43 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Marker highlight (the yellow "Real" stroke from the PDF) */
+@utility marker-highlight {
+  position: relative;
+  display: inline-block;
+  padding: 0 0.15em;
+  isolation: isolate;
+  color: var(--brand-ink);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 12% -4% 8% -4%;
+    background: var(--brand-yellow);
+    z-index: -1;
+    border-radius: 0.2em;
+    transform: skewX(-4deg) rotate(-1deg);
+  }
+}
+
+@utility shadow-soft {
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -8px rgb(0 0 0 / 0.08);
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }

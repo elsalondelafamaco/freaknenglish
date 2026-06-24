@@ -27,6 +27,32 @@ pensando en esta migración.
 | Webhook Wompi → Edge Function de Supabase (tú)   | Ruta `app/api/wompi/webhook/route.ts` en Next    |
 | Cron jobs documentados en `docs/backend-jobs.md` | Railway Cron / BullMQ / pg_cron                  |
 
+## Credenciales y datos de prueba
+
+El mock pre-siembra los siguientes usuarios (ver `src/lib/domain/seed.ts`):
+
+| Email                   | Password    | Rol      |
+| ----------------------- | ----------- | -------- |
+| estudiante@freakn.dev   | Freakn123!  | student  |
+| profe@freakn.dev        | Freakn123!  | teacher  |
+| admin@freakn.dev        | Freakn123!  | admin    |
+
+El estudiante demo trae además una suscripción `active` al plan `4-dias` para
+poder probar `/app` sin pasar por checkout. Reset con `localStorage.clear()`.
+
+## Checkout (Wompi)
+
+- Página `/checkout/$planId` crea una `PaymentIntent` (mock) y muestra el
+  Widget de Wompi cuando `VITE_WOMPI_PUBLIC_KEY` está configurada.
+- Si no hay key (entorno demo), aparece el botón **"Simular pago aprobado"**
+  que dispara el mismo flujo que un webhook `APPROVED`: crea usuario, activa
+  suscripción y abre sesión.
+- Página `/checkout/return` recibe `?id=...` (real) o `?reference=...&status=APPROVED`
+  (demo), y muestra confirmación o error.
+- El **webhook real** lo conectarás tú a una Edge Function de Supabase
+  (contrato en `docs/backend-jobs.md → wompi-payment-events`). En la migración
+  a Next pasa a `app/api/wompi/webhook/route.ts` sin cambios de contrato.
+
 ## Convenciones que facilitan el corte
 
 1. **Repositorios y servicios desacoplados** en `src/lib/domain/` —

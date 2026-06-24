@@ -7,10 +7,13 @@
 
 const STORAGE_KEY = "freakn.db.v1";
 
+import { seedDemoData } from "./seed";
+
 export interface DbShape {
   users: Record<string, unknown>;
   subscriptions: Record<string, unknown>;
   sessions: Record<string, unknown>;
+  paymentIntents: Record<string, unknown>;
   meta: { passwordsByEmail: Record<string, string> };
 }
 
@@ -18,6 +21,7 @@ const emptyDb = (): DbShape => ({
   users: {},
   subscriptions: {},
   sessions: {},
+  paymentIntents: {},
   meta: { passwordsByEmail: {} },
 });
 
@@ -36,6 +40,15 @@ export function readDb(): DbShape {
     cache = raw ? { ...emptyDb(), ...(JSON.parse(raw) as DbShape) } : emptyDb();
   } catch {
     cache = emptyDb();
+  }
+  // Seed idempotente: añade usuarios demo si faltan.
+  seedDemoData(cache);
+  if (isBrowser()) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
+    } catch {
+      /* ignore */
+    }
   }
   return cache;
 }

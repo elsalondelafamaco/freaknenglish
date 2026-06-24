@@ -67,6 +67,24 @@ function LoginPage() {
         </>
       }
     >
+      <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+        <p className="font-semibold">Cuentas de prueba (mock):</p>
+        <ul className="mt-1 space-y-0.5 font-mono">
+          <li>estudiante@freakn.dev · Freakn123!</li>
+          <li>profe@freakn.dev · Freakn123!</li>
+          <li>admin@freakn.dev · Freakn123!</li>
+        </ul>
+        <button
+          type="button"
+          onClick={() => {
+            setEmail("estudiante@freakn.dev");
+            setPassword("Freakn123!");
+          }}
+          className="mt-2 text-[11px] font-semibold text-amber-900 underline"
+        >
+          Rellenar como estudiante
+        </button>
+      </div>
       <GoogleButton onClick={onGoogle} disabled={busy} label="Continuar con Google" />
       <Divider>o</Divider>
       <form onSubmit={onSubmit} className="flex flex-col gap-4">

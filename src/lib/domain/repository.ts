@@ -7,6 +7,8 @@
 
 const STORAGE_KEY = "freakn.db.v1";
 
+import { seedDemoData } from "./seed";
+
 export interface DbShape {
   users: Record<string, unknown>;
   subscriptions: Record<string, unknown>;
@@ -39,14 +41,14 @@ export function readDb(): DbShape {
   } catch {
     cache = emptyDb();
   }
-  // Lazy seed: idempotente, solo en browser, una vez por instalación.
-  try {
-    // Import dinámico para evitar ciclo con auth.ts
-    const { seedDemoData } = require("./seed") as typeof import("./seed");
-    seedDemoData(cache);
-    if (isBrowser()) localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
-  } catch {
-    /* seed opcional */
+  // Seed idempotente: añade usuarios demo si faltan.
+  seedDemoData(cache);
+  if (isBrowser()) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
+    } catch {
+      /* ignore */
+    }
   }
   return cache;
 }

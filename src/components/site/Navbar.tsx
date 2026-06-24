@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
+import { useAuth } from "@/lib/auth/AuthProvider";
 import { Logo } from "./Logo";
 import { DarkPillLink } from "./DarkPillButton";
 
@@ -12,6 +13,8 @@ const NAV = [
 
 export function Navbar() {
   const [open, setOpen] = useState(false);
+  const { isAuthenticated, user } = useAuth();
+  const firstName = user?.fullName.split(" ")[0];
   return (
     <header className="absolute inset-x-0 top-0 z-30">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 lg:px-8">
@@ -38,9 +41,15 @@ export function Navbar() {
               Escríbenos
             </a>
           </span>
-          <DarkPillLink to="/login" size="md" withArrow>
-            Inicia Sesión
-          </DarkPillLink>
+          {isAuthenticated ? (
+            <DarkPillLink to="/app" size="md" withArrow>
+              {firstName ? `Hola, ${firstName}` : "Mi cuenta"}
+            </DarkPillLink>
+          ) : (
+            <DarkPillLink to="/login" size="md" withArrow>
+              Inicia Sesión
+            </DarkPillLink>
+          )}
         </div>
 
         <button
@@ -66,9 +75,15 @@ export function Navbar() {
               </a>
             ))}
             <hr className="border-brand-line" />
-            <DarkPillLink to="/login" className="w-full">
-              Inicia Sesión
-            </DarkPillLink>
+            {isAuthenticated ? (
+              <DarkPillLink to="/app" className="w-full">
+                Ir a mi cuenta
+              </DarkPillLink>
+            ) : (
+              <DarkPillLink to="/login" className="w-full">
+                Inicia Sesión
+              </DarkPillLink>
+            )}
           </div>
         </div>
       ) : null}

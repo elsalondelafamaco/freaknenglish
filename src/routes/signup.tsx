@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { z } from "zod";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   AuthShell,
   Divider,
@@ -11,20 +10,17 @@ import {
 } from "@/components/site/AuthShell";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
-const searchSchema = z.object({ redirect: z.string().optional() });
-
-export const Route = createFileRoute("/login")({
+export const Route = createFileRoute("/signup")({
   head: () => ({
-    meta: [{ title: "Inicia sesión — Freakn English" }],
+    meta: [{ title: "Crea tu cuenta — Freakn English" }],
   }),
-  validateSearch: searchSchema,
-  component: LoginPage,
+  component: SignupPage,
 });
 
-function LoginPage() {
-  const { redirect } = useSearch({ from: "/login" });
+function SignupPage() {
   const navigate = useNavigate();
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signUp, signInWithGoogle } = useAuth();
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -33,12 +29,16 @@ function LoginPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (password.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
     setBusy(true);
     try {
-      await signIn(email, password);
-      navigate({ to: redirect ?? "/app" });
+      await signUp(fullName, email, password);
+      navigate({ to: "/app" });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No fue posible iniciar sesión.");
+      setError(err instanceof Error ? err.message : "No fue posible crear la cuenta.");
     } finally {
       setBusy(false);
     }
@@ -48,7 +48,7 @@ function LoginPage() {
     setBusy(true);
     try {
       await signInWithGoogle();
-      navigate({ to: redirect ?? "/app" });
+      navigate({ to: "/app" });
     } finally {
       setBusy(false);
     }
@@ -56,20 +56,32 @@ function LoginPage() {
 
   return (
     <AuthShell
-      title="Bienvenido de vuelta"
-      subtitle="Inicia sesión para continuar con tu aprendizaje."
+      title="Crea tu cuenta"
+      subtitle="Empieza a hablar inglés desde el día 1."
       footer={
         <>
-          ¿No tienes cuenta?{" "}
-          <Link to="/signup" className="font-semibold text-brand-ink hover:underline">
-            Crea una aquí
+          ¿Ya tienes cuenta?{" "}
+          <Link to="/login" className="font-semibold text-brand-ink hover:underline">
+            Inicia sesión
           </Link>
         </>
       }
     >
-      <GoogleButton onClick={onGoogle} disabled={busy} label="Continuar con Google" />
+      <GoogleButton onClick={onGoogle} disabled={busy} label="Registrarte con Google" />
       <Divider>o</Divider>
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <Field label="Nombre completo" htmlFor="name">
+          <input
+            id="name"
+            type="text"
+            autoComplete="name"
+            required
+            className={inputClass}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Tu nombre"
+          />
+        </Field>
         <Field label="Email" htmlFor="email">
           <input
             id="email"
@@ -82,11 +94,15 @@ function LoginPage() {
             placeholder="tu@email.com"
           />
         </Field>
-        <Field label="Contraseña" htmlFor="password">
+        <Field
+          label="Contraseña"
+          htmlFor="password"
+          hint="Mínimo 8 caracteres."
+        >
           <input
             id="password"
             type="password"
-            autoComplete="current-password"
+            autoComplete="new-password"
             required
             className={inputClass}
             value={password}
@@ -100,14 +116,11 @@ function LoginPage() {
           disabled={busy}
           className="mt-1 inline-flex h-11 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white transition hover:bg-brand-ink-soft disabled:opacity-60"
         >
-          {busy ? "Ingresando…" : "Iniciar sesión"}
+          {busy ? "Creando cuenta…" : "Crear cuenta"}
         </button>
-        <Link
-          to="/forgot-password"
-          className="text-center text-sm text-brand-ink/70 hover:text-brand-ink"
-        >
-          ¿Olvidaste tu contraseña?
-        </Link>
+        <p className="text-center text-xs text-brand-ink/55">
+          Al continuar aceptas nuestros Términos y la Política de Privacidad.
+        </p>
       </form>
     </AuthShell>
   );

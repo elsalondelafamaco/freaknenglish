@@ -1,54 +1,7 @@
 import { Check } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-
-type Plan = {
-  id: string;
-  tag?: string;
-  days: string;
-  price: string;
-  highlight?: boolean;
-  features: string[];
-};
-
-const PLANS: Plan[] = [
-  {
-    id: "3-dias",
-    tag: "Ideal si estás empezando",
-    days: "3 días por Semana",
-    price: "$155",
-    features: [
-      "Clases 1 a 1 en vivo",
-      "Conversación desde el día 1",
-      "Feedback personalizado",
-      "Horarios fijos",
-    ],
-  },
-  {
-    id: "4-dias",
-    days: "4 días por Semana",
-    price: "$190",
-    highlight: true,
-    features: [
-      "Clases 1 a 1 en vivo",
-      "Conversación desde el día 1",
-      "Feedback personalizado",
-      "Horarios fijos",
-    ],
-  },
-  {
-    id: "5-dias",
-    tag: "Para avanzar lo más rápido posible",
-    days: "5 días por semana",
-    price: "$225",
-    features: [
-      "Clases 1 a 1 en vivo",
-      "Conversación desde el día 1",
-      "Feedback personalizado",
-      "Horarios fijos",
-    ],
-  },
-];
+import { PLANS, type Plan } from "@/lib/domain/plans";
 
 export function Pricing() {
   return (
@@ -90,9 +43,9 @@ function PriceCard({ plan }: { plan: Plan }) {
         <div className="h-9" />
       )}
       <div className="rounded-[22px] bg-brand-yellow-soft px-6 pb-7 pt-6 text-center">
-        <h3 className="text-2xl font-bold text-brand-ink">{plan.days}</h3>
+        <h3 className="text-2xl font-bold text-brand-ink">{plan.name}</h3>
         <div className="mt-2 text-3xl font-bold text-brand-ink">
-          {plan.price} <span className="text-base font-medium text-brand-ink/60">/ mes</span>
+          {plan.priceDisplay} <span className="text-base font-medium text-brand-ink/60">/ mes</span>
         </div>
         <Link
           to="/checkout/$planId"

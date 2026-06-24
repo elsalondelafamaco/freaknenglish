@@ -11,6 +11,7 @@ export interface DbShape {
   users: Record<string, unknown>;
   subscriptions: Record<string, unknown>;
   sessions: Record<string, unknown>;
+  paymentIntents: Record<string, unknown>;
   meta: { passwordsByEmail: Record<string, string> };
 }
 
@@ -18,6 +19,7 @@ const emptyDb = (): DbShape => ({
   users: {},
   subscriptions: {},
   sessions: {},
+  paymentIntents: {},
   meta: { passwordsByEmail: {} },
 });
 
@@ -36,6 +38,15 @@ export function readDb(): DbShape {
     cache = raw ? { ...emptyDb(), ...(JSON.parse(raw) as DbShape) } : emptyDb();
   } catch {
     cache = emptyDb();
+  }
+  // Lazy seed: idempotente, solo en browser, una vez por instalación.
+  try {
+    // Import dinámico para evitar ciclo con auth.ts
+    const { seedDemoData } = require("./seed") as typeof import("./seed");
+    seedDemoData(cache);
+    if (isBrowser()) localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
+  } catch {
+    /* seed opcional */
   }
   return cache;
 }

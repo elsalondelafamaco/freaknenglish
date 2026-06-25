@@ -6,7 +6,7 @@
  * En migración a Postgres, esto se convierte en un script `seed.sql`.
  */
 import type { DbShape } from "./repository";
-import type { User, Subscription } from "./types";
+import type { User, Subscription, ClassSession } from "./types";
 
 interface DemoUser {
   id: string;
@@ -66,5 +66,38 @@ export function seedDemoData(db: DbShape): void {
       startedAt: new Date().toISOString(),
       currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     } satisfies Subscription;
+  }
+
+  // Calendario demo (clases pasadas + próximas) para el estudiante.
+  const classes = db.classes as Record<string, ClassSession>;
+  const hasAny = Object.values(classes).some((c) => c.studentId === "usr_demo_student");
+  if (!hasAny) {
+    const base = new Date();
+    base.setHours(19, 0, 0, 0);
+    const offsets: Array<{ d: number; status: ClassSession["status"]; topic: string }> = [
+      { d: -2, status: "completed", topic: "Past tenses warm-up" },
+      { d: -1, status: "completed", topic: "Daily routines" },
+      { d: 0, status: "scheduled", topic: "Restaurant role-play" },
+      { d: 1, status: "scheduled", topic: "Travel & airports" },
+      { d: 3, status: "scheduled", topic: "Phone calls in English" },
+      { d: 5, status: "scheduled", topic: "Storytelling practice" },
+    ];
+    for (const { d, status, topic } of offsets) {
+      const dt = new Date(base);
+      dt.setDate(dt.getDate() + d);
+      const id = `cls_demo_${d}`;
+      classes[id] = {
+        id,
+        studentId: "usr_demo_student",
+        teacherId: "usr_demo_teacher",
+        teacherName: "Teacher Mark",
+        startsAt: dt.toISOString(),
+        durationMin: 50,
+        status,
+        topic,
+        meetingUrl: "https://meet.google.com/abc-defg-hij",
+        studentConfirmedAt: status === "completed" ? dt.toISOString() : undefined,
+      };
+    }
   }
 }

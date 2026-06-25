@@ -19,6 +19,11 @@ import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as CheckoutPlanIdRouteImport } from './routes/checkout.$planId'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
+import { Route as AuthenticatedAppLearningRouteImport } from './routes/_authenticated/app.learning'
+import { Route as AuthenticatedAppCalendarRouteImport } from './routes/_authenticated/app.calendar'
+import { Route as AuthenticatedAppLearningModuleIdRouteImport } from './routes/_authenticated/app.learning.$moduleId'
+import { Route as AuthenticatedAppCheckpointCheckpointIdRouteImport } from './routes/_authenticated/app.checkpoint.$checkpointId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -69,6 +74,36 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppSettingsRoute =
+  AuthenticatedAppSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppLearningRoute =
+  AuthenticatedAppLearningRouteImport.update({
+    id: '/learning',
+    path: '/learning',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppCalendarRoute =
+  AuthenticatedAppCalendarRouteImport.update({
+    id: '/calendar',
+    path: '/calendar',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppLearningModuleIdRoute =
+  AuthenticatedAppLearningModuleIdRouteImport.update({
+    id: '/$moduleId',
+    path: '/$moduleId',
+    getParentRoute: () => AuthenticatedAppLearningRoute,
+  } as any)
+const AuthenticatedAppCheckpointCheckpointIdRoute =
+  AuthenticatedAppCheckpointCheckpointIdRouteImport.update({
+    id: '/checkpoint/$checkpointId',
+    path: '/checkpoint/$checkpointId',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -79,7 +114,12 @@ export interface FileRoutesByFullPath {
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/checkout/$planId': typeof CheckoutPlanIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/app/calendar': typeof AuthenticatedAppCalendarRoute
+  '/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
+  '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
+  '/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -89,7 +129,12 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/checkout/$planId': typeof CheckoutPlanIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/app/calendar': typeof AuthenticatedAppCalendarRoute
+  '/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
+  '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
+  '/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -102,7 +147,12 @@ export interface FileRoutesById {
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/checkout/$planId': typeof CheckoutPlanIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/_authenticated/app/calendar': typeof AuthenticatedAppCalendarRoute
+  '/_authenticated/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
+  '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
+  '/_authenticated/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -115,7 +165,12 @@ export interface FileRouteTypes {
     | '/app'
     | '/checkout/$planId'
     | '/checkout/return'
+    | '/app/calendar'
+    | '/app/learning'
+    | '/app/settings'
     | '/app/'
+    | '/app/checkpoint/$checkpointId'
+    | '/app/learning/$moduleId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -125,7 +180,12 @@ export interface FileRouteTypes {
     | '/signup'
     | '/checkout/$planId'
     | '/checkout/return'
+    | '/app/calendar'
+    | '/app/learning'
+    | '/app/settings'
     | '/app'
+    | '/app/checkpoint/$checkpointId'
+    | '/app/learning/$moduleId'
   id:
     | '__root__'
     | '/'
@@ -137,7 +197,12 @@ export interface FileRouteTypes {
     | '/_authenticated/app'
     | '/checkout/$planId'
     | '/checkout/return'
+    | '/_authenticated/app/calendar'
+    | '/_authenticated/app/learning'
+    | '/_authenticated/app/settings'
     | '/_authenticated/app/'
+    | '/_authenticated/app/checkpoint/$checkpointId'
+    | '/_authenticated/app/learning/$moduleId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -223,15 +288,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/settings': {
+      id: '/_authenticated/app/settings'
+      path: '/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AuthenticatedAppSettingsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/learning': {
+      id: '/_authenticated/app/learning'
+      path: '/learning'
+      fullPath: '/app/learning'
+      preLoaderRoute: typeof AuthenticatedAppLearningRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/calendar': {
+      id: '/_authenticated/app/calendar'
+      path: '/calendar'
+      fullPath: '/app/calendar'
+      preLoaderRoute: typeof AuthenticatedAppCalendarRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/learning/$moduleId': {
+      id: '/_authenticated/app/learning/$moduleId'
+      path: '/$moduleId'
+      fullPath: '/app/learning/$moduleId'
+      preLoaderRoute: typeof AuthenticatedAppLearningModuleIdRouteImport
+      parentRoute: typeof AuthenticatedAppLearningRoute
+    }
+    '/_authenticated/app/checkpoint/$checkpointId': {
+      id: '/_authenticated/app/checkpoint/$checkpointId'
+      path: '/checkpoint/$checkpointId'
+      fullPath: '/app/checkpoint/$checkpointId'
+      preLoaderRoute: typeof AuthenticatedAppCheckpointCheckpointIdRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
   }
 }
 
+interface AuthenticatedAppLearningRouteChildren {
+  AuthenticatedAppLearningModuleIdRoute: typeof AuthenticatedAppLearningModuleIdRoute
+}
+
+const AuthenticatedAppLearningRouteChildren: AuthenticatedAppLearningRouteChildren =
+  {
+    AuthenticatedAppLearningModuleIdRoute:
+      AuthenticatedAppLearningModuleIdRoute,
+  }
+
+const AuthenticatedAppLearningRouteWithChildren =
+  AuthenticatedAppLearningRoute._addFileChildren(
+    AuthenticatedAppLearningRouteChildren,
+  )
+
 interface AuthenticatedAppRouteChildren {
+  AuthenticatedAppCalendarRoute: typeof AuthenticatedAppCalendarRoute
+  AuthenticatedAppLearningRoute: typeof AuthenticatedAppLearningRouteWithChildren
+  AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppCheckpointCheckpointIdRoute: typeof AuthenticatedAppCheckpointCheckpointIdRoute
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
+  AuthenticatedAppCalendarRoute: AuthenticatedAppCalendarRoute,
+  AuthenticatedAppLearningRoute: AuthenticatedAppLearningRouteWithChildren,
+  AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppCheckpointCheckpointIdRoute:
+    AuthenticatedAppCheckpointCheckpointIdRoute,
 }
 
 const AuthenticatedAppRouteWithChildren =

@@ -106,3 +106,120 @@ create table oauth_accounts (
 | `password_resets`  | `freakn.db.v1 → meta.resets{token:email}`     |
 | `password_hash`    | `freakn.db.v1 → meta.passwordsByEmail` (plano, solo dev) |
 | `oauth_accounts`   | TBD — el mock no persiste identidad de provider |
+
+## Fase 4 — Portal estudiante (clases + aprendizaje)
+
+```sql
+create type class_status as enum ('scheduled', 'completed', 'canceled', 'missed');
+create type lesson_kind  as enum ('video', 'pdf', 'slides', 'download');
+
+-- Clases 1-on-1 agendadas. Una clase = un slot de 50 min.
+create table classes (
+  id                    uuid primary key default gen_random_uuid(),
+  student_id            uuid not null references users(id) on delete cascade,
+  teacher_id            uuid not null references users(id) on delete restrict,
+  starts_at             timestamptz not null,
+  duration_min          int  not null default 50,
+  status                class_status not null default 'scheduled',
+  topic                 text,
+  meeting_url           text,
+  student_confirmed_at  timestamptz,           -- "sí, tomé mi clase"
+  teacher_validated_at  timestamptz,           -- cross-check del profe
+  created_at            timestamptz not null default now(),
+  updated_at            timestamptz not null default now()
+);
+create index classes_student_starts_idx on classes (student_id, starts_at);
+create index classes_teacher_starts_idx on classes (teacher_id, starts_at);
+
+-- Catálogo CMS (lo administra Fase 6). Por ahora se sirve estático en código.
+create table modules (
+  id             uuid primary key default gen_random_uuid(),
+  level          english_level not null,
+  ord            int  not null,
+  title          text not null,
+  summary        text not null,
+  cover_emoji    text,
+  checkpoint_id  uuid,                          -- FK definido más abajo
+  created_at     timestamptz not null default now()
+);
+
+create table lessons (
+  id          uuid primary key default gen_random_uuid(),
+  module_id   uuid not null references modules(id) on delete cascade,
+  ord         int  not null,
+  title       text not null,
+  kind        lesson_kind not null,
+  url         text not null,
+  est_minutes int  not null default 0
+);
+create index lessons_module_idx on lessons (module_id, ord);
+
+-- Progreso por usuario.
+create table lesson_progress (
+  user_id      uuid not null references users(id) on delete cascade,
+  lesson_id    uuid not null references lessons(id) on delete cascade,
+  completed_at timestamptz not null default now(),
+  primary key (user_id, lesson_id)
+);
+
+-- Checkpoints (exámenes de nivel). Las preguntas viven en JSON por simplicidad.
+create table checkpoints (
+  id             uuid primary key default gen_random_uuid(),
+  level          english_level not null,
+  unlocks_level  english_level not null,
+  title          text not null,
+  pass_score     int  not null,
+  questions      jsonb not null   -- [{id, prompt, options[], correct_index}]
+);
+alter table modules
+  add constraint modules_checkpoint_fk
+  foreign key (checkpoint_id) references checkpoints(id) on delete set null;
+
+create table checkpoint_attempts (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null references users(id) on delete cascade,
+  checkpoint_id  uuid not null references checkpoints(id) on delete cascade,
+  score          int not null,
+  passed         boolean not null,
+  taken_at       timestamptz not null default now()
+);
+create index checkpoint_attempts_user_idx on checkpoint_attempts (user_id, checkpoint_id);
+
+-- Encuesta de satisfacción mensual (NPS 0-10).
+create table satisfaction_surveys (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null references users(id) on delete cascade,
+  month_key    text not null,                 -- 'YYYY-MM'
+  nps          smallint not null check (nps between 0 and 10),
+  comment      text,
+  submitted_at timestamptz not null default now(),
+  unique (user_id, month_key)
+);
+```
+
+### Reglas de negocio Fase 4
+
+- **Cancelar/reprogramar** requiere ≥ `RESCHEDULE_LOCK_HOURS` (12h por defecto)
+  antes de `starts_at`. Constante en `src/lib/domain/classes.ts`; en backend
+  debe vivir en `class_policies` o variable de entorno.
+- **Asistencia**: `student_confirmed_at` lo setea el estudiante (botón
+  "Sí, tomé mi clase hoy"). `teacher_validated_at` lo setea el profe en
+  Fase 5. Si las dos coinciden → cuenta para nómina del profesor.
+- **Desbloqueo de nivel**: requiere `checkpoint_attempts.passed = true` para
+  el `checkpoint` del nivel actual. El siguiente nivel se desbloquea
+  automáticamente (consulta `bestCheckpointAttempt`).
+- **Encuesta mensual**: si no existe row en `satisfaction_surveys` con
+  `month_key = to_char(now(),'YYYY-MM')` para ese usuario, el cliente abre
+  el popup al entrar a `/app`. En backend, un cron diario marca usuarios
+  pendientes y envía recordatorio por Resend (ver `docs/backend-jobs.md`).
+
+### Equivalencias en el mock actual
+
+| Tabla SQL               | Storage mock                                       |
+| ----------------------- | -------------------------------------------------- |
+| `classes`               | `freakn.db.v1 → classes{id:ClassSession}`          |
+| `modules` + `lessons`   | constante `MODULES` en `src/lib/domain/learning.ts`|
+| `lesson_progress`       | `freakn.db.v1 → lessonProgress{userId:lessonId}`   |
+| `checkpoints`           | constante `CHECKPOINTS` en `learning.ts`           |
+| `checkpoint_attempts`   | `freakn.db.v1 → checkpointAttempts{id:Attempt}`    |
+| `satisfaction_surveys`  | `freakn.db.v1 → satisfactionSurveys{id:Survey}`    |

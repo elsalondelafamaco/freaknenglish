@@ -14,6 +14,10 @@ export interface DbShape {
   subscriptions: Record<string, unknown>;
   sessions: Record<string, unknown>;
   paymentIntents: Record<string, unknown>;
+  classes: Record<string, unknown>;
+  lessonProgress: Record<string, unknown>;
+  checkpointAttempts: Record<string, unknown>;
+  satisfactionSurveys: Record<string, unknown>;
   meta: { passwordsByEmail: Record<string, string> };
 }
 
@@ -22,6 +26,10 @@ const emptyDb = (): DbShape => ({
   subscriptions: {},
   sessions: {},
   paymentIntents: {},
+  classes: {},
+  lessonProgress: {},
+  checkpointAttempts: {},
+  satisfactionSurveys: {},
   meta: { passwordsByEmail: {} },
 });
 

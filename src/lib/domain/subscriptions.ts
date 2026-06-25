@@ -55,6 +55,16 @@ export function getPaymentIntent(reference: string): PaymentIntent | null {
   return ((db.paymentIntents as Record<string, PaymentIntent>)[reference] as PaymentIntent) ?? null;
 }
 
+export function getActiveSubscription(userId: string): Subscription | null {
+  const db = readDb();
+  const all = Object.values(db.subscriptions as Record<string, Subscription>);
+  return (
+    all.find((s) => s.userId === userId && s.status === "active") ??
+    all.find((s) => s.userId === userId) ??
+    null
+  );
+}
+
 /**
  * Marca la intención con el estado devuelto por Wompi (o por el simulador local)
  * y, si fue APPROVED, crea/activa la suscripción del usuario.

@@ -265,3 +265,41 @@ create table teacher_absences (
 - El profesor valida asistencia con `teacher_validate_attendance(class_id, attended)`; setea `status` y `teacher_validated_at`.
 - Una clase con `student_confirmed_at` pero sin `teacher_validated_at` aparece en el filtro "Pendientes".
 - Las notas son **privadas** del profesor; sólo el autor y admins las leen.
+
+## Fase 6 — Panel Admin
+
+Esta fase **no** crea tablas nuevas; agrega vistas/consultas y configuración
+sobre las tablas existentes.
+
+```sql
+-- Configuración global (pago por clase, recordatorios, etc.).
+create table app_settings (
+  key          text primary key,
+  value        jsonb not null,
+  updated_at   timestamptz not null default now()
+);
+-- Seed inicial:
+insert into app_settings (key, value) values
+  ('teacher_payrate_cop', '18000'::jsonb),
+  ('reschedule_lock_hours', '12'::jsonb);
+
+-- Histórico de nóminas generadas (PDF / CSV exportado).
+create table payroll_runs (
+  id           uuid primary key default gen_random_uuid(),
+  month_key    text not null,         -- 'YYYY-MM'
+  total_cop    bigint not null,
+  generated_by uuid references users(id),
+  generated_at timestamptz not null default now(),
+  payload      jsonb not null         -- detalle por profesor (snapshot)
+);
+create index on payroll_runs (month_key);
+```
+
+**Reglas de negocio** (Fase 6):
+- KPIs (MRR, NPS, asistencia) son funciones puras sobre `subscriptions`,
+  `classes` y `satisfaction_surveys` — no requieren cache mientras el
+  volumen sea bajo. Para escala mayor, materializar en vistas Postgres.
+- Nómina: sólo clases con `status='completed' AND teacher_validated_at IS NOT NULL`
+  cuentan para el pago. `teacher_payrate_cop` vive en `app_settings`.
+- El CMS edita `modules`/`lessons`/`checkpoints` con guardado optimista; el
+  contenido es estático en el mock (Fase 6 sólo lo expone en modo lectura).

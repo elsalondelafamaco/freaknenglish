@@ -7,12 +7,17 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminLayout,
 });
 
-const TABS = [
+const TABS: ReadonlyArray<{
+  to: string;
+  label: string;
+  icon: typeof BarChart3;
+  end?: boolean;
+}> = [
   { to: "/admin", label: "Analytics", icon: BarChart3, end: true },
   { to: "/admin/users", label: "CRM", icon: Users },
   { to: "/admin/content", label: "CMS", icon: BookOpen },
   { to: "/admin/payroll", label: "Nómina", icon: Wallet },
-] as const;
+];
 
 function AdminLayout() {
   const { hasRole, loading } = useAuth();
@@ -42,7 +47,7 @@ function AdminLayout() {
           return (
             <Link
               key={t.to}
-              to={t.to}
+              to={t.to as never}
               className={`inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-semibold transition ${
                 active
                   ? "border-brand-ink text-brand-ink"

@@ -452,3 +452,21 @@ model BoardOp {
   @@index([boardId, createdAt])
   @@map("board_ops")
 }
+
+/// Auditoría de impersonación admin → usuario.
+model ImpersonationLog {
+  id          String    @id @default(uuid())
+  adminId     String    @map("admin_id")
+  targetId    String    @map("target_id")
+  startedAt   DateTime  @default(now()) @map("started_at")
+  endedAt     DateTime? @map("ended_at")
+  ip          String?
+  userAgent   String?   @map("user_agent")
+
+  admin       User      @relation("ImpersonationAdmin",  fields: [adminId],  references: [id])
+  target      User      @relation("ImpersonationTarget", fields: [targetId], references: [id])
+
+  @@index([adminId, startedAt])
+  @@index([targetId, startedAt])
+  @@map("impersonation_logs")
+}

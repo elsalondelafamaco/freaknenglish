@@ -97,6 +97,7 @@ export function seedDemoData(db: DbShape): void {
         topic,
         meetingUrl: "https://meet.google.com/abc-defg-hij",
         studentConfirmedAt: status === "completed" ? dt.toISOString() : undefined,
+        teacherValidatedAt: status === "completed" ? dt.toISOString() : undefined,
       };
     }
   }

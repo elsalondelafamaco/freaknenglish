@@ -6,6 +6,7 @@ import {
   LogOut,
   Menu,
   Settings,
+  ShieldCheck,
   Sparkles,
   Users,
   X,
@@ -27,11 +28,22 @@ const TEACHER_NAV = [
   { to: "/teacher/students", label: "Estudiantes", icon: Users },
 ] as const;
 
+const ADMIN_NAV = [
+  { to: "/admin", label: "Analytics", icon: LayoutDashboard },
+  { to: "/admin/users", label: "CRM", icon: Users },
+  { to: "/admin/content", label: "CMS", icon: Sparkles },
+  { to: "/admin/payroll", label: "Nómina", icon: ShieldCheck },
+] as const;
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const NAV = user?.roles.includes("teacher") ? TEACHER_NAV : STUDENT_NAV;
+  const NAV = user?.roles.includes("admin")
+    ? ADMIN_NAV
+    : user?.roles.includes("teacher")
+      ? TEACHER_NAV
+      : STUDENT_NAV;
 
   return (
     <div className="min-h-screen bg-brand-surface">

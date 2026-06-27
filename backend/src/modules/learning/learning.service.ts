@@ -20,6 +20,23 @@ export class LearningService {
     })
   }
 
+  checkpoint(id: string) {
+    return this.prisma.checkpoint.findUnique({ where: { id } })
+  }
+
+  async userProgress(userId: string) {
+    const [progress, attempts] = await Promise.all([
+      this.prisma.lessonProgress.findMany({ where: { userId } }),
+      this.prisma.checkpointAttempt.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } }),
+    ])
+    return {
+      lessonsCompleted: progress.filter((p) => p.completedAt).length,
+      totalSecondsWatched: progress.reduce((s, p) => s + (p.secondsWatched ?? 0), 0),
+      checkpointsPassed: attempts.filter((a) => a.passed).map((a) => a.checkpointId),
+      attempts,
+    }
+  }
+
   upsertProgress(userId: string, lessonId: string, secondsWatched: number, completed: boolean) {
     return this.prisma.lessonProgress.upsert({
       where: { userId_lessonId: { userId, lessonId } },

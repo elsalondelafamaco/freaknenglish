@@ -11,7 +11,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true })
   app.useLogger(app.get(Logger))
 
-  app.setGlobalPrefix('api/v1')
+  app.setGlobalPrefix('api')
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' })
 
   app.use(cookieParser())

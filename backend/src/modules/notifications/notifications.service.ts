@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common'
+import { Prisma } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { ResendTransport } from './resend.transport'
 import { templates, TemplateKey } from './templates'
@@ -18,7 +19,7 @@ export class NotificationsService {
     template: TemplateKey
     subject: string
     dedupeKey: string
-    vars?: Record<string, unknown>
+    vars?: Prisma.InputJsonObject
   }) {
     const existing = await this.prisma.notification.findUnique({ where: { dedupeKey: input.dedupeKey } })
     if (existing && existing.status === 'sent') return existing

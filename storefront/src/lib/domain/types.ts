@@ -28,6 +28,8 @@ export interface User {
   level?: EnglishLevel;
   /** Onboarding completado (nivelación + horario inicial). */
   onboardedAt?: string;
+  /** Profesor asignado (sólo aplica a estudiantes). */
+  assignedTeacherId?: string;
   createdAt: string;
 }
 

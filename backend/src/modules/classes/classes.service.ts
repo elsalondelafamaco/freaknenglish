@@ -24,6 +24,24 @@ export class ClassesService {
     })
   }
 
+  upcoming(studentId: string) {
+    return this.prisma.class.findFirst({
+      where: { studentId, status: 'scheduled', startsAt: { gte: new Date(Date.now() - 60 * 60 * 1000) } },
+      orderBy: { startsAt: 'asc' },
+      include: { teacher: { select: { id: true, fullName: true, avatarUrl: true } } },
+    })
+  }
+
+  todayForTeacher(teacherId: string) {
+    const start = new Date(); start.setHours(0, 0, 0, 0)
+    const end = new Date(start); end.setDate(end.getDate() + 1)
+    return this.prisma.class.findMany({
+      where: { teacherId, startsAt: { gte: start, lt: end } },
+      orderBy: { startsAt: 'asc' },
+      include: { student: { select: { id: true, fullName: true, englishLevel: true } } },
+    })
+  }
+
   async validateAttendance(classId: string, teacherId: string) {
     const c = await this.prisma.class.findUnique({ where: { id: classId } })
     if (!c) throw new NotFoundException('Class not found')

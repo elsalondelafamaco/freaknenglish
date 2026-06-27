@@ -17,11 +17,16 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as CheckoutPlanIdRouteImport } from './routes/checkout.$planId'
+import { Route as AuthenticatedTeacherRouteImport } from './routes/_authenticated/teacher'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as AuthenticatedTeacherIndexRouteImport } from './routes/_authenticated/teacher.index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
+import { Route as AuthenticatedTeacherStudentsRouteImport } from './routes/_authenticated/teacher.students'
+import { Route as AuthenticatedTeacherScheduleRouteImport } from './routes/_authenticated/teacher.schedule'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppLearningRouteImport } from './routes/_authenticated/app.learning'
 import { Route as AuthenticatedAppCalendarRouteImport } from './routes/_authenticated/app.calendar'
+import { Route as AuthenticatedTeacherStudentsStudentIdRouteImport } from './routes/_authenticated/teacher.students.$studentId'
 import { Route as AuthenticatedAppLearningModuleIdRouteImport } from './routes/_authenticated/app.learning.$moduleId'
 import { Route as AuthenticatedAppCheckpointCheckpointIdRouteImport } from './routes/_authenticated/app.checkpoint.$checkpointId'
 
@@ -64,16 +69,39 @@ const CheckoutPlanIdRoute = CheckoutPlanIdRouteImport.update({
   path: '/checkout/$planId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedTeacherRoute = AuthenticatedTeacherRouteImport.update({
+  id: '/teacher',
+  path: '/teacher',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
   path: '/app',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedTeacherIndexRoute =
+  AuthenticatedTeacherIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedTeacherRoute,
+  } as any)
 const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedTeacherStudentsRoute =
+  AuthenticatedTeacherStudentsRouteImport.update({
+    id: '/students',
+    path: '/students',
+    getParentRoute: () => AuthenticatedTeacherRoute,
+  } as any)
+const AuthenticatedTeacherScheduleRoute =
+  AuthenticatedTeacherScheduleRouteImport.update({
+    id: '/schedule',
+    path: '/schedule',
+    getParentRoute: () => AuthenticatedTeacherRoute,
+  } as any)
 const AuthenticatedAppSettingsRoute =
   AuthenticatedAppSettingsRouteImport.update({
     id: '/settings',
@@ -91,6 +119,12 @@ const AuthenticatedAppCalendarRoute =
     id: '/calendar',
     path: '/calendar',
     getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedTeacherStudentsStudentIdRoute =
+  AuthenticatedTeacherStudentsStudentIdRouteImport.update({
+    id: '/$studentId',
+    path: '/$studentId',
+    getParentRoute: () => AuthenticatedTeacherStudentsRoute,
   } as any)
 const AuthenticatedAppLearningModuleIdRoute =
   AuthenticatedAppLearningModuleIdRouteImport.update({
@@ -112,14 +146,19 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/teacher': typeof AuthenticatedTeacherRouteWithChildren
   '/checkout/$planId': typeof CheckoutPlanIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
   '/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
+  '/teacher/students': typeof AuthenticatedTeacherStudentsRouteWithChildren
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/teacher/': typeof AuthenticatedTeacherIndexRoute
   '/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
+  '/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -132,9 +171,13 @@ export interface FileRoutesByTo {
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
   '/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
+  '/teacher/students': typeof AuthenticatedTeacherStudentsRouteWithChildren
   '/app': typeof AuthenticatedAppIndexRoute
+  '/teacher': typeof AuthenticatedTeacherIndexRoute
   '/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
+  '/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -145,14 +188,19 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/_authenticated/teacher': typeof AuthenticatedTeacherRouteWithChildren
   '/checkout/$planId': typeof CheckoutPlanIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/_authenticated/app/calendar': typeof AuthenticatedAppCalendarRoute
   '/_authenticated/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/_authenticated/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
+  '/_authenticated/teacher/students': typeof AuthenticatedTeacherStudentsRouteWithChildren
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/teacher/': typeof AuthenticatedTeacherIndexRoute
   '/_authenticated/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/_authenticated/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
+  '/_authenticated/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -163,14 +211,19 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/app'
+    | '/teacher'
     | '/checkout/$planId'
     | '/checkout/return'
     | '/app/calendar'
     | '/app/learning'
     | '/app/settings'
+    | '/teacher/schedule'
+    | '/teacher/students'
     | '/app/'
+    | '/teacher/'
     | '/app/checkpoint/$checkpointId'
     | '/app/learning/$moduleId'
+    | '/teacher/students/$studentId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -183,9 +236,13 @@ export interface FileRouteTypes {
     | '/app/calendar'
     | '/app/learning'
     | '/app/settings'
+    | '/teacher/schedule'
+    | '/teacher/students'
     | '/app'
+    | '/teacher'
     | '/app/checkpoint/$checkpointId'
     | '/app/learning/$moduleId'
+    | '/teacher/students/$studentId'
   id:
     | '__root__'
     | '/'
@@ -195,14 +252,19 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_authenticated/app'
+    | '/_authenticated/teacher'
     | '/checkout/$planId'
     | '/checkout/return'
     | '/_authenticated/app/calendar'
     | '/_authenticated/app/learning'
     | '/_authenticated/app/settings'
+    | '/_authenticated/teacher/schedule'
+    | '/_authenticated/teacher/students'
     | '/_authenticated/app/'
+    | '/_authenticated/teacher/'
     | '/_authenticated/app/checkpoint/$checkpointId'
     | '/_authenticated/app/learning/$moduleId'
+    | '/_authenticated/teacher/students/$studentId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -274,6 +336,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutPlanIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/teacher': {
+      id: '/_authenticated/teacher'
+      path: '/teacher'
+      fullPath: '/teacher'
+      preLoaderRoute: typeof AuthenticatedTeacherRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/app': {
       id: '/_authenticated/app'
       path: '/app'
@@ -281,12 +350,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/teacher/': {
+      id: '/_authenticated/teacher/'
+      path: '/'
+      fullPath: '/teacher/'
+      preLoaderRoute: typeof AuthenticatedTeacherIndexRouteImport
+      parentRoute: typeof AuthenticatedTeacherRoute
+    }
     '/_authenticated/app/': {
       id: '/_authenticated/app/'
       path: '/'
       fullPath: '/app/'
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/teacher/students': {
+      id: '/_authenticated/teacher/students'
+      path: '/students'
+      fullPath: '/teacher/students'
+      preLoaderRoute: typeof AuthenticatedTeacherStudentsRouteImport
+      parentRoute: typeof AuthenticatedTeacherRoute
+    }
+    '/_authenticated/teacher/schedule': {
+      id: '/_authenticated/teacher/schedule'
+      path: '/schedule'
+      fullPath: '/teacher/schedule'
+      preLoaderRoute: typeof AuthenticatedTeacherScheduleRouteImport
+      parentRoute: typeof AuthenticatedTeacherRoute
     }
     '/_authenticated/app/settings': {
       id: '/_authenticated/app/settings'
@@ -308,6 +398,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/calendar'
       preLoaderRoute: typeof AuthenticatedAppCalendarRouteImport
       parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/teacher/students/$studentId': {
+      id: '/_authenticated/teacher/students/$studentId'
+      path: '/$studentId'
+      fullPath: '/teacher/students/$studentId'
+      preLoaderRoute: typeof AuthenticatedTeacherStudentsStudentIdRouteImport
+      parentRoute: typeof AuthenticatedTeacherStudentsRoute
     }
     '/_authenticated/app/learning/$moduleId': {
       id: '/_authenticated/app/learning/$moduleId'
@@ -361,12 +458,45 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
 const AuthenticatedAppRouteWithChildren =
   AuthenticatedAppRoute._addFileChildren(AuthenticatedAppRouteChildren)
 
+interface AuthenticatedTeacherStudentsRouteChildren {
+  AuthenticatedTeacherStudentsStudentIdRoute: typeof AuthenticatedTeacherStudentsStudentIdRoute
+}
+
+const AuthenticatedTeacherStudentsRouteChildren: AuthenticatedTeacherStudentsRouteChildren =
+  {
+    AuthenticatedTeacherStudentsStudentIdRoute:
+      AuthenticatedTeacherStudentsStudentIdRoute,
+  }
+
+const AuthenticatedTeacherStudentsRouteWithChildren =
+  AuthenticatedTeacherStudentsRoute._addFileChildren(
+    AuthenticatedTeacherStudentsRouteChildren,
+  )
+
+interface AuthenticatedTeacherRouteChildren {
+  AuthenticatedTeacherScheduleRoute: typeof AuthenticatedTeacherScheduleRoute
+  AuthenticatedTeacherStudentsRoute: typeof AuthenticatedTeacherStudentsRouteWithChildren
+  AuthenticatedTeacherIndexRoute: typeof AuthenticatedTeacherIndexRoute
+}
+
+const AuthenticatedTeacherRouteChildren: AuthenticatedTeacherRouteChildren = {
+  AuthenticatedTeacherScheduleRoute: AuthenticatedTeacherScheduleRoute,
+  AuthenticatedTeacherStudentsRoute:
+    AuthenticatedTeacherStudentsRouteWithChildren,
+  AuthenticatedTeacherIndexRoute: AuthenticatedTeacherIndexRoute,
+}
+
+const AuthenticatedTeacherRouteWithChildren =
+  AuthenticatedTeacherRoute._addFileChildren(AuthenticatedTeacherRouteChildren)
+
 interface AuthenticatedRouteChildren {
   AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
+  AuthenticatedTeacherRoute: typeof AuthenticatedTeacherRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
+  AuthenticatedTeacherRoute: AuthenticatedTeacherRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

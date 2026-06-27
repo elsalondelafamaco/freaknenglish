@@ -223,3 +223,45 @@ create table satisfaction_surveys (
 | `checkpoints`           | constante `CHECKPOINTS` en `learning.ts`           |
 | `checkpoint_attempts`   | `freakn.db.v1 → checkpointAttempts{id:Attempt}`    |
 | `satisfaction_surveys`  | `freakn.db.v1 → satisfactionSurveys{id:Survey}`    |
+## Fase 5 — Portal Profesor
+
+```sql
+-- Notas privadas del profesor sobre una clase / estudiante.
+create table class_notes (
+  id           uuid primary key default gen_random_uuid(),
+  teacher_id   uuid not null references users(id) on delete cascade,
+  student_id   uuid not null references users(id) on delete cascade,
+  class_id     uuid references classes(id) on delete set null,
+  body         text not null,
+  rating       smallint check (rating between 1 and 5),
+  created_at   timestamptz not null default now()
+);
+create index on class_notes (teacher_id, student_id, created_at desc);
+
+-- La validación cruzada del profesor reusa columnas en `classes`:
+--   teacher_validated_at  timestamptz
+--   status                'completed' | 'missed' | 'scheduled' | 'canceled'
+-- (ya declaradas en Fase 4)
+
+-- Disponibilidad / ausencias del profesor (para asignación automática).
+create table teacher_availability (
+  id           uuid primary key default gen_random_uuid(),
+  teacher_id   uuid not null references users(id) on delete cascade,
+  weekday      smallint not null check (weekday between 0 and 6),
+  start_time   time not null,
+  end_time     time not null
+);
+
+create table teacher_absences (
+  id           uuid primary key default gen_random_uuid(),
+  teacher_id   uuid not null references users(id) on delete cascade,
+  starts_at    timestamptz not null,
+  ends_at      timestamptz not null,
+  reason       text
+);
+```
+
+**Reglas de negocio** (Fase 5):
+- El profesor valida asistencia con `teacher_validate_attendance(class_id, attended)`; setea `status` y `teacher_validated_at`.
+- Una clase con `student_confirmed_at` pero sin `teacher_validated_at` aparece en el filtro "Pendientes".
+- Las notas son **privadas** del profesor; sólo el autor y admins las leen.

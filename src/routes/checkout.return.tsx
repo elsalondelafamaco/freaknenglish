@@ -11,6 +11,7 @@ import {
 import { readDb, uid, writeDb } from "@/lib/domain/repository";
 import type { User } from "@/lib/domain/types";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { runAutomations } from "@/lib/domain/notifications";
 
 /**
  * Wompi devuelve al usuario con `?id=<transaction_id>` (y a veces `env=...`).
@@ -94,6 +95,8 @@ function ReturnPage() {
       });
     }
     resolvePayment(reference, "APPROVED", user.id);
+    // Encola welcome email (idempotente — dedupe por subscription.id).
+    void runAutomations();
     // Inicia sesión automática del nuevo usuario (mock).
     writeDb((db) => {
       const token = uid("tok");

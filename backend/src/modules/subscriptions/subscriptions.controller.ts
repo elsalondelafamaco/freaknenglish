@@ -17,4 +17,8 @@ export class SubscriptionsController {
   /** @endpoint POST /api/v1/subscriptions/cancel */
   @Post('cancel')
   cancel(@CurrentUser() user: AuthUser) { return this.svc.cancel(user.id) }
+
+  /** @endpoint POST /api/v1/subscriptions/resume */
+  @Post('resume')
+  resume(@CurrentUser() user: AuthUser) { return this.svc.resume(user.id) }
 }

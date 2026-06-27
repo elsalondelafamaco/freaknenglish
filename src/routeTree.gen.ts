@@ -30,6 +30,7 @@ import { Route as AuthenticatedAppLearningRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppCalendarRouteImport } from './routes/_authenticated/app.calendar'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminPayrollRouteImport } from './routes/_authenticated/admin.payroll'
+import { Route as AuthenticatedAdminNotificationsRouteImport } from './routes/_authenticated/admin.notifications'
 import { Route as AuthenticatedAdminContentRouteImport } from './routes/_authenticated/admin.content'
 import { Route as AuthenticatedTeacherStudentsStudentIdRouteImport } from './routes/_authenticated/teacher.students.$studentId'
 import { Route as AuthenticatedAppLearningModuleIdRouteImport } from './routes/_authenticated/app.learning.$moduleId'
@@ -146,6 +147,12 @@ const AuthenticatedAdminPayrollRoute =
     path: '/payroll',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminNotificationsRoute =
+  AuthenticatedAdminNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminContentRoute =
   AuthenticatedAdminContentRouteImport.update({
     id: '/content',
@@ -183,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/checkout/$planId': typeof CheckoutPlanIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/admin/content': typeof AuthenticatedAdminContentRoute
+  '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
@@ -206,6 +214,7 @@ export interface FileRoutesByTo {
   '/checkout/$planId': typeof CheckoutPlanIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/admin/content': typeof AuthenticatedAdminContentRoute
+  '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
@@ -234,6 +243,7 @@ export interface FileRoutesById {
   '/checkout/$planId': typeof CheckoutPlanIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/_authenticated/admin/content': typeof AuthenticatedAdminContentRoute
+  '/_authenticated/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/_authenticated/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/app/calendar': typeof AuthenticatedAppCalendarRoute
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
     | '/checkout/$planId'
     | '/checkout/return'
     | '/admin/content'
+    | '/admin/notifications'
     | '/admin/payroll'
     | '/admin/users'
     | '/app/calendar'
@@ -285,6 +296,7 @@ export interface FileRouteTypes {
     | '/checkout/$planId'
     | '/checkout/return'
     | '/admin/content'
+    | '/admin/notifications'
     | '/admin/payroll'
     | '/admin/users'
     | '/app/calendar'
@@ -312,6 +324,7 @@ export interface FileRouteTypes {
     | '/checkout/$planId'
     | '/checkout/return'
     | '/_authenticated/admin/content'
+    | '/_authenticated/admin/notifications'
     | '/_authenticated/admin/payroll'
     | '/_authenticated/admin/users'
     | '/_authenticated/app/calendar'
@@ -487,6 +500,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPayrollRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/notifications': {
+      id: '/_authenticated/admin/notifications'
+      path: '/notifications'
+      fullPath: '/admin/notifications'
+      preLoaderRoute: typeof AuthenticatedAdminNotificationsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/content': {
       id: '/_authenticated/admin/content'
       path: '/content'
@@ -520,6 +540,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminContentRoute: typeof AuthenticatedAdminContentRoute
+  AuthenticatedAdminNotificationsRoute: typeof AuthenticatedAdminNotificationsRoute
   AuthenticatedAdminPayrollRoute: typeof AuthenticatedAdminPayrollRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
@@ -527,6 +548,7 @@ interface AuthenticatedAdminRouteChildren {
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminContentRoute: AuthenticatedAdminContentRoute,
+  AuthenticatedAdminNotificationsRoute: AuthenticatedAdminNotificationsRoute,
   AuthenticatedAdminPayrollRoute: AuthenticatedAdminPayrollRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,

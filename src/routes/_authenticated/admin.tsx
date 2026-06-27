@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { BarChart3, BookOpen, Users, Wallet } from "lucide-react";
+import { BarChart3, BookOpen, Mail, Users, Wallet } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -17,6 +17,7 @@ const TABS: ReadonlyArray<{
   { to: "/admin/users", label: "CRM", icon: Users },
   { to: "/admin/content", label: "CMS", icon: BookOpen },
   { to: "/admin/payroll", label: "Nómina", icon: Wallet },
+  { to: "/admin/notifications", label: "Automaciones", icon: Mail },
 ];
 
 function AdminLayout() {

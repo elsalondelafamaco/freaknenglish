@@ -18,6 +18,7 @@ import {
 } from "@/lib/domain/classes";
 import { levelProgress } from "@/lib/domain/learning";
 import { hasAnsweredThisMonth } from "@/lib/domain/survey";
+import { runAutomations } from "@/lib/domain/notifications";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   head: () => ({ meta: [{ title: "Mi dashboard — Freakn English" }] }),
@@ -38,6 +39,12 @@ function fmtWhen(iso: string): string {
 function DashboardPage() {
   const { user } = useAuth();
   const firstName = user?.fullName.split(" ")[0] ?? "estudiante";
+
+  // Trigger lazy de automaciones (Fase 7). En prod esto vive en un cron
+  // server-side (ver docs/backend-jobs.md → class-reminder-1h).
+  useEffect(() => {
+    void runAutomations();
+  }, []);
   const [tick, setTick] = useState(0);
   const refresh = () => setTick((t) => t + 1);
   const [showSurvey, setShowSurvey] = useState(false);

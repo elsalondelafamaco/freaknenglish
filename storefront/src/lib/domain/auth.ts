@@ -18,7 +18,6 @@ import type { AuthResult, Provider, Session, User } from "./types";
 import { readDb, writeDb } from "./repository";
 import { authApi, usersApi } from "@/lib/api/endpoints";
 import { setAccessToken, getAccessToken, API_URL } from "@/lib/api/client";
-void getAccessToken;
 import { hydrateFromBackend, clearLocalState } from "@/lib/api/bootstrap";
 
 const SESSION_KEY = "freakn.session.v1";

@@ -143,6 +143,12 @@ export interface SatisfactionSurvey {
   /** YYYY-MM. */
   monthKey: string;
   nps: number; // 0..10
+  /** 1..5 — calidad del profesor. */
+  teacherScore?: number;
+  /** 1..5 — calidad del contenido. */
+  contentScore?: number;
+  /** 1..5 — experiencia con la plataforma. */
+  platformScore?: number;
   comment?: string;
   submittedAt: string;
 }

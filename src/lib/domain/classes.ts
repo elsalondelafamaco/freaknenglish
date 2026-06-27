@@ -8,7 +8,7 @@
  * - "Sí, tomé mi clase hoy" marca asistencia del lado del estudiante;
  *   el profesor luego valida (Fase 5).
  */
-import type { ClassSession } from "./types";
+import type { ClassNote, ClassSession, User } from "./types";
 import { readDb, writeDb, uid } from "./repository";
 
 export const RESCHEDULE_LOCK_HOURS = 12;
@@ -91,6 +91,118 @@ export function confirmAttendance(id: string): { ok: boolean; reason?: string } 
     };
   });
   return { ok: true };
+}
+
+// ===========================================================================
+// Fase 5 — Helpers para el portal de profesores
+// ===========================================================================
+
+export function listClassesForTeacher(teacherId: string): ClassSession[] {
+  return Object.values(table())
+    .filter((c) => c.teacherId === teacherId)
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+}
+
+export function teacherTodayClasses(teacherId: string): ClassSession[] {
+  const today = new Date().toISOString().slice(0, 10);
+  return listClassesForTeacher(teacherId).filter(
+    (c) => c.startsAt.startsWith(today) && c.status !== "canceled",
+  );
+}
+
+export function teacherUpcoming(teacherId: string): ClassSession[] {
+  const now = Date.now();
+  return listClassesForTeacher(teacherId).filter(
+    (c) => c.status === "scheduled" && new Date(c.startsAt).getTime() >= now,
+  );
+}
+
+/** Cross-check del profesor sobre la asistencia del estudiante. */
+export function teacherValidateAttendance(
+  id: string,
+  attended: boolean,
+): { ok: boolean; reason?: string } {
+  const c = table()[id];
+  if (!c) return { ok: false, reason: "Clase no encontrada." };
+  writeDb((db) => {
+    (db.classes as Record<string, ClassSession>)[id] = {
+      ...c,
+      status: attended ? "completed" : "missed",
+      teacherValidatedAt: new Date().toISOString(),
+    };
+  });
+  return { ok: true };
+}
+
+/** Estudiantes únicos asignados a un profesor (derivado de las clases). */
+export function listStudentsOfTeacher(teacherId: string): Array<{
+  student: User;
+  totalClasses: number;
+  completed: number;
+  missed: number;
+  nextClass?: ClassSession;
+}> {
+  const db = readDb();
+  const users = db.users as Record<string, User>;
+  const classes = listClassesForTeacher(teacherId);
+  const byStudent = new Map<string, ClassSession[]>();
+  for (const c of classes) {
+    const arr = byStudent.get(c.studentId) ?? [];
+    arr.push(c);
+    byStudent.set(c.studentId, arr);
+  }
+  const now = Date.now();
+  const rows = [];
+  for (const [studentId, list] of byStudent) {
+    const student = users[studentId];
+    if (!student) continue;
+    rows.push({
+      student,
+      totalClasses: list.length,
+      completed: list.filter((c) => c.status === "completed").length,
+      missed: list.filter((c) => c.status === "missed").length,
+      nextClass: list.find(
+        (c) => c.status === "scheduled" && new Date(c.startsAt).getTime() >= now,
+      ),
+    });
+  }
+  return rows.sort((a, b) => a.student.fullName.localeCompare(b.student.fullName));
+}
+
+// ===========================================================================
+// Notas del profesor
+// ===========================================================================
+
+function notesTable(): Record<string, ClassNote> {
+  return readDb().classNotes as Record<string, ClassNote>;
+}
+
+export function listNotesForStudent(studentId: string, teacherId?: string): ClassNote[] {
+  return Object.values(notesTable())
+    .filter((n) => n.studentId === studentId && (!teacherId || n.teacherId === teacherId))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function addClassNote(input: {
+  teacherId: string;
+  studentId: string;
+  classId?: string;
+  body: string;
+  rating?: number;
+}): ClassNote {
+  const note: ClassNote = {
+    id: uid("note"),
+    teacherId: input.teacherId,
+    studentId: input.studentId,
+    classId: input.classId,
+    body: input.body.trim(),
+    rating: input.rating,
+    createdAt: new Date().toISOString(),
+  };
+  writeDb((db) => {
+    (db.classNotes as Record<string, ClassNote>)[note.id] = note;
+  });
+  return note;
 }
 
 /** Crea clases de ejemplo si el estudiante demo todavía no tiene. */

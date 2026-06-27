@@ -7,23 +7,31 @@ import {
   Menu,
   Settings,
   Sparkles,
+  Users,
   X,
 } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { cn } from "@/lib/utils";
 
-const NAV = [
+const STUDENT_NAV = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard },
   { to: "/app/calendar", label: "Calendario", icon: CalendarDays },
   { to: "/app/learning", label: "Aprendizaje", icon: Sparkles },
   { to: "/app/settings", label: "Configuración", icon: Settings },
 ] as const;
 
+const TEACHER_NAV = [
+  { to: "/teacher", label: "Hoy", icon: LayoutDashboard },
+  { to: "/teacher/schedule", label: "Agenda", icon: CalendarDays },
+  { to: "/teacher/students", label: "Estudiantes", icon: Users },
+] as const;
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const NAV = user?.roles.includes("teacher") ? TEACHER_NAV : STUDENT_NAV;
 
   return (
     <div className="min-h-screen bg-brand-surface">
@@ -97,7 +105,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
-type Icon = (typeof NAV)[number]["icon"];
+type Icon = (typeof STUDENT_NAV)[number]["icon"];
 
 function NavItem({
   to,
@@ -114,7 +122,7 @@ function NavItem({
 }) {
   return (
     <Link
-      to={to}
+      to={to as never}
       onClick={onClick}
       className={cn(
         "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition",

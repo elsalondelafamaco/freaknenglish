@@ -146,3 +146,19 @@ export interface SatisfactionSurvey {
   comment?: string;
   submittedAt: string;
 }
+
+// ============================================================================
+// Fase 5 — Portal Profesor
+// ============================================================================
+
+/** Nota privada del profesor sobre una clase / estudiante. */
+export interface ClassNote {
+  id: string;
+  classId?: string;
+  studentId: string;
+  teacherId: string;
+  body: string;
+  /** Calidad de la sesión percibida por el profesor (1..5). */
+  rating?: number;
+  createdAt: string;
+}

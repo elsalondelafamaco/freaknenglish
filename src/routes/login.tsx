@@ -10,6 +10,7 @@ import {
   inputClass,
 } from "@/components/site/AuthShell";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { authService } from "@/lib/domain/auth";
 
 const searchSchema = z.object({ redirect: z.string().optional() });
 
@@ -30,13 +31,20 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  function defaultRouteForCurrentUser(): string {
+    const u = authService.getCurrentUser();
+    if (u?.roles.includes("teacher")) return "/teacher";
+    if (u?.roles.includes("admin")) return "/admin";
+    return "/app";
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setBusy(true);
     try {
       await signIn(email, password);
-      navigate({ to: redirect ?? "/app" });
+      navigate({ to: redirect ?? defaultRouteForCurrentUser() });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No fue posible iniciar sesión.");
     } finally {
@@ -48,7 +56,7 @@ function LoginPage() {
     setBusy(true);
     try {
       await signInWithGoogle();
-      navigate({ to: redirect ?? "/app" });
+      navigate({ to: redirect ?? defaultRouteForCurrentUser() });
     } finally {
       setBusy(false);
     }

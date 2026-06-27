@@ -1,11 +1,24 @@
 /**
- * AuthService — interfaz pública. Hoy: implementación mock (`MockAuthService`).
- * Mañana (Railway): `JwtAuthService` con NextAuth o un servicio propio,
- * cumpliendo la misma interfaz.
+ * AuthService — ahora conectado al backend NestJS.
+ *
+ * Mantenemos la misma interfaz pública (`signIn`, `signUp`, `getCurrentUser`,
+ * etc.) para no tocar las 20+ rutas que ya la consumen. Internamente:
+ *   - Llama al backend (`/auth/*`).
+ *   - El access token vive en memoria (`@/lib/api/client`).
+ *   - El refresh token es cookie httpOnly seteada por el backend.
+ *   - El "current user" se cachea en memoria + `readDb()` para que las
+ *     llamadas síncronas (`getCurrentUser`) sigan funcionando.
+ *
+ * Migración: este archivo desaparece cuando todas las rutas usen `useAuth()`
+ * y `useQuery` directo. La implementación anterior (mock localStorage) queda
+ * preservada en git.
  */
 
 import type { AuthResult, Provider, Session, User } from "./types";
-import { readDb, uid, writeDb } from "./repository";
+import { readDb, writeDb } from "./repository";
+import { authApi, usersApi } from "@/lib/api/endpoints";
+import { setAccessToken, getAccessToken, API_URL } from "@/lib/api/client";
+import { hydrateFromBackend, clearLocalState } from "@/lib/api/bootstrap";
 
 const SESSION_KEY = "freakn.session.v1";
 
@@ -29,46 +42,23 @@ export interface SignInInput {
   email: string;
   password: string;
 }
+/* ───────── Cache de usuario en memoria (espejo de readDb) ───────── */
 
-function persistSession(s: Session) {
-  if (typeof localStorage !== "undefined") {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(s));
-  }
+const ME_KEY = "freakn.me.v2";
+let currentUserId: string | null = null;
+
+function persistMeId(id: string | null) {
+  currentUserId = id;
+  if (typeof localStorage === "undefined") return;
+  if (id) localStorage.setItem(ME_KEY, id);
+  else localStorage.removeItem(ME_KEY);
 }
-function clearSession() {
-  if (typeof localStorage !== "undefined") localStorage.removeItem(SESSION_KEY);
-}
-function loadSession(): Session | null {
+
+function loadMeId(): string | null {
+  if (currentUserId) return currentUserId;
   if (typeof localStorage === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    const s = JSON.parse(raw) as Session;
-    if (new Date(s.expiresAt).getTime() < Date.now()) {
-      clearSession();
-      return null;
-    }
-    return s;
-  } catch {
-    return null;
-  }
-}
-
-function newSession(userId: string): Session {
-  return {
-    userId,
-    token: uid("tok"),
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-  };
-}
-
-function findUserByEmail(email: string): User | null {
-  const db = readDb();
-  const lower = email.trim().toLowerCase();
-  const u = Object.values(db.users as Record<string, User>).find(
-    (x) => x.email.toLowerCase() === lower,
-  );
-  return u ?? null;
+  currentUserId = localStorage.getItem(ME_KEY);
+  return currentUserId;
 }
 
 function getUserById(id: string): User | null {
@@ -76,119 +66,112 @@ function getUserById(id: string): User | null {
   return ((db.users as Record<string, User>)[id] as User) ?? null;
 }
 
-async function delay<T>(value: T, ms = 300): Promise<T> {
-  await new Promise((r) => setTimeout(r, ms));
-  return value;
+function fakeSession(userId: string): Session {
+  return {
+    userId,
+    token: getAccessToken() ?? "session",
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+  };
 }
 
 /**
- * Mock implementation.
- *
- * @migration Reemplazar por NextAuth (App Router) o un AuthService propio
- * sobre Postgres + bcrypt + JWT. Las firmas públicas no cambian.
+ * Implementación real conectada al backend NestJS.
+ * Mantiene firmas idénticas al mock anterior.
  */
-export class MockAuthService implements AuthService {
+class BackendAuthService implements AuthService {
   async signUp({ fullName, email, password }: SignUpInput) {
-    if (findUserByEmail(email)) {
-      throw new Error("Ya existe una cuenta con este email.");
-    }
-    const user: User = {
-      id: uid("usr"),
-      email: email.trim().toLowerCase(),
-      fullName: fullName.trim(),
-      roles: ["student"],
-      createdAt: new Date().toISOString(),
-    };
-    const session = newSession(user.id);
-    writeDb((db) => {
-      (db.users as Record<string, User>)[user.id] = user;
-      db.meta.passwordsByEmail[user.email] = password; // MOCK ONLY
-      (db.sessions as Record<string, Session>)[session.token] = session;
-    });
-    persistSession(session);
-    return delay({ user, session });
+    const r = await authApi.signup({ fullName, email, password });
+    setAccessToken(r.accessToken);
+    return finishLogin();
   }
 
   async signIn({ email, password }: SignInInput) {
-    const user = findUserByEmail(email);
-    const db = readDb();
-    const expected = db.meta.passwordsByEmail[email.trim().toLowerCase()];
-    if (!user || expected !== password) {
-      await delay(null, 400);
-      throw new Error("Email o contraseña incorrectos.");
-    }
-    const session = newSession(user.id);
-    writeDb((db) => {
-      (db.sessions as Record<string, Session>)[session.token] = session;
-    });
-    persistSession(session);
-    return delay({ user, session });
+    const r = await authApi.login(email, password);
+    setAccessToken(r.accessToken);
+    return finishLogin();
   }
 
   async signInWithProvider(provider: Provider) {
-    // MOCK: crea/recupera un usuario "demo" del provider.
-    const email = provider === "google" ? "demo.google@freakn.dev" : "demo@freakn.dev";
-    const existing = findUserByEmail(email);
-    const user: User =
-      existing ??
-      ({
-        id: uid("usr"),
-        email,
-        fullName: provider === "google" ? "Demo Google" : "Demo User",
-        roles: ["student"],
-        createdAt: new Date().toISOString(),
-      } as User);
-    const session = newSession(user.id);
-    writeDb((db) => {
-      (db.users as Record<string, User>)[user.id] = user;
-      (db.sessions as Record<string, Session>)[session.token] = session;
-    });
-    persistSession(session);
-    return delay({ user, session });
+    if (typeof window === "undefined") throw new Error("Window required");
+    if (provider !== "google") throw new Error(`Provider ${provider} not supported`);
+    // Redirige al backend, que tras la callback de Google nos manda a
+    // /auth/callback?accessToken=... en el storefront.
+    window.location.href = `${API_URL}/auth/google`;
+    // Esta promesa nunca resuelve, la página navega.
+    return new Promise<AuthResult>(() => {});
   }
 
   async signOut() {
-    clearSession();
-    await delay(null, 100);
+    try { await authApi.logout(); } catch { /* ignore */ }
+    setAccessToken(null);
+    persistMeId(null);
+    clearLocalState();
   }
 
   getCurrentSession(): Session | null {
-    return loadSession();
+    const id = loadMeId();
+    return id ? fakeSession(id) : null;
   }
 
   getCurrentUser(): User | null {
-    const s = loadSession();
-    return s ? getUserById(s.userId) : null;
+    const id = loadMeId();
+    return id ? getUserById(id) : null;
   }
 
   async requestPasswordReset(email: string) {
-    // MOCK: no envía email; genera un token y lo retorna en el query string.
-    const user = findUserByEmail(email);
-    if (!user) return delay(undefined, 300); // no leak
-    const token = uid("rst");
-    writeDb((db) => {
-      (db.meta as unknown as { resets: Record<string, string> }).resets = {
-        ...((db.meta as unknown as { resets?: Record<string, string> }).resets ?? {}),
-        [token]: user.email,
-      };
-    });
-    console.info(
-      `[mock-auth] Password reset link → ${window.location.origin}/reset-password?token=${token}`,
-    );
-    return delay(undefined, 300);
+    await authApi.forgot(email);
   }
 
   async resetPassword(token: string, newPassword: string) {
-    const db = readDb();
-    const resets = (db.meta as unknown as { resets?: Record<string, string> }).resets ?? {};
-    const email = resets[token];
-    if (!email) throw new Error("El enlace ha expirado o es inválido.");
-    writeDb((db) => {
-      db.meta.passwordsByEmail[email] = newPassword;
-      delete ((db.meta as unknown as { resets: Record<string, string> }).resets ?? {})[token];
-    });
-    await delay(null, 300);
+    await authApi.reset(token, newPassword);
   }
 }
 
-export const authService: AuthService = new MockAuthService();
+/**
+ * Llamado tras login/signup/refresh: pide `/me`, hidrata `readDb` y devuelve
+ * el AuthResult compatible con el shape antiguo.
+ */
+async function finishLogin(): Promise<AuthResult> {
+  const me = (await usersApi.me()) as any;
+  const role = me?.role ?? "student";
+  const user = (await hydrateFromBackend(role)) ?? {
+    id: me.id,
+    email: me.email,
+    fullName: me.fullName,
+    avatarUrl: me.avatarUrl ?? undefined,
+    roles: [role],
+    level: me.englishLevel ?? undefined,
+    createdAt: me.createdAt,
+  };
+  persistMeId(user.id);
+  writeDb((db) => {
+    (db.users as Record<string, User>)[user.id] = user;
+  });
+  return { user, session: fakeSession(user.id) };
+}
+
+/**
+ * Intenta refrescar la sesión usando la cookie httpOnly. Llamado por el
+ * AuthProvider al montar.
+ */
+export async function tryRestoreSession(): Promise<User | null> {
+  try {
+    const r = await authApi.refresh();
+    setAccessToken(r.accessToken);
+    const { user } = await finishLogin();
+    return user;
+  } catch {
+    persistMeId(null);
+    setAccessToken(null);
+    return null;
+  }
+}
+
+/** Permite a la callback de Google completar el login con un accessToken. */
+export async function finishOAuthLogin(accessToken: string): Promise<User> {
+  setAccessToken(accessToken);
+  const { user } = await finishLogin();
+  return user;
+}
+
+export const authService: AuthService = new BackendAuthService();

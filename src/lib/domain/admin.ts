@@ -15,7 +15,7 @@ import type {
   User,
 } from "./types";
 import { readDb } from "./repository";
-import { PLAN_BY_ID } from "./plans";
+import { getPlan } from "./plans";
 
 /** Tarifa que paga la plataforma al profesor por clase completada + validada. */
 export const TEACHER_PAYRATE_COP = 18000;
@@ -45,7 +45,7 @@ export function listAllUsers(): UserRow[] {
       return {
         user: u,
         subscription: sub,
-        planLabel: sub ? PLAN_BY_ID[sub.planId]?.name : undefined,
+        planLabel: sub ? (getPlan(sub.planId)?.name ?? undefined) : undefined,
         classes: userClasses.length,
         lastClassAt: last,
       };
@@ -89,7 +89,7 @@ export function computeKpis(): AdminKpis {
 
   const activeSubs = subs.filter((s) => s.status === "active");
   const mrr = activeSubs.reduce(
-    (acc, s) => acc + (PLAN_BY_ID[s.planId]?.priceCop ?? 0),
+    (acc, s) => acc + (getPlan(s.planId)?.priceCop ?? 0),
     0,
   );
 

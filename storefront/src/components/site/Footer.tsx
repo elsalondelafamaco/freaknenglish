@@ -4,25 +4,25 @@ const COLS = [
   {
     title: "Servicios",
     links: [
-      { label: "Testimonios", href: "#testimonios" },
-      { label: "Nosotros", href: "#" },
-      { label: "FAQs", href: "#" },
+      { label: "¿Cómo funciona?", href: "/#como-funciona" },
+      { label: "Testimonios", href: "/#testimonios" },
+      { label: "Precios", href: "/#precios" },
+      { label: "Preguntas frecuentes", href: "/#faq" },
     ],
   },
   {
     title: "Legal",
     links: [
-      { label: "404", href: "#" },
       { label: "Política de privacidad", href: "#" },
-      { label: "Términos", href: "#" },
+      { label: "Términos y condiciones", href: "#" },
     ],
   },
   {
-    title: "Socials",
+    title: "Síguenos",
     links: [
       { label: "Instagram", href: "#" },
       { label: "Facebook", href: "#" },
-      { label: "Tiktok", href: "#" },
+      { label: "TikTok", href: "#" },
     ],
   },
 ];
@@ -41,7 +41,10 @@ export function Footer() {
               <ul className="mt-4 space-y-3">
                 {col.links.map((l) => (
                   <li key={l.label}>
-                    <a href={l.href} className="text-[15px] text-white hover:text-brand-yellow">
+                    <a
+                      href={l.href}
+                      className="text-[15px] text-white transition-colors hover:text-brand-yellow"
+                    >
                       {l.label}
                     </a>
                   </li>

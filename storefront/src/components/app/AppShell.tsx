@@ -8,6 +8,7 @@ import {
   Menu,
   Settings,
   ShieldCheck,
+  Smile,
   Sparkles,
   Users,
   X,
@@ -35,6 +36,7 @@ const ADMIN_NAV = [
   { to: "/admin/content", label: "Contenido", icon: Sparkles, end: false },
   { to: "/admin/payroll", label: "Nómina", icon: ShieldCheck, end: false },
   { to: "/admin/notifications", label: "Notificaciones", icon: Mail, end: false },
+  { to: "/admin/surveys", label: "Encuestas", icon: Smile, end: false },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {

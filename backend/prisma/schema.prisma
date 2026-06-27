@@ -401,7 +401,7 @@ model Board {
   id          String   @id @default(uuid())
   classId     String?  @unique @map("class_id")
   ownerId     String   @map("owner_id")
-  title       String   @default("Untitled")
+  name        String   @default("Untitled")
   snapshot    Json     @default("{}") // last persisted state
   version     Int      @default(0)
   createdAt   DateTime @default(now()) @map("created_at")
@@ -431,14 +431,15 @@ model BoardOp {
   id        String   @id @default(uuid())
   boardId   String   @map("board_id")
   userId    String   @map("user_id")
-  kind      String   // stroke | object:add | object:update | object:delete
-  payload   Json
+  clientOpId String  @map("client_op_id") // idempotency key from client
+  op        Json     // free-form op payload (CRDT/event)
   seq       Int      // monotonic per board
   createdAt DateTime @default(now()) @map("created_at")
 
   board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
 
   @@unique([boardId, seq])
+  @@unique([boardId, clientOpId])
   @@index([boardId, createdAt])
   @@map("board_ops")
 }

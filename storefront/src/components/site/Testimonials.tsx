@@ -48,7 +48,7 @@ export function Testimonials() {
   };
 
   return (
-    <section id="testimonios" className="bg-white pb-20 lg:pb-28">
+    <section id="testimonios" className="bg-white pb-20 lg:pb-28 scroll-mt-24">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">

@@ -5,7 +5,7 @@ import { PLANS, type Plan } from "@/lib/domain/plans";
 
 export function Pricing() {
   return (
-    <section id="precios" className="bg-brand-surface py-20 lg:py-28">
+    <section id="precios" className="bg-brand-surface py-20 lg:py-28 scroll-mt-24">
       <div className="mx-auto max-w-6xl px-5 lg:px-8">
         <div className="text-center">
           <p className="text-sm font-medium text-brand-ink/60">
@@ -50,7 +50,7 @@ function PriceCard({ plan }: { plan: Plan }) {
         <Link
           to="/checkout/$planId"
           params={{ planId: plan.id }}
-          className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white transition hover:bg-brand-ink-soft"
+          className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-ink-soft hover:shadow-lg active:scale-[0.98]"
         >
           Seleccionar Plan
         </Link>

@@ -242,3 +242,26 @@ TEACHER_PAYRATE_COP=15000       # default; override en app_settings
 - Plantillas de email (`notification-templates.ts`).
 - Contrato del Widget Wompi en checkout.
 - DDL de `docs/data-model.md` → `prisma/schema.prisma`.
+---
+
+## Monorepo layout (Phase 9 — Jun 2025)
+
+```
+/                         # root proxy (npm workspaces)
+├── storefront/           # Vite + TanStack Start frontend (formerly project root)
+├── backend/              # NestJS 10 backend (this directory)
+├── docs/                 # Migration & architecture documentation
+└── package.json          # workspace root with delegating scripts
+```
+
+Root scripts:
+- `bun run dev` → starts the storefront preview.
+- `bun run backend:dev` → starts the Nest backend with watch.
+- `bun run backend:migrate` / `backend:seed` → Prisma helpers.
+
+The backend already has full scaffolding for: auth (JWT + Google), users,
+plans, subscriptions, checkout + Wompi webhook (HMAC verified), classes
+(12h rule), learning (modules/lessons/checkpoints), teachers (notes/CRM),
+admin (analytics, users, payroll), surveys (NPS), notifications (Resend),
+realtime board (Socket.IO + Redis adapter), and BullMQ-based cron
+automations. Swagger docs at `/api/docs`.

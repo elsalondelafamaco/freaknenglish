@@ -24,6 +24,13 @@ export class SubscriptionsService {
     })
   }
 
+  resume(userId: string) {
+    return this.prisma.subscription.update({
+      where: { userId },
+      data: { status: SubscriptionStatus.active, canceledAt: null, cancelAt: null },
+    })
+  }
+
   mine(userId: string) {
     return this.prisma.subscription.findUnique({ where: { userId }, include: { plan: true } })
   }

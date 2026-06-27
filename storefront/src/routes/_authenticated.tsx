@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  useNavigate,
+  useRouterState,
+} from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { AppShell } from "@/components/app/AppShell";
 
@@ -14,12 +19,17 @@ import { AppShell } from "@/components/app/AppShell";
  * redireccionar antes de SSR.
  */
 export const Route = createFileRoute("/_authenticated")({
+  // Private portals — keep search engines out.
+  head: () => ({
+    meta: [{ name: "robots", content: "noindex, nofollow" }],
+  }),
   component: AuthenticatedLayout,
 });
 
 function AuthenticatedLayout() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   // Capture the path we came in on, once, so the redirect target doesn't
   // recurse if the router re-renders during navigation.
   const initialPath = useRef<string>(
@@ -39,8 +49,25 @@ function AuthenticatedLayout() {
       });
       return;
     }
-    if (isAuthenticated) setChecked(true);
-  }, [isAuthenticated, loading, navigate]);
+    if (isAuthenticated && user) {
+      // Route users to the portal that matches their role. Admins and
+      // teachers should not see the student dashboard at /app, and vice versa.
+      const isAdmin = user.roles.includes("admin");
+      const isTeacher = user.roles.includes("teacher");
+      const isStudent = user.roles.includes("student");
+      let target: string | null = null;
+      if (pathname.startsWith("/admin") && !isAdmin) target = isTeacher ? "/teacher" : "/app";
+      else if (pathname.startsWith("/teacher") && !isTeacher && !isAdmin) target = "/app";
+      else if (pathname.startsWith("/app") && !isStudent) target = isAdmin ? "/admin" : "/teacher";
+
+      if (target && !redirected.current) {
+        redirected.current = true;
+        navigate({ to: target as never, replace: true });
+        return;
+      }
+      setChecked(true);
+    }
+  }, [isAuthenticated, loading, navigate, user, pathname]);
 
   if (!checked) {
     return (

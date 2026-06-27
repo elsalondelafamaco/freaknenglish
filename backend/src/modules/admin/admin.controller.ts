@@ -47,4 +47,14 @@ export class AdminController {
   /** @endpoint POST /api/v1/admin/notifications/run  (manual automations trigger) */
   @Post('notifications/run')
   runAutomations() { return this.svc.runAutomationsManually() }
+
+  /**
+   * @endpoint GET /api/v1/admin/surveys
+   * Lista de encuestas con datos del estudiante. Sólo admin (los profesores
+   * NO tienen acceso a esta ruta — protegida por RolesGuard("admin")).
+   */
+  @Get('surveys')
+  surveys(@Query('filter') filter?: 'promoters' | 'detractors' | 'all') {
+    return this.svc.surveys(filter)
+  }
 }

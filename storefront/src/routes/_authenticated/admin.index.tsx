@@ -11,7 +11,7 @@ import {
 import { computeKpis, formatCop } from "@/lib/domain/admin";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
-  head: () => ({ meta: [{ title: "Analytics — Admin Freakn'" }] }),
+  head: () => ({ meta: [{ title: "Analítica — Admin Freakn'" }] }),
   component: AdminAnalytics,
 });
 

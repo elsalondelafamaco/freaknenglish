@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /app/
+Disallow: /teacher/
+Disallow: /admin/
+Disallow: /checkout/
+Disallow: /auth/
+Disallow: /forgot-password
+Disallow: /reset-password
+
+Sitemap: https://interface-joy-flow.lovable.app/sitemap.xml

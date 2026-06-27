@@ -37,32 +37,27 @@ function AdminNotifications() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand-ink/55">
-            Fase 7 · Automaciones
-          </p>
-          <h2 className="mt-1 text-2xl font-bold tracking-tight text-brand-ink">
+          <h2 className="text-2xl font-bold tracking-tight text-brand-ink">
             Notificaciones
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-brand-ink/65">
-            Registro de emails y mensajes encolados por el sistema. Hoy usa el{" "}
-            <code className="rounded bg-brand-cream/60 px-1.5 py-0.5 text-xs">LogTransport</code>{" "}
-            (mock). En producción se cambia por Resend con 1 línea — ver{" "}
-            <code className="text-xs">docs/backend-jobs.md</code>.
+            Registro de emails y mensajes enviados por la plataforma (bienvenida,
+            recordatorios de clase, encuestas y renovaciones).
           </p>
         </div>
         <button
           onClick={onRun}
           disabled={running}
-          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-brand-ink px-4 text-sm font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-60"
+          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-brand-ink px-4 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-ink-soft hover:shadow-lg disabled:opacity-60"
         >
           <RefreshCcw className={`size-4 ${running ? "animate-spin" : ""}`} />
-          Correr automaciones
+          Ejecutar automaciones
         </button>
       </div>
 
       {lastRun !== null ? (
         <div className="rounded-2xl border border-brand-line bg-brand-cream/30 px-4 py-3 text-sm text-brand-ink">
-          Última corrida encoló <strong>{lastRun}</strong> notificaciones nuevas.
+          Última ejecución envió <strong>{lastRun}</strong> notificaciones nuevas.
         </div>
       ) : null}
 

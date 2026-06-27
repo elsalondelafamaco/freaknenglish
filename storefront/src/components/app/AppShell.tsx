@@ -8,6 +8,7 @@ import {
   Menu,
   Settings,
   ShieldCheck,
+  Smile,
   Sparkles,
   Users,
   X,
@@ -17,24 +18,25 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { cn } from "@/lib/utils";
 
 const STUDENT_NAV = [
-  { to: "/app", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/app/calendar", label: "Calendario", icon: CalendarDays },
-  { to: "/app/learning", label: "Aprendizaje", icon: Sparkles },
-  { to: "/app/settings", label: "Configuración", icon: Settings },
+  { to: "/app", label: "Inicio", icon: LayoutDashboard, end: true },
+  { to: "/app/calendar", label: "Calendario", icon: CalendarDays, end: false },
+  { to: "/app/learning", label: "Aprendizaje", icon: Sparkles, end: false },
+  { to: "/app/settings", label: "Configuración", icon: Settings, end: false },
 ] as const;
 
 const TEACHER_NAV = [
-  { to: "/teacher", label: "Hoy", icon: LayoutDashboard },
-  { to: "/teacher/schedule", label: "Agenda", icon: CalendarDays },
-  { to: "/teacher/students", label: "Estudiantes", icon: Users },
+  { to: "/teacher", label: "Hoy", icon: LayoutDashboard, end: true },
+  { to: "/teacher/schedule", label: "Agenda", icon: CalendarDays, end: false },
+  { to: "/teacher/students", label: "Estudiantes", icon: Users, end: false },
 ] as const;
 
 const ADMIN_NAV = [
-  { to: "/admin", label: "Analytics", icon: LayoutDashboard },
-  { to: "/admin/users", label: "CRM", icon: Users },
-  { to: "/admin/content", label: "CMS", icon: Sparkles },
-  { to: "/admin/payroll", label: "Nómina", icon: ShieldCheck },
-  { to: "/admin/notifications", label: "Automaciones", icon: Mail },
+  { to: "/admin", label: "Analítica", icon: LayoutDashboard, end: true },
+  { to: "/admin/users", label: "Usuarios", icon: Users, end: false },
+  { to: "/admin/content", label: "Contenido", icon: Sparkles, end: false },
+  { to: "/admin/payroll", label: "Nómina", icon: ShieldCheck, end: false },
+  { to: "/admin/notifications", label: "Notificaciones", icon: Mail, end: false },
+  { to: "/admin/surveys", label: "Encuestas", icon: Smile, end: false },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -56,10 +58,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Link>
         <nav className="mt-8 flex flex-col gap-1">
           {NAV.map((item) => {
-            const active = pathname === item.to || pathname.startsWith(item.to + "/");
-            return (
-              <NavItem key={item.to} {...item} active={active} />
-            );
+            const active = item.end
+              ? pathname === item.to
+              : pathname === item.to || pathname.startsWith(item.to + "/");
+            return <NavItem key={item.to} {...item} active={active} />;
           })}
         </nav>
         <div className="mt-auto rounded-2xl bg-brand-cream/60 p-4">
@@ -92,7 +94,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="lg:hidden mx-4 mt-2 rounded-2xl border border-brand-line bg-white p-3 shadow-soft">
           <div className="flex flex-col gap-1">
             {NAV.map((item) => {
-              const active = pathname === item.to || pathname.startsWith(item.to + "/");
+              const active = item.end
+                ? pathname === item.to
+                : pathname === item.to || pathname.startsWith(item.to + "/");
               return (
                 <NavItem
                   key={item.to}
@@ -139,10 +143,10 @@ function NavItem({
       to={to as never}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition",
+        "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
         active
-          ? "bg-brand-ink text-white"
-          : "text-brand-ink/75 hover:bg-brand-cream/50 hover:text-brand-ink",
+          ? "bg-brand-ink text-white shadow-soft"
+          : "text-brand-ink/75 hover:translate-x-0.5 hover:bg-brand-cream/60 hover:text-brand-ink",
       )}
     >
       <Icon className="size-4" />

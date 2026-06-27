@@ -4,7 +4,7 @@ import { CHECKPOINTS, MODULES } from "@/lib/domain/learning";
 import type { EnglishLevel, LessonKind } from "@/lib/domain/types";
 
 export const Route = createFileRoute("/_authenticated/admin/content")({
-  head: () => ({ meta: [{ title: "CMS — Admin Freakn'" }] }),
+  head: () => ({ meta: [{ title: "Contenido — Admin Freakn'" }] }),
   component: AdminCMS,
 });
 
@@ -13,11 +13,11 @@ const LEVELS: EnglishLevel[] = ["beginner", "intermediate", "advanced"];
 function AdminCMS() {
   return (
     <div className="flex flex-col gap-8">
-      <div className="rounded-2xl border border-dashed border-brand-line bg-brand-cream/30 p-4 text-sm text-brand-ink/75">
-        <strong>Modo lectura.</strong> El catálogo actual es estático (
-        <code>src/lib/domain/learning.ts</code>). En la migración, este panel
-        editará las tablas <code>modules</code> / <code>lessons</code> /{" "}
-        <code>checkpoints</code> directamente.
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight text-brand-ink">Contenido</h2>
+        <p className="mt-1 text-sm text-brand-ink/65">
+          Catálogo de módulos, lecciones y checkpoints organizados por nivel.
+        </p>
       </div>
 
       {LEVELS.map((level) => {

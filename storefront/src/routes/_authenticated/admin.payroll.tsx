@@ -64,10 +64,10 @@ function AdminPayroll() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-dashed border-brand-line bg-brand-cream/30 p-4 text-xs text-brand-ink/75">
+      <div className="rounded-2xl border border-brand-line bg-brand-cream/30 p-4 text-xs text-brand-ink/75">
         Tarifa actual por clase validada:{" "}
-        <strong>{formatCop(TEACHER_PAYRATE_COP)}</strong>. Sólo se cuentan clases con estado{" "}
-        <code>completed</code> y validación cruzada del profesor.
+        <strong>{formatCop(TEACHER_PAYRATE_COP)}</strong>. Solo se cuentan clases
+        completadas y validadas por el profesor.
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-brand-line bg-white">

@@ -24,7 +24,7 @@ const FAQS = [
 
 export function Faq() {
   return (
-    <section className="bg-white py-20 lg:py-28">
+    <section id="faq" className="bg-white py-20 lg:py-28 scroll-mt-24">
       <div className="mx-auto max-w-6xl px-5 lg:grid lg:grid-cols-[1fr_1.4fr] lg:gap-16 lg:px-8">
         <div className="max-w-md">
           <h2 className="text-balance text-3xl font-bold leading-tight tracking-tight text-brand-ink sm:text-4xl lg:text-[44px]">
@@ -58,14 +58,14 @@ function FaqItem({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-brand-line bg-white px-5 py-4 transition-shadow",
-        open && "shadow-soft",
+        "rounded-2xl border border-brand-line bg-white px-5 py-4 transition-all duration-200 hover:border-brand-ink/40",
+        open && "shadow-soft border-brand-ink/40",
       )}
     >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-4 text-left"
+        className="flex w-full items-center justify-between gap-4 text-left transition-colors"
         aria-expanded={open}
       >
         <span className="text-[15px] font-semibold text-brand-ink">{q}</span>

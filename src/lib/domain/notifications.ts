@@ -245,7 +245,7 @@ export async function runAutomations(): Promise<number> {
 
   // 4. Renovación: suscripciones que vencen en ≤ 3 días.
   for (const sub of subs) {
-    if (sub.status !== "active") continue;
+    if (sub.status !== "active" || !sub.currentPeriodEnd) continue;
     const daysLeft = (new Date(sub.currentPeriodEnd).getTime() - now) / 86_400_000;
     if (daysLeft > 3 || daysLeft < 0) continue;
     const user = users.find((u) => u.id === sub.userId);
@@ -289,5 +289,5 @@ export async function runAutomations(): Promise<number> {
 }
 
 function planLabel(planId: PlanId): string {
-  return PLANS.find((p) => p.id === planId)?.label ?? planId;
+  return PLANS.find((p) => p.id === planId)?.name ?? planId;
 }

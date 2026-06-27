@@ -17,6 +17,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as CheckoutPlanIdRouteImport } from './routes/checkout.$planId'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedTeacherRouteImport } from './routes/_authenticated/teacher'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -73,6 +74,11 @@ const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
 const CheckoutPlanIdRoute = CheckoutPlanIdRouteImport.update({
   id: '/checkout/$planId',
   path: '/checkout/$planId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedTeacherRoute = AuthenticatedTeacherRouteImport.update({
@@ -187,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/teacher': typeof AuthenticatedTeacherRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/checkout/$planId': typeof CheckoutPlanIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/admin/content': typeof AuthenticatedAdminContentRoute
@@ -211,6 +218,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/checkout/$planId': typeof CheckoutPlanIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/admin/content': typeof AuthenticatedAdminContentRoute
@@ -240,6 +248,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/_authenticated/teacher': typeof AuthenticatedTeacherRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/checkout/$planId': typeof CheckoutPlanIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/_authenticated/admin/content': typeof AuthenticatedAdminContentRoute
@@ -269,6 +278,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/app'
     | '/teacher'
+    | '/auth/callback'
     | '/checkout/$planId'
     | '/checkout/return'
     | '/admin/content'
@@ -293,6 +303,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/signup'
+    | '/auth/callback'
     | '/checkout/$planId'
     | '/checkout/return'
     | '/admin/content'
@@ -321,6 +332,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/app'
     | '/_authenticated/teacher'
+    | '/auth/callback'
     | '/checkout/$planId'
     | '/checkout/return'
     | '/_authenticated/admin/content'
@@ -347,6 +359,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   CheckoutPlanIdRoute: typeof CheckoutPlanIdRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
 }
@@ -407,6 +420,13 @@ declare module '@tanstack/react-router' {
       path: '/checkout/$planId'
       fullPath: '/checkout/$planId'
       preLoaderRoute: typeof CheckoutPlanIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/teacher': {
@@ -646,6 +666,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   CheckoutPlanIdRoute: CheckoutPlanIdRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
 }

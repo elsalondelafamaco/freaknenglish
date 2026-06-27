@@ -23,7 +23,7 @@ export class LearningController {
 
   /** @endpoint GET /api/v1/learning/progress  (current user, all levels) */
   @Get('progress')
-  progress(@CurrentUser() u: AuthUser) { return this.svc.userProgress(u.id) }
+  getProgress(@CurrentUser() u: AuthUser) { return this.svc.userProgress(u.id) }
 
   /** @endpoint GET /api/v1/learning/checkpoints/:id */
   @Get('checkpoints/:id')
@@ -31,7 +31,7 @@ export class LearningController {
 
   /** @endpoint POST /api/v1/learning/progress */
   @Post('progress')
-  progress(
+  upsertProgress(
     @CurrentUser() u: AuthUser,
     @Body() body: { lessonId: string; secondsWatched: number; completed: boolean },
   ) {

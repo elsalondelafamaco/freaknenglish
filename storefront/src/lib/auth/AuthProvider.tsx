@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { authService } from "@/lib/domain/auth";
+import { authService, tryRestoreSession } from "@/lib/domain/auth";
 import type { AppRole, User } from "@/lib/domain/types";
 
 export interface AuthContextValue {
@@ -33,14 +33,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refresh();
-    setLoading(false);
-    if (typeof window === "undefined") return;
+    let cancelled = false;
+    (async () => {
+      // Si hay refresh-cookie del backend, restaura la sesión.
+      const restored = await tryRestoreSession();
+      if (cancelled) return;
+      setUser(restored ?? authService.getCurrentUser());
+      setLoading(false);
+    })();
+    if (typeof window === "undefined") return () => { cancelled = true; };
     const onStorage = (e: StorageEvent) => {
       if (!e.key || e.key.startsWith("freakn.")) refresh();
     };
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("storage", onStorage);
+    };
   }, [refresh]);
 
   const value = useMemo<AuthContextValue>(

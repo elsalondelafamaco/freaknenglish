@@ -65,6 +65,7 @@ model User {
   avatarUrl       String?       @map("avatar_url")
   googleSub       String?       @unique @map("google_sub")
   emailVerifiedAt DateTime?     @map("email_verified_at")
+  assignedTeacherId String?     @map("assigned_teacher_id")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
@@ -82,6 +83,11 @@ model User {
   availability     TeacherAvailability[]
   absences         TeacherAbsence[]
   boards           BoardMember[]
+
+  assignedTeacher  User?         @relation("StudentTeacher", fields: [assignedTeacherId], references: [id], onDelete: SetNull)
+  assignedStudents User[]        @relation("StudentTeacher")
+  impersonationLogs ImpersonationLog[] @relation("ImpersonationAdmin")
+  impersonatedBy   ImpersonationLog[] @relation("ImpersonationTarget")
 
   @@map("users")
 }

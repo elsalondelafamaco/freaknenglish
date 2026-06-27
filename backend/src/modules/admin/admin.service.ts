@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
+import { InjectQueue } from '@nestjs/bullmq'
+import { Queue } from 'bullmq'
 import { env } from '../../config/env'
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @InjectQueue('automations') private automationsQueue: Queue,
+  ) {}
 
   async analytics() {
     const [activeSubs, plans, surveys, totalClasses, validatedClasses] = await Promise.all([
@@ -59,5 +64,35 @@ export class AdminService {
       rateCop: env.TEACHER_PAYRATE_COP,
       amountCop: (counts.get(t.id) ?? 0) * env.TEACHER_PAYRATE_COP,
     }))
+  }
+
+  async payrollCsv(period: string) {
+    const rows = await this.payroll(period)
+    const header = 'teacher_id,full_name,classes,rate_cop,amount_cop'
+    const body = rows
+      .map((r) => [r.teacherId, JSON.stringify(r.fullName), r.classes, r.rateCop, r.amountCop].join(','))
+      .join('\n')
+    return `${header}\n${body}\n`
+  }
+
+  content() {
+    return this.prisma.module.findMany({
+      orderBy: [{ level: 'asc' }, { position: 'asc' }],
+      include: { lessons: { orderBy: { position: 'asc' } }, checkpoints: true },
+    })
+  }
+
+  notifications(status?: 'queued' | 'sent' | 'failed') {
+    return this.prisma.notification.findMany({
+      where: status ? { status } : undefined,
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    })
+  }
+
+  async runAutomationsManually() {
+    await this.automationsQueue.add('tick-5m', { manual: true }, { removeOnComplete: true })
+    await this.automationsQueue.add('tick-daily', { manual: true }, { removeOnComplete: true })
+    return { ok: true, enqueued: ['tick-5m', 'tick-daily'] }
   }
 }

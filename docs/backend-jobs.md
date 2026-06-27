@@ -61,6 +61,45 @@ sea 1:1.
 - Side effects: calcular `payroll_runs` por profesor sumando
   `class_attendance` validadas en el mes anterior.
 
+### abandoned-cart-recover
+- Tipo: cron
+- Propósito: enviar email "te quedó pendiente tu plan" a leads con
+  `payment_intents.status = 'PENDING'` y antigüedad entre 30 min y 7 días.
+- Trigger: cron `*/15 * * * *`.
+- Side effects: insertar fila en `notifications` con `dedupe_key =
+  'abandoned:' || reference` y llamar Resend.
+- Secrets: `RESEND_API_KEY`.
+
+### subscription-renewal-reminder
+- Tipo: cron
+- Propósito: avisar 3 días antes de la renovación automática Wompi.
+- Trigger: cron diario 09:00.
+- Side effects: `notifications` (`dedupe_key = 'renewal:'||sub_id||':'||period_end`).
+
+### nps-monthly-trigger
+- Tipo: cron
+- Trigger: día 1 de cada mes 10:00.
+- Side effects: encola in_app "responde NPS" (`dedupe_key = 'nps:'||user_id||':'||YYYY-MM`).
+
+## Notas de implementación — transport intercambiable
+
+En el mock actual, `src/lib/domain/notifications.ts` expone:
+- `runAutomations()` — el cuerpo de los crons listados arriba, ejecutable
+  desde el panel admin (`/admin/notifications`) o lazy al entrar al portal.
+- `Transport` interface con dos implementaciones:
+    - `LogTransport` (default) → no envía, solo registra.
+    - `ResendTransport` (placeholder) → cuando migremos a Railway/Next.js,
+      su `send()` hará `POST /api/notifications/send` y el endpoint
+      Node llamará a Resend con `RESEND_API_KEY`. El payload (`to`,
+      `subject`, `html`) ya está en el formato final.
+- `enqueueNotification()` usa `dedupeKey` → idempotente. La tabla
+  `notifications` (ver `docs/data-model.md`) lo replica con UNIQUE.
+
+Cuando se enchufe Resend real:
+1. Crear endpoint server-side que valide auth y haga `fetch` a Resend.
+2. Reemplazar `setTransport(ResendTransport)` en bootstrap.
+3. Mover `runAutomations()` a cron jobs (los listados arriba) en lugar
+   de invocarlo lazy desde el frontend.
 ## Internal triggers
 
 (se llenan cuando aparezcan)

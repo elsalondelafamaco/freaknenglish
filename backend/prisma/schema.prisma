@@ -1,0 +1,444 @@
+// Freakn English — Prisma schema (Postgres).
+// Mirrors docs/data-model.md. Run: bun run prisma:migrate
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────
+enum AppRole {
+  student
+  teacher
+  admin
+}
+
+enum EnglishLevel {
+  beginner
+  intermediate
+  advanced
+}
+
+enum SubscriptionStatus {
+  pending
+  active
+  past_due
+  canceled
+  expired
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  VOIDED
+  ERROR
+}
+
+enum ClassStatus {
+  scheduled
+  validated
+  no_show
+  cancelled
+  rescheduled
+}
+
+enum NotificationStatus {
+  queued
+  sent
+  failed
+}
+
+// ─── Users & auth ─────────────────────────────────────────────────────────
+model User {
+  id              String        @id @default(uuid())
+  email           String        @unique
+  passwordHash    String?       @map("password_hash")
+  fullName        String        @map("full_name")
+  phone           String?
+  role            AppRole       @default(student)
+  englishLevel    EnglishLevel? @map("english_level")
+  avatarUrl       String?       @map("avatar_url")
+  googleSub       String?       @unique @map("google_sub")
+  emailVerifiedAt DateTime?     @map("email_verified_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  subscription     Subscription?
+  classesAsStudent Class[]       @relation("StudentClasses")
+  classesAsTeacher Class[]       @relation("TeacherClasses")
+  notes            ClassNote[]
+  progress         LessonProgress[]
+  attempts         CheckpointAttempt[]
+  surveys          SatisfactionSurvey[]
+  notifications    Notification[]
+  refreshTokens    RefreshToken[]
+  passwordResets   PasswordReset[]
+  paymentIntents   PaymentIntent[]
+  availability     TeacherAvailability[]
+  absences         TeacherAbsence[]
+  boards           BoardMember[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_resets")
+}
+
+// ─── Plans & subscriptions ────────────────────────────────────────────────
+model Plan {
+  id            String   @id // e.g. "3-dias", "4-dias", "5-dias"
+  name          String
+  daysPerWeek   Int      @map("days_per_week")
+  priceCop      Int      @map("price_cop")
+  features      Json     @default("[]")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  subscriptions  Subscription[]
+  paymentIntents PaymentIntent[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id                String             @id @default(uuid())
+  userId            String             @unique @map("user_id")
+  planId            String             @map("plan_id")
+  status            SubscriptionStatus @default(pending)
+  startedAt         DateTime?          @map("started_at")
+  currentPeriodEnd  DateTime?          @map("current_period_end")
+  cancelAt          DateTime?          @map("cancel_at")
+  canceledAt        DateTime?          @map("canceled_at")
+  wompiCustomerId   String?            @map("wompi_customer_id")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@map("subscriptions")
+}
+
+// ─── Payments (Wompi) ─────────────────────────────────────────────────────
+model PaymentIntent {
+  id              String        @id @default(uuid())
+  reference       String        @unique // sent to Wompi widget
+  userId          String?       @map("user_id") // null until checkout completes for new users
+  planId          String        @map("plan_id")
+  amountInCents   Int           @map("amount_in_cents")
+  currency        String        @default("COP")
+  status          PaymentStatus @default(PENDING)
+  customerEmail   String        @map("customer_email")
+  customerName    String        @map("customer_name")
+  customerPhone   String?       @map("customer_phone")
+  wompiId         String?       @unique @map("wompi_id")
+  approvedAt      DateTime?     @map("approved_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  user   User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  plan   Plan            @relation(fields: [planId], references: [id])
+  events PaymentEvent[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("payment_intents")
+}
+
+model PaymentEvent {
+  id              String        @id @default(uuid())
+  intentId        String        @map("intent_id")
+  wompiEventId    String        @unique @map("wompi_event_id") // idempotency
+  event           String        // transaction.updated, etc.
+  status          PaymentStatus
+  rawPayload      Json          @map("raw_payload")
+  receivedAt      DateTime      @default(now()) @map("received_at")
+
+  intent PaymentIntent @relation(fields: [intentId], references: [id], onDelete: Cascade)
+
+  @@index([intentId])
+  @@map("payment_events")
+}
+
+// ─── Classes ──────────────────────────────────────────────────────────────
+model Class {
+  id           String      @id @default(uuid())
+  studentId    String      @map("student_id")
+  teacherId    String?     @map("teacher_id")
+  startsAt     DateTime    @map("starts_at")
+  endsAt       DateTime    @map("ends_at")
+  status       ClassStatus @default(scheduled)
+  meetingUrl   String?     @map("meeting_url")
+  topic        String?
+  validatedAt  DateTime?   @map("validated_at")
+  cancelledAt  DateTime?   @map("cancelled_at")
+  cancelReason String?     @map("cancel_reason")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  student User       @relation("StudentClasses", fields: [studentId], references: [id], onDelete: Cascade)
+  teacher User?      @relation("TeacherClasses", fields: [teacherId], references: [id], onDelete: SetNull)
+  notes   ClassNote[]
+
+  @@index([studentId, startsAt])
+  @@index([teacherId, startsAt])
+  @@map("classes")
+}
+
+model ClassNote {
+  id        String   @id @default(uuid())
+  classId   String   @map("class_id")
+  teacherId String   @map("teacher_id")
+  rating    Int      // 1..5
+  notes     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacher User  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([classId])
+  @@map("class_notes")
+}
+
+model TeacherAvailability {
+  id        String   @id @default(uuid())
+  teacherId String   @map("teacher_id")
+  weekday   Int      // 0=Sun..6=Sat
+  startsAt  String   @map("starts_at") // "08:00"
+  endsAt    String   @map("ends_at")   // "18:00"
+  timezone  String   @default("America/Bogota")
+
+  teacher User @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([teacherId])
+  @@map("teacher_availability")
+}
+
+model TeacherAbsence {
+  id        String   @id @default(uuid())
+  teacherId String   @map("teacher_id")
+  startsAt  DateTime @map("starts_at")
+  endsAt    DateTime @map("ends_at")
+  reason    String?
+
+  teacher User @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@map("teacher_absences")
+}
+
+// ─── Learning ─────────────────────────────────────────────────────────────
+model Module {
+  id          String       @id
+  level       EnglishLevel
+  title       String
+  description String?
+  position    Int
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  lessons     Lesson[]
+  checkpoints Checkpoint[]
+
+  @@index([level, position])
+  @@map("modules")
+}
+
+model Lesson {
+  id            String   @id
+  moduleId      String   @map("module_id")
+  title         String
+  position      Int
+  durationMin   Int      @map("duration_min")
+  videoUrl      String?  @map("video_url")
+  pdfUrl        String?  @map("pdf_url")
+  slidesUrl     String?  @map("slides_url")
+  downloadUrls  Json     @default("[]") @map("download_urls")
+
+  module   Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
+
+  @@index([moduleId, position])
+  @@map("lessons")
+}
+
+model LessonProgress {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  lessonId    String    @map("lesson_id")
+  completedAt DateTime? @map("completed_at")
+  secondsWatched Int    @default(0) @map("seconds_watched")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("lesson_progress")
+}
+
+model Checkpoint {
+  id           String       @id
+  moduleId     String       @map("module_id")
+  fromLevel    EnglishLevel @map("from_level")
+  toLevel      EnglishLevel @map("to_level")
+  passingScore Int          @map("passing_score") // %
+  questions    Json         // [{ id, prompt, options, correctIndex }]
+
+  module   Module              @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  attempts CheckpointAttempt[]
+
+  @@map("checkpoints")
+}
+
+model CheckpointAttempt {
+  id            String     @id @default(uuid())
+  userId        String     @map("user_id")
+  checkpointId  String     @map("checkpoint_id")
+  score         Int        // %
+  passed        Boolean
+  answers       Json
+  createdAt     DateTime   @default(now()) @map("created_at")
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkpoint Checkpoint @relation(fields: [checkpointId], references: [id], onDelete: Cascade)
+
+  @@index([userId, checkpointId])
+  @@map("checkpoint_attempts")
+}
+
+// ─── Surveys ──────────────────────────────────────────────────────────────
+model SatisfactionSurvey {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  score     Int      // 0..10 NPS
+  comment   String?
+  period    String   // YYYY-MM
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, period])
+  @@map("satisfaction_surveys")
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────
+model Notification {
+  id         String             @id @default(uuid())
+  userId     String?            @map("user_id")
+  toEmail    String             @map("to_email")
+  channel    String             @default("email") // email | sms | push
+  template   String             // welcome, reminder_24h, reminder_1h, abandoned_cart, nps_monthly, renewal_3d
+  subject    String
+  status     NotificationStatus @default(queued)
+  dedupeKey  String             @unique @map("dedupe_key")
+  vars       Json               @default("{}")
+  providerId String?            @map("provider_id")
+  sentAt     DateTime?          @map("sent_at")
+  error      String?
+  createdAt  DateTime           @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@map("notifications")
+}
+
+// ─── Admin / settings ─────────────────────────────────────────────────────
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
+
+model PayrollRun {
+  id        String   @id @default(uuid())
+  period    String   // YYYY-MM
+  teacherId String   @map("teacher_id")
+  classes   Int
+  rateCop   Int      @map("rate_cop")
+  amountCop Int      @map("amount_cop")
+  status    String   @default("pending") // pending | paid
+  paidAt    DateTime? @map("paid_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([period, teacherId])
+  @@map("payroll_runs")
+}
+
+// ─── Realtime board ───────────────────────────────────────────────────────
+model Board {
+  id          String   @id @default(uuid())
+  classId     String?  @unique @map("class_id")
+  ownerId     String   @map("owner_id")
+  title       String   @default("Untitled")
+  snapshot    Json     @default("{}") // last persisted state
+  version     Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members BoardMember[]
+  ops     BoardOp[]
+
+  @@map("boards")
+}
+
+model BoardMember {
+  id       String  @id @default(uuid())
+  boardId  String  @map("board_id")
+  userId   String  @map("user_id")
+  role     String  @default("editor") // editor | viewer
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([boardId, userId])
+  @@map("board_members")
+}
+
+model BoardOp {
+  id        String   @id @default(uuid())
+  boardId   String   @map("board_id")
+  userId    String   @map("user_id")
+  kind      String   // stroke | object:add | object:update | object:delete
+  payload   Json
+  seq       Int      // monotonic per board
+  createdAt DateTime @default(now()) @map("created_at")
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@unique([boardId, seq])
+  @@index([boardId, createdAt])
+  @@map("board_ops")
+}

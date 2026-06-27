@@ -1,128 +1,206 @@
-## Objetivo
 
-Conectar el `storefront/` al backend Nest reemplazando los mocks de `src/lib/domain/*` por un cliente HTTP tipado, manteniendo el contrato actual de hooks/funciones para no reescribir las pantallas. Cerrar los gaps de endpoints que detecté contra los call sites del front.
+# Plan de mejoras Freakn'
 
-## Gaps detectados (endpoints o lógica que faltan en backend)
+Alcance: pulir la app (hover/animaciones/SEO/limpieza de wordings técnicos), arreglar bugs de navegación y permisos por rol, y cerrar los huecos funcionales del flujo admin/profesor/encuesta NPS — todo conectado al backend Nest.
 
-Comparando los controllers actuales contra lo que el storefront ya consume:
+---
 
-1. **Auth** — falta `GET /auth/me` ergonómico (hoy `GET /me`, está bien, solo documentar); falta `POST /auth/google/token` para intercambiar `id_token` del botón Google en el front sin pasar por redirect del backend (opcional, podemos usar solo el flujo redirect).
-2. **Classes** — falta `GET /classes/upcoming` (próxima clase del dashboard) y `GET /classes/today` (profesor). Hoy el front filtra en cliente; mejor exponerlo.
-3. **Teachers** — falta `GET /teacher/schedule?status=` con filtros (upcoming/past/pending) que ya usa `teacher.schedule.tsx`.
-4. **Admin** — falta `GET /admin/content` (CMS read-only de módulos/lecciones) y `GET /admin/notifications` + `POST /admin/notifications/run` (panel de automatizaciones) y `GET /admin/payroll/export.csv`.
-5. **Subscriptions** — falta `POST /subscriptions/resume` y exponer `currentPeriodEnd` en `GET /subscriptions/mine` (ya está, verificar shape).
-6. **Surveys** — falta `GET /surveys/pending` para que el dashboard sepa si mostrar el dialog NPS del mes.
-7. **Learning** — falta `GET /learning/progress` (resumen por nivel para el dashboard) y `GET /learning/checkpoints/:id` (cargar el examen).
-8. **Plans** — `GET /plans` está ✓.
-9. **Board** — endpoints ya existen; falta solo el handshake JWT en el gateway (verificar `board.gateway.ts`).
-10. **Health** — `GET /health` ✓.
+## 1. Hover, animaciones y accesibilidad global
 
-## Arquitectura de integración en el storefront
+Storefront (landing + portales).
+
+- Añadir `transition-colors / transition-transform duration-200` y `hover-scale` a TODOS los botones/links que hoy no reaccionan: `Hero` CTAs, `Navbar` items, `Footer` links, `Pricing` cards, `Faq` triggers, `DarkPillButton`, `AuthShell` (Google button, submit), `NavItem` del sidebar, `Stat` cards del dashboard, badges del CRM.
+- Estados `focus-visible` con anillo `ring-2 ring-brand-ink/40` en todo elemento interactivo (a, button, input, textarea). Necesario para accesibilidad por teclado.
+- Reemplazar `<div onClick>` por `<button>` donde aplique (revisar `SatisfactionDialog`, sidebar móvil, tabs admin).
+- `aria-label` en todos los botones icon-only (`Menu`, `X`, NPS scale `0-10`, cerrar dialog, "fill credentials" del login).
+- Pasar `h-screen` → `h-dvh` donde haya layouts full-height en mobile.
+- Animaciones de entrada por sección de la landing (`animate-fade-in` con stagger ligero) y `accordion-down/up` en `Faq`.
+- `prefers-reduced-motion`: respetar en `styles.css`.
+
+## 2. SEO técnico
+
+- `src/routes/sitemap[.]xml.ts` dinámico con `BASE_URL = "https://interface-joy-flow.lovable.app"` y entries solo para rutas públicas indexables: `/`, `/login`, `/signup`. Excluir `/app/*`, `/teacher/*`, `/admin/*`, `/checkout/*`, `/auth/callback`, `/forgot-password`, `/reset-password`.
+- `public/robots.txt`: `Allow: /` global, `Disallow: /app/`, `/teacher/`, `/admin/`, `/checkout/`, `/auth/`, `/forgot-password`, `/reset-password`. Directiva `Sitemap:`.
+- Por ruta pública: `head()` con title <60c + meta description <160c + `og:title`/`og:description`/`og:url` + `<link rel=canonical>`. Cada ruta privada añade `<meta name=robots content="noindex,nofollow">`.
+- `__root.tsx`: defaults sitewide (`og:type=website`, `og:site_name=Freakn'`, charset, viewport) y JSON-LD `Organization`.
+- Home: JSON-LD `Course` + `FAQPage` derivado del array de FAQ.
+- `<h1>` único por página, jerarquía de headings corregida en la landing.
+- `alt` descriptivos en imágenes generadas; `alt=""` en decorativas.
+- Lazy-loading (`loading="lazy"`) en imágenes bajo el fold.
+
+## 3. Limpieza de wordings técnicos
+
+Eliminar referencias a "Fase X", "mock", "Phase", "MockAuth", nombres de componentes, "automaciones (Fase 7)", etc. en UI visible:
+
+- `/login`: quitar caja amarilla "Cuentas de prueba (mock)" — moverla a un toggle "Cuentas demo" más sutil o eliminarla del todo.
+- Admin: header `"Freakn' Operations"` → `"Panel administrativo"`. Tab "Automaciones" se queda; quitar tooltips/textos sobre "Fase 7", "lazy trigger" etc.
+- `/admin/users` footer "Datos en vivo del repositorio mock..." → eliminar.
+- `/admin/content`: eliminar avisos de "CMS read-only" o moverlos a texto neutro.
+- Quitar `// Trigger lazy de automaciones (Fase 7)` y similares de UI (comentarios de código pueden quedar).
+- Revisar `Settings`, `Calendar`, `Checkpoint` por mensajes con "fase/mock/migration".
+
+## 4. Footer
+
+- Eliminar enlaces "Nosotros" y "404".
+- "FAQs" → ancla `/#faq` (TanStack `Link` con `hash="faq"`).
+- "Testimonios" → `/#testimonios` con scroll suave.
+- Implementar smooth scroll global: `html { scroll-behavior: smooth }` en `styles.css` + un pequeño handler que, si la ruta no es `/`, navegue a `/` y luego haga scroll al hash.
+- Mismo tratamiento al `Navbar` (ya usa `#como-funciona`, `#testimonios`, `#precios`).
+
+## 5. Encuesta NPS — privada, obligatoria, mensual, persistente
+
+**Reglas de negocio**
+
+- Solo estudiantes ven la encuesta.
+- Frecuencia: cada 30 días desde la última respuesta (no por mes calendario).
+- Obligatoria: no se puede cerrar (eliminar botón X y "Después", quitar `Esc`/click backdrop). Bloqueo de toda la navegación del portal estudiante hasta responder.
+- Privada: aviso visible "Tus respuestas son privadas. Tu profesor no las verá. Las usamos solo para mejorar la calidad."
+- Visible para admin, NO para profesor.
+
+**Formulario (5 preguntas + nota)**
+
+1. NPS 0-10 (recomendación general).
+2. Likert 1-5: claridad de tu profesor.
+3. Likert 1-5: calidad del material de aprendizaje.
+4. Likert 1-5: plataforma (facilidad de uso, agenda, accesos).
+5. Selección múltiple: "¿Qué te gustaría mejorar?" (opciones: ritmo, material, profesor, horarios, plataforma, otro).
+6. Texto libre (opcional, max 500c): "Comentario adicional".
+
+**Frontend**
+
+- Reescribir `SatisfactionDialog`: sin cierre, layout en 1 pantalla con scroll interno, validación + envío al backend, aviso de privacidad destacado.
+- Disparador: gate en `_authenticated` layout que, si `user.role==='student'` y `GET /surveys/pending` devuelve `{ pending: true }`, monta el dialog modal con `inert` sobre el resto de la app.
+
+**Backend (Nest + Prisma)**
+
+- Migrar `SatisfactionSurvey` a un schema más rico: además de `score` (NPS) y `comment`, agregar `teacherClarity`, `materialQuality`, `platformQuality` (Int 1-5), `improveAreas` (String[]).
+- Cambiar la lógica de `period` por `nextDueAt = submittedAt + 30 días`.
+- Endpoints:
+  - `GET /api/v1/surveys/pending` → `{ pending, nextDueAt }`.
+  - `POST /api/v1/surveys/nps` recibe el payload completo.
+  - `GET /api/v1/admin/surveys?from=&to=&q=` — solo admin, listado paginado con join al usuario.
+  - `GET /api/v1/admin/surveys/stats` — promedios + tendencia.
+- Excluir surveys de cualquier endpoint de profesor.
+- Sección nueva en `/admin`: tab "Satisfacción" con lista + drill-down + KPIs y filtro por mes.
+
+## 6. Admin no ve dashboard de estudiante
+
+- `_authenticated/app` (toda la rama `/app/*`) debe redirigir a `/admin` si el usuario es admin sin rol de estudiante; a `/teacher` si solo es profesor. Solo permitir si el usuario tiene rol `student`.
+- En `_authenticated/app.tsx` (layout) añadir `beforeLoad` que valide rol y haga `redirect()`.
+- Ajustar `login.tsx`: si el usuario es admin, ir directo a `/admin` (ya hace eso si tiene `teacher` antes — invertir orden: admin > teacher > student).
+
+## 7. Sidebar "active" pegado
+
+Bug: `pathname.startsWith(item.to + "/")` matchea `/admin` con `/admin/users` etc., y `/app` matchea todo `/app/*`. Resultado: la primera opción se queda activa.
+
+Fix:
+
+- Para items con `end: true` (raíces de sección como `/admin`, `/app`, `/teacher`), comparar igualdad exacta `pathname === item.to`.
+- Marcar `end: true` en los NAV donde corresponda y derivar `active` con esa lógica.
+- Verificar también el sub-nav de admin (`admin.tsx`) — usa la misma heurística.
+
+## 8. Admin impersona profesores (y estudiantes)
+
+- Backend: endpoint `POST /api/v1/admin/impersonate/:userId` (solo admin) que devuelve un nuevo `accessToken` + `refreshToken` con claims `{ sub: <userId>, role: <userRole>, impersonatedBy: <adminId> }` y vida corta (30 min). Refresh token marcado como `impersonation` (no rota al original).
+- Endpoint `POST /api/v1/admin/impersonate/stop` que revoca y reemite el token del admin original (guardado en cookie httpOnly aparte: `sb-impersonator`).
+- Frontend:
+  - Botón "Ver como" en `/admin/users` por fila + en perfil del usuario.
+  - `AuthProvider` guarda `originalUser` en memoria; al impersonar, cambia tokens, redirige a `/teacher` o `/app` según rol.
+  - Banner global persistente: "Estás viendo la app como <Nombre> · Volver a mi cuenta" con botón que invoca `stop`.
+- Logging: cada inicio/fin de impersonation en tabla `AuditLog` (admin actor + target).
+
+## 9. Admin crea profesores y estudiantes
+
+- Backend:
+  - `POST /api/v1/admin/users` body `{ fullName, email, role: 'teacher'|'student', sendInvite?: boolean, level? }`. Crea user con password aleatorio, NO crea suscripción. Si `sendInvite=true`, dispara email Resend con link de set-password (token corto en `password_resets`).
+  - `PATCH /api/v1/admin/users/:id` actualiza nombre/level/role.
+  - `POST /api/v1/admin/users/:id/disable` y `/enable`.
+  - `POST /api/v1/admin/users/:id/assign-teacher` body `{ teacherId }` → setea la relación `assignedTeacherId` en el estudiante (campo nuevo en `User`) o entrada en tabla pivote `StudentTeacher`.
+- Suscripciones de estudiantes siguen activándose vía Wompi widget → webhook (`/api/public/wompi/webhook`). Admin nunca activa manualmente la suscripción excepto por el endpoint nuevo `POST /api/v1/admin/users/:id/grant-subscription` (uso operativo, con motivo) — opcional.
+
+## 10. Cierre funcional admin/profesor (release-blocker)
+
+Funcionalidades del documento original que faltaban:
+
+**Admin (nuevo en CRM):**
+
+- Vista detalle de usuario `/admin/users/:id`:
+  - Datos personales + plan + estado de suscripción + historial de pagos.
+  - Clases tomadas/canceladas/pendientes.
+  - Progreso de aprendizaje (módulos + checkpoints).
+  - Respuestas NPS históricas.
+  - Profesor asignado (con selector para reasignar).
+  - Botón "Ver como" (impersonate).
+- En vista profesor `/admin/users/:teacherId`: además de lo anterior, lista de estudiantes asignados con métricas (clases dictadas, validadas, nota promedio de profesor).
+- Endpoint `GET /api/v1/admin/users/:id` que devuelva el agregado.
+
+**Admin asignación profesor↔estudiante:**
+
+- `/admin/assignments`: tabla cruzada con drag-handle o selector simple por fila: "Estudiante → Profesor". Botón "Auto-asignar" que distribuya estudiantes sin profesor entre profes con capacidad.
+- Backend: campo `assignedTeacherId` en `User` (estudiante) + endpoint `GET /api/v1/admin/assignments` y `POST /api/v1/admin/assignments`.
+- Cuando se crea una clase para un estudiante, por defecto se le asigna su `assignedTeacherId`.
+
+**Profesor:**
+
+- `/teacher/students/:studentId` ya existe — añadir: progreso de módulos (read-only), historial completo de clases (con paginación), botón para crear próxima clase con ese estudiante.
+- `/teacher/availability`: editor de slots semanales recurrentes + ausencias puntuales. Backend ya tiene tablas `teacher_availability` y `teacher_absences`; agregar endpoints `GET/PUT /api/v1/teacher/availability` y `POST/DELETE /api/v1/teacher/absences`.
+
+**Conexión backend en todas las vistas:**
+
+- Reemplazar los `readDb()` y `writeDb()` actuales por llamadas API + TanStack Query en: dashboard estudiante, calendario, learning, checkpoint, settings, todas las vistas de profesor y todas las vistas de admin.
+- Hidratación inicial (login → `apiBootstrap()`) ya existe; el siguiente paso es que los componentes lean directo de la API y dejen de depender del store local. El store mock se queda solo como fallback offline (flag `VITE_USE_MOCK`).
+- Crear hooks `useMe`, `useUpcomingClasses`, `useTeacherSchedule`, `useAdminAnalytics`, etc. con queryKeys consistentes.
+
+## Detalles técnicos
+
+```
+storefront/
+  src/styles.css                              # scroll-behavior:smooth, prefers-reduced-motion, focus-visible utility
+  src/routes/__root.tsx                       # JSON-LD Organization, og defaults, manifest, theme-color
+  src/routes/sitemap[.]xml.ts                 # NUEVO
+  public/robots.txt                           # NUEVO
+  src/components/site/Footer.tsx              # quitar Nosotros/404, hash links
+  src/components/site/Navbar.tsx              # focus-visible + hover refinado
+  src/components/site/{Hero,Faq,Pricing,...}  # animaciones entrada + JSON-LD FAQ
+  src/components/app/AppShell.tsx             # fix active matching (end-flag)
+  src/components/app/SatisfactionDialog.tsx   # 5 preguntas + privacidad + bloqueante
+  src/components/app/ImpersonationBanner.tsx  # NUEVO
+  src/routes/_authenticated.tsx               # gate NPS obligatorio + role redirects
+  src/routes/_authenticated/app.tsx           # beforeLoad: solo students
+  src/routes/_authenticated/admin.users.$id.tsx  # NUEVO detalle
+  src/routes/_authenticated/admin.assignments.tsx # NUEVO
+  src/routes/_authenticated/admin.surveys.tsx # NUEVO
+  src/routes/_authenticated/admin.users.new.tsx  # NUEVO (create teacher/student)
+  src/routes/_authenticated/teacher.availability.tsx # NUEVO
+  src/lib/api/endpoints.ts                    # endpoints nuevos
+  src/lib/auth/AuthProvider.tsx               # impersonation state
+  src/lib/hooks/use-*.ts                      # TanStack Query hooks por dominio
+
+backend/
+  prisma/schema.prisma                        # SatisfactionSurvey enriquecida, assignedTeacherId, AuditLog, password_resets
+  prisma/migrations/<timestamp>_phase2/...    # NUEVO migration
+  src/modules/admin/admin.controller.ts       # +users CRUD, impersonate, surveys, assignments
+  src/modules/admin/admin.service.ts
+  src/modules/surveys/surveys.controller.ts   # payload extendido
+  src/modules/teachers/teachers.controller.ts # availability/absences endpoints
+  src/modules/auth/auth.service.ts            # tokens de impersonation
+```
 
 ```text
-src/lib/
-  api/
-    client.ts         ← fetch wrapper con baseURL, JWT, refresh automático en 401
-    auth.ts           ← login/signup/refresh/logout/google
-    plans.ts          ← getPlans()
-    checkout.ts       ← createIntent()
-    subscriptions.ts  ← getMine, cancel, resume
-    classes.ts        ← list, confirm, validate, reschedule, cancel
-    learning.ts       ← modules, lesson progress, checkpoints
-    teachers.ts       ← students, schedule, notes
-    admin.ts          ← analytics, users, payroll, content, notifications
-    surveys.ts        ← submitNps, getPending
-    board.ts          ← list, create, opsSince + socket factory
-  domain/             ← se mantiene SOLO para tipos compartidos y helpers puros
-                        (los repositorios mock se borran)
-  auth/
-    AuthProvider.tsx  ← migra a JWT real (access in memory + refresh in httpOnly… o localStorage por ahora)
-    tokenStore.ts     ← guarda access/refresh, expone listener
-  realtime/
-    useBoardSocket.ts ← hook Socket.IO con auto-reconnect + opsSince catch-up
-  query/
-    queryClient.ts    ← TanStack Query client + queryKeys
+Flujo impersonate
+  Admin ─POST /admin/impersonate/:id─▶ Nest emite tokens scoped al target
+        ◀── cookie sb-impersonator (guarda admin original)
+        ── front cambia AuthProvider, redirige, muestra banner
+  Banner ─POST /admin/impersonate/stop──▶ Nest restaura tokens admin
 ```
 
-### Cliente HTTP (`src/lib/api/client.ts`)
+## Orden de ejecución
 
-- `fetch` wrapper con `VITE_API_URL` como base, JSON in/out, `Authorization: Bearer <access>`.
-- Cola de requests durante refresh: ante un 401 llama `POST /auth/refresh` una sola vez y reintenta.
-- Errores tipados (`ApiError` con `status`, `code`, `message`).
-- Soporta `AbortSignal` para cancelación de TanStack Query.
+1. SEO + accesibilidad + hovers + smooth scroll + footer + wordings (visual, sin backend).
+2. Fix sidebar active + redirect por rol + admin no ve `/app`.
+3. Encuesta NPS (schema + backend + dialog bloqueante + admin tab).
+4. Admin: crear usuarios + asignaciones profesor↔estudiante + detalle de usuario.
+5. Impersonation.
+6. Teacher availability + reemplazo final de mocks por API en todas las vistas.
 
-### Auth real
-
-- `AuthProvider` mantiene `user` y `accessToken` en memoria; `refreshToken` en `localStorage` (decisión documentada como punto a endurecer a httpOnly cookie cuando se migre a Next).
-- Al montar: si hay refresh → `POST /auth/refresh` → setea user con `/me`.
-- `signIn/signUp` llaman backend; el formulario de login mantiene el helper "rellenar credenciales" apuntando a los seeds (`estudiante@freakn.dev` / `profe@freakn.dev` / `admin@freakn.dev`).
-- Google: botón redirige a `${VITE_API_URL}/auth/google` (el backend ya devuelve al storefront con tokens en query → handler `/auth/callback` los persiste y navega).
-
-### TanStack Query
-
-Adoptar el patrón canónico TanStack: `ensureQueryData` en loaders + `useSuspenseQuery` en componentes. Migración por ruta sin tocar UI:
-
-- `/app` (dashboard): `classes.upcoming`, `subscriptions.mine`, `surveys.pending`, `learning.progress`.
-- `/app/calendar`: `classes.list`.
-- `/app/learning` + `/app/learning/$moduleId`: `learning.modules`, `learning.module(id)`.
-- `/app/checkpoint/$id`: `learning.checkpoint(id)` + mutation `submit`.
-- `/app/settings`: `users.me`, `subscriptions.mine`.
-- `/teacher`, `/teacher/schedule`, `/teacher/students`, `/teacher/students/$id`: endpoints `teacher/*`.
-- `/admin/*`: endpoints `admin/*`.
-- `/checkout/$planId` y `/checkout/return`: `plans.get`, `checkout.createIntent`, `subscriptions.mine`.
-
-### Realtime board
-
-- Nueva ruta `/_authenticated/app.board.$boardId.tsx` (sólo si quieres surface ya en UI; mínimo: deja el hook listo).
-- `useBoardSocket(boardId)`: conecta a `VITE_WS_URL/boards` con `auth: { token }`, hace `join`, escucha `op`, `presence`, `version`, y al reconectar llama `GET /boards/:id/ops?since=<lastSeq>` para catch-up.
-- Tipos compartidos `BoardOp`, `BoardPresence` en `src/lib/domain/board.ts`.
-
-## Cambios en backend (gaps de la sección anterior)
-
-Agregar en los módulos existentes:
-
-- `classes.controller.ts`: `GET /classes/upcoming`, `GET /classes/today`.
-- `teachers.controller.ts`: `GET /teacher/schedule?status=`.
-- `admin.controller.ts`: `GET /admin/content`, `GET /admin/notifications`, `POST /admin/notifications/run`, `GET /admin/payroll/export.csv`.
-- `subscriptions.controller.ts`: `POST /subscriptions/resume`.
-- `surveys.controller.ts`: `GET /surveys/pending`.
-- `learning.controller.ts`: `GET /learning/progress`, `GET /learning/checkpoints/:id`.
-- `board.gateway.ts`: verificar handshake JWT (`socket.handshake.auth.token` → `JwtService.verify`).
-- Seed: agregar módulos/lecciones/checkpoints demo y un board demo para `estudiante@freakn.dev` (hoy `prisma/seed.ts` solo trae users/plans/sub).
-
-## Variables de entorno
-
-Confirmar/agregar a `storefront/.env.example`:
-
-```env
-VITE_API_URL=http://localhost:3000/api/v1
-VITE_WS_URL=http://localhost:3000
-VITE_WOMPI_PUBLIC_KEY=pub_test_xxx
-VITE_PUBLIC_SITE_URL=http://localhost:5173
-```
-
-Backend ya tiene `.env.example` completo; añadir `FRONTEND_URL` para el callback de Google.
-
-## Orden de implementación
-
-1. **Infra cliente**: `api/client.ts`, `tokenStore.ts`, `queryClient.ts`, tipos.
-2. **Auth real** + `AuthProvider` + rutas `login/signup/forgot/reset/auth-callback`.
-3. **Plans + Checkout + Subscriptions** end-to-end (incluye `return` page leyendo el `payment_intent` real del backend).
-4. **Student** (dashboard, calendar, learning, checkpoint, settings, NPS).
-5. **Teacher** (today, schedule, students, notes).
-6. **Admin** (analytics, users, content, payroll, notifications).
-7. **Backend gaps** (en paralelo a 4–6 según se necesiten).
-8. **Realtime board** (hook + ruta mínima de prueba).
-9. **Limpieza**: borrar `src/lib/domain/repository.ts`, `seed.ts` (mock), `notifications.ts` (mock transport) y los servicios mock. Mantener `types.ts`, `plans.ts` (catálogo display), `notification-templates.ts` (solo si lo usa el admin para preview).
-10. **Docs**: actualizar `docs/migration.md` y `docs/AGENT_CONTEXT.md` con el contrato HTTP final y borrar referencias al mock.
-
-## Notas técnicas
-
-- TanStack Start corre en Worker. Los `fetch` van del browser al backend Nest en `localhost:3000` (dev) o Railway (prod). No usamos server functions para proxy — el cliente habla directo al Nest (CORS ya configurado en `main.ts`).
-- Rutas `_authenticated/*` siguen con el gate del router; la diferencia es que `context.auth.isAuthenticated` ahora se hidrata desde el refresh real.
-- Loaders de rutas protegidas solo corren tras el gate, así que pueden usar `ensureQueryData` sin miedo.
-- Mantengo el botón "Simular pago aprobado" en `/checkout/$planId` SOLO si `VITE_WOMPI_PUBLIC_KEY === "pub_test_placeholder"`; con key real desaparece.
-
-## Entregable
-
-Storefront 100% conectado al backend (sin mocks de datos), endpoints faltantes implementados en Nest, board realtime funcional con catch-up, seeds ricos para demo, y `.env.example` listo. La app queda lista para `bun run dev` (storefront) + `bun run backend:dev` (nest + postgres + redis vía docker-compose).
+Pregunta única antes de implementar: ¿avanzo en este orden o priorizas alguna sección (p. ej. la NPS o la impersonation) primero?

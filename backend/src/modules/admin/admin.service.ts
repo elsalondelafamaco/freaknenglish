@@ -95,4 +95,27 @@ export class AdminService {
     await this.automationsQueue.add('tick-daily', { manual: true }, { removeOnComplete: true })
     return { ok: true, enqueued: ['tick-5m', 'tick-daily'] }
   }
+
+  async surveys(filter?: 'promoters' | 'detractors' | 'all') {
+    const where =
+      filter === 'promoters'
+        ? { score: { gte: 9 } }
+        : filter === 'detractors'
+          ? { score: { lte: 6 } }
+          : {}
+    const rows = await this.prisma.satisfactionSurvey.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+      include: {
+        user: {
+          select: { id: true, fullName: true, email: true, role: true },
+        },
+      },
+    })
+    const promoters = rows.filter((r) => r.score >= 9).length
+    const detractors = rows.filter((r) => r.score <= 6).length
+    const nps = rows.length ? Math.round(((promoters - detractors) / rows.length) * 100) : null
+    return { rows, totals: { count: rows.length, promoters, detractors, nps } }
+  }
 }

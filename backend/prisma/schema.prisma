@@ -340,6 +340,9 @@ model SatisfactionSurvey {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
   score     Int      // 0..10 NPS
+  teacherScore  Int?   @map("teacher_score")  // 1..5
+  contentScore  Int?   @map("content_score")  // 1..5
+  platformScore Int?   @map("platform_score") // 1..5
   comment   String?
   period    String   // YYYY-MM
   createdAt DateTime @default(now()) @map("created_at")

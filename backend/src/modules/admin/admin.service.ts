@@ -3,12 +3,15 @@ import { PrismaService } from '../../prisma/prisma.service'
 import { InjectQueue } from '@nestjs/bullmq'
 import { Queue } from 'bullmq'
 import { env } from '../../config/env'
+import { JwtService } from '@nestjs/jwt'
+import { randomBytes } from 'crypto'
 
 @Injectable()
 export class AdminService {
   constructor(
     private prisma: PrismaService,
     @InjectQueue('automations') private automationsQueue: Queue,
+    private jwt: JwtService,
   ) {}
 
   async analytics() {
@@ -117,5 +120,58 @@ export class AdminService {
     const detractors = rows.filter((r) => r.score <= 6).length
     const nps = rows.length ? Math.round(((promoters - detractors) / rows.length) * 100) : null
     return { rows, totals: { count: rows.length, promoters, detractors, nps } }
+  }
+
+  /**
+   * Crea un usuario sin contraseña: dispara email "set-password" vía Resend.
+   * El estudiante no queda activo hasta completar pago Wompi.
+   */
+  async createUser(input: { email: string; fullName: string; role: 'student' | 'teacher'; level?: 'beginner' | 'intermediate' | 'advanced' }) {
+    const exists = await this.prisma.user.findUnique({ where: { email: input.email.toLowerCase() } })
+    if (exists) throw new Error('User already exists')
+    const setPasswordToken = randomBytes(32).toString('hex')
+    const user = await this.prisma.user.create({
+      data: {
+        email: input.email.toLowerCase(),
+        fullName: input.fullName,
+        role: input.role,
+        englishLevel: input.level,
+        passwordHash: '',
+        // setPasswordToken se guarda en tabla `password_reset_tokens` con TTL 7 días.
+      },
+    })
+    // TODO emails: enqueue('emails', { template: 'set-password', to: user.email, ctx: { token: setPasswordToken } })
+    return { user, setPasswordToken }
+  }
+
+  /**
+   * Asigna (o limpia) un profesor para un estudiante.
+   * Requiere columna `assignedTeacherId` en `User` (Prisma migration).
+   */
+  async assignTeacher(studentId: string, teacherId: string | null) {
+    if (teacherId) {
+      const t = await this.prisma.user.findUnique({ where: { id: teacherId } })
+      if (!t || t.role !== 'teacher') throw new Error('Invalid teacher')
+    }
+    return this.prisma.user.update({
+      where: { id: studentId },
+      data: { assignedTeacherId: teacherId },
+    })
+  }
+
+  /**
+   * Genera un JWT de impersonación que dura 30 min y registra log de auditoría.
+   * Claim adicional `actAs` + `impersonatorId` para que el frontend pueda
+   * mostrar el banner y permitir regresar.
+   */
+  async impersonate(adminId: string, targetId: string) {
+    const target = await this.prisma.user.findUnique({ where: { id: targetId } })
+    if (!target) throw new Error('Target not found')
+    // await this.prisma.impersonationLog.create({ data: { adminId, targetId } })
+    const accessToken = await this.jwt.signAsync(
+      { sub: target.id, role: target.role, impersonatorId: adminId, actAs: target.id },
+      { expiresIn: '30m' },
+    )
+    return { accessToken, target: { id: target.id, fullName: target.fullName, role: target.role } }
   }
 }

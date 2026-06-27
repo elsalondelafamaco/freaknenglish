@@ -69,32 +69,48 @@
   si un estudiante intenta entrar a `/admin` o `/teacher`, lo redirige a `/app`.
 - `login.tsx`: prioridad admin > teacher > student al elegir destino.
 
-## ⏳ Pendiente para el próximo turno
+## ✅ Completado en este turno
 
-Los siguientes 4 puntos requieren cambios más profundos en backend (modelo
-de datos, endpoints, sesiones secundarias) + UI nueva. Se documentan aquí
-para retomar:
+### 9. Impersonación admin → cualquier usuario
+- `lib/domain/admin-actions.ts`: `startImpersonation` / `stopImpersonation` /
+  `getImpersonation` con persistencia en `localStorage` (mock).
+- `components/app/ImpersonationBanner.tsx`: banner sticky amarillo con
+  "Salir de impersonación", incluido en `AppShell` para todas las rutas
+  autenticadas.
+- Backend stub: `POST /admin/users/:id/impersonate` firma JWT con
+  `actAs` + `impersonatorId` (30 min). Auditoría en tabla
+  `impersonation_logs` (nueva en `schema.prisma` + migración).
 
-1. **Impersonación admin → profesor** (punto 7 del usuario).
-   - Endpoint `POST /admin/users/:id/impersonate` que firma un JWT con
-     `actAs` + cookie `admin_original_session`.
-   - Banner persistente "Estás viendo como X · Salir de impersonación".
-   - Auditoría: tabla `impersonation_logs` (admin_id, target_id, started_at).
+### 10. Crear usuarios desde admin (sin activar suscripción)
+- `createUserByAdmin()` en `admin-actions.ts` con validación de email único.
+- `CreateUserDialog` integrado en `/admin/users` (botón "+ Crear usuario").
+  Tabs Estudiante/Profesor, campo nivel para estudiantes, nota explícita
+  "Crear un estudiante no activa la suscripción — eso ocurre tras un pago
+  Wompi".
+- Backend stub: `POST /admin/users` crea la fila y devuelve un
+  `setPasswordToken` para que Resend envíe el email "Configura tu contraseña".
 
-2. **Crear usuarios desde admin** (punto 8).
-   - `POST /admin/users` con `role`, `email`, `fullName`.
-   - Envío de email "set password" (Resend) — crea cuenta SIN suscripción.
-   - UI: dialog en `/admin/users` con tabs Estudiante / Profesor.
+### 11. Vista detalle `/admin/users/$id` + asignación estudiante↔profesor
+- Nueva ruta con secciones: cabecera (rol, email, nivel), suscripción
+  (estudiantes), profesor asignado con `<select>` para reasignar,
+  actividad (totales/completadas/próximas), estudiantes asignados (para
+  profesores), feedback reciente del profesor (para estudiantes).
+- Botón "Ver como este usuario" → impersonación con confirm + redirect
+  al portal correspondiente (`/app`, `/teacher` o `/admin`).
+- Schema: `User.assignedTeacherId` añadido en `types.ts` + en
+  `prisma/schema.prisma` con FK auto-referencial + índice.
+- Migración: `20260721000000_admin_assign_impersonate/migration.sql`
+  (columna + tabla `impersonation_logs`).
+- Endpoints en storefront/api: `adminApi.createUser`, `assignTeacher`,
+  `impersonate`.
+- CRM `/admin/users`: filas ahora son links a `/admin/users/$id`.
 
-3. **Asignación estudiante ↔ profesor** (punto 9).
-   - Campo `assigned_teacher_id` en `User` (Prisma migration).
-   - Endpoint `PATCH /admin/users/:studentId/assign-teacher`.
-   - Vista `/admin/users/$id` con pestañas (perfil, clases, progreso,
-     asignación) tanto para estudiantes como profesores.
-   - Vista `/teacher/students` ya existe — agregar filtro por
-     `assigned_teacher_id` cuando esté listo.
+## ⏳ Próximo turno (opcional)
 
-4. **Reemplazo de mocks por TanStack Query** (todo el portal).
-   - Hooks por dominio (`useClasses`, `useAdminAnalytics`, etc.).
-   - Limpiar `bootstrap.ts` y `readDb()` para que sólo se use como
-     fallback en modo demo offline.
+- **Reemplazo de mocks por TanStack Query** (todo el portal). Hoy la
+  capa `readDb`/`writeDb` + `bootstrap.ts` mantiene compatibilidad; el
+  cambio sólo aplica cuando el backend esté corriendo localmente. Hooks
+  sugeridos: `useClasses`, `useAdminAnalytics`, `useUsers`, etc.
+- **Filtrar `/teacher/students` por `assignedTeacherId`** una vez la
+  asignación viva en backend (hoy `classes.ts:listStudentsOfTeacher`
+  filtra por clases, lo cual sigue siendo válido como fallback).

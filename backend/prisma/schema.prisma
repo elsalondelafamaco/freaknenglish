@@ -65,6 +65,7 @@ model User {
   avatarUrl       String?       @map("avatar_url")
   googleSub       String?       @unique @map("google_sub")
   emailVerifiedAt DateTime?     @map("email_verified_at")
+  assignedTeacherId String?     @map("assigned_teacher_id")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
@@ -82,6 +83,11 @@ model User {
   availability     TeacherAvailability[]
   absences         TeacherAbsence[]
   boards           BoardMember[]
+
+  assignedTeacher  User?         @relation("StudentTeacher", fields: [assignedTeacherId], references: [id], onDelete: SetNull)
+  assignedStudents User[]        @relation("StudentTeacher")
+  impersonationLogs ImpersonationLog[] @relation("ImpersonationAdmin")
+  impersonatedBy   ImpersonationLog[] @relation("ImpersonationTarget")
 
   @@map("users")
 }
@@ -445,4 +451,22 @@ model BoardOp {
   @@unique([boardId, clientOpId])
   @@index([boardId, createdAt])
   @@map("board_ops")
+}
+
+/// Auditoría de impersonación admin → usuario.
+model ImpersonationLog {
+  id          String    @id @default(uuid())
+  adminId     String    @map("admin_id")
+  targetId    String    @map("target_id")
+  startedAt   DateTime  @default(now()) @map("started_at")
+  endedAt     DateTime? @map("ended_at")
+  ip          String?
+  userAgent   String?   @map("user_agent")
+
+  admin       User      @relation("ImpersonationAdmin",  fields: [adminId],  references: [id])
+  target      User      @relation("ImpersonationTarget", fields: [targetId], references: [id])
+
+  @@index([adminId, startedAt])
+  @@index([targetId, startedAt])
+  @@map("impersonation_logs")
 }

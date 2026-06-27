@@ -117,6 +117,14 @@ export const adminApi = {
   notifications: (status?: "queued" | "sent" | "failed") =>
     apiGet<any[]>("/admin/notifications", status ? { status } : undefined),
   runAutomations: () => apiPost<{ ok: true }>("/admin/notifications/run"),
+  createUser: (body: { email: string; fullName: string; role: "student" | "teacher"; level?: "beginner" | "intermediate" | "advanced" }) =>
+    apiPost<{ user: User; setPasswordToken: string }>("/admin/users", body),
+  assignTeacher: (studentId: string, teacherId: string | null) =>
+    apiPatch<User>(`/admin/users/${studentId}/assign-teacher`, { teacherId }),
+  impersonate: (userId: string) =>
+    apiPost<{ accessToken: string; target: { id: string; fullName: string; role: string } }>(
+      `/admin/users/${userId}/impersonate`,
+    ),
 };
 
 // ─── Surveys ───────────────────────────────────────────────────────────

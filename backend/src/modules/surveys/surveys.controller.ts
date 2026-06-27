@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator'
@@ -19,5 +19,15 @@ export class SurveysController {
       update: { score: body.score, comment: body.comment },
       create: { userId: u.id, score: body.score, comment: body.comment, period },
     })
+  }
+
+  /** @endpoint GET /api/v1/surveys/pending  → { pending: boolean, period: string } */
+  @Get('pending')
+  async pending(@CurrentUser() u: AuthUser) {
+    const period = new Date().toISOString().slice(0, 7)
+    const existing = await this.prisma.satisfactionSurvey.findUnique({
+      where: { userId_period: { userId: u.id, period } },
+    })
+    return { pending: !existing, period }
   }
 }

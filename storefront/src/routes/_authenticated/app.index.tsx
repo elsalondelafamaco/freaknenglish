@@ -17,7 +17,7 @@ import {
   todaysClassFor,
 } from "@/lib/domain/classes";
 import { levelProgress } from "@/lib/domain/learning";
-import { hasAnsweredThisMonth } from "@/lib/domain/survey";
+import { isSurveyDue } from "@/lib/domain/survey";
 import { runAutomations } from "@/lib/domain/notifications";
 
 export const Route = createFileRoute("/_authenticated/app/")({
@@ -40,8 +40,7 @@ function DashboardPage() {
   const { user } = useAuth();
   const firstName = user?.fullName.split(" ")[0] ?? "estudiante";
 
-  // Trigger lazy de automaciones (Fase 7). En prod esto vive en un cron
-  // server-side (ver docs/backend-jobs.md → class-reminder-1h).
+  // Lanza las automaciones pendientes (recordatorios, NPS, etc.).
   useEffect(() => {
     void runAutomations();
   }, []);
@@ -65,8 +64,8 @@ function DashboardPage() {
   useEffect(() => {
     if (!user) return;
     if (!user.roles.includes("student")) return;
-    if (!hasAnsweredThisMonth(user.id)) {
-      const t = setTimeout(() => setShowSurvey(true), 1200);
+    if (isSurveyDue(user.id)) {
+      const t = setTimeout(() => setShowSurvey(true), 600);
       return () => clearTimeout(t);
     }
   }, [user]);
@@ -210,7 +209,10 @@ function DashboardPage() {
       </section>
 
       {showSurvey ? (
-        <SatisfactionDialog userId={user.id} onClose={() => setShowSurvey(false)} />
+        <SatisfactionDialog
+          userId={user.id}
+          onSubmitted={() => setShowSurvey(false)}
+        />
       ) : null}
     </div>
   );

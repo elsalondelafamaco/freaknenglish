@@ -21,7 +21,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { SurveysModule } from './modules/surveys/surveys.module'
 import { BoardModule } from './modules/board/board.module'
 import { HealthModule } from './modules/health/health.module'
-import { JobsModule } from './jobs/jobs.module'
+import { JobsModule } from './modules/jobs/jobs.module'
 
 @Module({
   imports: [

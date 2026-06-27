@@ -3,12 +3,15 @@ import { PrismaService } from '../../prisma/prisma.service'
 import { InjectQueue } from '@nestjs/bullmq'
 import { Queue } from 'bullmq'
 import { env } from '../../config/env'
+import { JwtService } from '@nestjs/jwt'
+import { randomBytes } from 'crypto'
 
 @Injectable()
 export class AdminService {
   constructor(
     private prisma: PrismaService,
     @InjectQueue('automations') private automationsQueue: Queue,
+    private jwt: JwtService,
   ) {}
 
   async analytics() {

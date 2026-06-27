@@ -1,5 +1,6 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common'
+import { Controller, Get, Header, Post, Query, Res, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
+import type { Response } from 'express'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { RolesGuard } from '../../common/guards/roles.guard'
 import { Roles } from '../../common/decorators/roles.decorator'
@@ -24,4 +25,26 @@ export class AdminController {
   /** @endpoint GET /api/v1/admin/payroll?period=YYYY-MM */
   @Get('payroll')
   payroll(@Query('period') period: string) { return this.svc.payroll(period) }
+
+  /** @endpoint GET /api/v1/admin/payroll/export.csv?period=YYYY-MM */
+  @Get('payroll/export.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  async payrollCsv(@Query('period') period: string, @Res({ passthrough: true }) res: Response) {
+    res.setHeader('Content-Disposition', `attachment; filename="payroll-${period}.csv"`)
+    return this.svc.payrollCsv(period)
+  }
+
+  /** @endpoint GET /api/v1/admin/content  (CMS read-only: modules + lessons) */
+  @Get('content')
+  content() { return this.svc.content() }
+
+  /** @endpoint GET /api/v1/admin/notifications?status=queued|sent|failed */
+  @Get('notifications')
+  notifications(@Query('status') status?: 'queued' | 'sent' | 'failed') {
+    return this.svc.notifications(status)
+  }
+
+  /** @endpoint POST /api/v1/admin/notifications/run  (manual automations trigger) */
+  @Post('notifications/run')
+  runAutomations() { return this.svc.runAutomationsManually() }
 }

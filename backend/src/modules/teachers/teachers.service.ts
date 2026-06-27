@@ -34,4 +34,18 @@ export class TeachersService {
   addNote(teacherId: string, classId: string, rating: number, notes: string) {
     return this.prisma.classNote.create({ data: { teacherId, classId, rating, notes } })
   }
+
+  schedule(teacherId: string, status?: 'upcoming' | 'past' | 'pending') {
+    const now = new Date()
+    const where: any = { teacherId }
+    if (status === 'upcoming') Object.assign(where, { startsAt: { gte: now }, status: 'scheduled' })
+    else if (status === 'past') Object.assign(where, { startsAt: { lt: now } })
+    else if (status === 'pending') Object.assign(where, { status: 'scheduled', startsAt: { lt: now } })
+    return this.prisma.class.findMany({
+      where,
+      orderBy: { startsAt: status === 'past' ? 'desc' : 'asc' },
+      include: { student: { select: { id: true, fullName: true, englishLevel: true } } },
+      take: 200,
+    })
+  }
 }

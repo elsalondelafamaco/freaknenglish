@@ -17,6 +17,14 @@ export class ClassesController {
     return u.role === 'teacher' ? this.svc.listForTeacher(u.id) : this.svc.listForStudent(u.id)
   }
 
+  /** @endpoint GET /api/v1/classes/upcoming  (student dashboard) */
+  @Get('upcoming')
+  upcoming(@CurrentUser() u: AuthUser) { return this.svc.upcoming(u.id) }
+
+  /** @endpoint GET /api/v1/classes/today  (teacher dashboard) */
+  @Get('today')
+  today(@CurrentUser() u: AuthUser) { return this.svc.todayForTeacher(u.id) }
+
   /** @endpoint POST /api/v1/classes/:id/confirm  (student) */
   @Post(':id/confirm')
   confirm(@Param('id') id: string, @CurrentUser() u: AuthUser) {

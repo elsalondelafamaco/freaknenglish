@@ -1,223 +1,128 @@
+## Objetivo
 
-# Reestructura a monorepo: `storefront/` + `backend/`
+Conectar el `storefront/` al backend Nest reemplazando los mocks de `src/lib/domain/*` por un cliente HTTP tipado, manteniendo el contrato actual de hooks/funciones para no reescribir las pantallas. Cerrar los gaps de endpoints que detecté contra los call sites del front.
 
-## 1. Layout del repo
+## Gaps detectados (endpoints o lógica que faltan en backend)
 
-```text
-freakn/
-├── storefront/                  # todo el front actual (lo que hoy está en /)
-│   ├── src/
-│   ├── public/
-│   ├── package.json
-│   ├── vite.config.ts
-│   └── .env.example             # VITE_API_URL, VITE_WS_URL, VITE_WOMPI_PUBLIC_KEY...
-├── backend/                     # NestJS nuevo
-│   ├── src/
-│   ├── prisma/
-│   ├── test/
-│   ├── Dockerfile
-│   ├── railway.json
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── nest-cli.json
-│   └── .env.example
-├── docs/                        # los docs existentes se quedan a raíz
-│   ├── AGENT_CONTEXT.md
-│   ├── migration.md             # se actualiza: "migración completada parcialmente"
-│   ├── data-model.md
-│   ├── backend-jobs.md
-│   ├── pwa-and-stores.md
-│   └── deploy-railway.md        # NUEVO
-├── package.json                 # workspace raíz (bun workspaces) opcional
-├── .gitignore
-└── README.md                    # NUEVO: explica monorepo y cómo correr cada parte
-```
+Comparando los controllers actuales contra lo que el storefront ya consume:
 
-Lovable seguirá corriendo **solo `storefront/`** (se ajusta `.lovable/project.json` o el root del dev server). Tú trabajas `backend/` localmente.
+1. **Auth** — falta `GET /auth/me` ergonómico (hoy `GET /me`, está bien, solo documentar); falta `POST /auth/google/token` para intercambiar `id_token` del botón Google en el front sin pasar por redirect del backend (opcional, podemos usar solo el flujo redirect).
+2. **Classes** — falta `GET /classes/upcoming` (próxima clase del dashboard) y `GET /classes/today` (profesor). Hoy el front filtra en cliente; mejor exponerlo.
+3. **Teachers** — falta `GET /teacher/schedule?status=` con filtros (upcoming/past/pending) que ya usa `teacher.schedule.tsx`.
+4. **Admin** — falta `GET /admin/content` (CMS read-only de módulos/lecciones) y `GET /admin/notifications` + `POST /admin/notifications/run` (panel de automatizaciones) y `GET /admin/payroll/export.csv`.
+5. **Subscriptions** — falta `POST /subscriptions/resume` y exponer `currentPeriodEnd` en `GET /subscriptions/mine` (ya está, verificar shape).
+6. **Surveys** — falta `GET /surveys/pending` para que el dashboard sepa si mostrar el dialog NPS del mes.
+7. **Learning** — falta `GET /learning/progress` (resumen por nivel para el dashboard) y `GET /learning/checkpoints/:id` (cargar el examen).
+8. **Plans** — `GET /plans` está ✓.
+9. **Board** — endpoints ya existen; falta solo el handshake JWT en el gateway (verificar `board.gateway.ts`).
+10. **Health** — `GET /health` ✓.
 
----
-
-## 2. Storefront (mover, no reescribir)
-
-- Mover `src/`, `public/`, `vite.config.ts`, `tsconfig.json`, `components.json`, `bunfig.toml`, `eslint.config.js`, `.prettierrc` → `storefront/`.
-- Crear `storefront/.env.example` con:
-  ```text
-  VITE_API_URL=http://localhost:3000
-  VITE_WS_URL=ws://localhost:3000
-  VITE_WOMPI_PUBLIC_KEY=
-  VITE_PUBLIC_SITE_URL=http://localhost:5173
-  ```
-- Crear `storefront/src/lib/api/client.ts` — wrapper fetch que apunta a `VITE_API_URL` con bearer JWT desde `localStorage` (sustituirá progresivamente al mock).
-- Crear `storefront/src/lib/realtime/socket.ts` — cliente `socket.io-client` para el board en tiempo real (sin conectarse aún; queda el módulo listo).
-- **No se eliminan los mocks** (`src/lib/domain/*`). Quedan como fallback para que la UI siga funcionando hasta que conectes Nest. Documentado en `storefront/README.md`.
-- Ajustar `.lovable/project.json` para que el dev server arranque en `storefront/`.
-
----
-
-## 3. Backend (NestJS scaffold completo)
-
-### 3.1 Stack
-
-- **NestJS 10** (TS, decoradores).
-- **Prisma** como ORM (schema portable, migraciones nativas, tipos auto-generados).
-- **PostgreSQL 16** (Railway add-on).
-- **Redis** (Railway add-on) — para BullMQ y adapter de Socket.IO.
-- **Socket.IO** vía `@nestjs/websockets` con `@socket.io/redis-adapter` para escalado horizontal.
-- **BullMQ** vía `@nestjs/bullmq` para cron y jobs (reminders, abandoned cart, NPS, renovación).
-- **JWT** vía `@nestjs/jwt` + `passport-jwt`. Auth propia (no Supabase). Google OAuth con `passport-google-oauth20`.
-- **Resend** vía SDK oficial.
-- **Wompi** webhook con verificación HMAC.
-- **Zod** para validación de DTOs (con `nestjs-zod`) — mismos schemas que el front podrá importar luego si se quiere monorepo de tipos.
-- **Pino** para logs estructurados.
-- **Swagger** (`@nestjs/swagger`) → `GET /api/docs`.
-
-### 3.2 Estructura de módulos
+## Arquitectura de integración en el storefront
 
 ```text
-backend/src/
-├── main.ts
-├── app.module.ts
-├── config/                      # ConfigModule, validación con Zod
-├── prisma/
-│   └── prisma.service.ts
-├── common/                      # filters, guards globales, interceptors, pipes
-│   ├── guards/jwt-auth.guard.ts
-│   ├── guards/roles.guard.ts
-│   ├── decorators/roles.decorator.ts
-│   └── decorators/current-user.decorator.ts
-├── modules/
-│   ├── auth/                    # signup, login, refresh, google, forgot/reset
-│   ├── users/
-│   ├── plans/                   # catálogo (mismo que storefront/plans.ts)
-│   ├── subscriptions/           # estado, periodo, cancel
-│   ├── checkout/                # crea PaymentIntent, devuelve datos para widget Wompi
-│   ├── wompi/                   # webhook /api/public/wompi/webhook (HMAC)
-│   ├── classes/                 # CRUD, attendance, reschedule (regla 12h)
-│   ├── learning/                # modules, lessons, progress, checkpoints
-│   ├── teachers/                # availability, students, notes, rating
-│   ├── admin/                   # analytics (MRR, NPS), payroll, users mgmt
-│   ├── notifications/           # NotificationService + ResendTransport
-│   ├── surveys/                 # NPS / satisfaction
-│   ├── board/                   # ★ realtime board (Socket.IO Gateway)
-│   └── jobs/                    # BullMQ producers/consumers
-└── jobs/processors/             # reminder-24h, reminder-1h, abandoned-cart, nps-monthly, renewal-3d
+src/lib/
+  api/
+    client.ts         ← fetch wrapper con baseURL, JWT, refresh automático en 401
+    auth.ts           ← login/signup/refresh/logout/google
+    plans.ts          ← getPlans()
+    checkout.ts       ← createIntent()
+    subscriptions.ts  ← getMine, cancel, resume
+    classes.ts        ← list, confirm, validate, reschedule, cancel
+    learning.ts       ← modules, lesson progress, checkpoints
+    teachers.ts       ← students, schedule, notes
+    admin.ts          ← analytics, users, payroll, content, notifications
+    surveys.ts        ← submitNps, getPending
+    board.ts          ← list, create, opsSince + socket factory
+  domain/             ← se mantiene SOLO para tipos compartidos y helpers puros
+                        (los repositorios mock se borran)
+  auth/
+    AuthProvider.tsx  ← migra a JWT real (access in memory + refresh in httpOnly… o localStorage por ahora)
+    tokenStore.ts     ← guarda access/refresh, expone listener
+  realtime/
+    useBoardSocket.ts ← hook Socket.IO con auto-reconnect + opsSince catch-up
+  query/
+    queryClient.ts    ← TanStack Query client + queryKeys
 ```
 
-### 3.3 Endpoints (REST + WS)
+### Cliente HTTP (`src/lib/api/client.ts`)
 
-REST espejo de los `src/lib/domain/*` actuales del storefront. Todos prefijados `/api/v1`. Públicos en `/api/v1/public/*`:
+- `fetch` wrapper con `VITE_API_URL` como base, JSON in/out, `Authorization: Bearer <access>`.
+- Cola de requests durante refresh: ante un 401 llama `POST /auth/refresh` una sola vez y reintenta.
+- Errores tipados (`ApiError` con `status`, `code`, `message`).
+- Soporta `AbortSignal` para cancelación de TanStack Query.
 
-- `POST /api/v1/auth/signup | /login | /refresh | /logout | /forgot | /reset`
-- `GET  /api/v1/auth/google` / `GET /api/v1/auth/google/callback`
-- `GET  /api/v1/me`, `PATCH /api/v1/me`
-- `GET  /api/v1/plans` (público)
-- `POST /api/v1/checkout/intents` → `{ reference, amountInCents, signature }` para widget
-- `POST /api/v1/public/wompi/webhook` (HMAC verify, idempotente por `event.id`)
-- `GET/POST /api/v1/classes`, `POST /api/v1/classes/:id/attendance`, `POST /api/v1/classes/:id/reschedule`
-- `GET /api/v1/learning/modules`, `GET .../:id`, `POST .../progress`, `POST /api/v1/checkpoints/:id/submit`
-- `GET/POST /api/v1/teacher/...`, `GET /api/v1/teacher/students/:id/notes`
-- `GET /api/v1/admin/analytics`, `GET /api/v1/admin/payroll`, `GET /api/v1/admin/users`
-- `POST /api/v1/surveys/nps`
+### Auth real
 
-WebSocket namespace `/board` (JWT en handshake):
-- `board:join { boardId }`
-- `board:cursor`, `board:stroke`, `board:object:add|update|delete`
-- Broadcast a la sala con Redis adapter.
+- `AuthProvider` mantiene `user` y `accessToken` en memoria; `refreshToken` en `localStorage` (decisión documentada como punto a endurecer a httpOnly cookie cuando se migre a Next).
+- Al montar: si hay refresh → `POST /auth/refresh` → setea user con `/me`.
+- `signIn/signUp` llaman backend; el formulario de login mantiene el helper "rellenar credenciales" apuntando a los seeds (`estudiante@freakn.dev` / `profe@freakn.dev` / `admin@freakn.dev`).
+- Google: botón redirige a `${VITE_API_URL}/auth/google` (el backend ya devuelve al storefront con tokens en query → handler `/auth/callback` los persiste y navega).
 
-Todos los controllers llevan JSDoc del endpoint, DTO con Zod, guard de rol y `@ApiOperation` para Swagger.
+### TanStack Query
 
-### 3.4 Prisma schema (desde `docs/data-model.md`)
+Adoptar el patrón canónico TanStack: `ensureQueryData` en loaders + `useSuspenseQuery` en componentes. Migración por ruta sin tocar UI:
 
-Traducir 1:1 las tablas ya documentadas a `prisma/schema.prisma`:
-- `users`, `user_roles` (enum `AppRole`)
-- `subscriptions`, `plans` (seed)
-- `payment_intents`, `payment_events`
-- `classes`, `class_notes`, `teacher_availability`, `teacher_absences`
-- `modules`, `lessons`, `lesson_progress`, `checkpoints`, `checkpoint_attempts`
-- `satisfaction_surveys`
-- `notifications` (con `dedupe_key` único)
-- `app_settings`, `payroll_runs`
-- `boards`, `board_objects`, `board_snapshots` ★ (nuevo, para el realtime board)
+- `/app` (dashboard): `classes.upcoming`, `subscriptions.mine`, `surveys.pending`, `learning.progress`.
+- `/app/calendar`: `classes.list`.
+- `/app/learning` + `/app/learning/$moduleId`: `learning.modules`, `learning.module(id)`.
+- `/app/checkpoint/$id`: `learning.checkpoint(id)` + mutation `submit`.
+- `/app/settings`: `users.me`, `subscriptions.mine`.
+- `/teacher`, `/teacher/schedule`, `/teacher/students`, `/teacher/students/$id`: endpoints `teacher/*`.
+- `/admin/*`: endpoints `admin/*`.
+- `/checkout/$planId` y `/checkout/return`: `plans.get`, `checkout.createIntent`, `subscriptions.mine`.
 
-Migración inicial: `prisma migrate dev --name init`. Seeds en `prisma/seed.ts` replicando `src/lib/domain/seed.ts` (los 3 usuarios demo).
+### Realtime board
 
-### 3.5 Jobs (BullMQ)
+- Nueva ruta `/_authenticated/app.board.$boardId.tsx` (sólo si quieres surface ya en UI; mínimo: deja el hook listo).
+- `useBoardSocket(boardId)`: conecta a `VITE_WS_URL/boards` con `auth: { token }`, hace `join`, escucha `op`, `presence`, `version`, y al reconectar llama `GET /boards/:id/ops?since=<lastSeq>` para catch-up.
+- Tipos compartidos `BoardOp`, `BoardPresence` en `src/lib/domain/board.ts`.
 
-Cron declarados en `JobsModule` siguiendo `docs/backend-jobs.md`:
-- `reminder-24h` cada hora
-- `reminder-1h` cada 5 min
-- `abandoned-cart` cada 15 min
-- `nps-monthly` diario 09:00
-- `renewal-3d` diario 08:00
+## Cambios en backend (gaps de la sección anterior)
 
-Cada uno usa `NotificationService` → `ResendTransport` (real) con `dedupe_key` para idempotencia.
+Agregar en los módulos existentes:
 
-### 3.6 Wompi
+- `classes.controller.ts`: `GET /classes/upcoming`, `GET /classes/today`.
+- `teachers.controller.ts`: `GET /teacher/schedule?status=`.
+- `admin.controller.ts`: `GET /admin/content`, `GET /admin/notifications`, `POST /admin/notifications/run`, `GET /admin/payroll/export.csv`.
+- `subscriptions.controller.ts`: `POST /subscriptions/resume`.
+- `surveys.controller.ts`: `GET /surveys/pending`.
+- `learning.controller.ts`: `GET /learning/progress`, `GET /learning/checkpoints/:id`.
+- `board.gateway.ts`: verificar handshake JWT (`socket.handshake.auth.token` → `JwtService.verify`).
+- Seed: agregar módulos/lecciones/checkpoints demo y un board demo para `estudiante@freakn.dev` (hoy `prisma/seed.ts` solo trae users/plans/sub).
 
-- `WompiService.createIntent(planId, userId)` → genera `reference`, calcula `amountInCents`, firma con `WOMPI_INTEGRITY_SECRET` y devuelve payload listo para el widget.
-- `POST /api/v1/public/wompi/webhook`: verifica firma HMAC, upsert de `payment_event`, si `APPROVED` activa subscription + dispara welcome email. Idempotente por `event.id`.
+## Variables de entorno
 
-### 3.7 Deploy a Railway
+Confirmar/agregar a `storefront/.env.example`:
 
-- `backend/Dockerfile` multi-stage (build → distroless/node:20-alpine).
-- `backend/railway.json` con `startCommand: "npx prisma migrate deploy && node dist/main.js"`.
-- Servicios en Railway: **Postgres**, **Redis**, **backend (Nest)**. Storefront se queda en Lovable (o se mueve a Vercel/Railway luego).
-- Variables (template en `backend/.env.example`):
-  ```text
-  NODE_ENV=production
-  PORT=3000
-  DATABASE_URL=                  # Railway lo inyecta
-  REDIS_URL=                     # Railway lo inyecta
-  JWT_SECRET=
-  JWT_REFRESH_SECRET=
-  JWT_EXPIRES_IN=15m
-  JWT_REFRESH_EXPIRES_IN=30d
-  GOOGLE_CLIENT_ID=
-  GOOGLE_CLIENT_SECRET=
-  GOOGLE_CALLBACK_URL=
-  RESEND_API_KEY=
-  RESEND_FROM="Freakn <hola@freakn.com>"
-  WOMPI_PUBLIC_KEY=
-  WOMPI_PRIVATE_KEY=
-  WOMPI_INTEGRITY_SECRET=
-  WOMPI_EVENTS_SECRET=
-  PUBLIC_SITE_URL=https://freakn.com
-  CORS_ORIGINS=https://freakn.com,http://localhost:5173
-  TEACHER_PAYRATE_COP=15000
-  ```
+```env
+VITE_API_URL=http://localhost:3000/api/v1
+VITE_WS_URL=http://localhost:3000
+VITE_WOMPI_PUBLIC_KEY=pub_test_xxx
+VITE_PUBLIC_SITE_URL=http://localhost:5173
+```
 
-### 3.8 DX local
+Backend ya tiene `.env.example` completo; añadir `FRONTEND_URL` para el callback de Google.
 
-- `backend/docker-compose.yml` opcional con Postgres + Redis para que tú levantes todo con `docker compose up -d` y luego `bun run start:dev` (sin meter Nest en Docker — más rápido en dev).
-- Scripts: `dev`, `build`, `start:prod`, `prisma:migrate`, `prisma:seed`, `test`, `test:e2e`.
-- `backend/README.md` con: requisitos, comandos, cómo correr migraciones, cómo apuntar el storefront a `http://localhost:3000`.
+## Orden de implementación
 
----
+1. **Infra cliente**: `api/client.ts`, `tokenStore.ts`, `queryClient.ts`, tipos.
+2. **Auth real** + `AuthProvider` + rutas `login/signup/forgot/reset/auth-callback`.
+3. **Plans + Checkout + Subscriptions** end-to-end (incluye `return` page leyendo el `payment_intent` real del backend).
+4. **Student** (dashboard, calendar, learning, checkpoint, settings, NPS).
+5. **Teacher** (today, schedule, students, notes).
+6. **Admin** (analytics, users, content, payroll, notifications).
+7. **Backend gaps** (en paralelo a 4–6 según se necesiten).
+8. **Realtime board** (hook + ruta mínima de prueba).
+9. **Limpieza**: borrar `src/lib/domain/repository.ts`, `seed.ts` (mock), `notifications.ts` (mock transport) y los servicios mock. Mantener `types.ts`, `plans.ts` (catálogo display), `notification-templates.ts` (solo si lo usa el admin para preview).
+10. **Docs**: actualizar `docs/migration.md` y `docs/AGENT_CONTEXT.md` con el contrato HTTP final y borrar referencias al mock.
 
-## 4. Documentación
+## Notas técnicas
 
-- **`README.md`** (raíz, nuevo): explica monorepo, "Lovable corre storefront", cómo bajar y correr backend localmente, link a `docs/deploy-railway.md`.
-- **`docs/deploy-railway.md`** (nuevo): paso a paso — crear proyecto Railway, agregar Postgres, agregar Redis, crear servicio backend desde el repo (root `backend/`), pegar env vars, configurar Google OAuth callback, configurar webhook Wompi apuntando a `https://<railway-domain>/api/v1/public/wompi/webhook`, dominio custom, logs.
-- **`docs/migration.md`**: actualizar — Fase de migración a Nest **completada en código**, queda conectar el storefront.
-- **`docs/AGENT_CONTEXT.md`**: actualizar sección de stack y mapa de carpetas.
+- TanStack Start corre en Worker. Los `fetch` van del browser al backend Nest en `localhost:3000` (dev) o Railway (prod). No usamos server functions para proxy — el cliente habla directo al Nest (CORS ya configurado en `main.ts`).
+- Rutas `_authenticated/*` siguen con el gate del router; la diferencia es que `context.auth.isAuthenticated` ahora se hidrata desde el refresh real.
+- Loaders de rutas protegidas solo corren tras el gate, así que pueden usar `ensureQueryData` sin miedo.
+- Mantengo el botón "Simular pago aprobado" en `/checkout/$planId` SOLO si `VITE_WOMPI_PUBLIC_KEY === "pub_test_placeholder"`; con key real desaparece.
 
----
+## Entregable
 
-## 5. Lo que **no** se hace en este paso
-
-- No se borran los mocks del storefront (queda como fallback).
-- No se cambia ninguna UI.
-- No se conecta el storefront al backend todavía (sería un PR siguiente, cuando tú ya tengas Nest corriendo en Railway o local).
-- No se intenta correr `nest start` en el sandbox (no soportado).
-
----
-
-## 6. Detalles técnicos clave (resumen)
-
-- **Auth**: JWT access (15m) + refresh (30d) httpOnly cookie + access en `Authorization: Bearer`. `RolesGuard` lee `role` del JWT (sin tabla `user_roles` separada — se simplifica vs el patrón Supabase, todo dentro de Nest).
-- **Realtime board**: Gateway con `@WebSocketGateway({ namespace: '/board', cors: { origin: CORS_ORIGINS } })`, autenticación en `handleConnection` validando JWT del query/handshake, persistencia incremental cada N operaciones a `board_snapshots` (jsonb) para reconectar rápido.
-- **Idempotencia**: webhooks Wompi + envíos de email usan unique keys (`event_id`, `dedupe_key`).
-- **CORS**: lista blanca desde env, no `*`.
-- **Migración futura a otro hosting**: Prisma + Postgres puro + Redis estándar = portable a Fly, Render, AWS sin tocar código.
-
-¿Procedo así o quieres ajustar algo (ej. cambiar Prisma por Drizzle, omitir BullMQ, agregar tests e2e, etc.) antes de pasar a build?
+Storefront 100% conectado al backend (sin mocks de datos), endpoints faltantes implementados en Nest, board realtime funcional con catch-up, seeds ricos para demo, y `.env.example` listo. La app queda lista para `bun run dev` (storefront) + `bun run backend:dev` (nest + postgres + redis vía docker-compose).

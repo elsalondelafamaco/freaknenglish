@@ -21,6 +21,14 @@ export class LearningController {
   @Get('modules/:id')
   module(@Param('id') id: string) { return this.svc.module(id) }
 
+  /** @endpoint GET /api/v1/learning/progress  (current user, all levels) */
+  @Get('progress')
+  progress(@CurrentUser() u: AuthUser) { return this.svc.userProgress(u.id) }
+
+  /** @endpoint GET /api/v1/learning/checkpoints/:id */
+  @Get('checkpoints/:id')
+  checkpoint(@Param('id') id: string) { return this.svc.checkpoint(id) }
+
   /** @endpoint POST /api/v1/learning/progress */
   @Post('progress')
   progress(

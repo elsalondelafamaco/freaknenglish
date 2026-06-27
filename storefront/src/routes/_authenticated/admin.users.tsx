@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { Search } from "lucide-react";
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { Plus, Search } from "lucide-react";
 import { listAllUsers } from "@/lib/domain/admin";
+import { createUserByAdmin } from "@/lib/domain/admin-actions";
+import type { EnglishLevel } from "@/lib/domain/types";
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
   head: () => ({ meta: [{ title: "CRM — Admin Freakn'" }] }),
@@ -11,7 +13,9 @@ export const Route = createFileRoute("/_authenticated/admin/users")({
 function AdminCRM() {
   const [q, setQ] = useState("");
   const [role, setRole] = useState<"all" | "student" | "teacher" | "admin">("all");
-  const rows = useMemo(() => listAllUsers(), []);
+  const [tick, setTick] = useState(0);
+  const [showCreate, setShowCreate] = useState(false);
+  const rows = useMemo(() => listAllUsers(), [tick]);
   const filtered = rows.filter((r) => {
     if (role !== "all" && !r.user.roles.includes(role)) return false;
     if (!q.trim()) return true;
@@ -34,7 +38,8 @@ function AdminCRM() {
             className="w-full rounded-full border border-brand-line bg-white py-2 pl-9 pr-3 text-sm focus:border-brand-ink focus:outline-none"
           />
         </div>
-        <div className="inline-flex rounded-full border border-brand-line bg-white p-1 text-xs">
+        <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-full border border-brand-line bg-white p-1 text-xs">
           {(["all", "student", "teacher", "admin"] as const).map((r) => (
             <button
               key={r}
@@ -46,6 +51,13 @@ function AdminCRM() {
               {r === "all" ? "Todos" : r}
             </button>
           ))}
+          </div>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5"
+          >
+            <Plus className="size-3.5" /> Crear usuario
+          </button>
         </div>
       </div>
 
@@ -71,10 +83,12 @@ function AdminCRM() {
               </tr>
             ) : (
               filtered.map((r) => (
-                <tr key={r.user.id}>
+                <tr key={r.user.id} className="cursor-pointer hover:bg-brand-cream/30">
                   <td className="px-4 py-3">
-                    <div className="font-semibold text-brand-ink">{r.user.fullName}</div>
-                    <div className="text-xs text-brand-ink/55">{r.user.email}</div>
+                    <Link to="/admin/users/$id" params={{ id: r.user.id }} className="block">
+                      <div className="font-semibold text-brand-ink hover:underline">{r.user.fullName}</div>
+                      <div className="text-xs text-brand-ink/55">{r.user.email}</div>
+                    </Link>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
@@ -111,9 +125,126 @@ function AdminCRM() {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-brand-ink/50">
-        Datos en vivo del repositorio mock. En producción, esta vista paginará server-side.
-      </p>
+
+      {showCreate ? (
+        <CreateUserDialog
+          onClose={() => setShowCreate(false)}
+          onCreated={() => {
+            setShowCreate(false);
+            setTick((t) => t + 1);
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function CreateUserDialog({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [userRole, setUserRole] = useState<"student" | "teacher">("student");
+  const [level, setLevel] = useState<EnglishLevel>("beginner");
+  const [error, setError] = useState<string | null>(null);
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      createUserByAdmin({ fullName, email, role: userRole, level });
+      onCreated();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <form
+        onSubmit={onSubmit}
+        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+      >
+        <h2 className="text-lg font-semibold text-brand-ink">Crear usuario</h2>
+        <p className="mt-1 text-xs text-brand-ink/60">
+          Se enviará un email para configurar contraseña. Crear un estudiante
+          <strong> no activa la suscripción</strong> — eso ocurre tras un pago Wompi.
+        </p>
+
+        <div className="mt-4 flex gap-2">
+          {(["student", "teacher"] as const).map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setUserRole(r)}
+              className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium capitalize ${
+                userRole === r
+                  ? "border-brand-ink bg-brand-ink text-white"
+                  : "border-brand-line text-brand-ink/70 hover:bg-brand-cream/30"
+              }`}
+            >
+              {r === "student" ? "Estudiante" : "Profesor"}
+            </button>
+          ))}
+        </div>
+
+        <label className="mt-4 block text-xs font-semibold text-brand-ink/70">
+          Nombre completo
+          <input
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required
+            className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+          />
+        </label>
+        <label className="mt-3 block text-xs font-semibold text-brand-ink/70">
+          Email
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+          />
+        </label>
+        {userRole === "student" ? (
+          <label className="mt-3 block text-xs font-semibold text-brand-ink/70">
+            Nivel inicial
+            <select
+              value={level}
+              onChange={(e) => setLevel(e.target.value as EnglishLevel)}
+              className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+            >
+              <option value="beginner">Beginner (A1–A2)</option>
+              <option value="intermediate">Intermediate (B1–B2)</option>
+              <option value="advanced">Advanced (C1)</option>
+            </select>
+          </label>
+        ) : null}
+
+        {error ? (
+          <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>
+        ) : null}
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full px-4 py-2 text-sm font-medium text-brand-ink/70 hover:bg-brand-cream/30"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            className="rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white shadow-soft hover:-translate-y-0.5 transition"
+          >
+            Crear
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import {
   CalendarDays,
   LayoutDashboard,
   LogOut,
+  Mail,
   Menu,
   Settings,
   ShieldCheck,
@@ -33,6 +34,7 @@ const ADMIN_NAV = [
   { to: "/admin/users", label: "CRM", icon: Users },
   { to: "/admin/content", label: "CMS", icon: Sparkles },
   { to: "/admin/payroll", label: "Nómina", icon: ShieldCheck },
+  { to: "/admin/notifications", label: "Automaciones", icon: Mail },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {

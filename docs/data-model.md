@@ -303,3 +303,39 @@ create index on payroll_runs (month_key);
   cuentan para el pago. `teacher_payrate_cop` vive en `app_settings`.
 - El CMS edita `modules`/`lessons`/`checkpoints` con guardado optimista; el
   contenido es estático en el mock (Fase 6 sólo lo expone en modo lectura).
+
+## Fase 7 — Automaciones (notificaciones)
+
+```sql
+-- Log unificado de emails / WhatsApp / in-app encolados por el sistema.
+-- En el mock se persiste en localStorage (key `notifications`); el shape
+-- es 1:1 con esta tabla, así que migrar es un INSERT directo.
+create table notifications (
+  id           uuid primary key default gen_random_uuid(),
+  dedupe_key   text not null unique,            -- evita reenvíos (idempotencia)
+  user_id      uuid references users(id) on delete set null,
+  recipient    text not null,                   -- email o teléfono
+  channel      text not null check (channel in ('email','whatsapp','in_app')),
+  template     text not null,                   -- 'welcome' | 'abandoned-cart' | 'class-reminder' | 'renewal-reminder' | 'nps-monthly'
+  subject      text not null,
+  body         text not null,                   -- HTML renderizado listo para Resend
+  vars         jsonb not null,                  -- payload original (auditoría)
+  status       text not null check (status in ('queued','sent','failed','skipped')),
+  error        text,
+  created_at   timestamptz not null default now(),
+  sent_at      timestamptz
+);
+create index on notifications (user_id, created_at desc);
+create index on notifications (status, channel);
+```
+
+**Reglas de negocio** (Fase 7):
+- `dedupe_key` es la fuente de verdad para idempotencia. Convenciones:
+    - `welcome:<sub_id>`
+    - `abandoned:<payment_reference>`
+    - `class-reminder-24h:<class_id>` / `class-reminder-1h:<class_id>`
+    - `renewal:<sub_id>:<YYYY-MM-DD>`
+    - `nps:<user_id>:<YYYY-MM>`
+- Cuerpos HTML viven en `src/lib/domain/notification-templates.ts` y son
+  inline-styled para máxima compat con clientes de email.
+- Los crons que disparan inserts están en `docs/backend-jobs.md`.

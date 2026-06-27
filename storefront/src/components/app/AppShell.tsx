@@ -16,6 +16,7 @@ import {
 import { Logo } from "@/components/site/Logo";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { cn } from "@/lib/utils";
+import { ImpersonationBanner } from "@/components/app/ImpersonationBanner";
 
 const STUDENT_NAV = [
   { to: "/app", label: "Inicio", icon: LayoutDashboard, end: true },
@@ -51,6 +52,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-brand-surface">
+      <ImpersonationBanner />
       {/* Sidebar — desktop */}
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-brand-line bg-white p-5 lg:flex">
         <Link to="/" aria-label="Inicio">

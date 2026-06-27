@@ -207,3 +207,24 @@
     display: none;
   }
 }
+
+/* Global smooth scroll for anchor navigation (hash links).
+   Respect users with reduced motion preferences. */
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Consistent keyboard focus ring across interactive elements. */
+:where(a, button, [role="button"], input, select, textarea, summary):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--brand-cream), 0 0 0 4px var(--brand-ink);
+  border-radius: 8px;
+}

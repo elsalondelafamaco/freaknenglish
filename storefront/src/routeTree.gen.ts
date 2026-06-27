@@ -38,6 +38,7 @@ import { Route as AuthenticatedAdminContentRouteImport } from './routes/_authent
 import { Route as AuthenticatedTeacherStudentsStudentIdRouteImport } from './routes/_authenticated/teacher.students.$studentId'
 import { Route as AuthenticatedAppLearningModuleIdRouteImport } from './routes/_authenticated/app.learning.$moduleId'
 import { Route as AuthenticatedAppCheckpointCheckpointIdRouteImport } from './routes/_authenticated/app.checkpoint.$checkpointId'
+import { Route as AuthenticatedAdminUsersIdRouteImport } from './routes/_authenticated/admin.users.$id'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -196,6 +197,12 @@ const AuthenticatedAppCheckpointCheckpointIdRoute =
     path: '/checkpoint/$checkpointId',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAdminUsersIdRoute =
+  AuthenticatedAdminUsersIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAdminUsersRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -214,7 +221,7 @@ export interface FileRoutesByFullPath {
   '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/admin/surveys': typeof AuthenticatedAdminSurveysRoute
-  '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRouteWithChildren
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
   '/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
@@ -223,6 +230,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/teacher/': typeof AuthenticatedTeacherIndexRoute
+  '/admin/users/$id': typeof AuthenticatedAdminUsersIdRoute
   '/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
   '/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
@@ -241,7 +249,7 @@ export interface FileRoutesByTo {
   '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/admin/surveys': typeof AuthenticatedAdminSurveysRoute
-  '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRouteWithChildren
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
   '/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
@@ -250,6 +258,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/teacher': typeof AuthenticatedTeacherIndexRoute
+  '/admin/users/$id': typeof AuthenticatedAdminUsersIdRoute
   '/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
   '/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
@@ -273,7 +282,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/_authenticated/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/_authenticated/admin/surveys': typeof AuthenticatedAdminSurveysRoute
-  '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRouteWithChildren
   '/_authenticated/app/calendar': typeof AuthenticatedAppCalendarRoute
   '/_authenticated/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
@@ -282,6 +291,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/teacher/': typeof AuthenticatedTeacherIndexRoute
+  '/_authenticated/admin/users/$id': typeof AuthenticatedAdminUsersIdRoute
   '/_authenticated/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/_authenticated/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
   '/_authenticated/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
@@ -314,6 +324,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/app/'
     | '/teacher/'
+    | '/admin/users/$id'
     | '/app/checkpoint/$checkpointId'
     | '/app/learning/$moduleId'
     | '/teacher/students/$studentId'
@@ -341,6 +352,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/app'
     | '/teacher'
+    | '/admin/users/$id'
     | '/app/checkpoint/$checkpointId'
     | '/app/learning/$moduleId'
     | '/teacher/students/$studentId'
@@ -372,6 +384,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/'
     | '/_authenticated/app/'
     | '/_authenticated/teacher/'
+    | '/_authenticated/admin/users/$id'
     | '/_authenticated/app/checkpoint/$checkpointId'
     | '/_authenticated/app/learning/$moduleId'
     | '/_authenticated/teacher/students/$studentId'
@@ -595,15 +608,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCheckpointCheckpointIdRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/admin/users/$id': {
+      id: '/_authenticated/admin/users/$id'
+      path: '/$id'
+      fullPath: '/admin/users/$id'
+      preLoaderRoute: typeof AuthenticatedAdminUsersIdRouteImport
+      parentRoute: typeof AuthenticatedAdminUsersRoute
+    }
   }
 }
+
+interface AuthenticatedAdminUsersRouteChildren {
+  AuthenticatedAdminUsersIdRoute: typeof AuthenticatedAdminUsersIdRoute
+}
+
+const AuthenticatedAdminUsersRouteChildren: AuthenticatedAdminUsersRouteChildren =
+  {
+    AuthenticatedAdminUsersIdRoute: AuthenticatedAdminUsersIdRoute,
+  }
+
+const AuthenticatedAdminUsersRouteWithChildren =
+  AuthenticatedAdminUsersRoute._addFileChildren(
+    AuthenticatedAdminUsersRouteChildren,
+  )
 
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminContentRoute: typeof AuthenticatedAdminContentRoute
   AuthenticatedAdminNotificationsRoute: typeof AuthenticatedAdminNotificationsRoute
   AuthenticatedAdminPayrollRoute: typeof AuthenticatedAdminPayrollRoute
   AuthenticatedAdminSurveysRoute: typeof AuthenticatedAdminSurveysRoute
-  AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
+  AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRouteWithChildren
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
 
@@ -612,7 +646,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminNotificationsRoute: AuthenticatedAdminNotificationsRoute,
   AuthenticatedAdminPayrollRoute: AuthenticatedAdminPayrollRoute,
   AuthenticatedAdminSurveysRoute: AuthenticatedAdminSurveysRoute,
-  AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
+  AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRouteWithChildren,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
 }
 

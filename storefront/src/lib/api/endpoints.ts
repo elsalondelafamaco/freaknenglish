@@ -110,6 +110,7 @@ export const adminApi = {
     byPlan: Array<{ planId: string; active: number }>;
   }>("/admin/analytics"),
   users: (q?: string) => apiGet<User[]>("/admin/users", q ? { q } : undefined),
+  userDetail: (id: string) => apiGet<any>(`/admin/users/${id}`),
   payroll: (period: string) => apiGet<Array<{ teacherId: string; fullName: string; classes: number; rateCop: number; amountCop: number }>>("/admin/payroll", { period }),
   payrollCsv: (period: string) =>
     apiGet<string>(`/admin/payroll/export.csv`, { period }),
@@ -119,6 +120,12 @@ export const adminApi = {
   runAutomations: () => apiPost<{ ok: true }>("/admin/notifications/run"),
   createUser: (body: { email: string; fullName: string; role: "student" | "teacher"; level?: "beginner" | "intermediate" | "advanced" }) =>
     apiPost<{ user: User; setPasswordToken: string }>("/admin/users", body),
+  updateUser: (id: string, body: Partial<{ fullName: string; phone: string; role: "student" | "teacher" | "admin"; englishLevel: "beginner" | "intermediate" | "advanced" | null }>) =>
+    apiPatch<User>(`/admin/users/${id}`, body),
+  setUserStatus: (id: string, disabled: boolean) =>
+    apiPatch<User>(`/admin/users/${id}/status`, { disabled }),
+  softDeleteUser: (id: string) => apiPatch<User>(`/admin/users/${id}/delete`, {}),
+  resetPassword: (id: string) => apiPost<{ ok: true; link?: string; expiresAt?: string }>(`/admin/users/${id}/reset-password`),
   assignTeacher: (studentId: string, teacherId: string | null) =>
     apiPatch<User>(`/admin/users/${studentId}/assign-teacher`, { teacherId }),
   impersonate: (userId: string) =>

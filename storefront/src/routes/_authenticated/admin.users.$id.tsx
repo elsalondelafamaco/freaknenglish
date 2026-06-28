@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -20,14 +20,10 @@ import type {
 } from "@/lib/domain/types";
 import { getPlan, formatCop } from "@/lib/domain/plans";
 import type { PaymentIntent } from "@/lib/domain/subscriptions";
-import {
-  assignTeacherToStudent,
-  startImpersonation,
-  updateUserByAdmin,
-  setUserActive,
-  softDeleteUser,
-  resetUserPassword,
-} from "@/lib/domain/admin-actions";
+import { adminApi } from "@/lib/api/endpoints";
+import { setAccessToken } from "@/lib/api/client";
+import { hydrateFromBackend } from "@/lib/api/bootstrap";
+import { startImpersonation } from "@/lib/domain/admin-actions";
 import { listNotesForStudent } from "@/lib/domain/classes";
 import { listProgress } from "@/lib/domain/learning";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -46,8 +42,50 @@ function AdminUserDetail() {
   const [tick, setTick] = useState(0);
   const [tab, setTab] = useState<TabId>("overview");
   const [editing, setEditing] = useState(false);
+  const [remote, setRemote] = useState<any | null>(null);
+  const [remoteUsers, setRemoteUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([adminApi.userDetail(id), adminApi.users()])
+      .then(([detail, users]) => {
+        if (cancelled) return;
+        setRemote(detail);
+        setRemoteUsers(users ?? []);
+      })
+      .catch((err) => {
+        console.error("[admin user detail]", err);
+        if (!cancelled) setRemote(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, tick]);
 
   const data = useMemo(() => {
+    if (remote?.user) {
+      const user = adaptAdminUser(remote.user);
+      const isStudent = user.roles.includes("student");
+      const isTeacher = user.roles.includes("teacher");
+      const teachers = remoteUsers.map(adaptAdminUser).filter((u) => u.roles.includes("teacher") && !u.deletedAt);
+      const students = (remote.assignedStudents ?? []).map(adaptAdminUser);
+      const classes = (remote.classes ?? []).map(adaptAdminClass);
+      const payments = (remote.payments ?? []).map(adaptAdminPayment);
+      const surveys = (remote.surveys ?? []).map(adaptAdminSurvey);
+      const notes = (remote.notes ?? []).map(adaptAdminNote);
+      const progress = (remote.progress ?? []).map((p: any) => ({
+        userId: user.id,
+        lessonId: p.lessonId ?? p.lesson?.id ?? p.id,
+        completedAt: p.completedAt ?? p.updatedAt ?? p.createdAt ?? new Date().toISOString(),
+      }));
+      const assignedTeacher = remote.user.assignedTeacher ? adaptAdminUser({ ...remote.user.assignedTeacher, role: "teacher" }) : null;
+      return { user, isStudent, isTeacher, sub: adaptAdminSubscription(remote.user.subscription), payments, classes, teachers, students, assignedTeacher, surveys, notes, progress };
+    }
     const db = readDb();
     const users = db.users as Record<string, User>;
     const user = users[id];
@@ -91,13 +129,13 @@ function AdminUserDetail() {
       progress,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, tick]);
+  }, [id, tick, remote, remoteUsers]);
 
   if (!data) {
     return (
       <div className="text-sm text-brand-ink/70">
         <Link to="/admin/users" className="underline">← Volver</Link>
-        <p className="mt-4">Usuario no encontrado.</p>
+        <p className="mt-4">{loading ? "Cargando usuario…" : "Usuario no encontrado."}</p>
       </div>
     );
   }
@@ -124,19 +162,22 @@ function AdminUserDetail() {
     setTick((t) => t + 1);
   }
 
-  function onAssign(e: React.ChangeEvent<HTMLSelectElement>) {
+  async function onAssign(e: React.ChangeEvent<HTMLSelectElement>) {
     try {
-      assignTeacherToStudent(user.id, e.target.value || null);
+      await adminApi.assignTeacher(user.id, e.target.value || null);
       bump();
     } catch (err) {
       alert((err as Error).message);
     }
   }
 
-  function onImpersonate() {
+  async function onImpersonate() {
     if (!me) return;
     if (!confirm(`Vas a navegar como ${user.fullName}. ¿Continuar?`)) return;
+    const r = await adminApi.impersonate(user.id);
+    setAccessToken(r.accessToken);
     startImpersonation(me.id, user.id);
+    await hydrateFromBackend(r.target.role);
     refresh();
     const dest = user.roles.includes("admin")
       ? "/admin"
@@ -146,33 +187,24 @@ function AdminUserDetail() {
     router.navigate({ to: dest, replace: true });
   }
 
-  function onToggleActive() {
+  async function onToggleActive() {
     try {
-      setUserActive(user.id, !!user.disabledAt);
+      await adminApi.setUserStatus(user.id, !user.disabledAt);
       bump();
     } catch (err) {
       alert((err as Error).message);
     }
   }
 
-  function onDelete() {
+  async function onDelete() {
     if (!confirm(`¿Eliminar a ${user.fullName}? Quedará en soft-delete (recuperable en backend).`)) return;
-    softDeleteUser(user.id);
+    await adminApi.softDeleteUser(user.id);
     bump();
   }
 
-  function onResetPassword() {
-    const { tempPassword, setPasswordToken } = resetUserPassword(user.id);
-    alert(
-      [
-        `Contraseña temporal generada para ${user.email}:`,
-        ``,
-        `  ${tempPassword}`,
-        ``,
-        `Token de set-password (en producción se envía por email via Resend):`,
-        `  ${setPasswordToken}`,
-      ].join("\n"),
-    );
+  async function onResetPassword() {
+    const r = await adminApi.resetPassword(user.id);
+    alert(r.link ? `Link de recuperación generado:\n${r.link}` : "Email de recuperación enviado.");
   }
 
   const TABS: { id: TabId; label: string; show: boolean }[] = [

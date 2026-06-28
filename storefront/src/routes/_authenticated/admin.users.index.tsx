@@ -5,7 +5,7 @@ import { listAllUsers } from "@/lib/domain/admin";
 import { createUserByAdmin } from "@/lib/domain/admin-actions";
 import type { EnglishLevel } from "@/lib/domain/types";
 
-export const Route = createFileRoute("/_authenticated/admin/users")({
+export const Route = createFileRoute("/_authenticated/admin/users/")({
   head: () => ({ meta: [{ title: "CRM — Admin Freakn'" }] }),
   component: AdminCRM,
 });

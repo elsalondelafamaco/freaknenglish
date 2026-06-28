@@ -66,6 +66,11 @@ model User {
   googleSub       String?       @unique @map("google_sub")
   emailVerifiedAt DateTime?     @map("email_verified_at")
   assignedTeacherId String?     @map("assigned_teacher_id")
+  disabledAt      DateTime?     @map("disabled_at")
+  deletedAt       DateTime?     @map("deleted_at")
+  lastLoginAt     DateTime?     @map("last_login_at")
+  setPasswordToken String?      @map("set_password_token")
+  setPasswordTokenExpiresAt DateTime? @map("set_password_token_expires_at")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
@@ -288,12 +293,39 @@ model Lesson {
   pdfUrl        String?  @map("pdf_url")
   slidesUrl     String?  @map("slides_url")
   downloadUrls  Json     @default("[]") @map("download_urls")
+  /// Contenido HTML enriquecido (sanitizado en cliente).
+  contentHtml   String?  @map("content_html")
+  /// Notas internas / instrucciones para el estudiante.
+  notes         String?
+  /// Tipo dominante de la lección (video/pdf/slides/download/html).
+  kind          String   @default("video")
 
   module   Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   progress LessonProgress[]
+  attachments LessonAttachment[]
 
   @@index([moduleId, position])
   @@map("lessons")
+}
+
+/// Archivos adjuntos a una lección, almacenados en MinIO/S3.
+model LessonAttachment {
+  id          String   @id @default(uuid())
+  lessonId    String   @map("lesson_id")
+  name        String
+  /// Object key dentro del bucket de MinIO/S3.
+  storageKey  String   @map("storage_key")
+  /// URL pública (firmada o canónica) servida al frontend.
+  url         String
+  /// MIME type detectado en el upload.
+  contentType String?  @map("content_type")
+  sizeBytes   Int?     @map("size_bytes")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+  @@map("lesson_attachments")
 }
 
 model LessonProgress {

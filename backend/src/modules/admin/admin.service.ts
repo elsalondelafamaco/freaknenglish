@@ -4,7 +4,8 @@ import { InjectQueue } from '@nestjs/bullmq'
 import { Queue } from 'bullmq'
 import { env } from '../../config/env'
 import { JwtService } from '@nestjs/jwt'
-import { randomBytes } from 'crypto'
+import { randomBytes, randomUUID } from 'crypto'
+import { StorageService } from '../storage/storage.service'
 
 @Injectable()
 export class AdminService {
@@ -12,6 +13,7 @@ export class AdminService {
     private prisma: PrismaService,
     @InjectQueue('automations') private automationsQueue: Queue,
     private jwt: JwtService,
+    private storage: StorageService,
   ) {}
 
   async analytics() {
@@ -48,32 +50,68 @@ export class AdminService {
     })
   }
 
+  // ─── Payroll (config + cálculo por horas) ─────────────────────────────
+
+  private async getHourlyRateCop(): Promise<number> {
+    const row = await this.prisma.appSetting.findUnique({ where: { key: 'payroll.hourlyRateCop' } as any }).catch(() => null as any)
+    const stored = row?.value as any
+    const fromDb = typeof stored === 'number' ? stored : Number(stored?.value ?? NaN)
+    return Number.isFinite(fromDb) && fromDb > 0 ? fromDb : env.TEACHER_PAYRATE_COP
+  }
+
+  async getPayrollSettings() {
+    return { hourlyRateCop: await this.getHourlyRateCop() }
+  }
+
+  async setPayrollSettings(hourlyRateCop: number) {
+    if (!Number.isFinite(hourlyRateCop) || hourlyRateCop <= 0) throw new Error('Invalid hourly rate')
+    await this.prisma.appSetting.upsert({
+      where: { key: 'payroll.hourlyRateCop' },
+      update: { value: hourlyRateCop as any },
+      create: { key: 'payroll.hourlyRateCop', value: hourlyRateCop as any },
+    })
+    return { hourlyRateCop }
+  }
+
   async payroll(period: string) {
     const [year, month] = period.split('-').map(Number)
     const start = new Date(year, month - 1, 1)
     const end = new Date(year, month, 1)
     const classes = await this.prisma.class.findMany({
       where: { status: 'validated', validatedAt: { gte: start, lt: end }, teacherId: { not: null } },
-      select: { teacherId: true },
+      select: { teacherId: true, durationMin: true },
     })
+    // Acumulamos minutos por profesor (las clases validadas se pagan por hora real).
+    const minutes = new Map<string, number>()
     const counts = new Map<string, number>()
-    for (const c of classes) counts.set(c.teacherId!, (counts.get(c.teacherId!) ?? 0) + 1)
-    const teacherIds = Array.from(counts.keys())
+    for (const c of classes) {
+      const tid = c.teacherId!
+      minutes.set(tid, (minutes.get(tid) ?? 0) + (c.durationMin ?? 60))
+      counts.set(tid, (counts.get(tid) ?? 0) + 1)
+    }
+    const teacherIds = Array.from(minutes.keys())
     const teachers = await this.prisma.user.findMany({ where: { id: { in: teacherIds } } })
-    return teachers.map((t) => ({
-      teacherId: t.id,
-      fullName: t.fullName,
-      classes: counts.get(t.id) ?? 0,
-      rateCop: env.TEACHER_PAYRATE_COP,
-      amountCop: (counts.get(t.id) ?? 0) * env.TEACHER_PAYRATE_COP,
-    }))
+    const hourlyRate = await this.getHourlyRateCop()
+    return teachers.map((t) => {
+      const mins = minutes.get(t.id) ?? 0
+      const hours = mins / 60
+      return {
+        teacherId: t.id,
+        fullName: t.fullName,
+        classes: counts.get(t.id) ?? 0,
+        minutes: mins,
+        hours: Number(hours.toFixed(2)),
+        hourlyRateCop: hourlyRate,
+        amountCop: Math.round(hours * hourlyRate),
+      }
+    })
   }
 
   async payrollCsv(period: string) {
     const rows = await this.payroll(period)
-    const header = 'teacher_id,full_name,classes,rate_cop,amount_cop'
+    const header = 'teacher_id,full_name,classes,hours,hourly_rate_cop,amount_cop'
     const body = rows
-      .map((r) => [r.teacherId, JSON.stringify(r.fullName), r.classes, r.rateCop, r.amountCop].join(','))
+      .map((r) => [r.teacherId, JSON.stringify(r.fullName), r.classes, r.hours, r.hourlyRateCop, r.amountCop].join(','))
       .join('\n')
     return `${header}\n${body}\n`
   }
@@ -167,11 +205,222 @@ export class AdminService {
   async impersonate(adminId: string, targetId: string) {
     const target = await this.prisma.user.findUnique({ where: { id: targetId } })
     if (!target) throw new Error('Target not found')
-    // await this.prisma.impersonationLog.create({ data: { adminId, targetId } })
+    await this.prisma.impersonationLog.create({ data: { adminId, targetId } }).catch(() => null)
     const accessToken = await this.jwt.signAsync(
       { sub: target.id, role: target.role, impersonatorId: adminId, actAs: target.id },
       { expiresIn: '30m' },
     )
     return { accessToken, target: { id: target.id, fullName: target.fullName, role: target.role } }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // CRM · detalle, edición, estado, soft delete, reset password
+  // ────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Devuelve TODO lo necesario para pintar el perfil completo en `/admin/users/:id`.
+   * - Profesor: estudiantes asignados, NPS recibido (de sus clases), nómina del mes.
+   * - Estudiante: profesor asignado, suscripción, pagos, clases, progreso, NPS, notas.
+   */
+  async userDetail(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        subscription: { include: { plan: true } },
+        assignedTeacher: { select: { id: true, fullName: true, email: true } },
+      },
+    })
+    if (!user) throw new Error('User not found')
+
+    const isTeacher = user.role === 'teacher'
+    const isStudent = user.role === 'student'
+
+    const [payments, classesAsStudent, classesAsTeacher, surveys, progress, notesByTeacher, notesAboutStudent, assignedStudents] =
+      await Promise.all([
+        this.prisma.paymentIntent.findMany({ where: { userId: id }, orderBy: { createdAt: 'desc' }, take: 50 }),
+        isStudent
+          ? this.prisma.class.findMany({
+              where: { studentId: id },
+              orderBy: { scheduledAt: 'desc' },
+              take: 50,
+              include: { teacher: { select: { id: true, fullName: true } } },
+            })
+          : Promise.resolve([] as any[]),
+        isTeacher
+          ? this.prisma.class.findMany({
+              where: { teacherId: id },
+              orderBy: { scheduledAt: 'desc' },
+              take: 50,
+              include: { student: { select: { id: true, fullName: true } } },
+            })
+          : Promise.resolve([] as any[]),
+        this.prisma.satisfactionSurvey.findMany({ where: { userId: id }, orderBy: { createdAt: 'desc' }, take: 20 }),
+        isStudent
+          ? this.prisma.lessonProgress.findMany({
+              where: { userId: id, completedAt: { not: null } },
+              include: { lesson: { select: { id: true, title: true, moduleId: true } } },
+              orderBy: { updatedAt: 'desc' },
+              take: 100,
+            })
+          : Promise.resolve([] as any[]),
+        isTeacher
+          ? this.prisma.classNote.findMany({ where: { authorId: id }, orderBy: { createdAt: 'desc' }, take: 50 })
+          : Promise.resolve([] as any[]),
+        isStudent
+          ? this.prisma.classNote.findMany({
+              where: { class: { studentId: id } } as any,
+              orderBy: { createdAt: 'desc' },
+              take: 50,
+              include: { author: { select: { id: true, fullName: true } } },
+            })
+          : Promise.resolve([] as any[]),
+        isTeacher
+          ? this.prisma.user.findMany({
+              where: { assignedTeacherId: id, deletedAt: null },
+              select: { id: true, fullName: true, email: true, englishLevel: true, disabledAt: true },
+            })
+          : Promise.resolve([] as any[]),
+      ])
+
+    return {
+      user,
+      payments,
+      classes: isStudent ? classesAsStudent : classesAsTeacher,
+      surveys, // sólo admin las verá — el guard ya bloquea profesores
+      progress,
+      notes: isStudent ? notesAboutStudent : notesByTeacher,
+      assignedStudents,
+    }
+  }
+
+  async updateUser(
+    id: string,
+    data: { fullName?: string; phone?: string; role?: 'student' | 'teacher' | 'admin'; englishLevel?: 'beginner' | 'intermediate' | 'advanced' | null },
+  ) {
+    return this.prisma.user.update({ where: { id }, data: data as any })
+  }
+
+  async setUserStatus(id: string, disabled: boolean) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { disabledAt: disabled ? new Date() : null },
+    })
+  }
+
+  async softDeleteUser(id: string) {
+    return this.prisma.user.update({ where: { id }, data: { deletedAt: new Date(), disabledAt: new Date() } })
+  }
+
+  /**
+   * Genera token de reset (TTL 24h), persiste en `password_resets` y devuelve
+   * el link para que el caller (o un job) envíe el email vía Resend.
+   */
+  async resetUserPassword(id: string) {
+    const token = randomBytes(32).toString('hex')
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24)
+    await this.prisma.passwordReset.create({ data: { userId: id, tokenHash: token, expiresAt } as any })
+    const link = `${env.PUBLIC_SITE_URL}/reset-password?token=${token}`
+    // TODO emails: enqueue('emails', { template: 'reset-password', to: user.email, ctx: { link } })
+    return { ok: true, link, expiresAt }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // CMS · módulos, lecciones, adjuntos
+  // ────────────────────────────────────────────────────────────────────────
+
+  async saveModule(input: { id?: string; level: 'beginner' | 'intermediate' | 'advanced'; title: string; summary?: string; position?: number }) {
+    const id = input.id ?? randomUUID()
+    const existing = await this.prisma.module.findUnique({ where: { id } })
+    if (existing) {
+      return this.prisma.module.update({
+        where: { id },
+        data: {
+          title: input.title ?? existing.title,
+          summary: input.summary ?? existing.summary,
+          level: (input.level ?? existing.level) as any,
+          position: input.position ?? existing.position,
+        },
+      })
+    }
+    const last = await this.prisma.module.findFirst({ where: { level: input.level as any }, orderBy: { position: 'desc' } })
+    return this.prisma.module.create({
+      data: {
+        id,
+        title: input.title,
+        summary: input.summary ?? '',
+        level: input.level as any,
+        position: input.position ?? (last ? last.position + 1 : 1),
+      },
+    })
+  }
+
+  async deleteModule(id: string) {
+    await this.prisma.module.delete({ where: { id } })
+    return { ok: true }
+  }
+
+  async saveLesson(input: any) {
+    const id = input.id ?? randomUUID()
+    const existing = await this.prisma.lesson.findUnique({ where: { id } })
+    const data = {
+      title: input.title ?? existing?.title,
+      kind: input.kind ?? existing?.kind ?? 'video',
+      durationMin: input.durationMin ?? existing?.durationMin ?? 15,
+      videoUrl: input.videoUrl ?? existing?.videoUrl,
+      pdfUrl: input.pdfUrl ?? existing?.pdfUrl,
+      slidesUrl: input.slidesUrl ?? existing?.slidesUrl,
+      contentHtml: input.contentHtml ?? existing?.contentHtml,
+      notes: input.notes ?? existing?.notes,
+    }
+    if (existing) {
+      return this.prisma.lesson.update({ where: { id }, data: data as any })
+    }
+    if (!input.moduleId) throw new Error('moduleId required')
+    const last = await this.prisma.lesson.findFirst({ where: { moduleId: input.moduleId }, orderBy: { position: 'desc' } })
+    return this.prisma.lesson.create({
+      data: {
+        id,
+        moduleId: input.moduleId,
+        position: input.position ?? (last ? last.position + 1 : 1),
+        ...data,
+      } as any,
+    })
+  }
+
+  async deleteLesson(id: string) {
+    await this.prisma.lesson.delete({ where: { id } })
+    return { ok: true }
+  }
+
+  signUpload(body: { filename: string; contentType?: string; lessonId?: string }) {
+    return this.storage.signUpload({
+      filename: body.filename,
+      contentType: body.contentType,
+      prefix: body.lessonId ? `lessons/${body.lessonId}` : 'cms/uploads',
+    })
+  }
+
+  attachLessonFile(
+    lessonId: string,
+    body: { name: string; storageKey: string; url: string; contentType?: string; sizeBytes?: number },
+  ) {
+    return this.prisma.lessonAttachment.create({
+      data: {
+        lessonId,
+        name: body.name,
+        storageKey: body.storageKey,
+        url: body.url,
+        contentType: body.contentType,
+        sizeBytes: body.sizeBytes,
+      },
+    })
+  }
+
+  async deleteAttachment(id: string) {
+    const att = await this.prisma.lessonAttachment.findUnique({ where: { id } })
+    if (!att) return { ok: true }
+    await this.storage.delete(att.storageKey)
+    await this.prisma.lessonAttachment.delete({ where: { id } })
+    return { ok: true }
   }
 }

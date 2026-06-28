@@ -13,7 +13,8 @@ import type {
 } from "./types";
 import { readDb, writeDb, uid } from "./repository";
 
-export const CHECKPOINTS: Checkpoint[] = [
+/** Datos seed (sólo se usan si el store CMS está vacío). */
+const CHECKPOINTS_SEED: Checkpoint[] = [
   {
     id: "chk_beginner",
     level: "beginner",
@@ -82,7 +83,7 @@ export const CHECKPOINTS: Checkpoint[] = [
   },
 ];
 
-export const MODULES: LearningModule[] = [
+const MODULES_SEED: LearningModule[] = [
   {
     id: "mod_b1",
     level: "beginner",
@@ -227,16 +228,155 @@ export const MODULES: LearningModule[] = [
   },
 ];
 
+/* ============================================================
+ * Store CMS (CRUD)
+ * Persiste en `cmsModules` / `cmsCheckpoints`. Seed-on-empty.
+ * ============================================================ */
+
+function ensureCmsSeeded() {
+  const db = readDb();
+  const mods = db.cmsModules as Record<string, LearningModule>;
+  const chks = db.cmsCheckpoints as Record<string, Checkpoint>;
+  const needsModules = !mods || Object.keys(mods).length === 0;
+  const needsChks = !chks || Object.keys(chks).length === 0;
+  if (!needsModules && !needsChks) return;
+  writeDb((d) => {
+    if (needsChks) {
+      d.cmsCheckpoints = {};
+      for (const c of CHECKPOINTS_SEED) {
+        (d.cmsCheckpoints as Record<string, Checkpoint>)[c.id] = c;
+      }
+    }
+    if (needsModules) {
+      d.cmsModules = {};
+      for (const m of MODULES_SEED) {
+        (d.cmsModules as Record<string, LearningModule>)[m.id] = m;
+      }
+    }
+  });
+}
+
+export function listAllModules(): LearningModule[] {
+  ensureCmsSeeded();
+  const db = readDb();
+  return Object.values(db.cmsModules as Record<string, LearningModule>).sort(
+    (a, b) => a.order - b.order,
+  );
+}
+
+export function listAllCheckpoints(): Checkpoint[] {
+  ensureCmsSeeded();
+  const db = readDb();
+  return Object.values(db.cmsCheckpoints as Record<string, Checkpoint>);
+}
+
 export function modulesByLevel(level: EnglishLevel): LearningModule[] {
-  return MODULES.filter((m) => m.level === level).sort((a, b) => a.order - b.order);
+  return listAllModules()
+    .filter((m) => m.level === level)
+    .sort((a, b) => a.order - b.order);
 }
 
 export function getModule(id: string): LearningModule | null {
-  return MODULES.find((m) => m.id === id) ?? null;
+  ensureCmsSeeded();
+  const db = readDb();
+  return (db.cmsModules as Record<string, LearningModule>)[id] ?? null;
 }
 
 export function getCheckpoint(id: string): Checkpoint | null {
-  return CHECKPOINTS.find((c) => c.id === id) ?? null;
+  ensureCmsSeeded();
+  const db = readDb();
+  return (db.cmsCheckpoints as Record<string, Checkpoint>)[id] ?? null;
+}
+
+export interface SaveModuleInput {
+  id?: string;
+  level: EnglishLevel;
+  order: number;
+  coverEmoji?: string;
+  title: string;
+  summary: string;
+  checkpointId?: string;
+}
+
+export function saveModule(input: SaveModuleInput): LearningModule {
+  ensureCmsSeeded();
+  const id = input.id ?? uid("mod");
+  const db = readDb();
+  const existing = (db.cmsModules as Record<string, LearningModule>)[id];
+  const next: LearningModule = {
+    id,
+    level: input.level,
+    order: input.order,
+    coverEmoji: input.coverEmoji ?? existing?.coverEmoji ?? "📘",
+    title: input.title.trim(),
+    summary: input.summary.trim(),
+    checkpointId: input.checkpointId,
+    lessons: existing?.lessons ?? [],
+  };
+  writeDb((d) => {
+    (d.cmsModules as Record<string, LearningModule>)[id] = next;
+  });
+  return next;
+}
+
+export function deleteModule(id: string): void {
+  writeDb((d) => {
+    delete (d.cmsModules as Record<string, LearningModule>)[id];
+  });
+}
+
+export interface SaveLessonInput {
+  id?: string;
+  moduleId: string;
+  order: number;
+  title: string;
+  kind: "video" | "pdf" | "slides" | "download" | "html";
+  url?: string;
+  estMinutes?: number;
+  contentHtml?: string;
+  notes?: string;
+  attachments?: { name: string; url: string; size?: number }[];
+}
+
+export function saveLesson(input: SaveLessonInput): LearningModule {
+  ensureCmsSeeded();
+  const db = readDb();
+  const mod = (db.cmsModules as Record<string, LearningModule>)[input.moduleId];
+  if (!mod) throw new Error("Módulo no encontrado");
+  const lessonId = input.id ?? uid("lsn");
+  const lessonShape: LearningModule["lessons"][number] = {
+    id: lessonId,
+    moduleId: input.moduleId,
+    order: input.order,
+    title: input.title.trim(),
+    kind: input.kind as LearningModule["lessons"][number]["kind"],
+    url: input.url,
+    estMinutes: input.estMinutes,
+    // Extra fields (stored even si el tipo aún no las declara):
+    ...(input.contentHtml ? { contentHtml: input.contentHtml } : {}),
+    ...(input.notes ? { notes: input.notes } : {}),
+    ...(input.attachments ? { attachments: input.attachments } : {}),
+  } as LearningModule["lessons"][number];
+  const existingIdx = mod.lessons.findIndex((l) => l.id === lessonId);
+  const nextLessons = [...mod.lessons];
+  if (existingIdx >= 0) nextLessons[existingIdx] = lessonShape;
+  else nextLessons.push(lessonShape);
+  nextLessons.sort((a, b) => a.order - b.order);
+  const next: LearningModule = { ...mod, lessons: nextLessons };
+  writeDb((d) => {
+    (d.cmsModules as Record<string, LearningModule>)[input.moduleId] = next;
+  });
+  return next;
+}
+
+export function deleteLesson(moduleId: string, lessonId: string): void {
+  const db = readDb();
+  const mod = (db.cmsModules as Record<string, LearningModule>)[moduleId];
+  if (!mod) return;
+  const next = { ...mod, lessons: mod.lessons.filter((l) => l.id !== lessonId) };
+  writeDb((d) => {
+    (d.cmsModules as Record<string, LearningModule>)[moduleId] = next;
+  });
 }
 
 function progressKey(userId: string, lessonId: string) {

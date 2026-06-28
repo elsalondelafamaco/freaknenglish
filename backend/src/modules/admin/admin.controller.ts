@@ -89,4 +89,148 @@ export class AdminController {
   impersonate(@Param('id') targetId: string, @Req() req: any) {
     return this.svc.impersonate(req.user.id, targetId)
   }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // CRM · detalle y administración de usuarios
+  // ────────────────────────────────────────────────────────────────────────
+
+  /**
+   * @endpoint GET /api/v1/admin/users/:id
+   * Detalle completo del usuario: perfil, suscripción, pagos, clases,
+   * progreso de aprendizaje, NPS, notas, estudiantes asignados (si profesor),
+   * profesor asignado (si estudiante).
+   */
+  @Get('users/:id')
+  userDetail(@Param('id') id: string) {
+    return this.svc.userDetail(id)
+  }
+
+  /**
+   * @endpoint PATCH /api/v1/admin/users/:id
+   * Edita campos básicos (fullName, phone, role, englishLevel).
+   */
+  @Patch('users/:id')
+  updateUser(
+    @Param('id') id: string,
+    @Body() body: { fullName?: string; phone?: string; role?: 'student' | 'teacher' | 'admin'; englishLevel?: 'beginner' | 'intermediate' | 'advanced' | null },
+  ) {
+    return this.svc.updateUser(id, body)
+  }
+
+  /**
+   * @endpoint PATCH /api/v1/admin/users/:id/status
+   * Activa/desactiva un usuario. `disabled=true` marca `disabledAt=now()`
+   * y bloquea login en `AuthService`.
+   */
+  @Patch('users/:id/status')
+  setUserStatus(@Param('id') id: string, @Body() body: { disabled: boolean }) {
+    return this.svc.setUserStatus(id, body.disabled)
+  }
+
+  /**
+   * @endpoint DELETE /api/v1/admin/users/:id
+   * Soft delete: marca `deletedAt=now()`. No borra históricos.
+   */
+  @Patch('users/:id/delete')
+  softDeleteUser(@Param('id') id: string) {
+    return this.svc.softDeleteUser(id)
+  }
+
+  /**
+   * @endpoint POST /api/v1/admin/users/:id/reset-password
+   * Genera un token de un solo uso y dispara email (Resend) con el link
+   * `${PUBLIC_SITE_URL}/reset-password?token=...`. Devuelve token sólo en dev.
+   */
+  @Post('users/:id/reset-password')
+  resetPassword(@Param('id') id: string) {
+    return this.svc.resetUserPassword(id)
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Nómina · tarifa por hora configurable
+  // ────────────────────────────────────────────────────────────────────────
+
+  /** @endpoint GET /api/v1/admin/settings/payroll */
+  @Get('settings/payroll')
+  getPayrollSettings() { return this.svc.getPayrollSettings() }
+
+  /** @endpoint PATCH /api/v1/admin/settings/payroll  body: { hourlyRateCop: number } */
+  @Patch('settings/payroll')
+  setPayrollSettings(@Body() body: { hourlyRateCop: number }) {
+    return this.svc.setPayrollSettings(body.hourlyRateCop)
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // CMS · módulos, lecciones, adjuntos
+  // ────────────────────────────────────────────────────────────────────────
+
+  /** @endpoint POST /api/v1/admin/content/modules */
+  @Post('content/modules')
+  createModule(@Body() body: { id?: string; level: 'beginner' | 'intermediate' | 'advanced'; title: string; summary?: string; position?: number }) {
+    return this.svc.saveModule(body)
+  }
+
+  /** @endpoint PATCH /api/v1/admin/content/modules/:id */
+  @Patch('content/modules/:id')
+  updateModule(@Param('id') id: string, @Body() body: { title?: string; summary?: string; level?: 'beginner' | 'intermediate' | 'advanced'; position?: number }) {
+    return this.svc.saveModule({ id, ...body } as any)
+  }
+
+  /** @endpoint PATCH /api/v1/admin/content/modules/:id/delete */
+  @Patch('content/modules/:id/delete')
+  deleteModule(@Param('id') id: string) { return this.svc.deleteModule(id) }
+
+  /** @endpoint POST /api/v1/admin/content/lessons */
+  @Post('content/lessons')
+  createLesson(
+    @Body()
+    body: {
+      moduleId: string
+      title: string
+      kind?: 'video' | 'pdf' | 'slides' | 'download' | 'html'
+      durationMin?: number
+      videoUrl?: string
+      pdfUrl?: string
+      slidesUrl?: string
+      contentHtml?: string
+      notes?: string
+    },
+  ) {
+    return this.svc.saveLesson(body)
+  }
+
+  /** @endpoint PATCH /api/v1/admin/content/lessons/:id */
+  @Patch('content/lessons/:id')
+  updateLesson(@Param('id') id: string, @Body() body: any) {
+    return this.svc.saveLesson({ id, ...body })
+  }
+
+  /** @endpoint PATCH /api/v1/admin/content/lessons/:id/delete */
+  @Patch('content/lessons/:id/delete')
+  deleteLesson(@Param('id') id: string) { return this.svc.deleteLesson(id) }
+
+  /**
+   * @endpoint POST /api/v1/admin/uploads/sign
+   * Devuelve una URL firmada para `PUT` a MinIO/S3 + la URL pública final.
+   * Body: { filename, contentType?, lessonId? }
+   */
+  @Post('uploads/sign')
+  signUpload(@Body() body: { filename: string; contentType?: string; lessonId?: string }) {
+    return this.svc.signUpload(body)
+  }
+
+  /** @endpoint POST /api/v1/admin/content/lessons/:id/attachments */
+  @Post('content/lessons/:id/attachments')
+  attachFile(
+    @Param('id') lessonId: string,
+    @Body() body: { name: string; storageKey: string; url: string; contentType?: string; sizeBytes?: number },
+  ) {
+    return this.svc.attachLessonFile(lessonId, body)
+  }
+
+  /** @endpoint PATCH /api/v1/admin/content/attachments/:id/delete */
+  @Patch('content/attachments/:id/delete')
+  deleteAttachment(@Param('id') id: string) {
+    return this.svc.deleteAttachment(id)
+  }
 }

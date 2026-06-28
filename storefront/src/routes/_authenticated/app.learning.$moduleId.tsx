@@ -6,6 +6,7 @@ import {
   Circle,
   Download,
   FileText,
+  FileCode,
   PlayCircle,
   Presentation,
 } from "lucide-react";
@@ -36,6 +37,7 @@ const KIND_ICON: Record<LessonKind, typeof PlayCircle> = {
   pdf: FileText,
   slides: Presentation,
   download: Download,
+  html: FileCode,
 };
 
 function ModuleDetail() {

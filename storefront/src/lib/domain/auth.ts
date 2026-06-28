@@ -61,6 +61,16 @@ function loadMeId(): string | null {
   return currentUserId;
 }
 
+/**
+ * Fuerza una relectura de `localStorage` descartando la cache en memoria.
+ * Necesario tras impersonar / restaurar sesión.
+ */
+export function reloadCurrentUser(): User | null {
+  currentUserId = null;
+  const id = loadMeId();
+  return id ? getUserById(id) : null;
+}
+
 function getUserById(id: string): User | null {
   const db = readDb();
   return ((db.users as Record<string, User>)[id] as User) ?? null;

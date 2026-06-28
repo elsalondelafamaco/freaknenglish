@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { authService, tryRestoreSession } from "@/lib/domain/auth";
+import { authService, tryRestoreSession, reloadCurrentUser } from "@/lib/domain/auth";
 import type { AppRole, User } from "@/lib/domain/types";
 
 export interface AuthContextValue {
@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(() => {
-    setUser(authService.getCurrentUser());
+    setUser(reloadCurrentUser());
   }, []);
 
   useEffect(() => {

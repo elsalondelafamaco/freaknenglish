@@ -16,9 +16,14 @@ import type {
 } from "./types";
 import { readDb } from "./repository";
 import { getPlan } from "./plans";
+import { getHourlyRate } from "./app-settings";
 
-/** Tarifa que paga la plataforma al profesor por clase completada + validada. */
-export const TEACHER_PAYRATE_COP = 18000;
+/**
+ * Tarifa **por defecto** que paga la plataforma al profesor por hora de
+ * clase validada. La tarifa real es configurable desde el admin y se
+ * persiste en `app_settings` (clave `payroll.hourlyRateCop`).
+ */
+export const TEACHER_PAYRATE_COP = 35000;
 
 export interface UserRow {
   user: User;
@@ -116,18 +121,26 @@ export function computeKpis(): AdminKpis {
 export interface PayrollRow {
   teacher: User;
   validatedClasses: number;
+  totalMinutes: number;
+  hours: number;
+  rateCop: number;
   amountCop: number;
 }
 
-/** Planilla del mes en curso: 1 clase validada = TEACHER_PAYRATE_COP. */
+/**
+ * Planilla del mes en curso. El monto se calcula como horas reales
+ * validadas × tarifa configurable.
+ */
 export function computePayroll(monthKey?: string): {
   monthKey: string;
   rows: PayrollRow[];
   totalCop: number;
+  rateCop: number;
 } {
   const db = readDb();
   const users = db.users as Record<string, User>;
   const classes = Object.values(db.classes as Record<string, ClassSession>);
+  const rate = getHourlyRate();
 
   const now = new Date();
   const key =
@@ -141,7 +154,13 @@ export function computePayroll(monthKey?: string): {
     return k === key;
   });
 
+  // Comenzamos con TODOS los profesores activos para que aparezcan
+  // en la nómina incluso con cero clases del mes.
+  const teachers = Object.values(users).filter(
+    (u) => u.roles.includes("teacher") && !u.deletedAt,
+  );
   const byTeacher = new Map<string, ClassSession[]>();
+  for (const t of teachers) byTeacher.set(t.id, []);
   for (const c of filtered) {
     const arr = byTeacher.get(c.teacherId) ?? [];
     arr.push(c);
@@ -152,15 +171,23 @@ export function computePayroll(monthKey?: string): {
   for (const [teacherId, list] of byTeacher) {
     const teacher = users[teacherId];
     if (!teacher) continue;
+    const totalMinutes = list.reduce(
+      (acc, c) => acc + (c.durationMin ?? 50),
+      0,
+    );
+    const hours = totalMinutes / 60;
     rows.push({
       teacher,
       validatedClasses: list.length,
-      amountCop: list.length * TEACHER_PAYRATE_COP,
+      totalMinutes,
+      hours,
+      rateCop: rate,
+      amountCop: Math.round(hours * rate),
     });
   }
   rows.sort((a, b) => b.amountCop - a.amountCop);
   const total = rows.reduce((acc, r) => acc + r.amountCop, 0);
-  return { monthKey: key, rows, totalCop: total };
+  return { monthKey: key, rows, totalCop: total, rateCop: rate };
 }
 
 export function formatCop(n: number): string {

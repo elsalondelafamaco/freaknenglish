@@ -189,6 +189,7 @@ export function startImpersonation(adminId: string, targetId: string) {
   localStorage.setItem(IMPERSONATION_KEY, JSON.stringify(state));
   localStorage.setItem(SAVED_ADMIN_KEY, adminId);
   localStorage.setItem("freakn.me.v2", targetId);
+  reloadCurrentUser();
   try {
     window.dispatchEvent(
       new StorageEvent("storage", { key: "freakn.me.v2", newValue: targetId }),
@@ -205,6 +206,7 @@ export function stopImpersonation(): string | null {
   localStorage.removeItem(IMPERSONATION_KEY);
   localStorage.removeItem(SAVED_ADMIN_KEY);
   if (adminId) localStorage.setItem("freakn.me.v2", adminId);
+  reloadCurrentUser();
   try {
     window.dispatchEvent(
       new StorageEvent("storage", { key: "freakn.me.v2", newValue: adminId }),

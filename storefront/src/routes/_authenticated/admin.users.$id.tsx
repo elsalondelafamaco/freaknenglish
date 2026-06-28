@@ -207,6 +207,12 @@ function AdminUserDetail() {
     alert(r.link ? `Link de recuperación generado:\n${r.link}` : "Email de recuperación enviado.");
   }
 
+  async function onResetNps() {
+    if (!confirm(`¿Reiniciar la encuesta NPS de ${user.fullName}? La verá de nuevo cuando corresponda.`)) return;
+    await adminApi.resetNps(user.id);
+    bump();
+  }
+
   const TABS: { id: TabId; label: string; show: boolean }[] = [
     { id: "overview", label: "Resumen", show: true },
     { id: "subscription", label: "Suscripción", show: isStudent },
@@ -500,9 +506,18 @@ function AdminUserDetail() {
 
       {tab === "nps" && isStudent ? (
         <Card title={`Encuestas de satisfacción (${surveys.length})`}>
-          <p className="mb-3 text-xs text-brand-ink/55">
-            Estas respuestas son privadas. El profesor no las puede ver.
-          </p>
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-brand-ink/55">
+              Estas respuestas son privadas. El profesor no las puede ver.
+            </p>
+            <button
+              type="button"
+              onClick={onResetNps}
+              className="rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink/75 transition hover:-translate-y-0.5 hover:bg-brand-cream/40"
+            >
+              Reiniciar encuesta
+            </button>
+          </div>
           {surveys.length === 0 ? (
             <p className="text-sm text-brand-ink/55">Aún no ha respondido encuestas.</p>
           ) : (

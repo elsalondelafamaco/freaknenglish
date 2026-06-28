@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { CheckCircle2, Lock, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import {
-  CHECKPOINTS,
+  listAllCheckpoints,
   bestCheckpointAttempt,
   modulesByLevel,
   moduleProgress,
@@ -118,7 +118,7 @@ function CheckpointBanner({
   level: EnglishLevel;
   userId: string;
 }) {
-  const chk = CHECKPOINTS.find((c) => c.level === level);
+  const chk = listAllCheckpoints().find((c) => c.level === level);
   if (!chk) return null;
   const best = bestCheckpointAttempt(userId, chk.id);
   const passed = !!best?.passed;

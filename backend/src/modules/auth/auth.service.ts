@@ -12,16 +12,18 @@ export type Tokens = { accessToken: string; refreshToken: string }
 export class AuthService {
   constructor(private prisma: PrismaService, private jwt: JwtService) {}
 
-  async signup(input: { email: string; password: string; fullName: string; phone?: string }) {
-    const existing = await this.prisma.user.findUnique({ where: { email: input.email } })
+  async signup(input: { email: string; password: string; fullName: string; phone: string; documentNumber: string }) {
+    const email = input.email.trim().toLowerCase()
+    const existing = await this.prisma.user.findUnique({ where: { email } })
     if (existing) throw new ConflictException('Email already registered')
     const passwordHash = await argon2.hash(input.password)
     const user = await this.prisma.user.create({
       data: {
-        email: input.email,
+        email,
         passwordHash,
         fullName: input.fullName,
         phone: input.phone,
+        documentNumber: input.documentNumber,
         role: 'student',
       },
     })
@@ -31,8 +33,10 @@ export class AuthService {
   async login(email: string, password: string): Promise<Tokens & { user: { id: string; role: string } }> {
     const user = await this.prisma.user.findUnique({ where: { email } })
     if (!user || !user.passwordHash) throw new UnauthorizedException('Invalid credentials')
+    if (user.disabledAt || user.deletedAt) throw new UnauthorizedException('User disabled')
     const ok = await argon2.verify(user.passwordHash, password)
     if (!ok) throw new UnauthorizedException('Invalid credentials')
+    await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
     const tokens = await this.issueTokens(user)
     return { ...tokens, user: { id: user.id, role: user.role } }
   }

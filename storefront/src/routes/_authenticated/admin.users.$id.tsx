@@ -12,7 +12,6 @@ import {
 import { readDb } from "@/lib/domain/repository";
 import type {
   ClassSession,
-  PaymentIntent,
   SatisfactionSurvey,
   Subscription,
   User,
@@ -20,6 +19,7 @@ import type {
   AppRole,
 } from "@/lib/domain/types";
 import { getPlan, formatCop } from "@/lib/domain/plans";
+import type { PaymentIntent } from "@/lib/domain/subscriptions";
 import {
   assignTeacherToStudent,
   startImpersonation,
@@ -400,7 +400,7 @@ function AdminUserDetail() {
                             : "—"}
                         </td>
                         <td className="text-brand-ink/80">{getPlan(p.planId)?.name ?? p.planId}</td>
-                        <td className="text-brand-ink/80">{formatCop(p.amount)}</td>
+                        <td className="text-brand-ink/80">{formatCop(p.amountCop)}</td>
                         <td>
                           <span className="rounded-full bg-brand-cream px-2 py-0.5 text-[10px] font-semibold">
                             {p.status}
@@ -485,16 +485,13 @@ function AdminUserDetail() {
                   <li key={s.id} className="rounded-xl bg-brand-cream/40 p-3 text-sm">
                     <div className="flex justify-between text-xs text-brand-ink/55">
                       <span>{new Date(s.submittedAt).toLocaleDateString("es-CO")}</span>
-                      <span>NPS {s.npsScore}/10</span>
+                      <span>NPS {s.nps}/10</span>
                     </div>
-                    {s.answers ? (
-                      <dl className="mt-2 grid gap-1 text-xs md:grid-cols-2">
-                        <Row k="Profesor">{(s.answers as any).teacher ?? "—"}/5</Row>
-                        <Row k="Material">{(s.answers as any).material ?? "—"}/5</Row>
-                        <Row k="Plataforma">{(s.answers as any).platform ?? "—"}/5</Row>
-                        <Row k="Progreso">{(s.answers as any).progress ?? "—"}/5</Row>
-                      </dl>
-                    ) : null}
+                    <dl className="mt-2 grid gap-1 text-xs md:grid-cols-2">
+                      <Row k="Profesor">{s.teacherScore ?? "—"}/5</Row>
+                      <Row k="Contenido">{s.contentScore ?? "—"}/5</Row>
+                      <Row k="Plataforma">{s.platformScore ?? "—"}/5</Row>
+                    </dl>
                     {s.comment ? (
                       <p className="mt-2 italic text-brand-ink/75">"{s.comment}"</p>
                     ) : null}
@@ -515,9 +512,9 @@ function AdminUserDetail() {
                 <li key={n.id} className="rounded-xl bg-brand-cream/40 p-3 text-sm">
                   <div className="flex justify-between text-xs text-brand-ink/55">
                     <span>{new Date(n.createdAt).toLocaleDateString("es-CO")}</span>
-                    <span>Rating {n.rating}/5</span>
+                    <span>{n.rating ? `Rating ${n.rating}/5` : ""}</span>
                   </div>
-                  <p className="mt-1 text-brand-ink/80">{n.notes}</p>
+                  <p className="mt-1 text-brand-ink/80">{n.body}</p>
                 </li>
               ))}
             </ul>

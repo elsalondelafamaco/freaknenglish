@@ -31,6 +31,7 @@ import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppLearningRouteImport } from './routes/_authenticated/app.learning'
 import { Route as AuthenticatedAppCalendarRouteImport } from './routes/_authenticated/app.calendar'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
+import { Route as AuthenticatedAdminUsersIndexRouteImport } from './routes/_authenticated/admin.users.index'
 import { Route as AuthenticatedAdminSurveysRouteImport } from './routes/_authenticated/admin.surveys'
 import { Route as AuthenticatedAdminPayrollRouteImport } from './routes/_authenticated/admin.payroll'
 import { Route as AuthenticatedAdminNotificationsRouteImport } from './routes/_authenticated/admin.notifications'
@@ -155,6 +156,12 @@ const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminUsersIndexRoute =
+  AuthenticatedAdminUsersIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAdminUsersRoute,
+  } as any)
 const AuthenticatedAdminSurveysRoute =
   AuthenticatedAdminSurveysRouteImport.update({
     id: '/surveys',
@@ -221,12 +228,12 @@ export interface FileRoutesByFullPath {
   '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/admin/surveys': typeof AuthenticatedAdminSurveysRoute
-  '/admin/users': typeof AuthenticatedAdminUsersRouteWithChildren
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
   '/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
   '/teacher/students': typeof AuthenticatedTeacherStudentsRouteWithChildren
+  '/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/teacher/': typeof AuthenticatedTeacherIndexRoute
@@ -249,12 +256,12 @@ export interface FileRoutesByTo {
   '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/admin/surveys': typeof AuthenticatedAdminSurveysRoute
-  '/admin/users': typeof AuthenticatedAdminUsersRouteWithChildren
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
   '/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
   '/teacher/students': typeof AuthenticatedTeacherStudentsRouteWithChildren
+  '/admin/users': typeof AuthenticatedAdminUsersIndexRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/teacher': typeof AuthenticatedTeacherIndexRoute
@@ -288,6 +295,7 @@ export interface FileRoutesById {
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
   '/_authenticated/teacher/students': typeof AuthenticatedTeacherStudentsRouteWithChildren
+  '/_authenticated/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/teacher/': typeof AuthenticatedTeacherIndexRoute
@@ -321,6 +329,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/teacher/schedule'
     | '/teacher/students'
+    | '/admin/users/'
     | '/admin/'
     | '/app/'
     | '/teacher/'
@@ -349,6 +358,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/teacher/schedule'
     | '/teacher/students'
+    | '/admin/users'
     | '/admin'
     | '/app'
     | '/teacher'
@@ -381,6 +391,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/settings'
     | '/_authenticated/teacher/schedule'
     | '/_authenticated/teacher/students'
+    | '/_authenticated/admin/users/'
     | '/_authenticated/admin/'
     | '/_authenticated/app/'
     | '/_authenticated/teacher/'
@@ -559,6 +570,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/users/': {
+      id: '/_authenticated/admin/users/'
+      path: '/'
+      fullPath: '/admin/users/'
+      preLoaderRoute: typeof AuthenticatedAdminUsersIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminUsersRoute
+    }
     '/_authenticated/admin/surveys': {
       id: '/_authenticated/admin/surveys'
       path: '/surveys'
@@ -619,11 +637,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAdminUsersRouteChildren {
+  AuthenticatedAdminUsersIndexRoute: typeof AuthenticatedAdminUsersIndexRoute
   AuthenticatedAdminUsersIdRoute: typeof AuthenticatedAdminUsersIdRoute
 }
 
 const AuthenticatedAdminUsersRouteChildren: AuthenticatedAdminUsersRouteChildren =
   {
+    AuthenticatedAdminUsersIndexRoute: AuthenticatedAdminUsersIndexRoute,
     AuthenticatedAdminUsersIdRoute: AuthenticatedAdminUsersIdRoute,
   }
 

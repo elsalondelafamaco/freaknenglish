@@ -7,7 +7,8 @@ class CreateIntentDto {
   @IsString() planId!: string
   @IsEmail() customerEmail!: string
   @IsString() customerName!: string
-  @IsString() @IsOptional() customerPhone?: string
+  @IsString() customerPhone!: string
+  @IsString() customerDocument!: string
   @IsString() @IsOptional() userId?: string
 }
 

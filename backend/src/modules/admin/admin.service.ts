@@ -241,7 +241,7 @@ export class AdminService {
         isStudent
           ? this.prisma.class.findMany({
               where: { studentId: id },
-              orderBy: { scheduledAt: 'desc' },
+              orderBy: { startsAt: 'desc' },
               take: 50,
               include: { teacher: { select: { id: true, fullName: true } } },
             })
@@ -249,7 +249,7 @@ export class AdminService {
         isTeacher
           ? this.prisma.class.findMany({
               where: { teacherId: id },
-              orderBy: { scheduledAt: 'desc' },
+              orderBy: { startsAt: 'desc' },
               take: 50,
               include: { student: { select: { id: true, fullName: true } } },
             })
@@ -264,14 +264,14 @@ export class AdminService {
             })
           : Promise.resolve([] as any[]),
         isTeacher
-          ? this.prisma.classNote.findMany({ where: { authorId: id }, orderBy: { createdAt: 'desc' }, take: 50 })
+          ? this.prisma.classNote.findMany({ where: { teacherId: id }, orderBy: { createdAt: 'desc' }, take: 50 })
           : Promise.resolve([] as any[]),
         isStudent
           ? this.prisma.classNote.findMany({
               where: { class: { studentId: id } } as any,
               orderBy: { createdAt: 'desc' },
               take: 50,
-              include: { author: { select: { id: true, fullName: true } } },
+              include: { teacher: { select: { id: true, fullName: true } } },
             })
           : Promise.resolve([] as any[]),
         isTeacher

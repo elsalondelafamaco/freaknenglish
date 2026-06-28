@@ -110,15 +110,31 @@ export const adminApi = {
     byPlan: Array<{ planId: string; active: number }>;
   }>("/admin/analytics"),
   users: (q?: string) => apiGet<User[]>("/admin/users", q ? { q } : undefined),
+  userDetail: (id: string) => apiGet<any>(`/admin/users/${id}`),
   payroll: (period: string) => apiGet<Array<{ teacherId: string; fullName: string; classes: number; rateCop: number; amountCop: number }>>("/admin/payroll", { period }),
   payrollCsv: (period: string) =>
     apiGet<string>(`/admin/payroll/export.csv`, { period }),
   content: () => apiGet<LearningModule[]>("/admin/content"),
+  createModule: (body: { id?: string; level: "beginner" | "intermediate" | "advanced"; title: string; summary?: string; position?: number }) =>
+    apiPost<any>("/admin/content/modules", body),
+  updateModule: (id: string, body: { level?: "beginner" | "intermediate" | "advanced"; title?: string; summary?: string; position?: number }) =>
+    apiPatch<any>(`/admin/content/modules/${id}`, body),
+  deleteModule: (id: string) => apiPatch<{ ok: true }>(`/admin/content/modules/${id}/delete`, {}),
+  createLesson: (body: any) => apiPost<any>("/admin/content/lessons", body),
+  updateLesson: (id: string, body: any) => apiPatch<any>(`/admin/content/lessons/${id}`, body),
+  deleteLesson: (id: string) => apiPatch<{ ok: true }>(`/admin/content/lessons/${id}/delete`, {}),
   notifications: (status?: "queued" | "sent" | "failed") =>
     apiGet<any[]>("/admin/notifications", status ? { status } : undefined),
   runAutomations: () => apiPost<{ ok: true }>("/admin/notifications/run"),
   createUser: (body: { email: string; fullName: string; role: "student" | "teacher"; level?: "beginner" | "intermediate" | "advanced" }) =>
     apiPost<{ user: User; setPasswordToken: string }>("/admin/users", body),
+  updateUser: (id: string, body: Partial<{ fullName: string; phone: string; role: "student" | "teacher" | "admin"; englishLevel: "beginner" | "intermediate" | "advanced" | null }>) =>
+    apiPatch<User>(`/admin/users/${id}`, body),
+  setUserStatus: (id: string, disabled: boolean) =>
+    apiPatch<User>(`/admin/users/${id}/status`, { disabled }),
+  softDeleteUser: (id: string) => apiPatch<User>(`/admin/users/${id}/delete`, {}),
+  resetPassword: (id: string) => apiPost<{ ok: true; link?: string; expiresAt?: string }>(`/admin/users/${id}/reset-password`),
+  resetNps: (id: string) => apiPost<{ ok: true }>(`/admin/users/${id}/surveys/reset`),
   assignTeacher: (studentId: string, teacherId: string | null) =>
     apiPatch<User>(`/admin/users/${studentId}/assign-teacher`, { teacherId }),
   impersonate: (userId: string) =>
@@ -130,8 +146,8 @@ export const adminApi = {
 // ─── Surveys ───────────────────────────────────────────────────────────
 export const surveysApi = {
   pending: () => apiGet<{ pending: boolean; period: string }>("/surveys/pending"),
-  submit: (score: number, comment?: string) =>
-    apiPost<any>("/surveys/nps", { score, comment }),
+  submit: (body: { score: number; teacherScore?: number; contentScore?: number; platformScore?: number; comment?: string }) =>
+    apiPost<any>("/surveys/nps", body),
 };
 
 // ─── Boards (realtime) ─────────────────────────────────────────────────

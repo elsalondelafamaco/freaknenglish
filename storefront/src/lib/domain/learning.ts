@@ -13,7 +13,8 @@ import type {
 } from "./types";
 import { readDb, writeDb, uid } from "./repository";
 
-export const CHECKPOINTS: Checkpoint[] = [
+/** Datos seed (sólo se usan si el store CMS está vacío). */
+const CHECKPOINTS_SEED: Checkpoint[] = [
   {
     id: "chk_beginner",
     level: "beginner",

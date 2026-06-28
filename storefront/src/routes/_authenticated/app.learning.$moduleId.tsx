@@ -164,6 +164,18 @@ function ModuleDetail() {
 }
 
 function LessonViewer({ lesson }: { lesson: Lesson }) {
+  if (lesson.kind === "html") {
+    return (
+      <div className="h-[72vh] w-full overflow-hidden rounded-2xl border border-brand-line bg-white">
+        <iframe
+          title={lesson.title}
+          srcDoc={lesson.contentHtml ?? lesson.url ?? ""}
+          className="h-full w-full bg-white"
+          sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"
+        />
+      </div>
+    );
+  }
   if (lesson.kind === "video" || lesson.kind === "slides") {
     return (
       <div className="aspect-video w-full overflow-hidden rounded-2xl border border-brand-line bg-brand-ink/5">

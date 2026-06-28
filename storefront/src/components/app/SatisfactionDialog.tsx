@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Lock, ShieldCheck, Star } from "lucide-react";
-import { submitSatisfaction, type SurveyAnswers } from "@/lib/domain/survey";
+import { surveysApi } from "@/lib/api/endpoints";
 
 /**
  * Encuesta NPS obligatoria cada 30 días para estudiantes.
@@ -36,21 +36,24 @@ export function SatisfactionDialog({
   const ready =
     nps != null && teacherScore != null && contentScore != null && platformScore != null;
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!ready) {
       setError("Por favor responde las 4 preguntas con escala antes de enviar.");
       return;
     }
-    const answers: SurveyAnswers = {
-      nps: nps!,
-      teacherScore: teacherScore!,
-      contentScore: contentScore!,
-      platformScore: platformScore!,
-      comment: comment.trim() || undefined,
-    };
-    submitSatisfaction({ userId, answers });
-    setDone(true);
-    setTimeout(onSubmitted, 1100);
+    try {
+      await surveysApi.submit({
+        score: nps!,
+        teacherScore: teacherScore!,
+        contentScore: contentScore!,
+        platformScore: platformScore!,
+        comment: comment.trim() || undefined,
+      });
+      setDone(true);
+      setTimeout(onSubmitted, 1100);
+    } catch (err) {
+      setError((err as Error).message);
+    }
   }
 
   return (

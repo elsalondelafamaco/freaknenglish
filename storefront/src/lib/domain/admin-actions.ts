@@ -25,7 +25,7 @@ export function createUserByAdmin(input: CreateUserInput): User {
   const db = readDb();
   const users = db.users as Record<string, User>;
   const existing = Object.values(users).find((u) => u.email === email);
-  if (existing) throw new Error("Ya existe un usuario con ese email.");
+  if (existing && !existing.deletedAt) throw new Error("Ya existe un usuario con ese email.");
   const id = `usr_${Math.random().toString(36).slice(2, 10)}`;
   const user: User = {
     id,
@@ -41,6 +41,84 @@ export function createUserByAdmin(input: CreateUserInput): User {
     d.meta.passwordsByEmail[email] = "Freakn123!";
   });
   return user;
+}
+
+export interface UpdateUserInput {
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  level?: EnglishLevel;
+  roles?: AppRole[];
+}
+
+export function updateUserByAdmin(id: string, patch: UpdateUserInput): User {
+  const db = readDb();
+  const users = db.users as Record<string, User>;
+  const existing = users[id];
+  if (!existing) throw new Error("Usuario no encontrado");
+  const next: User = {
+    ...existing,
+    ...(patch.fullName !== undefined ? { fullName: patch.fullName.trim() } : {}),
+    ...(patch.email !== undefined ? { email: patch.email.trim().toLowerCase() } : {}),
+    ...(patch.phone !== undefined ? { phone: patch.phone } : {}),
+    ...(patch.level !== undefined ? { level: patch.level } : {}),
+    ...(patch.roles !== undefined && patch.roles.length > 0 ? { roles: patch.roles } : {}),
+  };
+  writeDb((d) => {
+    (d.users as Record<string, User>)[id] = next;
+    if (patch.email && patch.email !== existing.email) {
+      const pw = d.meta.passwordsByEmail[existing.email];
+      delete d.meta.passwordsByEmail[existing.email];
+      d.meta.passwordsByEmail[next.email] = pw ?? "Freakn123!";
+    }
+  });
+  return next;
+}
+
+export function setUserActive(id: string, active: boolean): User {
+  const db = readDb();
+  const users = db.users as Record<string, User>;
+  const existing = users[id];
+  if (!existing) throw new Error("Usuario no encontrado");
+  const next: User = {
+    ...existing,
+    disabledAt: active ? undefined : new Date().toISOString(),
+  };
+  writeDb((d) => {
+    (d.users as Record<string, User>)[id] = next;
+  });
+  return next;
+}
+
+export function softDeleteUser(id: string): void {
+  const db = readDb();
+  const users = db.users as Record<string, User>;
+  const existing = users[id];
+  if (!existing) throw new Error("Usuario no encontrado");
+  writeDb((d) => {
+    (d.users as Record<string, User>)[id] = {
+      ...existing,
+      deletedAt: new Date().toISOString(),
+      disabledAt: existing.disabledAt ?? new Date().toISOString(),
+    };
+  });
+}
+
+/**
+ * Resetea la contraseña en el mock a una temporal y devuelve el "set-password
+ * token" simulado para mostrarlo al admin (en backend, se envía por email).
+ */
+export function resetUserPassword(id: string): { tempPassword: string; setPasswordToken: string } {
+  const db = readDb();
+  const users = db.users as Record<string, User>;
+  const existing = users[id];
+  if (!existing) throw new Error("Usuario no encontrado");
+  const tempPassword = "Freakn" + Math.random().toString(36).slice(2, 6) + "!";
+  const setPasswordToken = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  writeDb((d) => {
+    d.meta.passwordsByEmail[existing.email] = tempPassword;
+  });
+  return { tempPassword, setPasswordToken };
 }
 
 export function assignTeacherToStudent(

@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Download } from "lucide-react";
-import { computePayroll, formatCop, TEACHER_PAYRATE_COP } from "@/lib/domain/admin";
+import { Download, Save } from "lucide-react";
+import { computePayroll, formatCop } from "@/lib/domain/admin";
+import { getHourlyRate, setHourlyRate } from "@/lib/domain/app-settings";
 
 export const Route = createFileRoute("/_authenticated/admin/payroll")({
   head: () => ({ meta: [{ title: "Nómina — Admin Freakn'" }] }),
@@ -15,14 +16,25 @@ function currentMonth() {
 
 function AdminPayroll() {
   const [monthKey, setMonthKey] = useState(currentMonth());
-  const payroll = useMemo(() => computePayroll(monthKey), [monthKey]);
+  const [tick, setTick] = useState(0);
+  const [rateDraft, setRateDraft] = useState<string>(() => String(getHourlyRate()));
+  const payroll = useMemo(() => computePayroll(monthKey), [monthKey, tick]);
+
+  function saveRate() {
+    try {
+      setHourlyRate(Number(rateDraft));
+      setTick((t) => t + 1);
+    } catch (err) {
+      alert((err as Error).message);
+    }
+  }
 
   function exportCsv() {
-    const header = "teacher_id,teacher_name,email,validated_classes,amount_cop\n";
+    const header = "teacher_id,teacher_name,email,validated_classes,hours,rate_cop,amount_cop\n";
     const rows = payroll.rows
       .map(
         (r) =>
-          `${r.teacher.id},"${r.teacher.fullName}",${r.teacher.email},${r.validatedClasses},${r.amountCop}`,
+          `${r.teacher.id},"${r.teacher.fullName}",${r.teacher.email},${r.validatedClasses},${r.hours.toFixed(2)},${r.rateCop},${r.amountCop}`,
       )
       .join("\n");
     const blob = new Blob([header + rows], { type: "text/csv" });
@@ -65,9 +77,32 @@ function AdminPayroll() {
       </div>
 
       <div className="rounded-2xl border border-brand-line bg-brand-cream/30 p-4 text-xs text-brand-ink/75">
-        Tarifa actual por clase validada:{" "}
-        <strong>{formatCop(TEACHER_PAYRATE_COP)}</strong>. Solo se cuentan clases
-        completadas y validadas por el profesor.
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-[11px] font-semibold uppercase tracking-wide text-brand-ink/55">
+              Tarifa por hora (COP)
+            </label>
+            <input
+              type="number"
+              min={1}
+              step={1000}
+              value={rateDraft}
+              onChange={(e) => setRateDraft(e.target.value)}
+              className="mt-1 w-40 rounded-xl border border-brand-line bg-white px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={saveRate}
+            className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-3 py-2 text-xs font-semibold text-white shadow-soft hover:-translate-y-0.5"
+          >
+            <Save className="size-3.5" /> Guardar tarifa
+          </button>
+          <p className="ml-auto text-[11px] text-brand-ink/55">
+            Tarifa vigente: <strong>{formatCop(payroll.rateCop)}</strong> /h. Solo se cuentan
+            clases completadas y validadas por el profesor.
+          </p>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-brand-line bg-white">
@@ -75,15 +110,17 @@ function AdminPayroll() {
           <thead className="bg-brand-cream/40 text-xs uppercase tracking-wide text-brand-ink/60">
             <tr>
               <th className="px-4 py-3">Profesor</th>
-              <th className="px-4 py-3">Clases validadas</th>
+              <th className="px-4 py-3">Clases</th>
+              <th className="px-4 py-3">Horas</th>
+              <th className="px-4 py-3">Tarifa/h</th>
               <th className="px-4 py-3 text-right">Monto</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-brand-line">
             {payroll.rows.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-4 py-8 text-center text-brand-ink/55">
-                  No hay clases validadas este mes.
+                <td colSpan={5} className="px-4 py-8 text-center text-brand-ink/55">
+                  No hay profesores registrados.
                 </td>
               </tr>
             ) : (
@@ -94,6 +131,8 @@ function AdminPayroll() {
                     <div className="text-xs text-brand-ink/55">{r.teacher.email}</div>
                   </td>
                   <td className="px-4 py-3 text-brand-ink/80">{r.validatedClasses}</td>
+                  <td className="px-4 py-3 text-brand-ink/80">{r.hours.toFixed(2)} h</td>
+                  <td className="px-4 py-3 text-brand-ink/80">{formatCop(r.rateCop)}</td>
                   <td className="px-4 py-3 text-right font-semibold text-brand-ink">
                     {formatCop(r.amountCop)}
                   </td>
@@ -108,6 +147,10 @@ function AdminPayroll() {
                 <td className="px-4 py-3">
                   {payroll.rows.reduce((a, r) => a + r.validatedClasses, 0)}
                 </td>
+                <td className="px-4 py-3">
+                  {payroll.rows.reduce((a, r) => a + r.hours, 0).toFixed(2)} h
+                </td>
+                <td className="px-4 py-3" />
                 <td className="px-4 py-3 text-right">{formatCop(payroll.totalCop)}</td>
               </tr>
             </tfoot>

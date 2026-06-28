@@ -160,6 +160,10 @@
 }
 
 @layer base {
+  /* Form input baseline used by admin/CMS dialogs. */
+  .input {
+    @apply w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink focus:border-brand-ink focus:outline-none;
+  }
   * {
     border-color: var(--color-border);
   }

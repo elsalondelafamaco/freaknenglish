@@ -629,15 +629,14 @@ function EditUserDialog({
     setRoles((rs) => (rs.includes(r) ? rs.filter((x) => x !== r) : [...rs, r]));
   }
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      updateUserByAdmin(user.id, {
+      await adminApi.updateUser(user.id, {
         fullName,
-        email,
         phone: phone || undefined,
-        level: roles.includes("student") ? level : undefined,
-        roles,
+        role: roles[0] ?? "student",
+        englishLevel: roles.includes("student") ? level : null,
       });
       onSaved();
     } catch (err) {

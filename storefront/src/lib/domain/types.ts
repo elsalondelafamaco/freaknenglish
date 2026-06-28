@@ -88,7 +88,7 @@ export interface ClassSession {
   meetingUrl?: string;
 }
 
-export type LessonKind = "video" | "pdf" | "slides" | "download";
+export type LessonKind = "video" | "pdf" | "slides" | "download" | "html";
 
 export interface Lesson {
   id: string;
@@ -97,8 +97,14 @@ export interface Lesson {
   title: string;
   kind: LessonKind;
   /** External URL: YouTube/Vimeo embed, PDF link, slides HTML, or downloadable asset. */
-  url: string;
-  estMinutes: number;
+  url?: string;
+  estMinutes?: number;
+  /** HTML enriquecido renderizable (sanitizado en cliente). */
+  contentHtml?: string;
+  /** Notas internas del profe / instrucciones para el estudiante. */
+  notes?: string;
+  /** Archivos adjuntos subidos a MinIO/S3. */
+  attachments?: { name: string; url: string; size?: number }[];
 }
 
 export interface LearningModule {

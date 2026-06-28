@@ -83,7 +83,7 @@ const CHECKPOINTS_SEED: Checkpoint[] = [
   },
 ];
 
-export const MODULES: LearningModule[] = [
+const MODULES_SEED: LearningModule[] = [
   {
     id: "mod_b1",
     level: "beginner",

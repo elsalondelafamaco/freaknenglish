@@ -115,6 +115,14 @@ export const adminApi = {
   payrollCsv: (period: string) =>
     apiGet<string>(`/admin/payroll/export.csv`, { period }),
   content: () => apiGet<LearningModule[]>("/admin/content"),
+  createModule: (body: { id?: string; level: "beginner" | "intermediate" | "advanced"; title: string; summary?: string; position?: number }) =>
+    apiPost<any>("/admin/content/modules", body),
+  updateModule: (id: string, body: { level?: "beginner" | "intermediate" | "advanced"; title?: string; summary?: string; position?: number }) =>
+    apiPatch<any>(`/admin/content/modules/${id}`, body),
+  deleteModule: (id: string) => apiPatch<{ ok: true }>(`/admin/content/modules/${id}/delete`, {}),
+  createLesson: (body: any) => apiPost<any>("/admin/content/lessons", body),
+  updateLesson: (id: string, body: any) => apiPatch<any>(`/admin/content/lessons/${id}`, body),
+  deleteLesson: (id: string) => apiPatch<{ ok: true }>(`/admin/content/lessons/${id}/delete`, {}),
   notifications: (status?: "queued" | "sent" | "failed") =>
     apiGet<any[]>("/admin/notifications", status ? { status } : undefined),
   runAutomations: () => apiPost<{ ok: true }>("/admin/notifications/run"),
@@ -137,8 +145,8 @@ export const adminApi = {
 // ─── Surveys ───────────────────────────────────────────────────────────
 export const surveysApi = {
   pending: () => apiGet<{ pending: boolean; period: string }>("/surveys/pending"),
-  submit: (score: number, comment?: string) =>
-    apiPost<any>("/surveys/nps", { score, comment }),
+  submit: (body: { score: number; teacherScore?: number; contentScore?: number; platformScore?: number; comment?: string }) =>
+    apiPost<any>("/surveys/nps", body),
 };
 
 // ─── Boards (realtime) ─────────────────────────────────────────────────

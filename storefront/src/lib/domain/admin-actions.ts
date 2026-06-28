@@ -12,6 +12,7 @@
  */
 import type { AppRole, User, EnglishLevel } from "./types";
 import { readDb, writeDb } from "./repository";
+import { reloadCurrentUser } from "./auth";
 
 export interface CreateUserInput {
   fullName: string;

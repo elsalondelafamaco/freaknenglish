@@ -24,12 +24,19 @@ export interface User {
   email: string;
   fullName: string;
   avatarUrl?: string;
+  phone?: string;
   roles: AppRole[];
   level?: EnglishLevel;
   /** Onboarding completado (nivelación + horario inicial). */
   onboardedAt?: string;
   /** Profesor asignado (sólo aplica a estudiantes). */
   assignedTeacherId?: string;
+  /** Si está definido, el usuario está deshabilitado y no puede iniciar sesión. */
+  disabledAt?: string;
+  /** Soft delete. */
+  deletedAt?: string;
+  /** Último login exitoso (ISO). */
+  lastLoginAt?: string;
   createdAt: string;
 }
 

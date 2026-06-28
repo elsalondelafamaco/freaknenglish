@@ -1,3 +1,24 @@
+## Round 4 — CRM completo, CMS funcional, Nómina por horas
+
+### Storefront
+- `admin.users.$id.tsx`: vista con tabs (Overview, Subscription, Payments, Classes, Learning, NPS, Notes, Students). Acciones: editar, desactivar/activar, soft delete, resetear contraseña.
+- Impersonación corregida: `startImpersonation` ahora invalida la cache en memoria de `auth.ts` (`reloadCurrentUser`) antes de navegar; los route guards síncronos ya leen el usuario destino.
+- `admin.payroll.tsx`: tarifa por hora editable (persistida en `app_settings`), tabla con `hours`, `hourlyRateCop`, `amountCop`. CSV regenerado.
+- `admin.content.tsx`: CMS CRUD para módulos / lecciones (video, pdf, slides, html, download) con notas internas y adjuntos.
+
+### Backend
+- `prisma/schema.prisma`: `User.disabledAt|deletedAt|lastLoginAt|setPasswordToken`, `Lesson.contentHtml|notes|kind`, modelo `LessonAttachment`.
+- Migración SQL: `20260801000000_cms_storage_user_states`.
+- `AdminController` + `AdminService`: endpoints CRM (`GET /admin/users/:id`, `PATCH /admin/users/:id`, `PATCH /admin/users/:id/status`, `PATCH /admin/users/:id/delete`, `POST /admin/users/:id/reset-password`), nómina (`GET|PATCH /admin/settings/payroll`), CMS (`POST/PATCH /admin/content/modules|lessons`, `POST /admin/uploads/sign`, `POST /admin/content/lessons/:id/attachments`).
+- `StorageModule` (`storage.service.ts`): cliente S3 v3 con presigned PUT. Funciona con MinIO local y S3/MinIO en Railway sin cambios.
+- `docker-compose.yml`: servicios `minio` (S3 :9000 + consola :9001) y `minio-bootstrap` que crea el bucket `freakn-cms` automáticamente.
+- `.env.example`: bloque `S3_*` documentado.
+- `package.json`: dependencias `@aws-sdk/client-s3` y `@aws-sdk/s3-request-presigner`.
+
+### Contraseña al crear usuario
+- Al crear desde admin **no se asigna contraseña**: se persiste un `setPasswordToken` (TTL 24h) y se envía email vía Resend (`/reset-password?token=…`). El usuario fija su contraseña en el primer ingreso.
+- En dev el endpoint devuelve el link en el response para poder probar sin SMTP.
+- Estudiantes creados así quedan **sin suscripción activa**: deben completar pago Wompi para entrar al portal.
 # Mejoras aplicadas (turno actual)
 
 ## ✅ Hecho

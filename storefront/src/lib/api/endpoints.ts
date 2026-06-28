@@ -134,6 +134,7 @@ export const adminApi = {
     apiPatch<User>(`/admin/users/${id}/status`, { disabled }),
   softDeleteUser: (id: string) => apiPatch<User>(`/admin/users/${id}/delete`, {}),
   resetPassword: (id: string) => apiPost<{ ok: true; link?: string; expiresAt?: string }>(`/admin/users/${id}/reset-password`),
+  resetNps: (id: string) => apiPost<{ ok: true }>(`/admin/users/${id}/surveys/reset`),
   assignTeacher: (studentId: string, teacherId: string | null) =>
     apiPatch<User>(`/admin/users/${studentId}/assign-teacher`, { teacherId }),
   impersonate: (userId: string) =>

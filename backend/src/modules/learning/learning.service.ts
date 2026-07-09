@@ -13,6 +13,28 @@ export class LearningService {
     })
   }
 
+  /**
+   * Resuelve el nivel efectivo del usuario si no se pasó filtro explícito.
+   * Estudiantes → siempre filtrados por su `englishLevel`; admin/teacher
+   * sin nivel asignado → todos los módulos.
+   */
+  async listModulesForUser(
+    userId: string,
+    level?: 'beginner' | 'intermediate' | 'advanced',
+  ) {
+    let effective = level
+    if (!effective) {
+      const u = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { englishLevel: true, role: true },
+      })
+      if (u?.role === 'student' && u.englishLevel) {
+        effective = u.englishLevel as 'beginner' | 'intermediate' | 'advanced'
+      }
+    }
+    return this.listModules(effective)
+  }
+
   module(id: string) {
     return this.prisma.module.findUnique({
       where: { id },

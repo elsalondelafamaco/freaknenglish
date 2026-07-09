@@ -222,3 +222,15 @@
 - **Filtrar `/teacher/students` por `assignedTeacherId`** una vez la
   asignación viva en backend (hoy `classes.ts:listStudentsOfTeacher`
   filtra por clases, lo cual sigue siendo válido como fallback).
+## Iteración D4 — CMS al backend + mensaje 48h
+
+- `admin.content.tsx` reescrito para consumir `adminApi.content` /
+  `createModule` / `updateModule` / `deleteModule` / `createLesson` /
+  `updateLesson` / `deleteLesson` mediante TanStack Query. Se eliminaron
+  las llamadas al mock local `lib/domain/learning.ts`.
+- Reordenamiento de módulos y lecciones con botones ↑/↓ (intercambia
+  `position` con el vecino). Diálogo de lección con campos por tipo
+  (`video/pdf/slides/download/html`) y notas.
+- `onboarding.schedule.tsx`: cuando no hay profesor disponible para los
+  bloques elegidos, el toast informa explícitamente “nos coordinaremos
+  contigo en las próximas 48 horas para iniciar con las clases”.

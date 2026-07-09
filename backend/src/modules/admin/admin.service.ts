@@ -79,14 +79,15 @@ export class AdminService {
     const end = new Date(year, month, 1)
     const classes = await this.prisma.class.findMany({
       where: { status: 'validated', validatedAt: { gte: start, lt: end }, teacherId: { not: null } },
-      select: { teacherId: true, durationMin: true },
+      select: { teacherId: true, startsAt: true, endsAt: true },
     })
     // Acumulamos minutos por profesor (las clases validadas se pagan por hora real).
     const minutes = new Map<string, number>()
     const counts = new Map<string, number>()
     for (const c of classes) {
       const tid = c.teacherId!
-      minutes.set(tid, (minutes.get(tid) ?? 0) + (c.durationMin ?? 60))
+      const classMinutes = Math.max(1, Math.round((c.endsAt.getTime() - c.startsAt.getTime()) / 60000))
+      minutes.set(tid, (minutes.get(tid) ?? 0) + classMinutes)
       counts.set(tid, (counts.get(tid) ?? 0) + 1)
     }
     const teacherIds = Array.from(minutes.keys())
@@ -241,7 +242,7 @@ export class AdminService {
         isStudent
           ? this.prisma.class.findMany({
               where: { studentId: id },
-              orderBy: { scheduledAt: 'desc' },
+              orderBy: { startsAt: 'desc' },
               take: 50,
               include: { teacher: { select: { id: true, fullName: true } } },
             })
@@ -249,7 +250,7 @@ export class AdminService {
         isTeacher
           ? this.prisma.class.findMany({
               where: { teacherId: id },
-              orderBy: { scheduledAt: 'desc' },
+              orderBy: { startsAt: 'desc' },
               take: 50,
               include: { student: { select: { id: true, fullName: true } } },
             })
@@ -264,14 +265,14 @@ export class AdminService {
             })
           : Promise.resolve([] as any[]),
         isTeacher
-          ? this.prisma.classNote.findMany({ where: { authorId: id }, orderBy: { createdAt: 'desc' }, take: 50 })
+          ? this.prisma.classNote.findMany({ where: { teacherId: id }, orderBy: { createdAt: 'desc' }, take: 50 })
           : Promise.resolve([] as any[]),
         isStudent
           ? this.prisma.classNote.findMany({
               where: { class: { studentId: id } } as any,
               orderBy: { createdAt: 'desc' },
               take: 50,
-              include: { author: { select: { id: true, fullName: true } } },
+              include: { teacher: { select: { id: true, fullName: true } } },
             })
           : Promise.resolve([] as any[]),
         isTeacher
@@ -336,7 +337,7 @@ export class AdminService {
         where: { id },
         data: {
           title: input.title ?? existing.title,
-          summary: input.summary ?? existing.summary,
+          description: input.summary ?? existing.description,
           level: (input.level ?? existing.level) as any,
           position: input.position ?? existing.position,
         },
@@ -347,7 +348,7 @@ export class AdminService {
       data: {
         id,
         title: input.title,
-        summary: input.summary ?? '',
+        description: input.summary ?? '',
         level: input.level as any,
         position: input.position ?? (last ? last.position + 1 : 1),
       },

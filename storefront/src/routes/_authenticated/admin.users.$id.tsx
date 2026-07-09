@@ -366,10 +366,10 @@ function AdminUserDetail() {
             <dl className="space-y-1 text-sm text-brand-ink/75">
               <Row k="Clases totales">{classes.length}</Row>
               <Row k="Completadas">
-                {classes.filter((c) => c.status === "completed").length}
+                {classes.filter((c: ClassSession) => c.status === "completed").length}
               </Row>
               <Row k="Próximas">
-                {classes.filter((c) => c.status === "scheduled").length}
+                {classes.filter((c: ClassSession) => c.status === "scheduled").length}
               </Row>
               {isStudent ? (
                 <>
@@ -426,11 +426,11 @@ function AdminUserDetail() {
                   {payments
                     .slice()
                     .sort(
-                      (a, b) =>
+                      (a: PaymentIntent, b: PaymentIntent) =>
                         new Date(b.createdAt ?? 0).getTime() -
                         new Date(a.createdAt ?? 0).getTime(),
                     )
-                    .map((p) => (
+                    .map((p: PaymentIntent) => (
                       <tr key={p.reference}>
                         <td className="py-2 text-brand-ink/70">
                           {p.createdAt
@@ -463,11 +463,11 @@ function AdminUserDetail() {
               {classes
                 .slice()
                 .sort(
-                  (a, b) =>
+                  (a: ClassSession, b: ClassSession) =>
                     new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime(),
                 )
                 .slice(0, 30)
-                .map((c) => (
+                .map((c: ClassSession) => (
                   <li key={c.id} className="flex items-center justify-between py-2 text-sm">
                     <div>
                       <div className="font-medium text-brand-ink">{c.topic ?? "Clase"}</div>
@@ -491,7 +491,7 @@ function AdminUserDetail() {
             <p className="text-sm text-brand-ink/55">El estudiante no ha completado lecciones.</p>
           ) : (
             <ul className="grid gap-1 text-sm md:grid-cols-2">
-              {progress.map((p) => (
+              {progress.map((p: { lessonId: string; completedAt: string }) => (
                 <li key={p.lessonId} className="text-brand-ink/70">
                   <span className="font-mono text-xs text-brand-ink/40">{p.lessonId}</span>{" "}
                   <span className="text-brand-ink/55">
@@ -525,10 +525,10 @@ function AdminUserDetail() {
               {surveys
                 .slice()
                 .sort(
-                  (a, b) =>
+                  (a: SatisfactionSurvey, b: SatisfactionSurvey) =>
                     new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
                 )
-                .map((s) => (
+                .map((s: SatisfactionSurvey) => (
                   <li key={s.id} className="rounded-xl bg-brand-cream/40 p-3 text-sm">
                     <div className="flex justify-between text-xs text-brand-ink/55">
                       <span>{new Date(s.submittedAt).toLocaleDateString("es-CO")}</span>
@@ -555,7 +555,7 @@ function AdminUserDetail() {
             <p className="text-sm text-brand-ink/55">Sin feedback registrado todavía.</p>
           ) : (
             <ul className="space-y-3">
-              {notes.map((n) => (
+              {notes.map((n: import("@/lib/domain/types").ClassNote) => (
                 <li key={n.id} className="rounded-xl bg-brand-cream/40 p-3 text-sm">
                   <div className="flex justify-between text-xs text-brand-ink/55">
                     <span>{new Date(n.createdAt).toLocaleDateString("es-CO")}</span>
@@ -575,7 +575,7 @@ function AdminUserDetail() {
             <p className="text-sm text-brand-ink/55">Aún no tiene estudiantes asignados.</p>
           ) : (
             <ul className="divide-y divide-brand-line">
-              {students.map((s) => (
+              {students.map((s: User) => (
                 <li key={s.id} className="flex items-center justify-between py-2 text-sm">
                   <Link
                     to="/admin/users/$id"
@@ -650,7 +650,7 @@ function EditUserDialog({
       await adminApi.updateUser(user.id, {
         fullName,
         phone: phone || undefined,
-        role: roles[0] ?? "student",
+        role: (["admin", "teacher", "student"] as const).find((r) => roles.includes(r)) ?? "student",
         englishLevel: roles.includes("student") ? level : null,
       });
       onSaved();
@@ -750,4 +750,104 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </label>
   );
+}
+
+// ─── Adapters backend → shape del dominio ─────────────────────────────
+
+function roleToRoles(role: string | undefined): AppRole[] {
+  const r = (role ?? "student") as AppRole;
+  return [r];
+}
+
+function adaptAdminUser(u: any): User {
+  return {
+    id: u.id,
+    email: u.email,
+    fullName: u.fullName,
+    avatarUrl: u.avatarUrl ?? undefined,
+    phone: u.phone ?? undefined,
+    roles: roleToRoles(u.role),
+    level: (u.englishLevel ?? undefined) as EnglishLevel | undefined,
+    onboardedAt: u.onboardedAt ?? undefined,
+    assignedTeacherId: u.assignedTeacherId ?? undefined,
+    disabledAt: u.disabledAt ?? undefined,
+    deletedAt: u.deletedAt ?? undefined,
+    lastLoginAt: u.lastLoginAt ?? undefined,
+    createdAt: u.createdAt ?? new Date().toISOString(),
+  };
+}
+
+function adaptAdminSubscription(s: any): Subscription | null {
+  if (!s) return null;
+  return {
+    id: s.id,
+    userId: s.userId,
+    planId: (s.plan?.id ?? s.planId) as Subscription["planId"],
+    status: (s.status ?? "pending") as Subscription["status"],
+    startedAt: s.startedAt ?? undefined,
+    currentPeriodEnd: s.currentPeriodEnd ?? undefined,
+    wompiReference: s.wompiReference ?? undefined,
+  };
+}
+
+function adaptAdminClass(c: any): ClassSession {
+  return {
+    id: c.id,
+    studentId: c.studentId,
+    teacherId: c.teacherId,
+    teacherName: c.teacher?.fullName ?? "",
+    startsAt: c.startsAt ?? c.scheduledAt ?? new Date().toISOString(),
+    durationMin: c.durationMin ?? 50,
+    status: (c.status ?? "scheduled") as ClassSession["status"],
+    studentConfirmedAt: c.studentConfirmedAt ?? undefined,
+    teacherValidatedAt: c.teacherValidatedAt ?? undefined,
+    topic: c.topic ?? undefined,
+    meetingUrl: c.meetingUrl ?? undefined,
+  };
+}
+
+function adaptAdminPayment(p: any): PaymentIntent {
+  const created = p.createdAt ?? new Date().toISOString();
+  return {
+    id: p.id,
+    userId: p.userId ?? "",
+    planId: p.planId,
+    reference: p.reference,
+    amountCop: Math.round((p.amountInCents ?? 0) / 100),
+    customer: {
+      fullName: p.customerName ?? "",
+      email: p.customerEmail ?? "",
+      phone: p.customerPhone ?? undefined,
+      document: p.customerDocument ?? undefined,
+    },
+    status: (p.status ?? "PENDING") as PaymentIntent["status"],
+    createdAt: created,
+    updatedAt: p.updatedAt ?? p.approvedAt ?? created,
+  };
+}
+
+function adaptAdminSurvey(s: any): SatisfactionSurvey {
+  return {
+    id: s.id,
+    userId: s.userId,
+    monthKey: s.monthKey ?? (s.createdAt ?? "").slice(0, 7),
+    nps: s.nps ?? s.score ?? 0,
+    teacherScore: s.teacherScore ?? undefined,
+    contentScore: s.contentScore ?? undefined,
+    platformScore: s.platformScore ?? undefined,
+    comment: s.comment ?? undefined,
+    submittedAt: s.submittedAt ?? s.createdAt ?? new Date().toISOString(),
+  };
+}
+
+function adaptAdminNote(n: any): import("@/lib/domain/types").ClassNote {
+  return {
+    id: n.id,
+    classId: n.classId ?? undefined,
+    studentId: n.studentId,
+    teacherId: n.teacherId,
+    body: n.body ?? "",
+    rating: n.rating ?? undefined,
+    createdAt: n.createdAt ?? new Date().toISOString(),
+  };
 }

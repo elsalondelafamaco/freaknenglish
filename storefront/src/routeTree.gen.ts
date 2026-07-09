@@ -31,11 +31,11 @@ import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppLearningRouteImport } from './routes/_authenticated/app.learning'
 import { Route as AuthenticatedAppCalendarRouteImport } from './routes/_authenticated/app.calendar'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
-import { Route as AuthenticatedAdminUsersIndexRouteImport } from './routes/_authenticated/admin.users.index'
 import { Route as AuthenticatedAdminSurveysRouteImport } from './routes/_authenticated/admin.surveys'
 import { Route as AuthenticatedAdminPayrollRouteImport } from './routes/_authenticated/admin.payroll'
 import { Route as AuthenticatedAdminNotificationsRouteImport } from './routes/_authenticated/admin.notifications'
 import { Route as AuthenticatedAdminContentRouteImport } from './routes/_authenticated/admin.content'
+import { Route as AuthenticatedAdminUsersIndexRouteImport } from './routes/_authenticated/admin.users.index'
 import { Route as AuthenticatedTeacherStudentsStudentIdRouteImport } from './routes/_authenticated/teacher.students.$studentId'
 import { Route as AuthenticatedAppLearningModuleIdRouteImport } from './routes/_authenticated/app.learning.$moduleId'
 import { Route as AuthenticatedAppCheckpointCheckpointIdRouteImport } from './routes/_authenticated/app.checkpoint.$checkpointId'
@@ -156,12 +156,6 @@ const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
-const AuthenticatedAdminUsersIndexRoute =
-  AuthenticatedAdminUsersIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedAdminUsersRoute,
-  } as any)
 const AuthenticatedAdminSurveysRoute =
   AuthenticatedAdminSurveysRouteImport.update({
     id: '/surveys',
@@ -185,6 +179,12 @@ const AuthenticatedAdminContentRoute =
     id: '/content',
     path: '/content',
     getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminUsersIndexRoute =
+  AuthenticatedAdminUsersIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAdminUsersRoute,
   } as any)
 const AuthenticatedTeacherStudentsStudentIdRoute =
   AuthenticatedTeacherStudentsStudentIdRouteImport.update({
@@ -228,12 +228,12 @@ export interface FileRoutesByFullPath {
   '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/admin/surveys': typeof AuthenticatedAdminSurveysRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRouteWithChildren
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
   '/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
   '/teacher/students': typeof AuthenticatedTeacherStudentsRouteWithChildren
-  '/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/teacher/': typeof AuthenticatedTeacherIndexRoute
@@ -241,6 +241,7 @@ export interface FileRoutesByFullPath {
   '/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
   '/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
+  '/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -261,7 +262,6 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
   '/teacher/students': typeof AuthenticatedTeacherStudentsRouteWithChildren
-  '/admin/users': typeof AuthenticatedAdminUsersIndexRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/teacher': typeof AuthenticatedTeacherIndexRoute
@@ -269,6 +269,7 @@ export interface FileRoutesByTo {
   '/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
   '/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
+  '/admin/users': typeof AuthenticatedAdminUsersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -295,7 +296,6 @@ export interface FileRoutesById {
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
   '/_authenticated/teacher/students': typeof AuthenticatedTeacherStudentsRouteWithChildren
-  '/_authenticated/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/teacher/': typeof AuthenticatedTeacherIndexRoute
@@ -303,6 +303,7 @@ export interface FileRoutesById {
   '/_authenticated/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/_authenticated/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
   '/_authenticated/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
+  '/_authenticated/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -329,7 +330,6 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/teacher/schedule'
     | '/teacher/students'
-    | '/admin/users/'
     | '/admin/'
     | '/app/'
     | '/teacher/'
@@ -337,6 +337,7 @@ export interface FileRouteTypes {
     | '/app/checkpoint/$checkpointId'
     | '/app/learning/$moduleId'
     | '/teacher/students/$studentId'
+    | '/admin/users/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -352,13 +353,11 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/payroll'
     | '/admin/surveys'
-    | '/admin/users'
     | '/app/calendar'
     | '/app/learning'
     | '/app/settings'
     | '/teacher/schedule'
     | '/teacher/students'
-    | '/admin/users'
     | '/admin'
     | '/app'
     | '/teacher'
@@ -366,6 +365,7 @@ export interface FileRouteTypes {
     | '/app/checkpoint/$checkpointId'
     | '/app/learning/$moduleId'
     | '/teacher/students/$studentId'
+    | '/admin/users'
   id:
     | '__root__'
     | '/'
@@ -391,7 +391,6 @@ export interface FileRouteTypes {
     | '/_authenticated/app/settings'
     | '/_authenticated/teacher/schedule'
     | '/_authenticated/teacher/students'
-    | '/_authenticated/admin/users/'
     | '/_authenticated/admin/'
     | '/_authenticated/app/'
     | '/_authenticated/teacher/'
@@ -399,6 +398,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/checkpoint/$checkpointId'
     | '/_authenticated/app/learning/$moduleId'
     | '/_authenticated/teacher/students/$studentId'
+    | '/_authenticated/admin/users/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -570,13 +570,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
-    '/_authenticated/admin/users/': {
-      id: '/_authenticated/admin/users/'
-      path: '/'
-      fullPath: '/admin/users/'
-      preLoaderRoute: typeof AuthenticatedAdminUsersIndexRouteImport
-      parentRoute: typeof AuthenticatedAdminUsersRoute
-    }
     '/_authenticated/admin/surveys': {
       id: '/_authenticated/admin/surveys'
       path: '/surveys'
@@ -604,6 +597,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/content'
       preLoaderRoute: typeof AuthenticatedAdminContentRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/users/': {
+      id: '/_authenticated/admin/users/'
+      path: '/'
+      fullPath: '/admin/users/'
+      preLoaderRoute: typeof AuthenticatedAdminUsersIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminUsersRoute
     }
     '/_authenticated/teacher/students/$studentId': {
       id: '/_authenticated/teacher/students/$studentId'
@@ -637,14 +637,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAdminUsersRouteChildren {
-  AuthenticatedAdminUsersIndexRoute: typeof AuthenticatedAdminUsersIndexRoute
   AuthenticatedAdminUsersIdRoute: typeof AuthenticatedAdminUsersIdRoute
+  AuthenticatedAdminUsersIndexRoute: typeof AuthenticatedAdminUsersIndexRoute
 }
 
 const AuthenticatedAdminUsersRouteChildren: AuthenticatedAdminUsersRouteChildren =
   {
-    AuthenticatedAdminUsersIndexRoute: AuthenticatedAdminUsersIndexRoute,
     AuthenticatedAdminUsersIdRoute: AuthenticatedAdminUsersIdRoute,
+    AuthenticatedAdminUsersIndexRoute: AuthenticatedAdminUsersIndexRoute,
   }
 
 const AuthenticatedAdminUsersRouteWithChildren =

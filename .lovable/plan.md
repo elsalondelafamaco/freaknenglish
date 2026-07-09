@@ -1,152 +1,146 @@
-## Correcciones Freakn — Round 6 (todo conectado al backend)
 
-Se agrupan por área y todas eliminan cualquier mock/localStorage remanente.
+# Plan — Board colaborativo en tiempo real
 
----
+## Contexto de lo ya hecho vs. faltante
 
-### 1. Logout confiable en todos los roles
-**Problema**: A veces queda en blanco tras cerrar sesión.
-**Causa probable**: `signOut()` no invalida queries de React Query, no navega y depende de re-render vía `setUser(null)` mientras loaders/queries protegidos siguen corriendo → error boundary sin render.
-**Fix**:
-- En `AuthProvider.signOut`: `queryClient.cancelQueries()` → `queryClient.clear()` → `authService.signOut()` (server: revoca refresh cookie) → `setUser(null)` → `router.navigate({ to: '/login', replace: true })` → `router.invalidate()`.
-- Exponer el logout desde un hook `useLogout()` que reciba `router`+`queryClient` (los componentes ya los tienen).
-- Reemplazar todas las llamadas a `signOut()` (navbar, app shell, admin, teacher).
+Backend ya tiene los cimientos: modelos `Board`, `BoardMember`, `BoardOp`, `BoardService` (append idempotente por `clientOpId`, secuencia monotónica, catch-up `/ops?since=`), `BoardController` (list/create/get/ops/invite) y `BoardGateway` de Socket.IO (`/board` namespace, `board:join/op/cursor/presence`). Falta: modelo de páginas, permisos por clase, UI completa (editor rico, dibujo, páginas, presencia, invitación), cliente WS en el storefront, e integración con la clase asignada estudiante↔profesor.
 
-### 2. NPS conectado y disparado por reglas reales
-**Reglas**: mostrar cuando el estudiante tiene programada su **última clase de la mensualidad** (o cuando la suscripción está `expired`/`past_due` y aún no respondió NPS de ese período). Nada de localStorage.
-**Backend**:
-- `GET /surveys/pending` → devuelve `{ required: boolean, period: 'YYYY-MM', reason: 'last_class'|'period_ended' }`.
-  Lógica: calcula el período actual (basado en `subscription.currentPeriodEnd`). `required=true` sii:
-   a) existe `Class` con `status='scheduled'` que es la **última** del período (mayor `startsAt` ≤ `currentPeriodEnd`) y no hay `SatisfactionSurvey` para ese `period`, **o**
-   b) `subscription.status in ('expired','past_due','canceled')` y falta encuesta del último período con actividad.
-- `POST /surveys` ya existe; asegurar `period` derivado en el servidor (no en el cliente).
-**Frontend**:
-- `AppShell` consulta `surveysApi.pending()` con React Query; muestra `<SatisfactionDialog>` bloqueante solo si `required`. Al enviar, invalida la query. Eliminar cualquier trigger por fecha/local.
+Del resto del backlog **sí quedan pendientes** además del board:
+- **D6** — Notificaciones (email Resend + in-app) para: pago exitoso, clase reservada, recordatorio 24h/1h, reasignación de profesor, NPS. Templates ya existen; falta cablear disparadores y el listado in-app.
+- **D7** — Métricas admin: KPIs de retención, asistencia, MRR/ARR desde datos reales (hoy `admin.index.tsx` usa mocks parciales).
+- **D8** — Descarga de facturas/recibos Wompi (PDF) desde `app.settings.tsx`.
+- **D9** — PWA offline básica para el catálogo de learning.
 
-### 3. Home → "Escoge tu horario" fluye correctamente
-**Problema**: El CTA lleva directo a checkout sin plan.
-**Fix**:
-- Todos los CTAs de la home (`Hero`, `HowItWorks`, `Pricing`) anclan a `#precios`.
-- En `Pricing`, cada plan tiene botón "Elegir plan" → `/checkout/$planId`.
-- Si el usuario está autenticado y sin suscripción activa, el gate del onboarding continúa siendo: `elegir plan → datos (checkout form) → pago Wompi → return → onboarding/schedule`.
-- Añadir breadcrumb visible de 4 pasos en `checkout.$planId` y `checkout.return` y `onboarding/schedule`.
+Este plan cubre **solo el Board** (el más grande). Al terminarlo confirmamos si sigo con D6→D9.
 
-### 4. Integración real con Wompi (widget/redirección real)
-**Problema**: solo muestra "Simular pago aprobado".
-**Fix backend**:
-- `CheckoutService.createIntent` ya calcula `signature`. Añadir soporte a **Web Checkout redirect** (además del widget) devolviendo `checkoutUrl` = `https://checkout.wompi.co/p/?public-key=...&currency=COP&amount-in-cents=...&reference=...&signature:integrity=...&redirect-url=...&customer-data:...`.
-- Endpoint `GET /checkout/status` ya existe → se sigue usando en la página de retorno.
-- Webhook `/api/v1/public/wompi/webhook` valida HMAC (ya implementado). Confirmar que al recibir `APPROVED` marca `PaymentIntent.APPROVED`, activa `Subscription.status='active'`, setea `currentPeriodEnd = now + 30d` y crea/asocia el `User`.
-**Fix frontend** (`checkout.$planId.tsx`):
-- Botón principal: **"Pagar con Wompi"** → si `intent.checkoutUrl` existe, `window.location.href = intent.checkoutUrl` (redirect real).
-- Solo si `WOMPI_PUBLIC_KEY` no está o el backend responde `demo=true`, se muestra el fallback "Simular pago (solo desarrollo)".
-- Renombrar copy: "Pagar con Wompi" / "Ir a la pasarela segura".
-- `checkout.return.tsx` mantiene polling `checkoutApi.status(reference)` y al `APPROVED` redirige a `/app` → el gate lleva a `/onboarding/schedule`.
+## Alcance funcional del Board
 
-### 5. Gate global de onboarding + bloqueo de módulos
-**Regla**: usuario registrado sin pago no puede acceder a learning/board.
-**Backend**:
-- Endpoint `GET /me/state` → `{ hasProfile, hasSubscription, subscriptionStatus, hasSchedule, pendingSurvey }`.
-- Middleware `RequireActiveSubscriptionGuard` aplicado a rutas de learning/board/classes: si no hay suscripción `active`, responde `402`. Aplicar en:
-  - `learning.controller` (todos los GET de módulos/lessons/checkpoints).
-  - `classes.controller` (GET student).
-  - `board.controller` / `board.gateway`.
-- `SatisfactionInterceptor`: para estudiantes con `pendingSurvey`, bloquea (403) todas las rutas no-encuesta hasta que responda.
-**Frontend** (`_authenticated.tsx`):
-- Redirige en orden: `profile` → `plan (#precios)` → `checkout` → `schedule` → `dashboard`.
-- Si `pendingSurvey.required` → renderiza `<SatisfactionDialog>` bloqueante sobre cualquier ruta.
-- Si backend responde 402 (por race condition) → redirige a `#precios`.
+Un espacio colaborativo por clase (o standalone) donde estudiante y profesor entran en tiempo real. Compuesto por:
 
-### 6. Admin NPS conectado
-**Backend**: `GET /admin/surveys` con filtros `?period=YYYY-MM&level=&teacherId=` → devuelve agregados (NPS promedio, distribución promotores/pasivos/detractores, teacherScore, contentScore, platformScore) + lista paginada.
-**Frontend**: `admin.surveys.tsx` reemplaza mocks por `useQuery(['admin','surveys',filters])`. Muestra KPIs, tabla y CSV export vía `/admin/surveys/csv`.
+1. **Páginas** dentro de un board: crear, renombrar, reordenar, duplicar, eliminar, jerarquía plana con orden por `position`.
+2. **Editor rico por página** (tipo Notion/Docs): H1/H2/H3, párrafo, listas, checklist, quote, code block, divider, imagen (subida a storage), tabla con filas/columnas editables, negrita/cursiva/subrayado/tachado, color de texto/resaltado, alineación, familia y tamaño de fuente, enlaces, embebidos (YouTube/Loom).
+3. **Capa de dibujo** por página (pizarra): lápiz, borrador, colores, grosor, formas básicas (línea, rect, elipse, flecha), texto libre, undo/redo, borrar página. Coexiste con el texto (overlay o modo "canvas").
+4. **Tiempo real**: cambios se propagan <200 ms; cursores/selecciones de otros usuarios visibles con nombre y color; indicador de "escribiendo"; presencia (avatares) por página.
+5. **Persistencia y reconexión**: snapshot + op-log; al reconectar se pide `since=lastSeq` y se reproducen operaciones perdidas; conflictos resueltos por CRDT (Yjs).
+6. **Permisos**: `owner` (profesor por defecto), `editor` (estudiante asignado), `viewer` (invitado). Solo owner invita/expulsa/borra board. Board de una clase auto-crea membresías con `assignedTeacherId` + `userId` del estudiante.
+7. **Exportación**: cada página exportable a PDF (impresión nativa) y Markdown; board completo a ZIP de MD + PNG de dibujos.
+8. **Historial**: lista de versiones (snapshots cada N ops o manual "Guardar versión") con vista previa y restauración.
 
-### 7. Precio con TRM del día
-**Backend**:
-- Nuevo módulo `exchange`:
-  - `ExchangeService.getUsdCopTrm()`: fetch a la API oficial (Superfinanciera SODA: `https://www.datos.gov.co/resource/32sa-8pi3.json`) con cache in-memory de 6h y fallback estático (`env.FALLBACK_TRM_COP=4200`).
-  - `GET /public/exchange/trm` → `{ trm, source, fetchedAt }`.
-- `Plan.priceUsd` (nuevo campo) o computado desde `priceCop / trm`. Se agrega `priceUsd` al schema y migración.
-- `PlansController` devuelve `{ id, name, daysPerWeek, priceCop, priceUsd, priceCopDisplay, priceUsdDisplay, trm }` recalculando `priceCop = round(priceUsd * trm)` en el momento y devolviendo ambos.
-- `CheckoutService.createIntent` re-consulta la TRM y crea `PaymentIntent.amountInCents` con el COP calculado en ese instante.
-**Frontend**: `Pricing` y `checkout.$planId` consumen precios del backend (sin `plans.ts` hardcoded).
+## Arquitectura técnica
 
-### 8. Admin Content: backend + drag & drop
-**Backend**:
-- Ya existen módulos/lessons en Prisma. Añadir:
-  - `PATCH /admin/modules/reorder` body `[{id, position}]`.
-  - `PATCH /admin/lessons/reorder` body `[{id, moduleId, position}]` (soporta mover entre módulos).
-  - CRUD `POST/PATCH/DELETE /admin/modules` y `/admin/lessons`.
-  - Uploads de attachments vía `storage` module (ya existe).
-**Frontend** (`admin.content.tsx`):
-- Reemplazar el orden numérico por drag & drop con `@dnd-kit/core` + `@dnd-kit/sortable` (ya en el stack o `bun add`).
-- Persistencia optimista: al drop, ejecuta `reorder` mutation → invalida `useQuery(['admin','content'])`.
-- Editor de lección conectado a `PATCH /admin/lessons/:id` (título, tipo, video/pdf/html/attachments).
+### Backend (NestJS + Prisma + Socket.IO)
 
-### 9. Contenido filtrado por nivel del estudiante
-**Backend**:
-- `GET /learning/modules` devuelve solo módulos con `level <= user.englishLevel` (beginner→[beginner], intermediate→[beginner,intermediate], advanced→[all]).
-- `LessonProgress` determina desbloqueo secuencial: la primera lección del primer módulo del nivel actual está desbloqueada; las siguientes se desbloquean al completar la anterior o pasar el `Checkpoint`.
-- `GET /learning/modules/:id` devuelve lecciones con `unlocked: boolean` y `completed: boolean`.
-**Frontend** (`app.learning.tsx` y `app.learning.$moduleId.tsx`):
-- Consumir el flag `unlocked` del backend, no lógica local.
-- Detalle de lección muestra video/PDF/HTML/attachments reales; marca `LessonProgress` al ver ≥90% o al pulsar "Marcar como vista".
+Nueva migración `20260813000000_board_pages_yjs`:
 
-### 10. Gate NO redirige a home; membresía visible + historial
-**Problema**: hoy redirige a `/#precios` (fuera de la app).
-**Fix**:
-- Nueva ruta `_authenticated/subscribe.tsx` — vista dentro del portal que muestra planes y CTA a `/checkout/$planId`. El gate redirige aquí en lugar de `/#precios`.
-- `app.settings.tsx`: sección "Mi membresía" con estado (`active/pending/past_due/canceled/expired`), próximo cobro, plan, botón "Cambiar plan" y "Cancelar".
-- Historial de pagos: `GET /me/payments` → tabla con fecha, monto COP, referencia, estado, comprobante Wompi.
+```text
+board_pages
+  id, board_id (FK cascade), title, position, kind ('doc'|'canvas'|'mixed'),
+  yjs_state Bytea (snapshot binario Yjs), created_at, updated_at
+  unique(board_id, position)
 
-### 11. Panel Profesor: estudiantes asignados + calendario + bloqueos
-**Backend**:
-- `GET /teacher/students` (ya existe pero devuelve vacío): corregir para que use `assignedTeacherId = req.user.id` en `User`.
-- `GET /teacher/calendar?from=&to=` → devuelve `Class[]` + `TeacherAvailability[]` + `TeacherAbsence[]` del profesor.
-- `POST /teacher/absences` `{ startsAt, endsAt, reason }` → crea bloqueo (el matcher del scheduling debe respetarlo).
-- `PATCH /teacher/availability` → actualizar horario recurrente.
-- `SchedulingService.autoAssign` (Item 12) debe excluir profesores con `TeacherAbsence` que solape.
-**Frontend**:
-- `teacher.students.tsx`: `useQuery(teacherApi.students())`, tabla con nivel, próxima clase, notas.
-- `teacher.schedule.tsx`: calendario semanal (react-big-calendar o grid propio) siempre visible; permite crear ausencias/bloqueos (drag-select) y editar disponibilidad.
+board_page_ops   (reemplaza uso genérico de board_ops para páginas)
+  id, page_id (FK cascade), user_id, client_op_id, update Bytea (Yjs update),
+  seq int, created_at
+  unique(page_id, seq)  unique(page_id, client_op_id)
 
-### 12. Auto-asignación con mensaje de coordinación 48h
-**Backend** (`SchedulingService.savePreferences`):
-- Para cada bloque preferido, busca profesores con `TeacherAvailability` que cubra el slot y sin `TeacherAbsence` solapando y sin clase ya programada.
-- **Toma el primero disponible**, setea `user.assignedTeacherId`, crea `Class` recurrente para las próximas 4 semanas (`ClassStatus.scheduled`) y devuelve `{ status: 'assigned', teacher }`.
-- Si NINGÚN bloque encuentra profe, `user.scheduleAssignmentStatus='manual_pending'` y devuelve `{ status: 'manual_pending' }`.
-**Frontend** (`onboarding/schedule.tsx`):
-- Tras guardar: si `assigned` → toast "¡Listo! Tu profe es X. Primera clase: ...".
-- Si `manual_pending` → pantalla amigable: *"Estamos coordinando con un profesor. Te contactaremos en las próximas 48 h para iniciar tus clases. Recibirás un email de confirmación."* + botón "Ir al dashboard" (dashboard entra en modo "esperando profesor" hasta que admin asigne).
+board_versions
+  id, board_id, label, snapshot Json, created_at, created_by
+```
 
----
+Cambios en `BoardService`:
+- CRUD páginas (`createPage`, `renamePage`, `reorderPages`, `duplicatePage`, `deletePage`).
+- `appendPageOp({ pageId, userId, update, clientOpId })` con seq por página.
+- `getPage(pageId)` → snapshot + `lastSeq`.
+- `opsSincePage(pageId, since)` para catch-up.
+- `snapshotPage(pageId)`: cada 50 ops o cada 5 min, condensa updates en `yjs_state` con `Y.encodeStateAsUpdate`.
+- Auto-crear board al confirmar reserva de clase (hook en `ClassesService.book`): owner=profesor, member=estudiante.
+- Endpoint `POST /boards/:id/versions` (checkpoint manual) y `POST /boards/:id/versions/:vid/restore`.
 
-## Detalles técnicos transversales
+Ampliar `BoardGateway`:
+- `page:join { pageId }` → room `page:${id}`, envía `snapshot + lastSeq`.
+- `page:update { pageId, update, clientOpId }` → persiste + broadcast `page:update` a la room.
+- `page:awareness { pageId, state }` (cursor Yjs + selección + color) → broadcast efímero.
+- `page:presence` con avatares por página.
+- Throttle server-side (bucket por socket, 60 ops/s).
 
-**Migraciones nuevas**:
-1. `20260812000000_plan_usd_and_trm`: agrega `plans.price_usd` (INT), `plans.price_display` (TEXT), settings key para TRM cache.
-2. `20260813000000_module_reorder_positions`: índice único (`level`, `position`) para consistencia.
-3. `20260814000000_teacher_students_index`: índice `users(assigned_teacher_id)`.
+Autorización: cada handler valida `ensureMember(boardId)` y que la página pertenezca al board.
 
-**Nuevos endpoints** (resumen):
-- `GET /me/state`, `GET /me/payments`
-- `GET /surveys/pending`
-- `GET /admin/surveys`, `GET /admin/surveys/csv`
-- `PATCH /admin/modules/reorder`, `PATCH /admin/lessons/reorder`, CRUD módulos/lecciones
-- `GET /public/exchange/trm`
-- `GET /teacher/students`, `GET /teacher/calendar`, `POST /teacher/absences`, `PATCH /teacher/availability`
-- Wompi: `intent.checkoutUrl` en respuesta
+### Frontend (React + TanStack)
 
-**Guards backend**:
-- `RequireActiveSubscriptionGuard` (learning/classes/board)
-- `RequirePendingSurveyCleared` (interceptor global para estudiantes)
+Librerías nuevas:
+- `yjs` + `y-protocols` (CRDT + awareness).
+- `@tiptap/react` + extensiones: `starter-kit`, `table`, `link`, `image`, `underline`, `text-style`, `color`, `highlight`, `font-family`, `task-list`, `placeholder`, `collaboration`, `collaboration-cursor`.
+- `perfect-freehand` + `<canvas>` propio (evitamos tldraw por tamaño); dibujo se serializa como shapes JSON en un `Y.Array` compartido para colaboración.
+- `socket.io-client`.
+- `jspdf` + `html2canvas` para exportar PDF por página.
 
-**Dependencias nuevas frontend**: `@dnd-kit/core`, `@dnd-kit/sortable` para admin content.
+Nuevos archivos:
 
-**Orden de implementación sugerido** (4 sub-iteraciones):
-- **D1**: Items 1, 2, 5, 10 (auth/gate/NPS/subscribe view) — base para el resto.
-- **D2**: Items 3, 4, 7 (checkout real + TRM + fluid CTA).
-- **D3**: Items 8, 9, 6 (content admin + learning filtered + admin NPS).
-- **D4**: Items 11, 12 (teacher + auto-assign + coordinación 48h).
+```text
+storefront/src/lib/board/
+  yProvider.ts           // SocketIOProvider custom (join/update/awareness)
+  useBoardPage.ts        // hook: conecta Yjs doc + tiptap + awareness
+  useBoardDrawing.ts     // shapes Y.Array + input handlers
+  colors.ts              // paleta consistente para cursores
 
-Al final: eliminación completa de `plans.ts` hardcoded, `learning` mock, cualquier `localStorage.getItem("freakn.survey…")`, y update de `docs/IMPROVEMENTS_LOG.md` con Round 6.
+storefront/src/components/board/
+  BoardShell.tsx         // sidebar páginas + toolbar + área central
+  PageList.tsx           // CRUD páginas, drag-reorder
+  Editor.tsx             // Tiptap con toolbar completa
+  Toolbar.tsx            // headings, fuente, tamaño, color, tabla, imagen, etc.
+  DrawLayer.tsx          // overlay canvas con herramientas de dibujo
+  PresenceBar.tsx        // avatares + colores por usuario activo
+  CursorOverlay.tsx      // cursores remotos (nombre + color)
+  VersionHistory.tsx     // lista + restaurar
+  InviteDialog.tsx       // buscar usuario y asignar rol
+
+storefront/src/routes/_authenticated/
+  boards.index.tsx       // lista mis boards + crear
+  boards.$boardId.tsx    // layout con <Outlet/> para páginas
+  boards.$boardId.pages.$pageId.tsx  // vista de página activa
+```
+
+Endpoints añadidos en `endpoints.ts`: `pages.list/create/rename/reorder/duplicate/delete`, `versions.list/create/restore`.
+
+Navegación: link "Board" en `AppShell` para estudiante y profesor, visible cuando exista al menos un board. Desde `teacher.students.$studentId` y `app.calendar` se enlaza al board de la clase.
+
+### Modelo de datos en tiempo real
+
+- Un `Y.Doc` **por página** (no por board) para minimizar tráfico.
+- Dentro del doc: `Y.XmlFragment('prosemirror')` para Tiptap + `Y.Array('shapes')` para dibujo + `Y.Map('meta')` para settings.
+- Awareness lleva `{ userId, name, color, cursor, tool }`.
+- Cliente asigna `clientOpId = crypto.randomUUID()` por update; servidor descarta duplicados.
+- Reconexión: al `connect` el cliente envía `since=lastSeqLocal`; server responde con updates faltantes → aplicados con `Y.applyUpdate`.
+
+### Seguridad
+
+- Todo pasa por `JwtAuthGuard` (REST) y verificación JWT en el handshake del socket.
+- RLS lógica en `ensureMember`.
+- Límite tamaño update: 256 KB; tamaño snapshot: 5 MB; imágenes subidas al bucket `board-uploads` con firma.
+
+## Entregables por iteración
+
+**B1 — Datos y páginas (backend)**: migración, CRUD páginas, endpoints REST, snapshot Yjs vacío al crear.
+**B2 — Provider Yjs + editor mínimo (frontend)**: rutas `boards.*`, lista, crear, abrir, editor Tiptap básico (párrafo/heading/negrita) sincronizado.
+**B3 — Toolbar completa + tablas + imágenes** (upload a storage existente).
+**B4 — Capa de dibujo** con Y.Array de shapes, herramientas y undo/redo.
+**B5 — Presencia + cursores + awareness colorizada**.
+**B6 — Reconexión robusta, snapshotting periódico, versiones manuales y restauración**.
+**B7 — Auto-provisioning**: crear board al reservar clase, invitaciones y roles desde UI.
+**B8 — Exportar PDF/Markdown y pulido UI/responsive móvil**.
+
+Cada iteración cierra con build + typecheck backend/storefront verdes.
+
+## Consideraciones y trade-offs
+
+- **Yjs vs. OT propio**: Yjs elimina conflictos gratis y tiene binding oficial de Tiptap; el costo es ~40 KB gz.
+- **tldraw descartado**: pesa >500 KB y su licencia comercial requiere atención; canvas propio con `perfect-freehand` es más liviano y suficiente para pizarra de clase.
+- **Socket.IO ya montado** en backend: reutilizamos el mismo namespace, no añadimos Redis por ahora (single-instance Railway). Si escala, se enchufa `RedisIoAdapter` que ya existe.
+- **Mobile**: dibujo con touch usando pointer events; toolbar colapsable.
+- **Sin OT server-side**: el server solo persiste y reenvía updates opacos de Yjs; la resolución vive en el cliente.
+
+## Preguntas abiertas (asumo defaults si no respondes)
+
+1. ¿El board por clase debe permitir también invitar a un tercer usuario (ej. otro profesor observador)? **Default: sí, solo owner puede invitar como `viewer`.**
+2. ¿Guardar historial de versiones automático cada N minutos o solo manual? **Default: snapshot cada 50 ops + botón manual "Guardar versión".**
+3. ¿Necesitas comentarios/anotaciones tipo Google Docs (hilos por selección)? **Default: fuera de alcance en esta ronda; se puede agregar como B9.**

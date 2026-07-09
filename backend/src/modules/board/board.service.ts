@@ -91,4 +91,134 @@ export class BoardService {
       create: { boardId, userId, role },
     })
   }
+
+  // ─── Pages ────────────────────────────────────────────────────────
+  async listPages(boardId: string, userId: string) {
+    await this.ensureMember(boardId, userId)
+    const pages = await this.prisma.boardPage.findMany({
+      where: { boardId },
+      orderBy: { position: 'asc' },
+      select: { id: true, title: true, position: true, kind: true, updatedAt: true },
+    })
+    return pages
+  }
+
+  async createPage(boardId: string, userId: string, input: { title?: string; kind?: string }) {
+    await this.ensureMember(boardId, userId)
+    const last = await this.prisma.boardPage.findFirst({
+      where: { boardId },
+      orderBy: { position: 'desc' },
+      select: { position: true },
+    })
+    return this.prisma.boardPage.create({
+      data: {
+        boardId,
+        title: input.title ?? 'Página nueva',
+        kind: input.kind ?? 'doc',
+        position: (last?.position ?? 0) + 1,
+      },
+    })
+  }
+
+  async renamePage(pageId: string, userId: string, title: string) {
+    const page = await this.prisma.boardPage.findUnique({ where: { id: pageId } })
+    if (!page) throw new NotFoundException()
+    await this.ensureMember(page.boardId, userId)
+    return this.prisma.boardPage.update({ where: { id: pageId }, data: { title } })
+  }
+
+  async reorderPage(pageId: string, userId: string, position: number) {
+    const page = await this.prisma.boardPage.findUnique({ where: { id: pageId } })
+    if (!page) throw new NotFoundException()
+    await this.ensureMember(page.boardId, userId)
+    return this.prisma.boardPage.update({ where: { id: pageId }, data: { position } })
+  }
+
+  async deletePage(pageId: string, userId: string) {
+    const page = await this.prisma.boardPage.findUnique({ where: { id: pageId } })
+    if (!page) throw new NotFoundException()
+    await this.ensureMember(page.boardId, userId)
+    await this.prisma.boardPage.delete({ where: { id: pageId } })
+    return { ok: true }
+  }
+
+  /**
+   * Devuelve el snapshot Yjs (base64) y la última seq para reconexión.
+   */
+  async getPageState(pageId: string, userId: string) {
+    const page = await this.prisma.boardPage.findUnique({ where: { id: pageId } })
+    if (!page) throw new NotFoundException()
+    await this.ensureMember(page.boardId, userId)
+    const last = await this.prisma.boardPageOp.findFirst({
+      where: { pageId },
+      orderBy: { seq: 'desc' },
+      select: { seq: true },
+    })
+    return {
+      id: page.id,
+      title: page.title,
+      kind: page.kind,
+      snapshot: page.yjsState ? Buffer.from(page.yjsState).toString('base64') : null,
+      lastSeq: last?.seq ?? 0,
+    }
+  }
+
+  /**
+   * Persiste un update Yjs (Uint8Array) para una página.
+   * Idempotente por clientOpId. Retorna la op con seq monótono.
+   */
+  async appendPageOp(input: {
+    pageId: string
+    userId: string
+    update: Buffer
+    clientOpId: string
+  }) {
+    const page = await this.prisma.boardPage.findUnique({
+      where: { id: input.pageId },
+      select: { boardId: true },
+    })
+    if (!page) throw new NotFoundException()
+    await this.ensureMember(page.boardId, input.userId)
+    const existing = await this.prisma.boardPageOp.findUnique({
+      where: { pageId_clientOpId: { pageId: input.pageId, clientOpId: input.clientOpId } },
+    })
+    if (existing) return existing
+    const last = await this.prisma.boardPageOp.findFirst({
+      where: { pageId: input.pageId },
+      orderBy: { seq: 'desc' },
+      select: { seq: true },
+    })
+    const seq = (last?.seq ?? 0) + 1
+    const op = await this.prisma.boardPageOp.create({
+      data: {
+        pageId: input.pageId,
+        userId: input.userId,
+        clientOpId: input.clientOpId,
+        seq,
+        update: input.update,
+      },
+    })
+    await this.prisma.boardPage.update({
+      where: { id: input.pageId },
+      data: { updatedAt: new Date() },
+    })
+    return op
+  }
+
+  async pageOpsSince(pageId: string, userId: string, sinceSeq: number) {
+    const page = await this.prisma.boardPage.findUnique({ where: { id: pageId } })
+    if (!page) throw new NotFoundException()
+    await this.ensureMember(page.boardId, userId)
+    const ops = await this.prisma.boardPageOp.findMany({
+      where: { pageId, seq: { gt: sinceSeq } },
+      orderBy: { seq: 'asc' },
+    })
+    return ops.map((o) => ({
+      seq: o.seq,
+      userId: o.userId,
+      clientOpId: o.clientOpId,
+      update: Buffer.from(o.update).toString('base64'),
+      createdAt: o.createdAt,
+    }))
+  }
 }

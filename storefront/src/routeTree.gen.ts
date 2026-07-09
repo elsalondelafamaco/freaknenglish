@@ -23,6 +23,7 @@ import { Route as AuthenticatedTeacherRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedTeacherIndexRouteImport } from './routes/_authenticated/teacher.index'
+import { Route as AuthenticatedBoardsIndexRouteImport } from './routes/_authenticated/boards.index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedTeacherStudentsRouteImport } from './routes/_authenticated/teacher.students'
@@ -30,6 +31,7 @@ import { Route as AuthenticatedTeacherScheduleRouteImport } from './routes/_auth
 import { Route as AuthenticatedTeacherAvailabilityRouteImport } from './routes/_authenticated/teacher.availability'
 import { Route as AuthenticatedOnboardingScheduleRouteImport } from './routes/_authenticated/onboarding.schedule'
 import { Route as AuthenticatedOnboardingProfileRouteImport } from './routes/_authenticated/onboarding.profile'
+import { Route as AuthenticatedBoardsBoardIdRouteImport } from './routes/_authenticated/boards.$boardId'
 import { Route as AuthenticatedAppSubscribeRouteImport } from './routes/_authenticated/app.subscribe'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppLearningRouteImport } from './routes/_authenticated/app.learning'
@@ -45,6 +47,7 @@ import { Route as AuthenticatedTeacherStudentsStudentIdRouteImport } from './rou
 import { Route as AuthenticatedAppLearningModuleIdRouteImport } from './routes/_authenticated/app.learning.$moduleId'
 import { Route as AuthenticatedAppCheckpointCheckpointIdRouteImport } from './routes/_authenticated/app.checkpoint.$checkpointId'
 import { Route as AuthenticatedAdminUsersIdRouteImport } from './routes/_authenticated/admin.users.$id'
+import { Route as AuthenticatedBoardsBoardIdPagesPageIdRouteImport } from './routes/_authenticated/boards.$boardId.pages.$pageId'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -116,6 +119,12 @@ const AuthenticatedTeacherIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedTeacherRoute,
   } as any)
+const AuthenticatedBoardsIndexRoute =
+  AuthenticatedBoardsIndexRouteImport.update({
+    id: '/boards/',
+    path: '/boards/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -154,6 +163,12 @@ const AuthenticatedOnboardingProfileRoute =
   AuthenticatedOnboardingProfileRouteImport.update({
     id: '/onboarding/profile',
     path: '/onboarding/profile',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedBoardsBoardIdRoute =
+  AuthenticatedBoardsBoardIdRouteImport.update({
+    id: '/boards/$boardId',
+    path: '/boards/$boardId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedAppSubscribeRoute =
@@ -245,6 +260,12 @@ const AuthenticatedAdminUsersIdRoute =
     path: '/$id',
     getParentRoute: () => AuthenticatedAdminUsersRoute,
   } as any)
+const AuthenticatedBoardsBoardIdPagesPageIdRoute =
+  AuthenticatedBoardsBoardIdPagesPageIdRouteImport.update({
+    id: '/pages/$pageId',
+    path: '/pages/$pageId',
+    getParentRoute: () => AuthenticatedBoardsBoardIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -269,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/subscribe': typeof AuthenticatedAppSubscribeRoute
+  '/boards/$boardId': typeof AuthenticatedBoardsBoardIdRouteWithChildren
   '/onboarding/profile': typeof AuthenticatedOnboardingProfileRoute
   '/onboarding/schedule': typeof AuthenticatedOnboardingScheduleRoute
   '/teacher/availability': typeof AuthenticatedTeacherAvailabilityRoute
@@ -276,12 +298,14 @@ export interface FileRoutesByFullPath {
   '/teacher/students': typeof AuthenticatedTeacherStudentsRouteWithChildren
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/boards/': typeof AuthenticatedBoardsIndexRoute
   '/teacher/': typeof AuthenticatedTeacherIndexRoute
   '/admin/users/$id': typeof AuthenticatedAdminUsersIdRoute
   '/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
   '/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
   '/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
+  '/boards/$boardId/pages/$pageId': typeof AuthenticatedBoardsBoardIdPagesPageIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -302,6 +326,7 @@ export interface FileRoutesByTo {
   '/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/subscribe': typeof AuthenticatedAppSubscribeRoute
+  '/boards/$boardId': typeof AuthenticatedBoardsBoardIdRouteWithChildren
   '/onboarding/profile': typeof AuthenticatedOnboardingProfileRoute
   '/onboarding/schedule': typeof AuthenticatedOnboardingScheduleRoute
   '/teacher/availability': typeof AuthenticatedTeacherAvailabilityRoute
@@ -309,12 +334,14 @@ export interface FileRoutesByTo {
   '/teacher/students': typeof AuthenticatedTeacherStudentsRouteWithChildren
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/boards': typeof AuthenticatedBoardsIndexRoute
   '/teacher': typeof AuthenticatedTeacherIndexRoute
   '/admin/users/$id': typeof AuthenticatedAdminUsersIdRoute
   '/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
   '/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
   '/admin/users': typeof AuthenticatedAdminUsersIndexRoute
+  '/boards/$boardId/pages/$pageId': typeof AuthenticatedBoardsBoardIdPagesPageIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -341,6 +368,7 @@ export interface FileRoutesById {
   '/_authenticated/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/subscribe': typeof AuthenticatedAppSubscribeRoute
+  '/_authenticated/boards/$boardId': typeof AuthenticatedBoardsBoardIdRouteWithChildren
   '/_authenticated/onboarding/profile': typeof AuthenticatedOnboardingProfileRoute
   '/_authenticated/onboarding/schedule': typeof AuthenticatedOnboardingScheduleRoute
   '/_authenticated/teacher/availability': typeof AuthenticatedTeacherAvailabilityRoute
@@ -348,12 +376,14 @@ export interface FileRoutesById {
   '/_authenticated/teacher/students': typeof AuthenticatedTeacherStudentsRouteWithChildren
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/boards/': typeof AuthenticatedBoardsIndexRoute
   '/_authenticated/teacher/': typeof AuthenticatedTeacherIndexRoute
   '/_authenticated/admin/users/$id': typeof AuthenticatedAdminUsersIdRoute
   '/_authenticated/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/_authenticated/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
   '/_authenticated/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
   '/_authenticated/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
+  '/_authenticated/boards/$boardId/pages/$pageId': typeof AuthenticatedBoardsBoardIdPagesPageIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -380,6 +410,7 @@ export interface FileRouteTypes {
     | '/app/learning'
     | '/app/settings'
     | '/app/subscribe'
+    | '/boards/$boardId'
     | '/onboarding/profile'
     | '/onboarding/schedule'
     | '/teacher/availability'
@@ -387,12 +418,14 @@ export interface FileRouteTypes {
     | '/teacher/students'
     | '/admin/'
     | '/app/'
+    | '/boards/'
     | '/teacher/'
     | '/admin/users/$id'
     | '/app/checkpoint/$checkpointId'
     | '/app/learning/$moduleId'
     | '/teacher/students/$studentId'
     | '/admin/users/'
+    | '/boards/$boardId/pages/$pageId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -413,6 +446,7 @@ export interface FileRouteTypes {
     | '/app/learning'
     | '/app/settings'
     | '/app/subscribe'
+    | '/boards/$boardId'
     | '/onboarding/profile'
     | '/onboarding/schedule'
     | '/teacher/availability'
@@ -420,12 +454,14 @@ export interface FileRouteTypes {
     | '/teacher/students'
     | '/admin'
     | '/app'
+    | '/boards'
     | '/teacher'
     | '/admin/users/$id'
     | '/app/checkpoint/$checkpointId'
     | '/app/learning/$moduleId'
     | '/teacher/students/$studentId'
     | '/admin/users'
+    | '/boards/$boardId/pages/$pageId'
   id:
     | '__root__'
     | '/'
@@ -451,6 +487,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/learning'
     | '/_authenticated/app/settings'
     | '/_authenticated/app/subscribe'
+    | '/_authenticated/boards/$boardId'
     | '/_authenticated/onboarding/profile'
     | '/_authenticated/onboarding/schedule'
     | '/_authenticated/teacher/availability'
@@ -458,12 +495,14 @@ export interface FileRouteTypes {
     | '/_authenticated/teacher/students'
     | '/_authenticated/admin/'
     | '/_authenticated/app/'
+    | '/_authenticated/boards/'
     | '/_authenticated/teacher/'
     | '/_authenticated/admin/users/$id'
     | '/_authenticated/app/checkpoint/$checkpointId'
     | '/_authenticated/app/learning/$moduleId'
     | '/_authenticated/teacher/students/$studentId'
     | '/_authenticated/admin/users/'
+    | '/_authenticated/boards/$boardId/pages/$pageId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -579,6 +618,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTeacherIndexRouteImport
       parentRoute: typeof AuthenticatedTeacherRoute
     }
+    '/_authenticated/boards/': {
+      id: '/_authenticated/boards/'
+      path: '/boards'
+      fullPath: '/boards/'
+      preLoaderRoute: typeof AuthenticatedBoardsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/app/': {
       id: '/_authenticated/app/'
       path: '/'
@@ -626,6 +672,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding/profile'
       fullPath: '/onboarding/profile'
       preLoaderRoute: typeof AuthenticatedOnboardingProfileRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/boards/$boardId': {
+      id: '/_authenticated/boards/$boardId'
+      path: '/boards/$boardId'
+      fullPath: '/boards/$boardId'
+      preLoaderRoute: typeof AuthenticatedBoardsBoardIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/app/subscribe': {
@@ -732,6 +785,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/users/$id'
       preLoaderRoute: typeof AuthenticatedAdminUsersIdRouteImport
       parentRoute: typeof AuthenticatedAdminUsersRoute
+    }
+    '/_authenticated/boards/$boardId/pages/$pageId': {
+      id: '/_authenticated/boards/$boardId/pages/$pageId'
+      path: '/pages/$pageId'
+      fullPath: '/boards/$boardId/pages/$pageId'
+      preLoaderRoute: typeof AuthenticatedBoardsBoardIdPagesPageIdRouteImport
+      parentRoute: typeof AuthenticatedBoardsBoardIdRoute
     }
   }
 }
@@ -845,20 +905,39 @@ const AuthenticatedTeacherRouteChildren: AuthenticatedTeacherRouteChildren = {
 const AuthenticatedTeacherRouteWithChildren =
   AuthenticatedTeacherRoute._addFileChildren(AuthenticatedTeacherRouteChildren)
 
+interface AuthenticatedBoardsBoardIdRouteChildren {
+  AuthenticatedBoardsBoardIdPagesPageIdRoute: typeof AuthenticatedBoardsBoardIdPagesPageIdRoute
+}
+
+const AuthenticatedBoardsBoardIdRouteChildren: AuthenticatedBoardsBoardIdRouteChildren =
+  {
+    AuthenticatedBoardsBoardIdPagesPageIdRoute:
+      AuthenticatedBoardsBoardIdPagesPageIdRoute,
+  }
+
+const AuthenticatedBoardsBoardIdRouteWithChildren =
+  AuthenticatedBoardsBoardIdRoute._addFileChildren(
+    AuthenticatedBoardsBoardIdRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
   AuthenticatedTeacherRoute: typeof AuthenticatedTeacherRouteWithChildren
+  AuthenticatedBoardsBoardIdRoute: typeof AuthenticatedBoardsBoardIdRouteWithChildren
   AuthenticatedOnboardingProfileRoute: typeof AuthenticatedOnboardingProfileRoute
   AuthenticatedOnboardingScheduleRoute: typeof AuthenticatedOnboardingScheduleRoute
+  AuthenticatedBoardsIndexRoute: typeof AuthenticatedBoardsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
   AuthenticatedTeacherRoute: AuthenticatedTeacherRouteWithChildren,
+  AuthenticatedBoardsBoardIdRoute: AuthenticatedBoardsBoardIdRouteWithChildren,
   AuthenticatedOnboardingProfileRoute: AuthenticatedOnboardingProfileRoute,
   AuthenticatedOnboardingScheduleRoute: AuthenticatedOnboardingScheduleRoute,
+  AuthenticatedBoardsIndexRoute: AuthenticatedBoardsIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

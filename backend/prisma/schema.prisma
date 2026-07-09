@@ -456,6 +456,7 @@ model Board {
 
   members BoardMember[]
   ops     BoardOp[]
+  pages   BoardPage[]
 
   @@map("boards")
 }
@@ -489,6 +490,40 @@ model BoardOp {
   @@unique([boardId, clientOpId])
   @@index([boardId, createdAt])
   @@map("board_ops")
+}
+
+model BoardPage {
+  id        String   @id @default(uuid())
+  boardId   String   @map("board_id")
+  title     String   @default("Página")
+  position  Int      @default(0)
+  kind      String   @default("doc") // doc | canvas | mixed
+  yjsState  Bytes?   @map("yjs_state")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  board Board         @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  ops   BoardPageOp[]
+
+  @@index([boardId, position])
+  @@map("board_pages")
+}
+
+model BoardPageOp {
+  id         String   @id @default(uuid())
+  pageId     String   @map("page_id")
+  userId     String   @map("user_id")
+  clientOpId String   @map("client_op_id")
+  update     Bytes
+  seq        Int
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  page BoardPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, seq])
+  @@unique([pageId, clientOpId])
+  @@index([pageId, createdAt])
+  @@map("board_page_ops")
 }
 
 /// Auditoría de impersonación admin → usuario.

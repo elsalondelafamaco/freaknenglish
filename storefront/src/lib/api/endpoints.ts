@@ -3,7 +3,7 @@
  * Tipos minimalistas — el contrato real está en backend/src/modules/* y
  * en `docs/data-model.md`.
  */
-import { apiGet, apiPatch, apiPost } from "./client";
+import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
 import type {
   ClassSession,
   Subscription,
@@ -261,4 +261,25 @@ export const boardsApi = {
     apiGet<any[]>(`/boards/${id}/ops`, { since }),
   invite: (id: string, userId: string, role: "editor" | "viewer" = "editor") =>
     apiPost<any>(`/boards/${id}/invite`, { userId, role }),
+  // Pages
+  listPages: (boardId: string) =>
+    apiGet<Array<{ id: string; title: string; position: number; kind: string; updatedAt: string }>>(
+      `/boards/${boardId}/pages`,
+    ),
+  createPage: (boardId: string, body: { title?: string; kind?: string } = {}) =>
+    apiPost<any>(`/boards/${boardId}/pages`, body),
+  renamePage: (pageId: string, title: string) =>
+    apiPatch<any>(`/boards/pages/${pageId}`, { title }),
+  reorderPage: (pageId: string, position: number) =>
+    apiPatch<any>(`/boards/pages/${pageId}`, { position }),
+  deletePage: (pageId: string) => apiDelete<any>(`/boards/pages/${pageId}`),
+  pageState: (pageId: string) =>
+    apiGet<{ id: string; title: string; kind: string; snapshot: string | null; lastSeq: number }>(
+      `/boards/pages/${pageId}/state`,
+    ),
+  pageOpsSince: (pageId: string, since: number) =>
+    apiGet<Array<{ seq: number; userId: string; clientOpId: string; update: string }>>(
+      `/boards/pages/${pageId}/ops`,
+      { since },
+    ),
 };

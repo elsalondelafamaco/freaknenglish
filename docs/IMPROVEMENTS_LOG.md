@@ -246,3 +246,37 @@
 - Storefront: nueva ruta `/teacher/availability` con grid 7×15 (07:00–21:00);
   al guardar informa cuántos estudiantes se asignaron automáticamente.
 - Nav del portal profesor incluye el ítem "Disponibilidad".
+
+## Iteración D10 — Board colaborativo en tiempo real (B1 + B2 + B5)
+
+- **Backend:** migración `20260813000000_board_pages` con tablas
+  `board_pages` y `board_page_ops` (Yjs binary state + op log per página).
+  Prisma models `BoardPage` y `BoardPageOp` con relación cascada al board.
+- `BoardService`: CRUD páginas (`listPages`, `createPage`, `renamePage`,
+  `reorderPage`, `deletePage`), snapshot + catch-up (`getPageState`,
+  `appendPageOp` idempotente por `clientOpId`, `pageOpsSince`).
+- `BoardController`: nuevos endpoints REST `GET/POST /boards/:id/pages`,
+  `PATCH/DELETE /boards/pages/:pageId`, `GET /boards/pages/:pageId/state`,
+  `GET /boards/pages/:pageId/ops?since=N`.
+- `BoardGateway`: eventos WS `page:join`, `page:leave`, `page:update`
+  (Yjs update en base64, límite 256 KB, broadcast a peers), `page:awareness`
+  (cursor + selección), y presencia por página. Autorización vía
+  `ensureMember(boardId)` en cada handler.
+- **Frontend:** dependencias `yjs`, `y-protocols`, `socket.io-client`,
+  `@tiptap/react` + starter-kit/collaboration/collaboration-cursor/
+  placeholder.
+- `src/lib/board/yProvider.ts`: `createPageProvider` conecta un `Y.Doc` +
+  `Awareness` al socket `/board`, bootstrapea con snapshot REST, aplica ops
+  faltantes, reintenta join en reconexión y expone estado + presencia.
+- Rutas nuevas: `/boards` (lista + crear), `/boards/$boardId` (sidebar de
+  páginas: crear/renombrar/eliminar) con auto-navegación a la primera
+  página, y `/boards/$boardId/pages/$pageId` (editor Tiptap colaborativo
+  con toolbar completa: bold/italic/strike/H1-H3/lista/ordered/tasks/quote/
+  code + undo/redo, cursores remotos con color por usuario, avatares de
+  presencia y píldora de estado conectando/en vivo/offline).
+- Endpoints storefront (`boardsApi.listPages/createPage/renamePage/
+  reorderPage/deletePage/pageState/pageOpsSince`).
+- `AppShell`: entrada "Boards" en la nav de estudiante y profesor.
+- Pendiente en iteraciones B3–B8: tablas, imágenes con upload, capa de
+  dibujo, historial de versiones, auto-provisioning al reservar clase,
+  exportar PDF/Markdown y pulido móvil.

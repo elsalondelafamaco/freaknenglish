@@ -1,5 +1,45 @@
 ## Round 5 — Checkout Wompi, Onboarding + horarios, Nómina real
 
+## Round 6 — NPS por reglas, Wompi Web Checkout real, TRM Superfinanciera
+
+### D1 (hecho)
+- **Logout robusto** (`AppShell.tsx`): `cancelQueries → clear → signOut →
+  navigate('/login', replace) → router.invalidate()`.
+- **NPS por reglas** (`surveys.controller.ts`): `GET /surveys/pending`
+  ahora devuelve `{ pending, period, reason }` con `reason ∈
+  {last_class, period_ended}`. Se dispara sólo si el estudiante tiene
+  su última clase programada del periodo actual, o si la suscripción
+  quedó `expired|past_due|canceled`. Ya no se apoya en
+  `localStorage`. El dialog se monta desde `_authenticated.tsx` y se
+  eliminó el trigger cliente en `app.index.tsx`.
+- **Onboarding + suscripción**: usuarios sin suscripción activa son
+  redirigidos a la nueva ruta interna `/app/subscribe` (catálogo real
+  de planes con CTA a `/checkout/$planId`).
+- **Historial de pagos**: `GET /me/payments` + `usersApi.payments()`.
+
+### D2 (hecho)
+- **Wompi Web Checkout real** (`checkout.service.ts`): `createIntent`
+  devuelve además `checkoutUrl` construido con la URL prehosteada de
+  Wompi (`https://checkout.wompi.co/p/?...`) firmando `reference +
+  amount + currency + INTEGRITY_SECRET` (SHA-256). El frontend
+  (`checkout.$planId.tsx`) redirige por `window.location.href` y se
+  eliminaron el widget embebido, el botón "Simular pago aprobado" y el
+  paso intermedio. `checkout/return` sigue haciendo polling contra
+  `/checkout/status` porque la fuente de verdad es el webhook.
+- **TRM (Superfinanciera)**: nuevo módulo `exchange/` con
+  `GET /public/exchange/trm`. Consulta SODA
+  (`https://www.datos.gov.co/resource/32sa-8pi3.json?$limit=1&$order=vigenciadesde%20DESC`),
+  cachea en tabla `trm_rates` con TTL de 12h, fallback a la última fila
+  o valor duro si el SODA falla.
+- **Planes con USD**: migración `20260812000000_plan_usd_and_trm`
+  añade `plans.price_usd` + tabla `trm_rates`. `GET /plans` ahora
+  devuelve `{ trm, plans: [{ id, name, daysPerWeek, priceCop,
+  priceUsd, features }] }`.
+- **Landing Pricing** (`components/site/Pricing.tsx`) consume
+  `plansApi.list()` con TanStack Query, muestra el precio USD real,
+  el equivalente en COP y la TRM referencia. Cae al catálogo local
+  (`PLANS`) si el backend no responde.
+
 ### Iteración A — Checkout + Wompi end-to-end
 - Backend: `POST /checkout/intents` (documento + teléfono obligatorios),
   `GET /checkout/status?reference=` para polling, `express.raw` sólo en

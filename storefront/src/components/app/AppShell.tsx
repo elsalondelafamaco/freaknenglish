@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
   LayoutDashboard,
@@ -42,8 +43,24 @@ const ADMIN_NAV = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  async function handleSignOut() {
+    try {
+      await queryClient.cancelQueries();
+    } catch { /* ignore */ }
+    queryClient.clear();
+    try {
+      await signOut();
+    } catch { /* ignore, we still navigate */ }
+    await navigate({ to: "/login", replace: true });
+    void router.invalidate();
+  }
+
   const NAV = user?.roles.includes("admin")
     ? ADMIN_NAV
     : user?.roles.includes("teacher")

@@ -62,18 +62,54 @@ export class SurveysController {
   }
 
   /**
-   * @endpoint GET /api/v1/surveys/pending  → { pending: boolean, period: string }
-   * Frecuencia objetivo: cada 30 días desde la última respuesta.
+   * @endpoint GET /api/v1/surveys/pending  → { pending, period, reason }
+   *
+   * Reglas de negocio:
+   *   a) `last_class`  → el estudiante tiene una clase `scheduled` que es la
+   *      última dentro de su `currentPeriodEnd` (o dentro de los próximos 7 d
+   *      si no hay suscripción activa) y no ha respondido la encuesta de
+   *      ese período.
+   *   b) `period_ended` → la suscripción está `expired|past_due|canceled` y
+   *      falta la encuesta del último período con actividad.
    */
   @Get('pending')
   async pending(@CurrentUser() u: AuthUser) {
-    const last = await this.prisma.satisfactionSurvey.findFirst({
-      where: { userId: u.id },
-      orderBy: { createdAt: 'desc' },
+    const now = new Date()
+    const period = now.toISOString().slice(0, 7)
+    const sub = await this.prisma.subscription.findUnique({ where: { userId: u.id } })
+    const answered = await this.prisma.satisfactionSurvey.findUnique({
+      where: { userId_period: { userId: u.id, period } },
     })
-    const period = new Date().toISOString().slice(0, 7)
-    if (!last) return { pending: true, period }
-    const ageDays = (Date.now() - new Date(last.createdAt).getTime()) / 86_400_000
-    return { pending: ageDays >= 30, period, lastAnsweredAt: last.createdAt }
+    if (answered) return { pending: false, period, reason: null }
+
+    // (a) última clase del período programada y a punto de cursarse
+    const periodEnd = sub?.currentPeriodEnd ?? new Date(now.getTime() + 7 * 86_400_000)
+    const lastClass = await this.prisma.class.findFirst({
+      where: { studentId: u.id, status: 'scheduled', startsAt: { lte: periodEnd } },
+      orderBy: { startsAt: 'desc' },
+    })
+    if (lastClass) {
+      const upcomingCount = await this.prisma.class.count({
+        where: {
+          studentId: u.id,
+          status: 'scheduled',
+          startsAt: { gte: lastClass.startsAt, lte: periodEnd },
+        },
+      })
+      // Si esta clase es la última pendiente del período (upcomingCount === 1)
+      // pedimos la encuesta antes de que la tome.
+      if (upcomingCount <= 1) {
+        return { pending: true, period, reason: 'last_class' as const }
+      }
+    }
+
+    // (b) suscripción no activa y aún no respondió
+    if (sub && ['expired', 'past_due', 'canceled'].includes(sub.status)) {
+      return { pending: true, period, reason: 'period_ended' as const }
+    }
+
+    return { pending: false, period, reason: null }
   }
+
+  /** @endpoint GET /api/v1/me/payments (histórico del usuario) */
 }

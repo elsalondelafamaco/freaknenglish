@@ -32,6 +32,19 @@ export const usersApi = {
   me: () => apiGet<any>("/me"),
   updateMe: (body: Partial<{ fullName: string; phone: string; avatarUrl: string; documentNumber: string }>) =>
     apiPatch<any>("/me", body),
+  payments: () =>
+    apiGet<Array<{
+      id: string;
+      reference: string;
+      planId: string;
+      planName?: string;
+      amountInCents: number;
+      currency: string;
+      status: "PENDING" | "APPROVED" | "DECLINED" | "VOIDED" | "ERROR";
+      approvedAt: string | null;
+      createdAt: string;
+      wompiId: string | null;
+    }>>("/me/payments"),
 };
 
 // ─── Scheduling ────────────────────────────────────────────────────────
@@ -192,7 +205,10 @@ export const adminApi = {
 
 // ─── Surveys ───────────────────────────────────────────────────────────
 export const surveysApi = {
-  pending: () => apiGet<{ pending: boolean; period: string }>("/surveys/pending"),
+  pending: () =>
+    apiGet<{ pending: boolean; period: string; reason: "last_class" | "period_ended" | null }>(
+      "/surveys/pending",
+    ),
   submit: (body: { score: number; teacherScore?: number; contentScore?: number; platformScore?: number; comment?: string }) =>
     apiPost<any>("/surveys/nps", body),
 };

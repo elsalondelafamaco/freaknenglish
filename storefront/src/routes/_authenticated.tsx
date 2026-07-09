@@ -7,8 +7,9 @@ import {
 } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { AppShell } from "@/components/app/AppShell";
-import { subscriptionsApi } from "@/lib/api/endpoints";
+import { subscriptionsApi, surveysApi } from "@/lib/api/endpoints";
 import { useQuery } from "@tanstack/react-query";
+import { SatisfactionDialog } from "@/components/app/SatisfactionDialog";
 
 /**
  * Gate de rutas autenticadas.
@@ -48,6 +49,12 @@ function AuthenticatedLayout() {
     enabled: isStudent && isAuthenticated,
     staleTime: 30_000,
   });
+  const { data: pendingSurvey, refetch: refetchSurvey } = useQuery({
+    queryKey: ["me", "survey-pending"],
+    queryFn: () => surveysApi.pending(),
+    enabled: isStudent && isAuthenticated,
+    staleTime: 60_000,
+  });
 
   useEffect(() => {
     if (loading) return;
@@ -78,10 +85,13 @@ function AuthenticatedLayout() {
         const hasSchedule = user.scheduleAssignmentStatus === "auto_assigned"
           || user.scheduleAssignmentStatus === "manual_pending";
         if (missingProfile) target = "/onboarding/profile";
-        else if (!hasActiveSub && !pathname.startsWith("/checkout")) {
-          // Sin suscripción → mandamos al pricing (home #precios).
-          if (typeof window !== "undefined") window.location.href = "/#precios";
-          return;
+        else if (
+          !hasActiveSub &&
+          !pathname.startsWith("/checkout") &&
+          pathname !== "/app/subscribe"
+        ) {
+          // Sin suscripción → vista interna del portal (no salimos a la home).
+          target = "/app/subscribe";
         }
         else if (hasActiveSub && !hasSchedule) target = "/onboarding/schedule";
       }
@@ -106,6 +116,12 @@ function AuthenticatedLayout() {
   return (
     <AppShell>
       <Outlet />
+      {isStudent && pendingSurvey?.pending && user ? (
+        <SatisfactionDialog
+          userId={user.id}
+          onSubmitted={() => void refetchSurvey()}
+        />
+      ) : null}
     </AppShell>
   );
 }

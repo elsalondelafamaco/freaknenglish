@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
   LayoutDashboard,
@@ -42,8 +43,24 @@ const ADMIN_NAV = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  async function handleSignOut() {
+    try {
+      await queryClient.cancelQueries();
+    } catch { /* ignore */ }
+    queryClient.clear();
+    try {
+      await signOut();
+    } catch { /* ignore, we still navigate */ }
+    await navigate({ to: "/login", replace: true });
+    void router.invalidate();
+  }
+
   const NAV = user?.roles.includes("admin")
     ? ADMIN_NAV
     : user?.roles.includes("teacher")
@@ -70,7 +87,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="text-sm font-semibold text-brand-ink">{user?.fullName}</div>
           <div className="truncate text-xs text-brand-ink/65">{user?.email}</div>
           <button
-            onClick={signOut}
+            onClick={handleSignOut}
             className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-brand-ink/70 hover:text-brand-ink"
           >
             <LogOut className="size-3.5" /> Cerrar sesión
@@ -109,7 +126,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               );
             })}
             <button
-              onClick={signOut}
+              onClick={handleSignOut}
               className="mt-2 inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-brand-ink/70 hover:bg-brand-cream/40"
             >
               <LogOut className="size-4" /> Cerrar sesión

@@ -61,9 +61,14 @@ function adaptUser(u: any): User {
     email: u.email,
     fullName: u.fullName,
     avatarUrl: u.avatarUrl ?? undefined,
+    phone: u.phone ?? undefined,
+    documentNumber: u.documentNumber ?? undefined,
     roles: [u.role],
     level: u.englishLevel ?? undefined,
     onboardedAt: u.emailVerifiedAt ?? undefined,
+    assignedTeacherId: u.assignedTeacherId ?? undefined,
+    schedulePreferences: Array.isArray(u.schedulePreferences) ? u.schedulePreferences : undefined,
+    scheduleAssignmentStatus: u.scheduleAssignmentStatus ?? undefined,
     createdAt: u.createdAt,
   };
 }

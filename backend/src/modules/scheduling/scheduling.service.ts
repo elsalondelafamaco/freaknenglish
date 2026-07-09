@@ -1,0 +1,147 @@
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { PrismaService } from '../../prisma/prisma.service'
+
+/**
+ * Bloques semanales de horario del estudiante.
+ * weekday: 0=Dom..6=Sáb ; hour: 24h (7..21 típico).
+ */
+export interface ScheduleBlock {
+  weekday: number
+  hour: number
+}
+
+function isHourInRange(hour: number, startsAt: string, endsAt: string) {
+  const s = parseInt(startsAt.split(':')[0] ?? '0', 10)
+  const e = parseInt(endsAt.split(':')[0] ?? '0', 10)
+  return hour >= s && hour < e
+}
+
+@Injectable()
+export class SchedulingService {
+  constructor(private prisma: PrismaService) {}
+
+  /**
+   * Grilla 7×24 (weekday × hour) → cantidad de profesores con disponibilidad.
+   * Sólo profesores activos (no deshabilitados/eliminados).
+   */
+  async availabilityGrid() {
+    const avail = await this.prisma.teacherAvailability.findMany({
+      include: { teacher: { select: { disabledAt: true, deletedAt: true } } },
+    })
+    const grid: Record<string, number> = {}
+    for (const a of avail) {
+      if (a.teacher.disabledAt || a.teacher.deletedAt) continue
+      const s = parseInt(a.startsAt.split(':')[0] ?? '0', 10)
+      const e = parseInt(a.endsAt.split(':')[0] ?? '0', 10)
+      for (let h = s; h < e; h++) {
+        const key = `${a.weekday}:${h}`
+        grid[key] = (grid[key] ?? 0) + 1
+      }
+    }
+    return { grid, hours: Array.from({ length: 15 }, (_, i) => i + 7) } // 7..21
+  }
+
+  /**
+   * Recibe N bloques (== plan.daysPerWeek), busca UN profesor con
+   * disponibilidad para TODOS. Si encuentra: assignedTeacherId + status
+   * `auto_assigned`. Si no: `manual_pending`.
+   */
+  async submitPreferences(userId: string, blocks: ScheduleBlock[]) {
+    if (!Array.isArray(blocks) || blocks.length === 0) throw new BadRequestException('blocks required')
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { subscription: { include: { plan: true } } },
+    })
+    if (!user) throw new NotFoundException('User not found')
+    if (!user.subscription || user.subscription.status !== 'active') {
+      throw new BadRequestException('Active subscription required')
+    }
+    const expected = user.subscription.plan.daysPerWeek
+    if (blocks.length !== expected) {
+      throw new BadRequestException(`Plan requires exactly ${expected} blocks`)
+    }
+
+    // Buscar profesor que cubra todos los bloques.
+    const teachers = await this.prisma.user.findMany({
+      where: { role: 'teacher', disabledAt: null, deletedAt: null },
+      include: { availability: true },
+    })
+    const match = teachers.find((t) =>
+      blocks.every((b) =>
+        t.availability.some((a) => a.weekday === b.weekday && isHourInRange(b.hour, a.startsAt, a.endsAt)),
+      ),
+    )
+
+    const status = match ? 'auto_assigned' : 'manual_pending'
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        schedulePreferences: blocks as any,
+        scheduleAssignmentStatus: status,
+        assignedTeacherId: match?.id ?? user.assignedTeacherId ?? null,
+        onboardedAt: user.onboardedAt ?? new Date(),
+      },
+    })
+
+    return {
+      status,
+      teacher: match ? { id: match.id, fullName: match.fullName } : null,
+      blocks,
+    }
+  }
+
+  /** Estado del onboarding del estudiante autenticado. */
+  async mySchedule(userId: string) {
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        schedulePreferences: true,
+        scheduleAssignmentStatus: true,
+        assignedTeacherId: true,
+        assignedTeacher: { select: { id: true, fullName: true } },
+      },
+    })
+    return u
+  }
+
+  // ── Admin ──────────────────────────────────────────────────────────
+
+  async pendingRequests() {
+    return this.prisma.user.findMany({
+      where: { scheduleAssignmentStatus: 'manual_pending', deletedAt: null },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        englishLevel: true,
+        schedulePreferences: true,
+        subscription: { select: { plan: { select: { name: true, daysPerWeek: true } } } },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 200,
+    })
+  }
+
+  async assignRequest(studentId: string, teacherId: string) {
+    const t = await this.prisma.user.findUnique({ where: { id: teacherId } })
+    if (!t || t.role !== 'teacher') throw new BadRequestException('Invalid teacher')
+    return this.prisma.user.update({
+      where: { id: studentId },
+      data: { assignedTeacherId: teacherId, scheduleAssignmentStatus: 'auto_assigned' },
+    })
+  }
+
+  async getTeacherAvailability(teacherId: string) {
+    return this.prisma.teacherAvailability.findMany({ where: { teacherId }, orderBy: [{ weekday: 'asc' }, { startsAt: 'asc' }] })
+  }
+
+  async setTeacherAvailability(teacherId: string, slots: Array<{ weekday: number; startsAt: string; endsAt: string }>) {
+    await this.prisma.teacherAvailability.deleteMany({ where: { teacherId } })
+    if (slots.length === 0) return []
+    await this.prisma.teacherAvailability.createMany({
+      data: slots.map((s) => ({ teacherId, weekday: s.weekday, startsAt: s.startsAt, endsAt: s.endsAt })),
+    })
+    return this.getTeacherAvailability(teacherId)
+  }
+}

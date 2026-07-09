@@ -3,7 +3,6 @@ import { ApiTags } from '@nestjs/swagger'
 import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator'
 import { CheckoutService } from './checkout.service'
 import { PrismaService } from '../../prisma/prisma.service'
-import { Public } from '../../common/decorators/public.decorator'
 
 class CreateIntentDto {
   @IsString() planId!: string
@@ -18,13 +17,11 @@ class CreateIntentDto {
 @Controller('checkout')
 export class CheckoutController {
   constructor(private svc: CheckoutService, private prisma: PrismaService) {}
-  /** @endpoint POST /api/v1/checkout/intents */
-  @Public()
+  /** @endpoint POST /api/v1/checkout/intents (public) */
   @Post('intents')
   create(@Body() dto: CreateIntentDto) { return this.svc.createIntent(dto) }
 
   /** @endpoint GET /api/v1/checkout/status?reference=... (public) */
-  @Public()
   @Get('status')
   async status(@Query('reference') reference?: string, @Query('id') wompiId?: string) {
     if (!reference && !wompiId) throw new NotFoundException('reference or id required')

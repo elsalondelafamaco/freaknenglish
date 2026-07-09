@@ -207,24 +207,21 @@ function CheckoutPage() {
  * cuando el usuario despliegue la Edge Function (ver docs/backend-jobs.md).
  */
 function WompiStep({
-  reference,
-  amountCop,
+  intent,
   email,
   onBack,
   onSimulateApproved,
 }: {
-  reference: string;
-  amountCop: number;
+  intent: BackendIntent;
   email: string;
   onBack: () => void;
   onSimulateApproved: () => void;
 }) {
   const formRef = useRef<HTMLFormElement | null>(null);
-  const publicKey = publicEnv.wompiPublicKey();
-  const currency = publicEnv.currency();
-  const redirectUrl =
-    (publicEnv.appOrigin() || (typeof window !== "undefined" ? window.location.origin : "")) +
-    "/checkout/return";
+  // Backend is the source of truth for publicKey + signature.
+  const publicKey = intent.publicKey || publicEnv.wompiPublicKey();
+  const currency = intent.currency;
+  const redirectUrl = intent.redirectUrl;
   const hasRealKey = publicKey.startsWith("pub_") && !publicKey.includes("placeholder");
 
   // Inyecta dinámicamente <script src="https://checkout.wompi.co/widget.js">
@@ -247,8 +244,9 @@ function WompiStep({
         <form ref={formRef} className="flex flex-col items-stretch gap-3">
           <input type="hidden" name="public-key" value={publicKey} />
           <input type="hidden" name="currency" value={currency} />
-          <input type="hidden" name="amount-in-cents" value={String(amountCop * 100)} />
-          <input type="hidden" name="reference" value={reference} />
+          <input type="hidden" name="amount-in-cents" value={String(intent.amountInCents)} />
+          <input type="hidden" name="reference" value={intent.reference} />
+          <input type="hidden" name="signature:integrity" value={intent.signature} />
           <input type="hidden" name="redirect-url" value={redirectUrl} />
           <input type="hidden" name="customer-data:email" value={email} />
           {/* El script inyecta el botón "Pagar con Wompi" aquí. */}
@@ -278,7 +276,7 @@ function WompiStep({
         Volver a editar mis datos
       </button>
       <p className="mt-3 text-center text-xs text-brand-ink/50">
-        Referencia: <span className="font-mono">{reference}</span>
+        Referencia: <span className="font-mono">{intent.reference}</span>
       </p>
     </div>
   );

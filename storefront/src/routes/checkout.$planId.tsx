@@ -1,30 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { Field, inputClass, ErrorBox } from "@/components/site/AuthShell";
 import { getPlan, formatCop } from "@/lib/domain/plans";
 import { checkoutApi } from "@/lib/api/endpoints";
-import { publicEnv } from "@/lib/env";
 
 export const Route = createFileRoute("/checkout/$planId")({
   head: () => ({ meta: [{ title: "Checkout — Freakn English" }] }),
   component: CheckoutPage,
 });
 
-type Step = "form" | "pay";
-
-type BackendIntent = Awaited<ReturnType<typeof checkoutApi.createIntent>>;
-
 function CheckoutPage() {
   const { planId } = Route.useParams();
-  const navigate = useNavigate();
   const plan = useMemo(() => getPlan(planId), [planId]);
 
-  const [step, setStep] = useState<Step>("form");
   const [form, setForm] = useState({ fullName: "", email: "", document: "", phone: "" });
   const [error, setError] = useState<string | null>(null);
-  const [intent, setIntent] = useState<BackendIntent | null>(null);
   const [loading, setLoading] = useState(false);
 
   if (!plan) {
@@ -62,11 +54,12 @@ function CheckoutPage() {
         customerDocument: form.document.trim(),
         customerPhone: form.phone.trim(),
       });
-      setIntent(created);
-      setStep("pay");
+      // Redirige directamente al Web Checkout de Wompi. La fuente de verdad
+      // del estado de pago es el webhook server-side; la vista `/checkout/return`
+      // solo refleja el estado consultando `GET /checkout/status`.
+      window.location.href = created.checkoutUrl;
     } catch (err: any) {
       setError(err?.message ?? "No pudimos iniciar el pago. Intenta de nuevo.");
-    } finally {
       setLoading(false);
     }
   }
@@ -81,17 +74,13 @@ function CheckoutPage() {
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
           {/* Left: form / widget */}
           <div className="rounded-3xl border border-brand-line bg-white p-6 shadow-soft md:p-8">
-            <h1 className="text-2xl font-bold text-brand-ink md:text-3xl">
-              {step === "form" ? "Completa tus datos" : "Pago seguro con Wompi"}
-            </h1>
+            <h1 className="text-2xl font-bold text-brand-ink md:text-3xl">Completa tus datos</h1>
             <p className="mt-1 text-sm text-brand-ink/65">
-              {step === "form"
-                ? "Los necesitamos para crear tu cuenta y enviarte la confirmación."
-                : "Serás redirigido a la pasarela segura de Wompi para completar el pago."}
+              Los necesitamos para crear tu cuenta. Al continuar serás redirigido a la pasarela
+              segura de Wompi para completar el pago.
             </p>
 
-            {step === "form" ? (
-              <form onSubmit={submitForm} className="mt-6 flex flex-col gap-4">
+            <form onSubmit={submitForm} className="mt-6 flex flex-col gap-4">
                 <Field label="Nombre completo" htmlFor="fullName">
                   <input
                     id="fullName"
@@ -142,27 +131,14 @@ function CheckoutPage() {
                   disabled={loading}
                   className="mt-2 inline-flex h-12 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white transition hover:bg-brand-ink-soft disabled:opacity-60"
                 >
-                  {loading ? "Preparando pago…" : "Continuar al pago"}
+                  {loading ? "Redirigiendo a Wompi…" : "Continuar al pago"}
                 </button>
                 <p className="text-center text-xs text-brand-ink/55">
                   Al continuar aceptas nuestros{" "}
                   <a href="#" className="underline">Términos</a> y{" "}
                   <a href="#" className="underline">Política de privacidad</a>.
                 </p>
-              </form>
-            ) : intent ? (
-              <WompiStep
-                intent={intent}
-                email={form.email.trim().toLowerCase()}
-                onBack={() => setStep("form")}
-                onSimulateApproved={() =>
-                  navigate({
-                    to: "/checkout/return",
-                    search: { reference: intent.reference, status: "APPROVED" },
-                  })
-                }
-              />
-            ) : null}
+            </form>
           </div>
 
           {/* Right: order summary */}
@@ -194,90 +170,5 @@ function CheckoutPage() {
         </div>
       </div>
     </main>
-  );
-}
-
-/**
- * Paso 2 — Widget de Checkout de Wompi (sin tokenización propia).
- *
- * Si `VITE_WOMPI_PUBLIC_KEY` no está configurada (entorno de desarrollo),
- * mostramos un botón "Simular pago aprobado" que dispara el mismo flujo que
- * un webhook `APPROVED`. Esto permite probar el resto del producto sin
- * credenciales reales. La integración con el webhook real se conectará
- * cuando el usuario despliegue la Edge Function (ver docs/backend-jobs.md).
- */
-function WompiStep({
-  intent,
-  email,
-  onBack,
-  onSimulateApproved,
-}: {
-  intent: BackendIntent;
-  email: string;
-  onBack: () => void;
-  onSimulateApproved: () => void;
-}) {
-  const formRef = useRef<HTMLFormElement | null>(null);
-  // Backend is the source of truth for publicKey + signature.
-  const publicKey = intent.publicKey || publicEnv.wompiPublicKey();
-  const currency = intent.currency;
-  const redirectUrl = intent.redirectUrl;
-  const hasRealKey = publicKey.startsWith("pub_") && !publicKey.includes("placeholder");
-
-  // Inyecta dinámicamente <script src="https://checkout.wompi.co/widget.js">
-  // dentro del <form>. Wompi requiere que el script sea hijo del form.
-  useEffect(() => {
-    if (!hasRealKey || !formRef.current) return;
-    const existing = formRef.current.querySelector("script[data-wompi]");
-    if (existing) return;
-    const s = document.createElement("script");
-    s.src = "https://checkout.wompi.co/widget.js";
-    s.setAttribute("data-render", "button");
-    s.setAttribute("data-wompi", "1");
-    s.async = true;
-    formRef.current.appendChild(s);
-  }, [hasRealKey]);
-
-  return (
-    <div className="mt-6">
-      {hasRealKey ? (
-        <form ref={formRef} className="flex flex-col items-stretch gap-3">
-          <input type="hidden" name="public-key" value={publicKey} />
-          <input type="hidden" name="currency" value={currency} />
-          <input type="hidden" name="amount-in-cents" value={String(intent.amountInCents)} />
-          <input type="hidden" name="reference" value={intent.reference} />
-          <input type="hidden" name="signature:integrity" value={intent.signature} />
-          <input type="hidden" name="redirect-url" value={redirectUrl} />
-          <input type="hidden" name="customer-data:email" value={email} />
-          {/* El script inyecta el botón "Pagar con Wompi" aquí. */}
-        </form>
-      ) : (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-          <p className="font-medium">Modo demo activo</p>
-          <p className="mt-1 text-amber-900/80">
-            No hay <code className="font-mono text-xs">VITE_WOMPI_PUBLIC_KEY</code> configurada.
-            Puedes simular un pago aprobado para probar el resto del flujo.
-          </p>
-        </div>
-      )}
-
-      <button
-        type="button"
-        onClick={onSimulateApproved}
-        className="mt-4 inline-flex h-12 w-full items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white hover:bg-brand-ink-soft"
-      >
-        Simular pago aprobado (demo)
-      </button>
-      <button
-        type="button"
-        onClick={onBack}
-        className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-full border border-brand-line bg-white text-sm font-medium text-brand-ink hover:bg-brand-cream/40"
-      >
-        Volver a editar mis datos
-      </button>
-      <p className="mt-3 text-center text-xs text-brand-ink/50">
-        Referencia: <span className="font-mono">{intent.reference}</span>
-      </p>
-    </div>
   );
 }

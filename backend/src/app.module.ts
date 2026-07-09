@@ -23,6 +23,7 @@ import { BoardModule } from './modules/board/board.module'
 import { HealthModule } from './modules/health/health.module'
 import { JobsModule } from './modules/jobs/jobs.module'
 import { SchedulingModule } from './modules/scheduling/scheduling.module'
+import { ExchangeModule } from './modules/exchange/exchange.module'
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { SchedulingModule } from './modules/scheduling/scheduling.module'
     HealthModule,
     JobsModule,
     SchedulingModule,
+    ExchangeModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

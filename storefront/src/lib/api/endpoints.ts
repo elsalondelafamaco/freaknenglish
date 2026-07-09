@@ -73,7 +73,22 @@ export const scheduleApi = {
 
 // ─── Plans + Checkout ──────────────────────────────────────────────────
 export const plansApi = {
-  list: () => apiGet<Array<{ id: string; name: string; daysPerWeek: number; priceCop: number }>>("/plans"),
+  list: () =>
+    apiGet<{
+      trm: { valueCop: number; validFrom: string; source: string };
+      plans: Array<{
+        id: string;
+        name: string;
+        daysPerWeek: number;
+        priceCop: number;
+        priceUsd: number | null;
+        features: string[];
+      }>;
+    }>("/plans"),
+};
+
+export const exchangeApi = {
+  trm: () => apiGet<{ valueCop: number; validFrom: string; source: string }>("/public/exchange/trm"),
 };
 
 export const checkoutApi = {
@@ -86,6 +101,7 @@ export const checkoutApi = {
       signature: string;
       publicKey: string;
       redirectUrl: string;
+      checkoutUrl: string;
     }>("/checkout/intents", body),
   status: (reference: string) =>
     apiGet<{

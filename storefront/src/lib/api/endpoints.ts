@@ -211,6 +211,20 @@ export const adminApi = {
   softDeleteUser: (id: string) => apiPatch<User>(`/admin/users/${id}/delete`, {}),
   resetPassword: (id: string) => apiPost<{ ok: true; link?: string; expiresAt?: string }>(`/admin/users/${id}/reset-password`),
   resetNps: (id: string) => apiPost<{ ok: true }>(`/admin/users/${id}/surveys/reset`),
+  surveys: (filter?: "all" | "promoters" | "detractors") =>
+    apiGet<{
+      rows: Array<{
+        id: string;
+        score: number;
+        teacherScore: number | null;
+        contentScore: number | null;
+        platformScore: number | null;
+        comment: string | null;
+        createdAt: string;
+        user: { id: string; fullName: string; email: string; role: string };
+      }>;
+      totals: { count: number; promoters: number; detractors: number; nps: number | null };
+    }>("/admin/surveys", filter ? { filter } : undefined),
   assignTeacher: (studentId: string, teacherId: string | null) =>
     apiPatch<User>(`/admin/users/${studentId}/assign-teacher`, { teacherId }),
   impersonate: (userId: string) =>

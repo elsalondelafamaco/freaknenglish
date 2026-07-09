@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
   LayoutDashboard,
+  LayoutGrid,
   LogOut,
   Mail,
   Menu,
@@ -23,6 +24,7 @@ const STUDENT_NAV = [
   { to: "/app", label: "Inicio", icon: LayoutDashboard, end: true },
   { to: "/app/calendar", label: "Calendario", icon: CalendarDays, end: false },
   { to: "/app/learning", label: "Aprendizaje", icon: Sparkles, end: false },
+  { to: "/boards", label: "Boards", icon: LayoutGrid, end: false },
   { to: "/app/settings", label: "Configuración", icon: Settings, end: false },
 ] as const;
 
@@ -30,6 +32,7 @@ const TEACHER_NAV = [
   { to: "/teacher", label: "Hoy", icon: LayoutDashboard, end: true },
   { to: "/teacher/schedule", label: "Agenda", icon: CalendarDays, end: false },
   { to: "/teacher/students", label: "Estudiantes", icon: Users, end: false },
+  { to: "/boards", label: "Boards", icon: LayoutGrid, end: false },
   { to: "/teacher/availability", label: "Disponibilidad", icon: Settings, end: false },
 ] as const;
 

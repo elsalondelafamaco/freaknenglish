@@ -340,7 +340,7 @@ export class AdminService {
         where: { id },
         data: {
           title: input.title ?? existing.title,
-          summary: input.summary ?? existing.summary,
+          description: input.summary ?? existing.description,
           level: (input.level ?? existing.level) as any,
           position: input.position ?? existing.position,
         },
@@ -351,7 +351,7 @@ export class AdminService {
       data: {
         id,
         title: input.title,
-        summary: input.summary ?? '',
+        description: input.summary ?? '',
         level: input.level as any,
         position: input.position ?? (last ? last.position + 1 : 1),
       },

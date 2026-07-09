@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { boardsApi } from "@/lib/api/endpoints";
+import { InviteDialog } from "@/components/board/InviteDialog";
 
 export const Route = createFileRoute("/_authenticated/boards/$boardId")({
   head: () => ({ meta: [{ title: "Board" }] }),
@@ -63,6 +64,7 @@ function BoardLayout() {
           <h2 className="mt-1 truncate text-sm font-semibold text-brand-ink">
             {boardQ.data?.name ?? "…"}
           </h2>
+          <div className="mt-2"><InviteDialog boardId={boardId} /></div>
         </header>
         <button
           onClick={() => createPageM.mutate()}

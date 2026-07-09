@@ -159,6 +159,15 @@ export const teachersApi = {
     apiGet<ClassSession[]>("/teacher/schedule", status ? { status } : undefined),
   addNote: (classId: string, rating: number, notes: string) =>
     apiPost<any>(`/teacher/classes/${classId}/notes`, { rating, notes }),
+  myAvailability: () =>
+    apiGet<Array<{ id: string; weekday: number; startsAt: string; endsAt: string }>>(
+      "/teacher/availability",
+    ),
+  saveMyAvailability: (slots: Array<{ weekday: number; startsAt: string; endsAt: string }>) =>
+    apiPost<{
+      availability: Array<{ id: string; weekday: number; startsAt: string; endsAt: string }>;
+      reassigned: Array<{ id: string; fullName: string }>;
+    }>("/teacher/availability", { slots }),
 };
 
 // ─── Admin ─────────────────────────────────────────────────────────────

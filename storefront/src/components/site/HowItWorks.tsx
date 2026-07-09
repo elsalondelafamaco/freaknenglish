@@ -46,7 +46,7 @@ export function HowItWorks() {
               <strong className="font-semibold text-brand-ink">no en que memorices.</strong>
             </p>
           </div>
-          <DarkPillLink to="/checkout/4-dias" size="md" className="self-start lg:self-auto">
+          <DarkPillLink to="/" hash="planes" size="md" className="self-start lg:self-auto">
             Escoge tu Horario ahora
           </DarkPillLink>
         </div>

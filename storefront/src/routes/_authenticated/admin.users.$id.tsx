@@ -807,16 +807,23 @@ function adaptAdminClass(c: any): ClassSession {
 }
 
 function adaptAdminPayment(p: any): PaymentIntent {
+  const created = p.createdAt ?? new Date().toISOString();
   return {
     id: p.id,
     userId: p.userId ?? "",
     planId: p.planId,
     reference: p.reference,
     amountCop: Math.round((p.amountInCents ?? 0) / 100),
+    customer: {
+      fullName: p.customerName ?? "",
+      email: p.customerEmail ?? "",
+      phone: p.customerPhone ?? undefined,
+      document: p.customerDocument ?? undefined,
+    },
     status: (p.status ?? "PENDING") as PaymentIntent["status"],
-    createdAt: p.createdAt ?? new Date().toISOString(),
-    approvedAt: p.approvedAt ?? undefined,
-  } as PaymentIntent;
+    createdAt: created,
+    updatedAt: p.updatedAt ?? p.approvedAt ?? created,
+  };
 }
 
 function adaptAdminSurvey(s: any): SatisfactionSurvey {

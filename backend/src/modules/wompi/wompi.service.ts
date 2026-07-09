@@ -84,14 +84,37 @@ export class WompiService {
       },
     })
 
-    if (tx.status === 'APPROVED' && intent.userId) {
-      await this.subs.activateForUser(intent.userId, intent.planId)
+    if (tx.status === 'APPROVED') {
+      let userId = intent.userId
+      if (!userId) {
+        // Auto-provision student account from the checkout data.
+        const email = intent.customerEmail.toLowerCase()
+        let user = await this.prisma.user.findUnique({ where: { email } })
+        const token = crypto.randomBytes(24).toString('hex')
+        const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7)
+        if (!user) {
+          user = await this.prisma.user.create({
+            data: {
+              email,
+              fullName: intent.customerName,
+              phone: intent.customerPhone ?? undefined,
+              documentNumber: intent.customerDocument ?? undefined,
+              role: 'student' as any,
+              setPasswordToken: token,
+              setPasswordTokenExpiresAt: expires,
+            },
+          })
+        }
+        userId = user.id
+        await this.prisma.paymentIntent.update({ where: { id: intent.id }, data: { userId } })
+      }
+      await this.subs.activateForUser(userId, intent.planId)
       await this.notifications.enqueue({
-        userId: intent.userId,
+        userId,
         toEmail: intent.customerEmail,
         template: 'welcome',
         subject: '¡Bienvenido a Freakn!',
-        dedupeKey: `welcome:${intent.userId}`,
+        dedupeKey: `welcome:${userId}`,
         vars: { fullName: intent.customerName },
       })
     }

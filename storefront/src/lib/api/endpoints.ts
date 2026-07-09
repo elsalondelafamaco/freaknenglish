@@ -144,9 +144,23 @@ export const adminApi = {
   }>("/admin/analytics"),
   users: (q?: string) => apiGet<User[]>("/admin/users", q ? { q } : undefined),
   userDetail: (id: string) => apiGet<any>(`/admin/users/${id}`),
-  payroll: (period: string) => apiGet<Array<{ teacherId: string; fullName: string; classes: number; rateCop: number; amountCop: number }>>("/admin/payroll", { period }),
+  payroll: (period: string) =>
+    apiGet<
+      Array<{
+        teacherId: string;
+        fullName: string;
+        classes: number;
+        minutes: number;
+        hours: number;
+        hourlyRateCop: number;
+        amountCop: number;
+      }>
+    >("/admin/payroll", { period }),
   payrollCsv: (period: string) =>
     apiGet<string>(`/admin/payroll/export.csv`, { period }),
+  payrollSettings: () => apiGet<{ hourlyRateCop: number }>("/admin/settings/payroll"),
+  setPayrollSettings: (hourlyRateCop: number) =>
+    apiPatch<{ hourlyRateCop: number }>("/admin/settings/payroll", { hourlyRateCop }),
   content: () => apiGet<LearningModule[]>("/admin/content"),
   createModule: (body: { id?: string; level: "beginner" | "intermediate" | "advanced"; title: string; summary?: string; position?: number }) =>
     apiPost<any>("/admin/content/modules", body),

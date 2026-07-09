@@ -1,8 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Download, Save } from "lucide-react";
-import { computePayroll, formatCop } from "@/lib/domain/admin";
-import { getHourlyRate, setHourlyRate } from "@/lib/domain/app-settings";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { adminApi } from "@/lib/api/endpoints";
+import { toast } from "sonner";
+
+const formatCop = (n: number) =>
+  new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
 
 export const Route = createFileRoute("/_authenticated/admin/payroll")({
   head: () => ({ meta: [{ title: "Nómina — Admin Freakn'" }] }),
@@ -16,34 +20,46 @@ function currentMonth() {
 
 function AdminPayroll() {
   const [monthKey, setMonthKey] = useState(currentMonth());
-  const [tick, setTick] = useState(0);
-  const [rateDraft, setRateDraft] = useState<string>(() => String(getHourlyRate()));
-  const payroll = useMemo(() => computePayroll(monthKey), [monthKey, tick]);
+  const qc = useQueryClient();
+  const rowsQ = useQuery({
+    queryKey: ["admin", "payroll", monthKey],
+    queryFn: () => adminApi.payroll(monthKey),
+  });
+  const settingsQ = useQuery({
+    queryKey: ["admin", "payroll", "settings"],
+    queryFn: () => adminApi.payrollSettings(),
+  });
+  const [rateDraft, setRateDraft] = useState<string>("");
+  useEffect(() => {
+    if (settingsQ.data) setRateDraft(String(settingsQ.data.hourlyRateCop));
+  }, [settingsQ.data]);
 
-  function saveRate() {
+  const saveRate = useMutation({
+    mutationFn: () => adminApi.setPayrollSettings(Number(rateDraft)),
+    onSuccess: () => {
+      toast.success("Tarifa actualizada");
+      qc.invalidateQueries({ queryKey: ["admin", "payroll"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Error al guardar"),
+  });
+
+  const rows = rowsQ.data ?? [];
+  const rateCop = settingsQ.data?.hourlyRateCop ?? 0;
+  const totalCop = useMemo(() => rows.reduce((a, r) => a + r.amountCop, 0), [rows]);
+
+  async function exportCsv() {
     try {
-      setHourlyRate(Number(rateDraft));
-      setTick((t) => t + 1);
-    } catch (err) {
-      alert((err as Error).message);
+      const csv = await adminApi.payrollCsv(monthKey);
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `payroll-${monthKey}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Error al exportar");
     }
-  }
-
-  function exportCsv() {
-    const header = "teacher_id,teacher_name,email,validated_classes,hours,rate_cop,amount_cop\n";
-    const rows = payroll.rows
-      .map(
-        (r) =>
-          `${r.teacher.id},"${r.teacher.fullName}",${r.teacher.email},${r.validatedClasses},${r.hours.toFixed(2)},${r.rateCop},${r.amountCop}`,
-      )
-      .join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `payroll-${monthKey}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
   }
 
   return (
@@ -64,7 +80,7 @@ function AdminPayroll() {
           <div className="text-right">
             <div className="text-xs text-brand-ink/55">Total a pagar</div>
             <div className="text-2xl font-bold text-brand-ink">
-              {formatCop(payroll.totalCop)}
+              {formatCop(totalCop)}
             </div>
           </div>
           <button
@@ -93,13 +109,14 @@ function AdminPayroll() {
           </div>
           <button
             type="button"
-            onClick={saveRate}
+            onClick={() => saveRate.mutate()}
+            disabled={saveRate.isPending || !rateDraft}
             className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-3 py-2 text-xs font-semibold text-white shadow-soft hover:-translate-y-0.5"
           >
             <Save className="size-3.5" /> Guardar tarifa
           </button>
           <p className="ml-auto text-[11px] text-brand-ink/55">
-            Tarifa vigente: <strong>{formatCop(payroll.rateCop)}</strong> /h. Solo se cuentan
+            Tarifa vigente: <strong>{formatCop(rateCop)}</strong> /h. Solo se cuentan
             clases completadas y validadas por el profesor.
           </p>
         </div>
@@ -117,22 +134,24 @@ function AdminPayroll() {
             </tr>
           </thead>
           <tbody className="divide-y divide-brand-line">
-            {payroll.rows.length === 0 ? (
+            {rowsQ.isLoading ? (
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-brand-ink/55">Cargando…</td></tr>
+            ) : rows.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-brand-ink/55">
-                  No hay profesores registrados.
+                  No hay clases validadas en este mes.
                 </td>
               </tr>
             ) : (
-              payroll.rows.map((r) => (
-                <tr key={r.teacher.id}>
+              rows.map((r) => (
+                <tr key={r.teacherId}>
                   <td className="px-4 py-3">
-                    <div className="font-semibold text-brand-ink">{r.teacher.fullName}</div>
-                    <div className="text-xs text-brand-ink/55">{r.teacher.email}</div>
+                    <div className="font-semibold text-brand-ink">{r.fullName}</div>
+                    <div className="text-xs text-brand-ink/55">ID: {r.teacherId.slice(0, 8)}</div>
                   </td>
-                  <td className="px-4 py-3 text-brand-ink/80">{r.validatedClasses}</td>
+                  <td className="px-4 py-3 text-brand-ink/80">{r.classes}</td>
                   <td className="px-4 py-3 text-brand-ink/80">{r.hours.toFixed(2)} h</td>
-                  <td className="px-4 py-3 text-brand-ink/80">{formatCop(r.rateCop)}</td>
+                  <td className="px-4 py-3 text-brand-ink/80">{formatCop(r.hourlyRateCop)}</td>
                   <td className="px-4 py-3 text-right font-semibold text-brand-ink">
                     {formatCop(r.amountCop)}
                   </td>
@@ -140,18 +159,18 @@ function AdminPayroll() {
               ))
             )}
           </tbody>
-          {payroll.rows.length > 0 ? (
+          {rows.length > 0 ? (
             <tfoot>
               <tr className="bg-brand-cream/30 font-semibold text-brand-ink">
                 <td className="px-4 py-3">Total</td>
                 <td className="px-4 py-3">
-                  {payroll.rows.reduce((a, r) => a + r.validatedClasses, 0)}
+                  {rows.reduce((a, r) => a + r.classes, 0)}
                 </td>
                 <td className="px-4 py-3">
-                  {payroll.rows.reduce((a, r) => a + r.hours, 0).toFixed(2)} h
+                  {rows.reduce((a, r) => a + r.hours, 0).toFixed(2)} h
                 </td>
                 <td className="px-4 py-3" />
-                <td className="px-4 py-3 text-right">{formatCop(payroll.totalCop)}</td>
+                <td className="px-4 py-3 text-right">{formatCop(totalCop)}</td>
               </tr>
             </tfoot>
           ) : null}

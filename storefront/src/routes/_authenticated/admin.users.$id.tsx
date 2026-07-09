@@ -650,7 +650,7 @@ function EditUserDialog({
       await adminApi.updateUser(user.id, {
         fullName,
         phone: phone || undefined,
-        role: roles[0] ?? "student",
+        role: (["admin", "teacher", "student"] as const).find((r) => roles.includes(r)) ?? "student",
         englishLevel: roles.includes("student") ? level : null,
       });
       onSaved();
@@ -750,4 +750,97 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </label>
   );
+}
+
+// ─── Adapters backend → shape del dominio ─────────────────────────────
+
+function roleToRoles(role: string | undefined): AppRole[] {
+  const r = (role ?? "student") as AppRole;
+  return [r];
+}
+
+function adaptAdminUser(u: any): User {
+  return {
+    id: u.id,
+    email: u.email,
+    fullName: u.fullName,
+    avatarUrl: u.avatarUrl ?? undefined,
+    phone: u.phone ?? undefined,
+    roles: roleToRoles(u.role),
+    level: (u.englishLevel ?? undefined) as EnglishLevel | undefined,
+    onboardedAt: u.onboardedAt ?? undefined,
+    assignedTeacherId: u.assignedTeacherId ?? undefined,
+    disabledAt: u.disabledAt ?? undefined,
+    deletedAt: u.deletedAt ?? undefined,
+    lastLoginAt: u.lastLoginAt ?? undefined,
+    createdAt: u.createdAt ?? new Date().toISOString(),
+  };
+}
+
+function adaptAdminSubscription(s: any): Subscription | null {
+  if (!s) return null;
+  return {
+    id: s.id,
+    userId: s.userId,
+    planId: (s.plan?.id ?? s.planId) as Subscription["planId"],
+    status: (s.status ?? "pending") as Subscription["status"],
+    startedAt: s.startedAt ?? undefined,
+    currentPeriodEnd: s.currentPeriodEnd ?? undefined,
+    wompiReference: s.wompiReference ?? undefined,
+  };
+}
+
+function adaptAdminClass(c: any): ClassSession {
+  return {
+    id: c.id,
+    studentId: c.studentId,
+    teacherId: c.teacherId,
+    teacherName: c.teacher?.fullName ?? "",
+    startsAt: c.startsAt ?? c.scheduledAt ?? new Date().toISOString(),
+    durationMin: c.durationMin ?? 50,
+    status: (c.status ?? "scheduled") as ClassSession["status"],
+    studentConfirmedAt: c.studentConfirmedAt ?? undefined,
+    teacherValidatedAt: c.teacherValidatedAt ?? undefined,
+    topic: c.topic ?? undefined,
+    meetingUrl: c.meetingUrl ?? undefined,
+  };
+}
+
+function adaptAdminPayment(p: any): PaymentIntent {
+  return {
+    id: p.id,
+    userId: p.userId ?? "",
+    planId: p.planId,
+    reference: p.reference,
+    amountCop: Math.round((p.amountInCents ?? 0) / 100),
+    status: (p.status ?? "PENDING") as PaymentIntent["status"],
+    createdAt: p.createdAt ?? new Date().toISOString(),
+    approvedAt: p.approvedAt ?? undefined,
+  } as PaymentIntent;
+}
+
+function adaptAdminSurvey(s: any): SatisfactionSurvey {
+  return {
+    id: s.id,
+    userId: s.userId,
+    monthKey: s.monthKey ?? (s.createdAt ?? "").slice(0, 7),
+    nps: s.nps ?? s.score ?? 0,
+    teacherScore: s.teacherScore ?? undefined,
+    contentScore: s.contentScore ?? undefined,
+    platformScore: s.platformScore ?? undefined,
+    comment: s.comment ?? undefined,
+    submittedAt: s.submittedAt ?? s.createdAt ?? new Date().toISOString(),
+  };
+}
+
+function adaptAdminNote(n: any): import("@/lib/domain/types").ClassNote {
+  return {
+    id: n.id,
+    classId: n.classId ?? undefined,
+    studentId: n.studentId,
+    teacherId: n.teacherId,
+    body: n.body ?? "",
+    rating: n.rating ?? undefined,
+    createdAt: n.createdAt ?? new Date().toISOString(),
+  };
 }

@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { Smile, MessageSquare } from "lucide-react";
-import { listAllSurveys } from "@/lib/domain/survey";
-import { readDb } from "@/lib/domain/repository";
-import type { User } from "@/lib/domain/types";
+import { adminApi } from "@/lib/api/endpoints";
 
 export const Route = createFileRoute("/_authenticated/admin/surveys")({
   head: () => ({
@@ -22,41 +21,36 @@ function avg(nums: number[]): string {
 }
 
 function AdminSurveys() {
-  const surveys = useMemo(() => listAllSurveys(), []);
-  const usersById = useMemo(() => {
-    const all = (readDb().users ?? {}) as Record<string, User>;
-    return all;
-  }, []);
   const [filter, setFilter] = useState<"all" | "detractors" | "promoters">("all");
-
-  const filtered = surveys.filter((s) => {
-    if (filter === "detractors") return s.nps <= 6;
-    if (filter === "promoters") return s.nps >= 9;
-    return true;
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin", "surveys", filter],
+    queryFn: () => adminApi.surveys(filter),
   });
-
-  const promoters = surveys.filter((s) => s.nps >= 9).length;
-  const detractors = surveys.filter((s) => s.nps <= 6).length;
-  const nps =
-    surveys.length === 0
-      ? "—"
-      : `${Math.round(((promoters - detractors) / surveys.length) * 100)}`;
+  const rows = data?.rows ?? [];
+  const totals = data?.totals;
+  const nps = totals?.nps == null ? "—" : String(totals.nps);
 
   return (
     <div className="flex flex-col gap-5">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-brand-ink">Encuestas</h2>
         <p className="mt-1 max-w-2xl text-sm text-brand-ink/65">
-          Respuestas de los estudiantes a la encuesta de calidad cada 30 días. Las
-          respuestas son privadas: los profesores no las pueden ver.
+          Respuestas de la encuesta NPS que se dispara antes de la última clase
+          del periodo o al terminar la mensualidad. Sólo visibles para admin.
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Kpi label="NPS" value={nps} />
-        <Kpi label="Respuestas" value={String(surveys.length)} />
-        <Kpi label="Profesor (1-5)" value={avg(surveys.map((s) => s.teacherScore ?? 0).filter(Boolean))} />
-        <Kpi label="Contenido (1-5)" value={avg(surveys.map((s) => s.contentScore ?? 0).filter(Boolean))} />
+        <Kpi label="Respuestas" value={String(totals?.count ?? 0)} />
+        <Kpi
+          label="Profesor (1-5)"
+          value={avg(rows.map((s) => s.teacherScore ?? 0).filter(Boolean))}
+        />
+        <Kpi
+          label="Contenido (1-5)"
+          value={avg(rows.map((s) => s.contentScore ?? 0).filter(Boolean))}
+        />
       </div>
 
       <div className="flex flex-wrap gap-1.5">
@@ -93,7 +87,13 @@ function AdminSurveys() {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {isLoading ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-10 text-center text-brand-ink/55">
+                  Cargando encuestas…
+                </td>
+              </tr>
+            ) : rows.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-brand-ink/55">
                   <Smile className="mx-auto mb-2 size-5" />
@@ -101,23 +101,21 @@ function AdminSurveys() {
                 </td>
               </tr>
             ) : (
-              filtered.map((s) => {
-                const u = usersById[s.userId];
-                return (
+              rows.map((s) => (
                   <tr key={s.id} className="border-t border-brand-line/70 align-top">
                     <td className="px-4 py-3">
-                      <div className="font-medium text-brand-ink">{u?.fullName ?? "—"}</div>
-                      <div className="text-xs text-brand-ink/55">{u?.email ?? s.userId}</div>
+                      <div className="font-medium text-brand-ink">{s.user.fullName}</div>
+                      <div className="text-xs text-brand-ink/55">{s.user.email}</div>
                     </td>
                     <td className="px-4 py-3 text-brand-ink/65">
-                      {new Date(s.submittedAt).toLocaleDateString("es-CO", {
+                      {new Date(s.createdAt).toLocaleDateString("es-CO", {
                         day: "2-digit",
                         month: "short",
                         year: "numeric",
                       })}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <NpsPill score={s.nps} />
+                      <NpsPill score={s.score} />
                     </td>
                     <td className="px-4 py-3 text-center font-mono text-xs text-brand-ink/80">
                       {s.teacherScore ?? "—"}
@@ -139,8 +137,7 @@ function AdminSurveys() {
                       )}
                     </td>
                   </tr>
-                );
-              })
+                ))
             )}
           </tbody>
         </table>

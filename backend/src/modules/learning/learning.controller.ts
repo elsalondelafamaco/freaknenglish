@@ -13,17 +13,16 @@ export class LearningController {
 
   /**
    * @endpoint GET /api/v1/learning/modules?level=beginner
-   * Si no se pasa `level`, se filtra automáticamente por el nivel del
-   * estudiante autenticado (`user.englishLevel`). Admin/teacher sin nivel
-   * reciben todos los módulos.
+   * Si no se pasa `level`, el servicio lo resuelve desde el
+   * `englishLevel` del estudiante autenticado (fallback a todos los
+   * niveles si el usuario no tiene nivel asignado — admin/teacher).
    */
   @Get('modules')
-  async modules(
+  modules(
     @CurrentUser() u: AuthUser,
     @Query('level') level?: 'beginner' | 'intermediate' | 'advanced',
   ) {
-    const effective = level ?? (u.englishLevel as 'beginner' | 'intermediate' | 'advanced' | undefined)
-    return this.svc.listModules(effective)
+    return this.svc.listModulesForUser(u.id, level)
   }
 
   /** @endpoint GET /api/v1/learning/modules/:id */

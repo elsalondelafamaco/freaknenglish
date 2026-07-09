@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { RolesGuard } from '../../common/guards/roles.guard'
@@ -44,9 +44,9 @@ export class SchedulingController {
   @Get('admin/teachers/:id/availability')
   getAvail(@Param('id') id: string) { return this.svc.getTeacherAvailability(id) }
 
-  /** @endpoint PUT /api/v1/admin/teachers/:id/availability  Body: { slots:[{weekday,startsAt,endsAt}] } */
+  /** @endpoint POST /api/v1/admin/teachers/:id/availability  Body: { slots:[{weekday,startsAt,endsAt}] } */
   @Roles('admin')
-  @Put('admin/teachers/:id/availability')
+  @Post('admin/teachers/:id/availability')
   setAvail(@Param('id') id: string, @Body() body: { slots: Array<{ weekday: number; startsAt: string; endsAt: string }> }) {
     return this.svc.setTeacherAvailability(id, body.slots ?? [])
   }

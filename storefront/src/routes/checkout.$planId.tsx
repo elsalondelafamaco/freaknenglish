@@ -4,7 +4,7 @@ import { Check, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { Field, inputClass, ErrorBox } from "@/components/site/AuthShell";
 import { getPlan, formatCop } from "@/lib/domain/plans";
-import { createPaymentIntent } from "@/lib/domain/subscriptions";
+import { checkoutApi } from "@/lib/api/endpoints";
 import { publicEnv } from "@/lib/env";
 
 export const Route = createFileRoute("/checkout/$planId")({
@@ -14,6 +14,8 @@ export const Route = createFileRoute("/checkout/$planId")({
 
 type Step = "form" | "pay";
 
+type BackendIntent = Awaited<ReturnType<typeof checkoutApi.createIntent>>;
+
 function CheckoutPage() {
   const { planId } = Route.useParams();
   const navigate = useNavigate();
@@ -22,7 +24,8 @@ function CheckoutPage() {
   const [step, setStep] = useState<Step>("form");
   const [form, setForm] = useState({ fullName: "", email: "", document: "", phone: "" });
   const [error, setError] = useState<string | null>(null);
-  const [intent, setIntent] = useState<ReturnType<typeof createPaymentIntent> | null>(null);
+  const [intent, setIntent] = useState<BackendIntent | null>(null);
+  const [loading, setLoading] = useState(false);
 
   if (!plan) {
     return (
@@ -43,25 +46,29 @@ function CheckoutPage() {
     );
   }
 
-  function submitForm(e: React.FormEvent) {
+  async function submitForm(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!form.fullName.trim() || !form.email.trim()) {
-      setError("Necesitamos tu nombre y email para continuar.");
+    if (!form.fullName.trim() || !form.email.trim() || !form.document.trim() || !form.phone.trim()) {
+      setError("Nombre, email, documento y celular son obligatorios.");
       return;
     }
-    const created = createPaymentIntent({
-      planId: plan!.id,
-      amountCop: plan!.priceCop,
-      customer: {
-        fullName: form.fullName.trim(),
-        email: form.email.trim().toLowerCase(),
-        document: form.document.trim() || undefined,
-        phone: form.phone.trim() || undefined,
-      },
-    });
-    setIntent(created);
-    setStep("pay");
+    setLoading(true);
+    try {
+      const created = await checkoutApi.createIntent({
+        planId: plan!.id,
+        customerEmail: form.email.trim().toLowerCase(),
+        customerName: form.fullName.trim(),
+        customerDocument: form.document.trim(),
+        customerPhone: form.phone.trim(),
+      });
+      setIntent(created);
+      setStep("pay");
+    } catch (err: any) {
+      setError(err?.message ?? "No pudimos iniciar el pago. Intenta de nuevo.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -107,16 +114,17 @@ function CheckoutPage() {
                   />
                 </Field>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <Field label="Documento" htmlFor="document" hint="Opcional, solo Colombia.">
+                  <Field label="Documento" htmlFor="document" hint="Obligatorio para facturación.">
                     <input
                       id="document"
                       className={inputClass}
                       value={form.document}
                       onChange={(e) => setForm({ ...form, document: e.target.value })}
                       inputMode="numeric"
+                      required
                     />
                   </Field>
-                  <Field label="Celular" htmlFor="phone" hint="Opcional.">
+                  <Field label="Celular" htmlFor="phone" hint="Formato internacional (+57...).">
                     <input
                       id="phone"
                       className={inputClass}
@@ -124,15 +132,17 @@ function CheckoutPage() {
                       onChange={(e) => setForm({ ...form, phone: e.target.value })}
                       inputMode="tel"
                       autoComplete="tel"
+                      required
                     />
                   </Field>
                 </div>
                 <ErrorBox>{error}</ErrorBox>
                 <button
                   type="submit"
-                  className="mt-2 inline-flex h-12 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white transition hover:bg-brand-ink-soft"
+                  disabled={loading}
+                  className="mt-2 inline-flex h-12 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white transition hover:bg-brand-ink-soft disabled:opacity-60"
                 >
-                  Continuar al pago
+                  {loading ? "Preparando pago…" : "Continuar al pago"}
                 </button>
                 <p className="text-center text-xs text-brand-ink/55">
                   Al continuar aceptas nuestros{" "}
@@ -142,9 +152,8 @@ function CheckoutPage() {
               </form>
             ) : intent ? (
               <WompiStep
-                reference={intent.reference}
-                amountCop={plan.priceCop}
-                email={intent.customer.email}
+                intent={intent}
+                email={form.email.trim().toLowerCase()}
                 onBack={() => setStep("form")}
                 onSimulateApproved={() =>
                   navigate({

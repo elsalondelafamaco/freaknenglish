@@ -30,7 +30,7 @@ export const authApi = {
 // ─── Me / Users ────────────────────────────────────────────────────────
 export const usersApi = {
   me: () => apiGet<any>("/me"),
-  updateMe: (body: Partial<{ fullName: string; phone: string; avatarUrl: string }>) =>
+  updateMe: (body: Partial<{ fullName: string; phone: string; avatarUrl: string; documentNumber: string }>) =>
     apiPatch<any>("/me", body),
 };
 

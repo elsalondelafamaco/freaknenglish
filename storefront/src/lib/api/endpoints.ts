@@ -261,6 +261,16 @@ export const boardsApi = {
     apiGet<any[]>(`/boards/${id}/ops`, { since }),
   invite: (id: string, userId: string, role: "editor" | "viewer" = "editor") =>
     apiPost<any>(`/boards/${id}/invite`, { userId, role }),
+  inviteByEmail: (id: string, email: string, role: "editor" | "viewer" = "editor") =>
+    apiPost<{ ok: boolean; user: { id: string; email: string; fullName: string } }>(
+      `/boards/${id}/invite-by-email`,
+      { email, role },
+    ),
+  signUpload: (id: string, body: { filename: string; contentType?: string }) =>
+    apiPost<{ uploadUrl: string; publicUrl: string; storageKey: string }>(
+      `/boards/${id}/uploads/sign`,
+      body,
+    ),
   // Pages
   listPages: (boardId: string) =>
     apiGet<Array<{ id: string; title: string; position: number; kind: string; updatedAt: string }>>(

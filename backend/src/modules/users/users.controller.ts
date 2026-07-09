@@ -3,13 +3,14 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator'
 import { UsersService } from './users.service'
+import { PrismaService } from '../../prisma/prisma.service'
 
 @ApiTags('users')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('me')
 export class UsersController {
-  constructor(private users: UsersService) {}
+  constructor(private users: UsersService, private prisma: PrismaService) {}
 
   /** @endpoint GET /api/v1/me */
   @Get()
@@ -22,5 +23,35 @@ export class UsersController {
     @Body() body: { fullName?: string; phone?: string; avatarUrl?: string; documentNumber?: string },
   ) {
     return this.users.update(user.id, body)
+  }
+
+  /**
+   * @endpoint GET /api/v1/me/payments
+   * Histórico de intents del usuario (incluye los que fueron creados por
+   * email antes de existir el `userId`, matcheados por customerEmail).
+   */
+  @Get('payments')
+  async payments(@CurrentUser() user: AuthUser) {
+    const me = await this.prisma.user.findUnique({ where: { id: user.id } })
+    const intents = await this.prisma.paymentIntent.findMany({
+      where: {
+        OR: [{ userId: user.id }, { customerEmail: me?.email ?? '' }],
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { plan: { select: { name: true, id: true } } },
+      take: 50,
+    })
+    return intents.map((i) => ({
+      id: i.id,
+      reference: i.reference,
+      planId: i.planId,
+      planName: i.plan?.name,
+      amountInCents: i.amountInCents,
+      currency: i.currency,
+      status: i.status,
+      approvedAt: i.approvedAt,
+      createdAt: i.createdAt,
+      wompiId: i.wompiId,
+    }))
   }
 }

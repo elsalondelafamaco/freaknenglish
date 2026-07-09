@@ -25,12 +25,17 @@ export interface User {
   fullName: string;
   avatarUrl?: string;
   phone?: string;
+  documentNumber?: string;
   roles: AppRole[];
   level?: EnglishLevel;
   /** Onboarding completado (nivelación + horario inicial). */
   onboardedAt?: string;
   /** Profesor asignado (sólo aplica a estudiantes). */
   assignedTeacherId?: string;
+  /** Bloques semanales elegidos en onboarding. */
+  schedulePreferences?: Array<{ weekday: number; hour: number }>;
+  /** Estado del onboarding de horario. */
+  scheduleAssignmentStatus?: "auto_assigned" | "manual_pending";
   /** Si está definido, el usuario está deshabilitado y no puede iniciar sesión. */
   disabledAt?: string;
   /** Soft delete. */

@@ -1,3 +1,36 @@
+## Round 5 — Checkout Wompi, Onboarding + horarios, Nómina real
+
+### Iteración A — Checkout + Wompi end-to-end
+- Backend: `POST /checkout/intents` (documento + teléfono obligatorios),
+  `GET /checkout/status?reference=` para polling, `express.raw` sólo en
+  `/api/v1/public/wompi/webhook` para validar firma HMAC.
+- Wompi: si `APPROVED` sin `userId`, se busca por email; si no existe se crea
+  estudiante con `setPasswordToken` (7 días) y luego se activa la suscripción.
+- Storefront: `/checkout/$planId` monta el widget Wompi con firma del server;
+  `/checkout/return` hace polling contra `/checkout/status`. CTAs de la home
+  llevan a `/#precios` para forzar selección de plan.
+
+### Iteración B — Onboarding gate + horarios
+- Backend: nuevo módulo `scheduling/` con `GET /schedule/availability-grid`,
+  `GET /schedule/mine`, `POST /schedule/preferences` (auto-asigna profesor
+  si hay disponibilidad para TODOS los bloques, si no `manual_pending`),
+  `GET /admin/schedule/requests`, `POST /admin/schedule/requests/:id/assign`,
+  `GET/POST /admin/teachers/:id/availability`.
+- Migración `20260810000000_schedule_preferences` para `schedule_preferences`
+  y `schedule_assignment_status` en `users`.
+- Storefront: gate en `_authenticated.tsx` redirige estudiantes según
+  perfil / suscripción / horario; nuevas páginas
+  `/onboarding/profile`, `/onboarding/schedule`, `/admin/schedule`.
+
+### Iteración C — Nómina real, limpieza mocks, docs
+- `AdminService.payroll`: calcula duración real desde `startsAt`/`endsAt` de
+  cada `Class` con `status=validated`; tarifa por hora de `app_settings`.
+- `admin.payroll.tsx`: 100 % contra backend (`adminApi.payroll`,
+  `payrollSettings`, `payrollCsv`); se eliminó dependencia de mocks
+  `computePayroll` / `getHourlyRate`.
+- `saveModule`: corregido para usar `description` (nombre real en Prisma)
+  en lugar del alias `summary`.
+
 ## Round 4 — CRM completo, CMS funcional, Nómina por horas
 
 ### Storefront

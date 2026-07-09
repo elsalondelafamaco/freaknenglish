@@ -7,6 +7,8 @@ import {
 } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { AppShell } from "@/components/app/AppShell";
+import { subscriptionsApi } from "@/lib/api/endpoints";
+import { useQuery } from "@tanstack/react-query";
 
 /**
  * Gate de rutas autenticadas.
@@ -38,6 +40,15 @@ function AuthenticatedLayout() {
   const redirected = useRef(false);
   const [checked, setChecked] = useState(false);
 
+  // Estudiantes: consultamos su suscripción real para decidir gating.
+  const isStudent = !!user?.roles.includes("student");
+  const { data: mySub } = useQuery({
+    queryKey: ["me", "subscription"],
+    queryFn: () => subscriptionsApi.mine(),
+    enabled: isStudent && isAuthenticated,
+    staleTime: 30_000,
+  });
+
   useEffect(() => {
     if (loading) return;
     if (!isAuthenticated && !redirected.current) {
@@ -54,11 +65,26 @@ function AuthenticatedLayout() {
       // teachers should not see the student dashboard at /app, and vice versa.
       const isAdmin = user.roles.includes("admin");
       const isTeacher = user.roles.includes("teacher");
-      const isStudent = user.roles.includes("student");
+      const roleIsStudent = user.roles.includes("student");
       let target: string | null = null;
       if (pathname.startsWith("/admin") && !isAdmin) target = isTeacher ? "/teacher" : "/app";
       else if (pathname.startsWith("/teacher") && !isTeacher && !isAdmin) target = "/app";
-      else if (pathname.startsWith("/app") && !isStudent) target = isAdmin ? "/admin" : "/teacher";
+      else if (pathname.startsWith("/app") && !roleIsStudent) target = isAdmin ? "/admin" : "/teacher";
+
+      // Onboarding gate para estudiantes.
+      if (!target && roleIsStudent && !pathname.startsWith("/onboarding")) {
+        const missingProfile = !user.phone || !user.documentNumber;
+        const hasActiveSub = !!mySub && (mySub as any).status === "active";
+        const hasSchedule = user.scheduleAssignmentStatus === "auto_assigned"
+          || user.scheduleAssignmentStatus === "manual_pending";
+        if (missingProfile) target = "/onboarding/profile";
+        else if (!hasActiveSub && !pathname.startsWith("/checkout")) {
+          // Sin suscripción → mandamos al pricing (home #precios).
+          if (typeof window !== "undefined") window.location.href = "/#precios";
+          return;
+        }
+        else if (hasActiveSub && !hasSchedule) target = "/onboarding/schedule";
+      }
 
       if (target && !redirected.current) {
         redirected.current = true;
@@ -67,7 +93,7 @@ function AuthenticatedLayout() {
       }
       setChecked(true);
     }
-  }, [isAuthenticated, loading, navigate, user, pathname]);
+  }, [isAuthenticated, loading, navigate, user, pathname, mySub]);
 
   if (!checked) {
     return (

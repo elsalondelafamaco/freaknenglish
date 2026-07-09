@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -20,14 +20,10 @@ import type {
 } from "@/lib/domain/types";
 import { getPlan, formatCop } from "@/lib/domain/plans";
 import type { PaymentIntent } from "@/lib/domain/subscriptions";
-import {
-  assignTeacherToStudent,
-  startImpersonation,
-  updateUserByAdmin,
-  setUserActive,
-  softDeleteUser,
-  resetUserPassword,
-} from "@/lib/domain/admin-actions";
+import { adminApi } from "@/lib/api/endpoints";
+import { setAccessToken } from "@/lib/api/client";
+import { hydrateFromBackend } from "@/lib/api/bootstrap";
+import { startImpersonation } from "@/lib/domain/admin-actions";
 import { listNotesForStudent } from "@/lib/domain/classes";
 import { listProgress } from "@/lib/domain/learning";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -46,8 +42,50 @@ function AdminUserDetail() {
   const [tick, setTick] = useState(0);
   const [tab, setTab] = useState<TabId>("overview");
   const [editing, setEditing] = useState(false);
+  const [remote, setRemote] = useState<any | null>(null);
+  const [remoteUsers, setRemoteUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([adminApi.userDetail(id), adminApi.users()])
+      .then(([detail, users]) => {
+        if (cancelled) return;
+        setRemote(detail);
+        setRemoteUsers(users ?? []);
+      })
+      .catch((err) => {
+        console.error("[admin user detail]", err);
+        if (!cancelled) setRemote(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, tick]);
 
   const data = useMemo(() => {
+    if (remote?.user) {
+      const user = adaptAdminUser(remote.user);
+      const isStudent = user.roles.includes("student");
+      const isTeacher = user.roles.includes("teacher");
+      const teachers = remoteUsers.map(adaptAdminUser).filter((u) => u.roles.includes("teacher") && !u.deletedAt);
+      const students = (remote.assignedStudents ?? []).map(adaptAdminUser);
+      const classes = (remote.classes ?? []).map(adaptAdminClass);
+      const payments = (remote.payments ?? []).map(adaptAdminPayment);
+      const surveys = (remote.surveys ?? []).map(adaptAdminSurvey);
+      const notes = (remote.notes ?? []).map(adaptAdminNote);
+      const progress = (remote.progress ?? []).map((p: any) => ({
+        userId: user.id,
+        lessonId: p.lessonId ?? p.lesson?.id ?? p.id,
+        completedAt: p.completedAt ?? p.updatedAt ?? p.createdAt ?? new Date().toISOString(),
+      }));
+      const assignedTeacher = remote.user.assignedTeacher ? adaptAdminUser({ ...remote.user.assignedTeacher, role: "teacher" }) : null;
+      return { user, isStudent, isTeacher, sub: adaptAdminSubscription(remote.user.subscription), payments, classes, teachers, students, assignedTeacher, surveys, notes, progress };
+    }
     const db = readDb();
     const users = db.users as Record<string, User>;
     const user = users[id];
@@ -91,13 +129,13 @@ function AdminUserDetail() {
       progress,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, tick]);
+  }, [id, tick, remote, remoteUsers]);
 
   if (!data) {
     return (
       <div className="text-sm text-brand-ink/70">
         <Link to="/admin/users" className="underline">← Volver</Link>
-        <p className="mt-4">Usuario no encontrado.</p>
+        <p className="mt-4">{loading ? "Cargando usuario…" : "Usuario no encontrado."}</p>
       </div>
     );
   }
@@ -124,19 +162,22 @@ function AdminUserDetail() {
     setTick((t) => t + 1);
   }
 
-  function onAssign(e: React.ChangeEvent<HTMLSelectElement>) {
+  async function onAssign(e: React.ChangeEvent<HTMLSelectElement>) {
     try {
-      assignTeacherToStudent(user.id, e.target.value || null);
+      await adminApi.assignTeacher(user.id, e.target.value || null);
       bump();
     } catch (err) {
       alert((err as Error).message);
     }
   }
 
-  function onImpersonate() {
+  async function onImpersonate() {
     if (!me) return;
     if (!confirm(`Vas a navegar como ${user.fullName}. ¿Continuar?`)) return;
+    const r = await adminApi.impersonate(user.id);
+    setAccessToken(r.accessToken);
     startImpersonation(me.id, user.id);
+    await hydrateFromBackend(r.target.role);
     refresh();
     const dest = user.roles.includes("admin")
       ? "/admin"
@@ -146,33 +187,30 @@ function AdminUserDetail() {
     router.navigate({ to: dest, replace: true });
   }
 
-  function onToggleActive() {
+  async function onToggleActive() {
     try {
-      setUserActive(user.id, !!user.disabledAt);
+      await adminApi.setUserStatus(user.id, !user.disabledAt);
       bump();
     } catch (err) {
       alert((err as Error).message);
     }
   }
 
-  function onDelete() {
+  async function onDelete() {
     if (!confirm(`¿Eliminar a ${user.fullName}? Quedará en soft-delete (recuperable en backend).`)) return;
-    softDeleteUser(user.id);
+    await adminApi.softDeleteUser(user.id);
     bump();
   }
 
-  function onResetPassword() {
-    const { tempPassword, setPasswordToken } = resetUserPassword(user.id);
-    alert(
-      [
-        `Contraseña temporal generada para ${user.email}:`,
-        ``,
-        `  ${tempPassword}`,
-        ``,
-        `Token de set-password (en producción se envía por email via Resend):`,
-        `  ${setPasswordToken}`,
-      ].join("\n"),
-    );
+  async function onResetPassword() {
+    const r = await adminApi.resetPassword(user.id);
+    alert(r.link ? `Link de recuperación generado:\n${r.link}` : "Email de recuperación enviado.");
+  }
+
+  async function onResetNps() {
+    if (!confirm(`¿Reiniciar la encuesta NPS de ${user.fullName}? La verá de nuevo cuando corresponda.`)) return;
+    await adminApi.resetNps(user.id);
+    bump();
   }
 
   const TABS: { id: TabId; label: string; show: boolean }[] = [
@@ -328,10 +366,10 @@ function AdminUserDetail() {
             <dl className="space-y-1 text-sm text-brand-ink/75">
               <Row k="Clases totales">{classes.length}</Row>
               <Row k="Completadas">
-                {classes.filter((c) => c.status === "completed").length}
+                {classes.filter((c: ClassSession) => c.status === "completed").length}
               </Row>
               <Row k="Próximas">
-                {classes.filter((c) => c.status === "scheduled").length}
+                {classes.filter((c: ClassSession) => c.status === "scheduled").length}
               </Row>
               {isStudent ? (
                 <>
@@ -388,11 +426,11 @@ function AdminUserDetail() {
                   {payments
                     .slice()
                     .sort(
-                      (a, b) =>
+                      (a: PaymentIntent, b: PaymentIntent) =>
                         new Date(b.createdAt ?? 0).getTime() -
                         new Date(a.createdAt ?? 0).getTime(),
                     )
-                    .map((p) => (
+                    .map((p: PaymentIntent) => (
                       <tr key={p.reference}>
                         <td className="py-2 text-brand-ink/70">
                           {p.createdAt
@@ -425,11 +463,11 @@ function AdminUserDetail() {
               {classes
                 .slice()
                 .sort(
-                  (a, b) =>
+                  (a: ClassSession, b: ClassSession) =>
                     new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime(),
                 )
                 .slice(0, 30)
-                .map((c) => (
+                .map((c: ClassSession) => (
                   <li key={c.id} className="flex items-center justify-between py-2 text-sm">
                     <div>
                       <div className="font-medium text-brand-ink">{c.topic ?? "Clase"}</div>
@@ -453,7 +491,7 @@ function AdminUserDetail() {
             <p className="text-sm text-brand-ink/55">El estudiante no ha completado lecciones.</p>
           ) : (
             <ul className="grid gap-1 text-sm md:grid-cols-2">
-              {progress.map((p) => (
+              {progress.map((p: { lessonId: string; completedAt: string }) => (
                 <li key={p.lessonId} className="text-brand-ink/70">
                   <span className="font-mono text-xs text-brand-ink/40">{p.lessonId}</span>{" "}
                   <span className="text-brand-ink/55">
@@ -468,9 +506,18 @@ function AdminUserDetail() {
 
       {tab === "nps" && isStudent ? (
         <Card title={`Encuestas de satisfacción (${surveys.length})`}>
-          <p className="mb-3 text-xs text-brand-ink/55">
-            Estas respuestas son privadas. El profesor no las puede ver.
-          </p>
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-brand-ink/55">
+              Estas respuestas son privadas. El profesor no las puede ver.
+            </p>
+            <button
+              type="button"
+              onClick={onResetNps}
+              className="rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink/75 transition hover:-translate-y-0.5 hover:bg-brand-cream/40"
+            >
+              Reiniciar encuesta
+            </button>
+          </div>
           {surveys.length === 0 ? (
             <p className="text-sm text-brand-ink/55">Aún no ha respondido encuestas.</p>
           ) : (
@@ -478,10 +525,10 @@ function AdminUserDetail() {
               {surveys
                 .slice()
                 .sort(
-                  (a, b) =>
+                  (a: SatisfactionSurvey, b: SatisfactionSurvey) =>
                     new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
                 )
-                .map((s) => (
+                .map((s: SatisfactionSurvey) => (
                   <li key={s.id} className="rounded-xl bg-brand-cream/40 p-3 text-sm">
                     <div className="flex justify-between text-xs text-brand-ink/55">
                       <span>{new Date(s.submittedAt).toLocaleDateString("es-CO")}</span>
@@ -508,7 +555,7 @@ function AdminUserDetail() {
             <p className="text-sm text-brand-ink/55">Sin feedback registrado todavía.</p>
           ) : (
             <ul className="space-y-3">
-              {notes.map((n) => (
+              {notes.map((n: import("@/lib/domain/types").ClassNote) => (
                 <li key={n.id} className="rounded-xl bg-brand-cream/40 p-3 text-sm">
                   <div className="flex justify-between text-xs text-brand-ink/55">
                     <span>{new Date(n.createdAt).toLocaleDateString("es-CO")}</span>
@@ -528,7 +575,7 @@ function AdminUserDetail() {
             <p className="text-sm text-brand-ink/55">Aún no tiene estudiantes asignados.</p>
           ) : (
             <ul className="divide-y divide-brand-line">
-              {students.map((s) => (
+              {students.map((s: User) => (
                 <li key={s.id} className="flex items-center justify-between py-2 text-sm">
                   <Link
                     to="/admin/users/$id"
@@ -597,15 +644,14 @@ function EditUserDialog({
     setRoles((rs) => (rs.includes(r) ? rs.filter((x) => x !== r) : [...rs, r]));
   }
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      updateUserByAdmin(user.id, {
+      await adminApi.updateUser(user.id, {
         fullName,
-        email,
         phone: phone || undefined,
-        level: roles.includes("student") ? level : undefined,
-        roles,
+        role: (["admin", "teacher", "student"] as const).find((r) => roles.includes(r)) ?? "student",
+        englishLevel: roles.includes("student") ? level : null,
       });
       onSaved();
     } catch (err) {
@@ -704,4 +750,104 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </label>
   );
+}
+
+// ─── Adapters backend → shape del dominio ─────────────────────────────
+
+function roleToRoles(role: string | undefined): AppRole[] {
+  const r = (role ?? "student") as AppRole;
+  return [r];
+}
+
+function adaptAdminUser(u: any): User {
+  return {
+    id: u.id,
+    email: u.email,
+    fullName: u.fullName,
+    avatarUrl: u.avatarUrl ?? undefined,
+    phone: u.phone ?? undefined,
+    roles: roleToRoles(u.role),
+    level: (u.englishLevel ?? undefined) as EnglishLevel | undefined,
+    onboardedAt: u.onboardedAt ?? undefined,
+    assignedTeacherId: u.assignedTeacherId ?? undefined,
+    disabledAt: u.disabledAt ?? undefined,
+    deletedAt: u.deletedAt ?? undefined,
+    lastLoginAt: u.lastLoginAt ?? undefined,
+    createdAt: u.createdAt ?? new Date().toISOString(),
+  };
+}
+
+function adaptAdminSubscription(s: any): Subscription | null {
+  if (!s) return null;
+  return {
+    id: s.id,
+    userId: s.userId,
+    planId: (s.plan?.id ?? s.planId) as Subscription["planId"],
+    status: (s.status ?? "pending") as Subscription["status"],
+    startedAt: s.startedAt ?? undefined,
+    currentPeriodEnd: s.currentPeriodEnd ?? undefined,
+    wompiReference: s.wompiReference ?? undefined,
+  };
+}
+
+function adaptAdminClass(c: any): ClassSession {
+  return {
+    id: c.id,
+    studentId: c.studentId,
+    teacherId: c.teacherId,
+    teacherName: c.teacher?.fullName ?? "",
+    startsAt: c.startsAt ?? c.scheduledAt ?? new Date().toISOString(),
+    durationMin: c.durationMin ?? 50,
+    status: (c.status ?? "scheduled") as ClassSession["status"],
+    studentConfirmedAt: c.studentConfirmedAt ?? undefined,
+    teacherValidatedAt: c.teacherValidatedAt ?? undefined,
+    topic: c.topic ?? undefined,
+    meetingUrl: c.meetingUrl ?? undefined,
+  };
+}
+
+function adaptAdminPayment(p: any): PaymentIntent {
+  const created = p.createdAt ?? new Date().toISOString();
+  return {
+    id: p.id,
+    userId: p.userId ?? "",
+    planId: p.planId,
+    reference: p.reference,
+    amountCop: Math.round((p.amountInCents ?? 0) / 100),
+    customer: {
+      fullName: p.customerName ?? "",
+      email: p.customerEmail ?? "",
+      phone: p.customerPhone ?? undefined,
+      document: p.customerDocument ?? undefined,
+    },
+    status: (p.status ?? "PENDING") as PaymentIntent["status"],
+    createdAt: created,
+    updatedAt: p.updatedAt ?? p.approvedAt ?? created,
+  };
+}
+
+function adaptAdminSurvey(s: any): SatisfactionSurvey {
+  return {
+    id: s.id,
+    userId: s.userId,
+    monthKey: s.monthKey ?? (s.createdAt ?? "").slice(0, 7),
+    nps: s.nps ?? s.score ?? 0,
+    teacherScore: s.teacherScore ?? undefined,
+    contentScore: s.contentScore ?? undefined,
+    platformScore: s.platformScore ?? undefined,
+    comment: s.comment ?? undefined,
+    submittedAt: s.submittedAt ?? s.createdAt ?? new Date().toISOString(),
+  };
+}
+
+function adaptAdminNote(n: any): import("@/lib/domain/types").ClassNote {
+  return {
+    id: n.id,
+    classId: n.classId ?? undefined,
+    studentId: n.studentId,
+    teacherId: n.teacherId,
+    body: n.body ?? "",
+    rating: n.rating ?? undefined,
+    createdAt: n.createdAt ?? new Date().toISOString(),
+  };
 }

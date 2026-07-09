@@ -27,7 +27,7 @@ export function Hero() {
             inglés con fluidez.
           </p>
           <div className="mt-7 flex justify-center lg:justify-start">
-            <DarkPillLink to="/checkout/4-dias" size="lg">
+            <DarkPillLink to="/" hash="precios" size="lg">
               Comienza Hoy Tu Aprendizaje
             </DarkPillLink>
           </div>

@@ -10,7 +10,7 @@ export class UsersService {
       include: { subscription: { include: { plan: true } } },
     })
   }
-  update(userId: string, data: { fullName?: string; phone?: string; avatarUrl?: string }) {
+  update(userId: string, data: { fullName?: string; phone?: string; avatarUrl?: string; documentNumber?: string }) {
     return this.prisma.user.update({ where: { id: userId }, data })
   }
 }

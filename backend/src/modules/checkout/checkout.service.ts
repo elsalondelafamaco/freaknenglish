@@ -16,7 +16,8 @@ export class CheckoutService {
     planId: string
     customerEmail: string
     customerName: string
-    customerPhone?: string
+    customerPhone: string
+    customerDocument: string
     userId?: string
   }) {
     const plan = await this.prisma.plan.findUnique({ where: { id: input.planId } })
@@ -36,6 +37,7 @@ export class CheckoutService {
         customerEmail: input.customerEmail,
         customerName: input.customerName,
         customerPhone: input.customerPhone,
+        customerDocument: input.customerDocument,
       },
     })
 

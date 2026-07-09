@@ -30,8 +30,32 @@ export const authApi = {
 // ─── Me / Users ────────────────────────────────────────────────────────
 export const usersApi = {
   me: () => apiGet<any>("/me"),
-  updateMe: (body: Partial<{ fullName: string; phone: string; avatarUrl: string }>) =>
+  updateMe: (body: Partial<{ fullName: string; phone: string; avatarUrl: string; documentNumber: string }>) =>
     apiPatch<any>("/me", body),
+};
+
+// ─── Scheduling ────────────────────────────────────────────────────────
+export const scheduleApi = {
+  grid: () => apiGet<{ grid: Record<string, number>; hours: number[] }>("/schedule/availability-grid"),
+  mine: () => apiGet<{
+    schedulePreferences: Array<{ weekday: number; hour: number }> | null;
+    scheduleAssignmentStatus: "auto_assigned" | "manual_pending" | null;
+    assignedTeacher: { id: string; fullName: string } | null;
+  }>("/schedule/mine"),
+  submit: (blocks: Array<{ weekday: number; hour: number }>) =>
+    apiPost<{ status: "auto_assigned" | "manual_pending"; teacher: { id: string; fullName: string } | null }>(
+      "/schedule/preferences",
+      { blocks },
+    ),
+  adminPending: () => apiGet<any[]>("/admin/schedule/requests"),
+  adminAssign: (userId: string, teacherId: string) =>
+    apiPost<any>(`/admin/schedule/requests/${userId}/assign`, { teacherId }),
+  adminTeacherAvailability: (teacherId: string) =>
+    apiGet<Array<{ id: string; weekday: number; startsAt: string; endsAt: string }>>(`/admin/teachers/${teacherId}/availability`),
+  adminSetTeacherAvailability: (
+    teacherId: string,
+    slots: Array<{ weekday: number; startsAt: string; endsAt: string }>,
+  ) => apiPost<any>(`/admin/teachers/${teacherId}/availability`, { slots }),
 };
 
 // ─── Plans + Checkout ──────────────────────────────────────────────────
@@ -40,7 +64,7 @@ export const plansApi = {
 };
 
 export const checkoutApi = {
-  createIntent: (body: { planId: string; customerEmail: string; customerName: string; customerPhone?: string }) =>
+  createIntent: (body: { planId: string; customerEmail: string; customerName: string; customerPhone: string; customerDocument: string; userId?: string }) =>
     apiPost<{
       intentId: string;
       reference: string;
@@ -50,6 +74,15 @@ export const checkoutApi = {
       publicKey: string;
       redirectUrl: string;
     }>("/checkout/intents", body),
+  status: (reference: string) =>
+    apiGet<{
+      reference: string;
+      status: "PENDING" | "APPROVED" | "DECLINED" | "VOIDED" | "ERROR";
+      planId: string;
+      planName?: string;
+      approvedAt: string | null;
+      customerEmail: string;
+    }>("/checkout/status", { reference }),
 };
 
 // ─── Subscriptions ─────────────────────────────────────────────────────
@@ -110,15 +143,45 @@ export const adminApi = {
     byPlan: Array<{ planId: string; active: number }>;
   }>("/admin/analytics"),
   users: (q?: string) => apiGet<User[]>("/admin/users", q ? { q } : undefined),
-  payroll: (period: string) => apiGet<Array<{ teacherId: string; fullName: string; classes: number; rateCop: number; amountCop: number }>>("/admin/payroll", { period }),
+  userDetail: (id: string) => apiGet<any>(`/admin/users/${id}`),
+  payroll: (period: string) =>
+    apiGet<
+      Array<{
+        teacherId: string;
+        fullName: string;
+        classes: number;
+        minutes: number;
+        hours: number;
+        hourlyRateCop: number;
+        amountCop: number;
+      }>
+    >("/admin/payroll", { period }),
   payrollCsv: (period: string) =>
     apiGet<string>(`/admin/payroll/export.csv`, { period }),
+  payrollSettings: () => apiGet<{ hourlyRateCop: number }>("/admin/settings/payroll"),
+  setPayrollSettings: (hourlyRateCop: number) =>
+    apiPatch<{ hourlyRateCop: number }>("/admin/settings/payroll", { hourlyRateCop }),
   content: () => apiGet<LearningModule[]>("/admin/content"),
+  createModule: (body: { id?: string; level: "beginner" | "intermediate" | "advanced"; title: string; summary?: string; position?: number }) =>
+    apiPost<any>("/admin/content/modules", body),
+  updateModule: (id: string, body: { level?: "beginner" | "intermediate" | "advanced"; title?: string; summary?: string; position?: number }) =>
+    apiPatch<any>(`/admin/content/modules/${id}`, body),
+  deleteModule: (id: string) => apiPatch<{ ok: true }>(`/admin/content/modules/${id}/delete`, {}),
+  createLesson: (body: any) => apiPost<any>("/admin/content/lessons", body),
+  updateLesson: (id: string, body: any) => apiPatch<any>(`/admin/content/lessons/${id}`, body),
+  deleteLesson: (id: string) => apiPatch<{ ok: true }>(`/admin/content/lessons/${id}/delete`, {}),
   notifications: (status?: "queued" | "sent" | "failed") =>
     apiGet<any[]>("/admin/notifications", status ? { status } : undefined),
   runAutomations: () => apiPost<{ ok: true }>("/admin/notifications/run"),
   createUser: (body: { email: string; fullName: string; role: "student" | "teacher"; level?: "beginner" | "intermediate" | "advanced" }) =>
     apiPost<{ user: User; setPasswordToken: string }>("/admin/users", body),
+  updateUser: (id: string, body: Partial<{ fullName: string; phone: string; role: "student" | "teacher" | "admin"; englishLevel: "beginner" | "intermediate" | "advanced" | null }>) =>
+    apiPatch<User>(`/admin/users/${id}`, body),
+  setUserStatus: (id: string, disabled: boolean) =>
+    apiPatch<User>(`/admin/users/${id}/status`, { disabled }),
+  softDeleteUser: (id: string) => apiPatch<User>(`/admin/users/${id}/delete`, {}),
+  resetPassword: (id: string) => apiPost<{ ok: true; link?: string; expiresAt?: string }>(`/admin/users/${id}/reset-password`),
+  resetNps: (id: string) => apiPost<{ ok: true }>(`/admin/users/${id}/surveys/reset`),
   assignTeacher: (studentId: string, teacherId: string | null) =>
     apiPatch<User>(`/admin/users/${studentId}/assign-teacher`, { teacherId }),
   impersonate: (userId: string) =>
@@ -130,8 +193,8 @@ export const adminApi = {
 // ─── Surveys ───────────────────────────────────────────────────────────
 export const surveysApi = {
   pending: () => apiGet<{ pending: boolean; period: string }>("/surveys/pending"),
-  submit: (score: number, comment?: string) =>
-    apiPost<any>("/surveys/nps", { score, comment }),
+  submit: (body: { score: number; teacherScore?: number; contentScore?: number; platformScore?: number; comment?: string }) =>
+    apiPost<any>("/surveys/nps", body),
 };
 
 // ─── Boards (realtime) ─────────────────────────────────────────────────

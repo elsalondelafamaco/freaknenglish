@@ -86,8 +86,11 @@ export class AdminService {
     const counts = new Map<string, number>()
     for (const c of classes) {
       const tid = c.teacherId!
-      const classMinutes = Math.max(1, Math.round((c.endsAt.getTime() - c.startsAt.getTime()) / 60000))
-      minutes.set(tid, (minutes.get(tid) ?? 0) + classMinutes)
+      const durMin = Math.max(
+        0,
+        Math.round((c.endsAt.getTime() - c.startsAt.getTime()) / 60000),
+      ) || 60
+      minutes.set(tid, (minutes.get(tid) ?? 0) + durMin)
       counts.set(tid, (counts.get(tid) ?? 0) + 1)
     }
     const teacherIds = Array.from(minutes.keys())

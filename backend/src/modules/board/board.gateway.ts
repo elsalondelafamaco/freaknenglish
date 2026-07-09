@@ -93,6 +93,72 @@ export class BoardGateway implements OnGatewayConnection, OnGatewayDisconnect {
     })
   }
 
+  // ─── Page-scoped Yjs sync ───────────────────────────────────────
+  @SubscribeMessage('page:join')
+  async onPageJoin(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() body: { pageId: string },
+  ) {
+    const state = await this.boards.getPageState(body.pageId, socket.data.user.id)
+    const room = `page:${body.pageId}`
+    await socket.join(room)
+    this.broadcastPagePresence(room)
+    return { ok: true, ...state }
+  }
+
+  @SubscribeMessage('page:leave')
+  async onPageLeave(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() body: { pageId: string },
+  ) {
+    const room = `page:${body.pageId}`
+    await socket.leave(room)
+    this.broadcastPagePresence(room)
+    return { ok: true }
+  }
+
+  @SubscribeMessage('page:update')
+  async onPageUpdate(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() body: { pageId: string; update: string; clientOpId: string },
+  ) {
+    const buffer = Buffer.from(body.update, 'base64')
+    if (buffer.length === 0 || buffer.length > 256 * 1024) {
+      return { ok: false, error: 'invalid update size' }
+    }
+    const op = await this.boards.appendPageOp({
+      pageId: body.pageId,
+      userId: socket.data.user.id,
+      update: buffer,
+      clientOpId: body.clientOpId,
+    })
+    // Broadcast to peers (skip sender to avoid echo)
+    socket.to(`page:${body.pageId}`).emit('page:update', {
+      seq: op.seq,
+      userId: op.userId,
+      clientOpId: op.clientOpId,
+      update: body.update,
+    })
+    return { ok: true, seq: op.seq }
+  }
+
+  @SubscribeMessage('page:awareness')
+  onPageAwareness(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() body: { pageId: string; update: string },
+  ) {
+    socket.to(`page:${body.pageId}`).emit('page:awareness', {
+      userId: socket.data.user.id,
+      update: body.update,
+    })
+  }
+
+  private async broadcastPagePresence(room: string) {
+    const sockets = await this.server.in(room).fetchSockets()
+    const users = sockets.map((s) => s.data.user).filter(Boolean)
+    this.server.to(room).emit('page:presence', { users })
+  }
+
   private async broadcastPresence(room: string) {
     const sockets = await this.server.in(room).fetchSockets()
     const users = sockets.map((s) => s.data.user).filter(Boolean)

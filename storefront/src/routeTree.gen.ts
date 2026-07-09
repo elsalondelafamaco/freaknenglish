@@ -29,6 +29,7 @@ import { Route as AuthenticatedTeacherStudentsRouteImport } from './routes/_auth
 import { Route as AuthenticatedTeacherScheduleRouteImport } from './routes/_authenticated/teacher.schedule'
 import { Route as AuthenticatedOnboardingScheduleRouteImport } from './routes/_authenticated/onboarding.schedule'
 import { Route as AuthenticatedOnboardingProfileRouteImport } from './routes/_authenticated/onboarding.profile'
+import { Route as AuthenticatedAppSubscribeRouteImport } from './routes/_authenticated/app.subscribe'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated/app.settings'
 import { Route as AuthenticatedAppLearningRouteImport } from './routes/_authenticated/app.learning'
 import { Route as AuthenticatedAppCalendarRouteImport } from './routes/_authenticated/app.calendar'
@@ -148,6 +149,12 @@ const AuthenticatedOnboardingProfileRoute =
     path: '/onboarding/profile',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAppSubscribeRoute =
+  AuthenticatedAppSubscribeRouteImport.update({
+    id: '/subscribe',
+    path: '/subscribe',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppSettingsRoute =
   AuthenticatedAppSettingsRouteImport.update({
     id: '/settings',
@@ -254,6 +261,7 @@ export interface FileRoutesByFullPath {
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
   '/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/subscribe': typeof AuthenticatedAppSubscribeRoute
   '/onboarding/profile': typeof AuthenticatedOnboardingProfileRoute
   '/onboarding/schedule': typeof AuthenticatedOnboardingScheduleRoute
   '/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
@@ -285,6 +293,7 @@ export interface FileRoutesByTo {
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
   '/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/subscribe': typeof AuthenticatedAppSubscribeRoute
   '/onboarding/profile': typeof AuthenticatedOnboardingProfileRoute
   '/onboarding/schedule': typeof AuthenticatedOnboardingScheduleRoute
   '/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
@@ -322,6 +331,7 @@ export interface FileRoutesById {
   '/_authenticated/app/calendar': typeof AuthenticatedAppCalendarRoute
   '/_authenticated/app/learning': typeof AuthenticatedAppLearningRouteWithChildren
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/_authenticated/app/subscribe': typeof AuthenticatedAppSubscribeRoute
   '/_authenticated/onboarding/profile': typeof AuthenticatedOnboardingProfileRoute
   '/_authenticated/onboarding/schedule': typeof AuthenticatedOnboardingScheduleRoute
   '/_authenticated/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
@@ -359,6 +369,7 @@ export interface FileRouteTypes {
     | '/app/calendar'
     | '/app/learning'
     | '/app/settings'
+    | '/app/subscribe'
     | '/onboarding/profile'
     | '/onboarding/schedule'
     | '/teacher/schedule'
@@ -390,6 +401,7 @@ export interface FileRouteTypes {
     | '/app/calendar'
     | '/app/learning'
     | '/app/settings'
+    | '/app/subscribe'
     | '/onboarding/profile'
     | '/onboarding/schedule'
     | '/teacher/schedule'
@@ -426,6 +438,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/calendar'
     | '/_authenticated/app/learning'
     | '/_authenticated/app/settings'
+    | '/_authenticated/app/subscribe'
     | '/_authenticated/onboarding/profile'
     | '/_authenticated/onboarding/schedule'
     | '/_authenticated/teacher/schedule'
@@ -595,6 +608,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOnboardingProfileRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/app/subscribe': {
+      id: '/_authenticated/app/subscribe'
+      path: '/subscribe'
+      fullPath: '/app/subscribe'
+      preLoaderRoute: typeof AuthenticatedAppSubscribeRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/settings': {
       id: '/_authenticated/app/settings'
       path: '/settings'
@@ -754,6 +774,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppCalendarRoute: typeof AuthenticatedAppCalendarRoute
   AuthenticatedAppLearningRoute: typeof AuthenticatedAppLearningRouteWithChildren
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
+  AuthenticatedAppSubscribeRoute: typeof AuthenticatedAppSubscribeRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppCheckpointCheckpointIdRoute: typeof AuthenticatedAppCheckpointCheckpointIdRoute
 }
@@ -762,6 +783,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppCalendarRoute: AuthenticatedAppCalendarRoute,
   AuthenticatedAppLearningRoute: AuthenticatedAppLearningRouteWithChildren,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
+  AuthenticatedAppSubscribeRoute: AuthenticatedAppSubscribeRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppCheckpointCheckpointIdRoute:
     AuthenticatedAppCheckpointCheckpointIdRoute,

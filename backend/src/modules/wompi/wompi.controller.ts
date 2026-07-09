@@ -16,7 +16,10 @@ export class WompiController {
    */
   @Post('webhook')
   async webhook(@Req() req: Request, @Headers('x-event-id') eventId?: string) {
-    const raw = JSON.stringify(req.body)
+    // Body arrives as Buffer thanks to express.raw() bound in main.ts.
+    const raw = Buffer.isBuffer(req.body)
+      ? (req.body as Buffer).toString('utf8')
+      : JSON.stringify(req.body)
     const event = this.svc.verifyAndParse(raw, eventId)
     return this.svc.handleEvent(event)
   }

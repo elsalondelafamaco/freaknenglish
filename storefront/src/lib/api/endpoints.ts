@@ -40,7 +40,7 @@ export const plansApi = {
 };
 
 export const checkoutApi = {
-  createIntent: (body: { planId: string; customerEmail: string; customerName: string; customerPhone?: string }) =>
+  createIntent: (body: { planId: string; customerEmail: string; customerName: string; customerPhone: string; customerDocument: string; userId?: string }) =>
     apiPost<{
       intentId: string;
       reference: string;
@@ -50,6 +50,15 @@ export const checkoutApi = {
       publicKey: string;
       redirectUrl: string;
     }>("/checkout/intents", body),
+  status: (reference: string) =>
+    apiGet<{
+      reference: string;
+      status: "PENDING" | "APPROVED" | "DECLINED" | "VOIDED" | "ERROR";
+      planId: string;
+      planName?: string;
+      approvedAt: string | null;
+      customerEmail: string;
+    }>("/checkout/status", { reference }),
 };
 
 // ─── Subscriptions ─────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator'
@@ -43,5 +43,57 @@ export class BoardController {
     @Body() body: { userId: string; role?: 'editor' | 'viewer' },
   ) {
     return this.svc.invite(id, u.id, body.userId, body.role)
+  }
+
+  // ─── Pages ────────────────────────────────────────────────────────
+  /** @endpoint GET /api/v1/boards/:id/pages */
+  @Get(':id/pages')
+  listPages(@CurrentUser() u: AuthUser, @Param('id') id: string) {
+    return this.svc.listPages(id, u.id)
+  }
+
+  /** @endpoint POST /api/v1/boards/:id/pages */
+  @Post(':id/pages')
+  createPage(
+    @CurrentUser() u: AuthUser,
+    @Param('id') id: string,
+    @Body() body: { title?: string; kind?: string },
+  ) {
+    return this.svc.createPage(id, u.id, body ?? {})
+  }
+
+  /** @endpoint PATCH /api/v1/boards/pages/:pageId */
+  @Patch('pages/:pageId')
+  updatePage(
+    @CurrentUser() u: AuthUser,
+    @Param('pageId') pageId: string,
+    @Body() body: { title?: string; position?: number },
+  ) {
+    if (typeof body.position === 'number') {
+      return this.svc.reorderPage(pageId, u.id, body.position)
+    }
+    return this.svc.renamePage(pageId, u.id, body.title ?? 'Página')
+  }
+
+  /** @endpoint DELETE /api/v1/boards/pages/:pageId */
+  @Delete('pages/:pageId')
+  deletePage(@CurrentUser() u: AuthUser, @Param('pageId') pageId: string) {
+    return this.svc.deletePage(pageId, u.id)
+  }
+
+  /** @endpoint GET /api/v1/boards/pages/:pageId/state */
+  @Get('pages/:pageId/state')
+  pageState(@CurrentUser() u: AuthUser, @Param('pageId') pageId: string) {
+    return this.svc.getPageState(pageId, u.id)
+  }
+
+  /** @endpoint GET /api/v1/boards/pages/:pageId/ops?since=N */
+  @Get('pages/:pageId/ops')
+  pageOps(
+    @CurrentUser() u: AuthUser,
+    @Param('pageId') pageId: string,
+    @Query('since') since: string,
+  ) {
+    return this.svc.pageOpsSince(pageId, u.id, Number(since) || 0)
   }
 }

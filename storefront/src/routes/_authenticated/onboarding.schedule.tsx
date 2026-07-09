@@ -29,7 +29,9 @@ function OnboardingSchedule() {
         toast.success(`¡Listo! Tu profesor es ${r.teacher?.fullName ?? "asignado"}.`);
         navigate({ to: "/app" });
       } else {
-        toast.info("Recibimos tu preferencia. Te contactaremos para acordar el horario.");
+        toast.info(
+          "Recibimos tu preferencia. Nos coordinaremos contigo en las próximas 48 horas para iniciar con las clases.",
+        );
         navigate({ to: "/app" });
       }
     },

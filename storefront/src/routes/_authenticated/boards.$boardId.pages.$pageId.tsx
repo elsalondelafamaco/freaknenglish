@@ -52,7 +52,7 @@ function BoardPage() {
     {
       extensions: provider
         ? [
-            StarterKit.configure({ history: false }),
+            StarterKit.configure({ undoRedo: false } as any),
             Placeholder.configure({ placeholder: "Empieza a escribir…" }),
             Collaboration.configure({ document: provider.doc }),
             CollaborationCursor.configure({

@@ -87,7 +87,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="text-sm font-semibold text-brand-ink">{user?.fullName}</div>
           <div className="truncate text-xs text-brand-ink/65">{user?.email}</div>
           <button
-            onClick={signOut}
+            onClick={handleSignOut}
             className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-brand-ink/70 hover:text-brand-ink"
           >
             <LogOut className="size-3.5" /> Cerrar sesión
@@ -126,7 +126,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               );
             })}
             <button
-              onClick={signOut}
+              onClick={handleSignOut}
               className="mt-2 inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-brand-ink/70 hover:bg-brand-cream/40"
             >
               <LogOut className="size-4" /> Cerrar sesión

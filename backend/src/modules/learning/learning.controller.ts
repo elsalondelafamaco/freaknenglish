@@ -11,10 +11,19 @@ import { LearningService } from './learning.service'
 export class LearningController {
   constructor(private svc: LearningService) {}
 
-  /** @endpoint GET /api/v1/learning/modules?level=beginner */
+  /**
+   * @endpoint GET /api/v1/learning/modules?level=beginner
+   * Si no se pasa `level`, se filtra automáticamente por el nivel del
+   * estudiante autenticado (`user.englishLevel`). Admin/teacher sin nivel
+   * reciben todos los módulos.
+   */
   @Get('modules')
-  modules(@Query('level') level?: 'beginner' | 'intermediate' | 'advanced') {
-    return this.svc.listModules(level)
+  async modules(
+    @CurrentUser() u: AuthUser,
+    @Query('level') level?: 'beginner' | 'intermediate' | 'advanced',
+  ) {
+    const effective = level ?? (u.englishLevel as 'beginner' | 'intermediate' | 'advanced' | undefined)
+    return this.svc.listModules(effective)
   }
 
   /** @endpoint GET /api/v1/learning/modules/:id */

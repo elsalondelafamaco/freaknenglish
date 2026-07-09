@@ -46,6 +46,24 @@ export class CheckoutService {
       .update(`${reference}${amountInCents}${currency}${env.WOMPI_INTEGRITY_SECRET}`)
       .digest('hex')
 
+    // Wompi "Web Checkout" — pasarela pre-hosteada. Ver:
+    // https://docs.wompi.co/docs/colombia/web-checkout/
+    const redirectUrl = `${env.PUBLIC_SITE_URL}/checkout/return`
+    const checkoutParams = new URLSearchParams({
+      'public-key': env.WOMPI_PUBLIC_KEY,
+      currency,
+      'amount-in-cents': String(amountInCents),
+      reference,
+      'signature:integrity': signature,
+      'redirect-url': redirectUrl,
+      'customer-data:email': input.customerEmail,
+      'customer-data:full-name': input.customerName,
+      'customer-data:phone-number': input.customerPhone,
+      'customer-data:legal-id': input.customerDocument,
+      'customer-data:legal-id-type': 'CC',
+    })
+    const checkoutUrl = `https://checkout.wompi.co/p/?${checkoutParams.toString()}`
+
     return {
       intentId: intent.id,
       reference,
@@ -53,7 +71,8 @@ export class CheckoutService {
       currency,
       signature,
       publicKey: env.WOMPI_PUBLIC_KEY,
-      redirectUrl: `${env.PUBLIC_SITE_URL}/checkout/return`,
+      redirectUrl,
+      checkoutUrl,
     }
   }
 }

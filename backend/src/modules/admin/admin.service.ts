@@ -79,14 +79,18 @@ export class AdminService {
     const end = new Date(year, month, 1)
     const classes = await this.prisma.class.findMany({
       where: { status: 'validated', validatedAt: { gte: start, lt: end }, teacherId: { not: null } },
-      select: { teacherId: true, durationMin: true },
+      select: { teacherId: true, startsAt: true, endsAt: true },
     })
     // Acumulamos minutos por profesor (las clases validadas se pagan por hora real).
     const minutes = new Map<string, number>()
     const counts = new Map<string, number>()
     for (const c of classes) {
       const tid = c.teacherId!
-      minutes.set(tid, (minutes.get(tid) ?? 0) + (c.durationMin ?? 60))
+      const durMin = Math.max(
+        0,
+        Math.round((c.endsAt.getTime() - c.startsAt.getTime()) / 60000),
+      ) || 60
+      minutes.set(tid, (minutes.get(tid) ?? 0) + durMin)
       counts.set(tid, (counts.get(tid) ?? 0) + 1)
     }
     const teacherIds = Array.from(minutes.keys())
@@ -336,7 +340,7 @@ export class AdminService {
         where: { id },
         data: {
           title: input.title ?? existing.title,
-          summary: input.summary ?? existing.summary,
+          description: input.summary ?? existing.description,
           level: (input.level ?? existing.level) as any,
           position: input.position ?? existing.position,
         },
@@ -347,7 +351,7 @@ export class AdminService {
       data: {
         id,
         title: input.title,
-        summary: input.summary ?? '',
+        description: input.summary ?? '',
         level: input.level as any,
         position: input.position ?? (last ? last.position + 1 : 1),
       },

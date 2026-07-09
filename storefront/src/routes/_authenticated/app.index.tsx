@@ -9,7 +9,6 @@ import {
   Video,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { SatisfactionDialog } from "@/components/app/SatisfactionDialog";
 import {
   confirmAttendance,
   listClassesFor,
@@ -17,7 +16,6 @@ import {
   todaysClassFor,
 } from "@/lib/domain/classes";
 import { levelProgress } from "@/lib/domain/learning";
-import { isSurveyDue } from "@/lib/domain/survey";
 import { runAutomations } from "@/lib/domain/notifications";
 
 export const Route = createFileRoute("/_authenticated/app/")({
@@ -46,7 +44,6 @@ function DashboardPage() {
   }, []);
   const [tick, setTick] = useState(0);
   const refresh = () => setTick((t) => t + 1);
-  const [showSurvey, setShowSurvey] = useState(false);
 
   const data = useMemo(() => {
     if (!user) return null;
@@ -60,15 +57,6 @@ function DashboardPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, tick]);
-
-  useEffect(() => {
-    if (!user) return;
-    if (!user.roles.includes("student")) return;
-    if (isSurveyDue(user.id)) {
-      const t = setTimeout(() => setShowSurvey(true), 600);
-      return () => clearTimeout(t);
-    }
-  }, [user]);
 
   if (!user || !data) return null;
 
@@ -207,13 +195,6 @@ function DashboardPage() {
           ) : null}
         </ul>
       </section>
-
-      {showSurvey ? (
-        <SatisfactionDialog
-          userId={user.id}
-          onSubmitted={() => setShowSurvey(false)}
-        />
-      ) : null}
     </div>
   );
 }

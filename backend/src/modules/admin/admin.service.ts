@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { InjectQueue } from '@nestjs/bullmq'
 import { Queue } from 'bullmq'
@@ -9,12 +9,31 @@ import { StorageService } from '../storage/storage.service'
 
 @Injectable()
 export class AdminService {
+  private readonly demoUserAliases: Record<string, string> = {
+    usr_demo_student: 'estudiante@freakn.dev',
+    usr_demo_teacher: 'profe@freakn.dev',
+    usr_demo_admin: 'admin@freakn.dev',
+  }
+
   constructor(
     private prisma: PrismaService,
     @InjectQueue('automations') private automationsQueue: Queue,
     private jwt: JwtService,
     private storage: StorageService,
   ) {}
+
+  private async resolveExistingUserId(idOrAlias: string): Promise<string> {
+    const byId = await this.prisma.user.findUnique({ where: { id: idOrAlias }, select: { id: true } })
+    if (byId) return byId.id
+
+    const email = this.demoUserAliases[idOrAlias] ?? (idOrAlias.includes('@') ? idOrAlias : null)
+    if (email) {
+      const byEmail = await this.prisma.user.findUnique({ where: { email: email.toLowerCase() }, select: { id: true } })
+      if (byEmail) return byEmail.id
+    }
+
+    throw new NotFoundException('User not found')
+  }
 
   async analytics() {
     const [activeSubs, plans, surveys, totalClasses, validatedClasses] = await Promise.all([
@@ -191,13 +210,18 @@ export class AdminService {
    * Requiere columna `assignedTeacherId` en `User` (Prisma migration).
    */
   async assignTeacher(studentId: string, teacherId: string | null) {
+    const resolvedStudentId = await this.resolveExistingUserId(studentId)
+    let resolvedTeacherId: string | null = null
+
     if (teacherId) {
-      const t = await this.prisma.user.findUnique({ where: { id: teacherId } })
+      resolvedTeacherId = await this.resolveExistingUserId(teacherId)
+      const t = await this.prisma.user.findUnique({ where: { id: resolvedTeacherId } })
       if (!t || t.role !== 'teacher') throw new Error('Invalid teacher')
     }
+
     return this.prisma.user.update({
-      where: { id: studentId },
-      data: { assignedTeacherId: teacherId },
+      where: { id: resolvedStudentId },
+      data: { assignedTeacherId: resolvedTeacherId },
     })
   }
 
@@ -207,7 +231,8 @@ export class AdminService {
    * mostrar el banner y permitir regresar.
    */
   async impersonate(adminId: string, targetId: string) {
-    const target = await this.prisma.user.findUnique({ where: { id: targetId } })
+    const resolvedTargetId = await this.resolveExistingUserId(targetId)
+    const target = await this.prisma.user.findUnique({ where: { id: resolvedTargetId } })
     if (!target) throw new Error('Target not found')
     await this.prisma.impersonationLog.create({ data: { adminId, targetId } }).catch(() => null)
     const accessToken = await this.jwt.signAsync(
@@ -227,8 +252,9 @@ export class AdminService {
    * - Estudiante: profesor asignado, suscripción, pagos, clases, progreso, NPS, notas.
    */
   async userDetail(id: string) {
+    const resolvedId = await this.resolveExistingUserId(id)
     const user = await this.prisma.user.findUnique({
-      where: { id },
+      where: { id: resolvedId },
       include: {
         subscription: { include: { plan: true } },
         assignedTeacher: { select: { id: true, fullName: true, email: true } },
@@ -241,10 +267,10 @@ export class AdminService {
 
     const [payments, classesAsStudent, classesAsTeacher, surveys, progress, notesByTeacher, notesAboutStudent, assignedStudents] =
       await Promise.all([
-        this.prisma.paymentIntent.findMany({ where: { userId: id }, orderBy: { createdAt: 'desc' }, take: 50 }),
+        this.prisma.paymentIntent.findMany({ where: { userId: resolvedId }, orderBy: { createdAt: 'desc' }, take: 50 }),
         isStudent
           ? this.prisma.class.findMany({
-              where: { studentId: id },
+              where: { studentId: resolvedId },
               orderBy: { startsAt: 'desc' },
               take: 50,
               include: { teacher: { select: { id: true, fullName: true } } },
@@ -252,27 +278,27 @@ export class AdminService {
           : Promise.resolve([] as any[]),
         isTeacher
           ? this.prisma.class.findMany({
-              where: { teacherId: id },
+              where: { teacherId: resolvedId },
               orderBy: { startsAt: 'desc' },
               take: 50,
               include: { student: { select: { id: true, fullName: true } } },
             })
           : Promise.resolve([] as any[]),
-        this.prisma.satisfactionSurvey.findMany({ where: { userId: id }, orderBy: { createdAt: 'desc' }, take: 20 }),
+        this.prisma.satisfactionSurvey.findMany({ where: { userId: resolvedId }, orderBy: { createdAt: 'desc' }, take: 20 }),
         isStudent
           ? this.prisma.lessonProgress.findMany({
-              where: { userId: id, completedAt: { not: null } },
+              where: { userId: resolvedId, completedAt: { not: null } },
               include: { lesson: { select: { id: true, title: true, moduleId: true } } },
               orderBy: { updatedAt: 'desc' },
               take: 100,
             })
           : Promise.resolve([] as any[]),
         isTeacher
-          ? this.prisma.classNote.findMany({ where: { teacherId: id }, orderBy: { createdAt: 'desc' }, take: 50 })
+          ? this.prisma.classNote.findMany({ where: { teacherId: resolvedId }, orderBy: { createdAt: 'desc' }, take: 50 })
           : Promise.resolve([] as any[]),
         isStudent
           ? this.prisma.classNote.findMany({
-              where: { class: { studentId: id } } as any,
+              where: { class: { studentId: resolvedId } } as any,
               orderBy: { createdAt: 'desc' },
               take: 50,
               include: { teacher: { select: { id: true, fullName: true } } },
@@ -280,7 +306,7 @@ export class AdminService {
           : Promise.resolve([] as any[]),
         isTeacher
           ? this.prisma.user.findMany({
-              where: { assignedTeacherId: id, deletedAt: null },
+              where: { assignedTeacherId: resolvedId, deletedAt: null },
               select: { id: true, fullName: true, email: true, englishLevel: true, disabledAt: true },
             })
           : Promise.resolve([] as any[]),
@@ -301,18 +327,21 @@ export class AdminService {
     id: string,
     data: { fullName?: string; phone?: string; role?: 'student' | 'teacher' | 'admin'; englishLevel?: 'beginner' | 'intermediate' | 'advanced' | null },
   ) {
-    return this.prisma.user.update({ where: { id }, data: data as any })
+    const resolvedId = await this.resolveExistingUserId(id)
+    return this.prisma.user.update({ where: { id: resolvedId }, data: data as any })
   }
 
   async setUserStatus(id: string, disabled: boolean) {
+    const resolvedId = await this.resolveExistingUserId(id)
     return this.prisma.user.update({
-      where: { id },
+      where: { id: resolvedId },
       data: { disabledAt: disabled ? new Date() : null },
     })
   }
 
   async softDeleteUser(id: string) {
-    return this.prisma.user.update({ where: { id }, data: { deletedAt: new Date(), disabledAt: new Date() } })
+    const resolvedId = await this.resolveExistingUserId(id)
+    return this.prisma.user.update({ where: { id: resolvedId }, data: { deletedAt: new Date(), disabledAt: new Date() } })
   }
 
   /**
@@ -320,9 +349,10 @@ export class AdminService {
    * el link para que el caller (o un job) envíe el email vía Resend.
    */
   async resetUserPassword(id: string) {
+    const resolvedId = await this.resolveExistingUserId(id)
     const token = randomBytes(32).toString('hex')
     const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24)
-    await this.prisma.passwordReset.create({ data: { userId: id, tokenHash: token, expiresAt } as any })
+    await this.prisma.passwordReset.create({ data: { userId: resolvedId, tokenHash: token, expiresAt } as any })
     const link = `${env.PUBLIC_SITE_URL}/reset-password?token=${token}`
     // TODO emails: enqueue('emails', { template: 'reset-password', to: user.email, ctx: { link } })
     return { ok: true, link, expiresAt }

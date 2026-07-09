@@ -3,6 +3,7 @@ import { ValidationPipe, VersioningType } from '@nestjs/common'
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'
 import { Logger } from 'nestjs-pino'
 import cookieParser from 'cookie-parser'
+import express from 'express'
 import { AppModule } from './app.module'
 import { RedisIoAdapter } from './modules/board/redis-io.adapter'
 import { env } from './config/env'
@@ -15,6 +16,13 @@ async function bootstrap() {
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' })
 
   app.use(cookieParser())
+
+  // Raw body ONLY for Wompi webhook so we can verify HMAC signature on bytes.
+  app.use(
+    '/api/v1/public/wompi/webhook',
+    express.raw({ type: 'application/json', limit: '1mb' }),
+  )
+
   app.enableCors({
     origin: env.CORS_ORIGINS.split(',').map((s) => s.trim()),
     credentials: true,

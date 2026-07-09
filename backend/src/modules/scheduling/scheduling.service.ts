@@ -144,4 +144,43 @@ export class SchedulingService {
     })
     return this.getTeacherAvailability(teacherId)
   }
+
+  /**
+   * Re-evalúa a los estudiantes con `manual_pending`: si los nuevos
+   * bloques del profesor cubren TODAS sus preferencias, los auto-asigna.
+   * Devuelve el listado de estudiantes reasignados.
+   */
+  async reassignPendingForTeacher(teacherId: string) {
+    const teacher = await this.prisma.user.findUnique({
+      where: { id: teacherId },
+      include: { availability: true },
+    })
+    if (!teacher || teacher.role !== 'teacher' || teacher.disabledAt || teacher.deletedAt) return []
+
+    const pending = await this.prisma.user.findMany({
+      where: { scheduleAssignmentStatus: 'manual_pending', deletedAt: null },
+      select: { id: true, fullName: true, schedulePreferences: true },
+    })
+
+    const reassigned: Array<{ id: string; fullName: string }> = []
+    for (const s of pending) {
+      const blocks = (s.schedulePreferences as any as ScheduleBlock[] | null) ?? []
+      if (blocks.length === 0) continue
+      const covers = blocks.every((b) =>
+        teacher.availability.some(
+          (a) => a.weekday === b.weekday && isHourInRange(b.hour, a.startsAt, a.endsAt),
+        ),
+      )
+      if (!covers) continue
+      await this.prisma.user.update({
+        where: { id: s.id },
+        data: {
+          assignedTeacherId: teacherId,
+          scheduleAssignmentStatus: 'auto_assigned',
+        },
+      })
+      reassigned.push({ id: s.id, fullName: s.fullName })
+    }
+    return reassigned
+  }
 }

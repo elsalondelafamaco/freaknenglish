@@ -135,6 +135,7 @@ model Plan {
   name          String
   daysPerWeek   Int      @map("days_per_week")
   priceCop      Int      @map("price_cop")
+  priceUsd      Int?     @map("price_usd")
   features      Json     @default("[]")
   isActive      Boolean  @default(true) @map("is_active")
   createdAt     DateTime @default(now()) @map("created_at")

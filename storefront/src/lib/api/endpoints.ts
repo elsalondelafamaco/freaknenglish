@@ -34,6 +34,30 @@ export const usersApi = {
     apiPatch<any>("/me", body),
 };
 
+// ─── Scheduling ────────────────────────────────────────────────────────
+export const scheduleApi = {
+  grid: () => apiGet<{ grid: Record<string, number>; hours: number[] }>("/schedule/availability-grid"),
+  mine: () => apiGet<{
+    schedulePreferences: Array<{ weekday: number; hour: number }> | null;
+    scheduleAssignmentStatus: "auto_assigned" | "manual_pending" | null;
+    assignedTeacher: { id: string; fullName: string } | null;
+  }>("/schedule/mine"),
+  submit: (blocks: Array<{ weekday: number; hour: number }>) =>
+    apiPost<{ status: "auto_assigned" | "manual_pending"; teacher: { id: string; fullName: string } | null }>(
+      "/schedule/preferences",
+      { blocks },
+    ),
+  adminPending: () => apiGet<any[]>("/admin/schedule/requests"),
+  adminAssign: (userId: string, teacherId: string) =>
+    apiPost<any>(`/admin/schedule/requests/${userId}/assign`, { teacherId }),
+  adminTeacherAvailability: (teacherId: string) =>
+    apiGet<Array<{ id: string; weekday: number; startsAt: string; endsAt: string }>>(`/admin/teachers/${teacherId}/availability`),
+  adminSetTeacherAvailability: (
+    teacherId: string,
+    slots: Array<{ weekday: number; startsAt: string; endsAt: string }>,
+  ) => apiPost<any>(`/admin/teachers/${teacherId}/availability`, { slots }),
+};
+
 // ─── Plans + Checkout ──────────────────────────────────────────────────
 export const plansApi = {
   list: () => apiGet<Array<{ id: string; name: string; daysPerWeek: number; priceCop: number }>>("/plans"),

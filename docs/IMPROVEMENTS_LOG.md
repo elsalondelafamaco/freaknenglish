@@ -234,3 +234,15 @@
 - `onboarding.schedule.tsx`: cuando no hay profesor disponible para los
   bloques elegidos, el toast informa explícitamente “nos coordinaremos
   contigo en las próximas 48 horas para iniciar con las clases”.
+
+## Iteración D5 — Disponibilidad self-service del profesor + reasignación auto
+
+- Backend: `GET/POST /api/v1/teacher/availability` (self). Al guardar,
+  `SchedulingService.reassignPendingForTeacher` recorre a los estudiantes
+  con `scheduleAssignmentStatus='manual_pending'` y si el nuevo horario del
+  profesor cubre TODAS sus preferencias, los deja `auto_assigned` con
+  `assignedTeacherId = teacher`.
+- `TeachersModule` importa `SchedulingModule` (exportado).
+- Storefront: nueva ruta `/teacher/availability` con grid 7×15 (07:00–21:00);
+  al guardar informa cuántos estudiantes se asignaron automáticamente.
+- Nav del portal profesor incluye el ítem "Disponibilidad".

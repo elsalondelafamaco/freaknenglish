@@ -30,6 +30,7 @@ const TEACHER_NAV = [
   { to: "/teacher", label: "Hoy", icon: LayoutDashboard, end: true },
   { to: "/teacher/schedule", label: "Agenda", icon: CalendarDays, end: false },
   { to: "/teacher/students", label: "Estudiantes", icon: Users, end: false },
+  { to: "/teacher/availability", label: "Disponibilidad", icon: Settings, end: false },
 ] as const;
 
 const ADMIN_NAV = [

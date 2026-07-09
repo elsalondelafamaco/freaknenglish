@@ -5,6 +5,7 @@ import { RolesGuard } from '../../common/guards/roles.guard'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator'
 import { TeachersService } from './teachers.service'
+import { SchedulingService } from '../scheduling/scheduling.service'
 
 @ApiTags('teachers')
 @ApiBearerAuth()
@@ -12,7 +13,7 @@ import { TeachersService } from './teachers.service'
 @Roles('teacher', 'admin')
 @Controller('teacher')
 export class TeachersController {
-  constructor(private svc: TeachersService) {}
+  constructor(private svc: TeachersService, private scheduling: SchedulingService) {}
 
   /** @endpoint GET /api/v1/teacher/students */
   @Get('students')
@@ -38,5 +39,28 @@ export class TeachersController {
     @Body() body: { rating: number; notes: string },
   ) {
     return this.svc.addNote(u.id, classId, body.rating, body.notes)
+  }
+
+  /** @endpoint GET /api/v1/teacher/availability  (self) */
+  @Get('availability')
+  getAvailability(@CurrentUser() u: AuthUser) {
+    return this.scheduling.getTeacherAvailability(u.id)
+  }
+
+  /**
+   * @endpoint POST /api/v1/teacher/availability  (self)
+   * Body: { slots: [{ weekday, startsAt, endsAt }] }
+   * Al guardar, se dispara una re-evaluación de estudiantes en
+   * `manual_pending`: si el profesor cubre TODOS los bloques del alumno,
+   * queda auto-asignado.
+   */
+  @Post('availability')
+  async setAvailability(
+    @CurrentUser() u: AuthUser,
+    @Body() body: { slots: Array<{ weekday: number; startsAt: string; endsAt: string }> },
+  ) {
+    const availability = await this.scheduling.setTeacherAvailability(u.id, body.slots ?? [])
+    const reassigned = await this.scheduling.reassignPendingForTeacher(u.id)
+    return { availability, reassigned }
   }
 }

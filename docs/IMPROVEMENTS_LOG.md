@@ -40,6 +40,20 @@
   el equivalente en COP y la TRM referencia. Cae al catálogo local
   (`PLANS`) si el backend no responde.
 
+### D3 (hecho)
+- **Admin NPS real** (`admin.surveys.tsx`): eliminado `readDb` /
+  `listAllSurveys`. Ahora consume `adminApi.surveys(filter)` con
+  TanStack Query. El backend ya expone `GET /api/v1/admin/surveys` con
+  KPIs (`nps`, `promoters`, `detractors`, `count`) calculados server-side.
+- **Módulos filtrados por nivel del estudiante**
+  (`learning.controller.ts` + `learning.service.ts`): si no se pasa
+  `?level`, el servicio resuelve el nivel desde `user.englishLevel`
+  (sólo estudiantes; admin/teacher ven todos). Nuevo método
+  `listModulesForUser(userId, level?)`.
+- Pendiente para D4: drag & drop en `admin.content.tsx` con `@dnd-kit`
+  y rewrite del portal `/app/learning` para consumir `learningApi` en
+  vez de `listAllModules` local.
+
 ### Iteración A — Checkout + Wompi end-to-end
 - Backend: `POST /checkout/intents` (documento + teléfono obligatorios),
   `GET /checkout/status?reference=` para polling, `express.raw` sólo en

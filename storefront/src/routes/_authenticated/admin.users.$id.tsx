@@ -6,7 +6,6 @@ import {
   Mail,
   Pencil,
   Power,
-  Trash2,
   KeyRound,
 } from "lucide-react";
 import { readDb } from "@/lib/domain/repository";
@@ -196,12 +195,6 @@ function AdminUserDetail() {
     }
   }
 
-  async function onDelete() {
-    if (!confirm(`¿Eliminar a ${user.fullName}? Quedará en soft-delete (recuperable en backend).`)) return;
-    await adminApi.softDeleteUser(user.id);
-    bump();
-  }
-
   async function onResetPassword() {
     const r = await adminApi.resetPassword(user.id);
     alert(r.link ? `Link de recuperación generado:\n${r.link}` : "Email de recuperación enviado.");
@@ -296,14 +289,6 @@ function AdminUserDetail() {
               className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-3 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-40"
             >
               <Eye className="size-3.5" /> Ver como este usuario
-            </button>
-          ) : null}
-          {user.id !== me?.id && !isDeleted ? (
-            <button
-              onClick={onDelete}
-              className="inline-flex items-center gap-1.5 rounded-full border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-700 transition hover:-translate-y-0.5 hover:bg-red-50"
-            >
-              <Trash2 className="size-3.5" /> Eliminar
             </button>
           ) : null}
         </div>

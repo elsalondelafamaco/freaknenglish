@@ -27,8 +27,8 @@ const schema = z.object({
   WOMPI_INTEGRITY_SECRET: z.string().optional().default(''),
   WOMPI_EVENTS_SECRET: z.string().optional().default(''),
   WOMPI_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
-  PUBLIC_SITE_URL: z.string().url().default('http://localhost:5173'),
-  CORS_ORIGINS: z.string().default('http://localhost:5173'),
+  PUBLIC_SITE_URL: z.string().url().default('https://freaknenglish.com'),
+  CORS_ORIGINS: z.string().default('https://freaknenglish.com,http://localhost:5173'),
   TEACHER_PAYRATE_COP: z.coerce.number().default(15000),
 })
 

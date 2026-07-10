@@ -20,6 +20,13 @@ export class NotificationsService {
     subject: string
     dedupeKey: string
     vars?: Prisma.InputJsonObject
+    // in-app fields (bell)
+    type?: 'system' | 'payment' | 'class' | 'teacher' | 'learning'
+    title?: string
+    body?: string
+    linkUrl?: string
+    // if true, only store in-app (skip email transport)
+    inAppOnly?: boolean
   }) {
     const existing = await this.prisma.notification.findUnique({ where: { dedupeKey: input.dedupeKey } })
     if (existing && existing.status === 'sent') return existing
@@ -34,8 +41,19 @@ export class NotificationsService {
           subject: input.subject,
           dedupeKey: input.dedupeKey,
           vars: input.vars ?? {},
+          type: input.type ?? 'system',
+          title: input.title ?? input.subject,
+          body: input.body,
+          linkUrl: input.linkUrl,
         },
       }))
+
+    if (input.inAppOnly) {
+      return this.prisma.notification.update({
+        where: { id: record.id },
+        data: { status: 'sent', sentAt: new Date() },
+      })
+    }
 
     try {
       const renderer = templates[input.template] as (v: any) => string
@@ -52,5 +70,42 @@ export class NotificationsService {
         data: { status: 'failed', error: (e as Error).message },
       })
     }
+  }
+
+  // ─── In-app inbox ───────────────────────────────────────────────
+
+  listForUser(userId: string, opts: { unreadOnly?: boolean; limit?: number } = {}) {
+    return this.prisma.notification.findMany({
+      where: {
+        userId,
+        ...(opts.unreadOnly ? { readAt: null } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(opts.limit ?? 50, 200),
+      select: {
+        id: true, type: true, template: true, title: true, body: true,
+        linkUrl: true, subject: true, readAt: true, createdAt: true,
+      },
+    })
+  }
+
+  unreadCount(userId: string) {
+    return this.prisma.notification.count({ where: { userId, readAt: null } })
+  }
+
+  async markRead(userId: string, id: string) {
+    const n = await this.prisma.notification.findFirst({ where: { id, userId } })
+    if (!n) return { ok: false }
+    if (n.readAt) return { ok: true }
+    await this.prisma.notification.update({ where: { id }, data: { readAt: new Date() } })
+    return { ok: true }
+  }
+
+  async markAllRead(userId: string) {
+    const r = await this.prisma.notification.updateMany({
+      where: { userId, readAt: null },
+      data: { readAt: new Date() },
+    })
+    return { ok: true, count: r.count }
   }
 }

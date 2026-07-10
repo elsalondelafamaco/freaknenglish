@@ -1,14 +1,15 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Lock, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import {
   listAllCheckpoints,
   bestCheckpointAttempt,
-  modulesByLevel,
   moduleProgress,
 } from "@/lib/domain/learning";
-import type { EnglishLevel } from "@/lib/domain/types";
+import { learningApi } from "@/lib/api/endpoints";
+import type { EnglishLevel, LearningModule } from "@/lib/domain/types";
 
 export const Route = createFileRoute("/_authenticated/app/learning")({
   head: () => ({ meta: [{ title: "Aprendizaje — Freakn English" }] }),
@@ -24,7 +25,11 @@ const LEVELS: { id: EnglishLevel; label: string }[] = [
 function LearningIndex() {
   const { user } = useAuth();
   const [level, setLevel] = useState<EnglishLevel>(user?.level ?? "beginner");
-  const mods = useMemo(() => modulesByLevel(level), [level]);
+  const modsQ = useQuery({
+    queryKey: ["learning", "modules", level],
+    queryFn: () => learningApi.modules(level),
+  });
+  const mods = (modsQ.data ?? []) as LearningModule[];
 
   if (!user) return null;
 
@@ -72,7 +77,12 @@ function LearningIndex() {
       </div>
 
       <section className="grid gap-4 md:grid-cols-2">
-        {mods.map((m) => {
+        {modsQ.isLoading ? (
+          <p className="text-sm text-brand-ink/60">Cargando módulos…</p>
+        ) : mods.length === 0 ? (
+          <p className="text-sm text-brand-ink/60">Aún no hay módulos publicados para este nivel.</p>
+        ) : null}
+        {mods.map((m: any) => {
           const prog = moduleProgress(user.id, m);
           return (
             <Link
@@ -82,7 +92,7 @@ function LearningIndex() {
               className="group rounded-3xl border border-brand-line bg-white p-6 transition hover:border-brand-ink/30 hover:shadow-soft"
             >
               <div className="flex items-start justify-between">
-                <div className="text-3xl">{m.coverEmoji}</div>
+                <div className="text-3xl">{m.coverEmoji ?? "📘"}</div>
                 {prog.complete ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-brand-success/15 px-2.5 py-1 text-[11px] font-medium text-brand-success">
                     <CheckCircle2 className="size-3.5" /> Completo

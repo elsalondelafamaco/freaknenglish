@@ -1,61 +1,103 @@
-## Estado actual (hecho ✅)
 
-- **Board colaborativo B1–B8**: páginas, Yjs en tiempo real, presencia, editor rico (tablas, imágenes, listas, colores, resaltado), capa de dibujo, snapshots, invitaciones por email, historial de versiones y export Markdown/PDF.
-- **D6 — Notificaciones**: emails con branding por env (`BRAND_*`, `RESEND_FROM`, `RESEND_REPLY_TO`), template de ejemplo completo (`payment_success`), inbox in-app con campana, badge y ruta `/notifications`, triggers en Wompi / clases / asignación de profesor.
-- Nota: el `dist-check` que reportaste ya pasa limpio al reejecutar tanto `build` como `build:dev` en storefront y `build` en backend. Era un artefacto de la corrida asíncrona anterior — no requiere fix.
+# Objetivo
 
-## Pendiente por implementar
+Hacer la app 100% funcional contra el backend Nest. Cero `localStorage`, cero
+`readDb/writeDb`, cero servicios mock (`@/lib/domain/*` como fuente de verdad).
+Cada pantalla lee/escribe vía `endpoints.ts` con TanStack Query, y las
+mutaciones invalidan sus queries.
 
-### D7 — Métricas admin reales (`/admin`)
-Hoy `admin.index.tsx` usa mocks parciales. Cablear KPIs desde datos reales:
-- **Retención**: cohortes mensuales de estudiantes activos (con clase validada en el mes).
-- **Asistencia**: % clases `validated` vs `scheduled` por semana/mes, por profesor.
-- **MRR / ARR**: suma de `Subscription.plan.priceCop` activas × frecuencia (COP y USD con TRM).
-- **Churn**: cancelaciones / activos al inicio del período.
-- **Top profesores**: horas dictadas, NPS promedio.
-- **Ingresos**: `PaymentIntent APPROVED` por día (últimos 30/90 días).
-- Endpoint `GET /admin/metrics?range=30d|90d|ytd` en backend + cards y sparklines en frontend.
+# Diagnóstico
 
-### D8 — Facturas / recibos Wompi en PDF
-Desde `app.settings.tsx` → pestaña de pagos, botón "Descargar recibo" por transacción `APPROVED`:
-- Endpoint `GET /me/payments/:intentId/receipt.pdf` (auth por dueño).
-- Render server-side con `pdfkit` o `@react-pdf/renderer` (Node) con branding del env D6.
-- Datos: referencia Wompi, monto, plan, IVA implícito, fecha aprobación, datos del cliente.
-- Cache del PDF generado en storage (`billing/receipts/{intentId}.pdf`) para no regenerar.
+Hoy la arquitectura es híbrida:
+- `endpoints.ts` ya cubre todos los módulos del backend (auth, users,
+  scheduling, plans, checkout, subscriptions, classes, learning, teachers,
+  admin, surveys, notifications, boards, receipts).
+- Pero en login se corre `hydrateFromBackend()` que **copia todo** al store
+  local (`lib/domain/repository.ts`, persistido en `localStorage`), y ~20
+  rutas + 10 servicios (`lib/domain/*.ts`) siguen leyendo de ese store.
+- Efectos: datos rancios entre pestañas, mutaciones que solo tocan el mock
+  (no llegan al server), cambios que "no se ven" hasta re-login, y todo el
+  estado sensible viviendo en `localStorage`.
 
-### D9 — PWA offline básica del catálogo Learning
-- `manifest.webmanifest` + iconos + `theme_color` alineado al brand.
-- Service worker (Workbox o vanilla) con:
-  - Precache del shell (rutas `/app/learning*`).
-  - Runtime cache stale-while-revalidate para `GET /learning/*` (módulos y lecciones).
-  - Cache de imágenes de lecciones con LRU.
-- Botón "Instalar app" en `AppShell` cuando `beforeinstallprompt` esté disponible.
-- Página de "Sin conexión" mínima.
+Archivos con dependencia de `readDb/writeDb` o `lib/domain/*`:
+- Servicios mock: `auth.ts`, `classes.ts`, `learning.ts`, `subscriptions.ts`,
+  `admin.ts`, `admin-actions.ts`, `notifications.ts`, `survey.ts`,
+  `app-settings.ts`, `repository.ts`, `seed.ts`.
+- Rutas: `_authenticated/{app.index, app.calendar, app.learning,
+  app.learning.$moduleId, app.checkpoint.$checkpointId, app.settings,
+  app.subscribe, teacher.index, teacher.schedule, teacher.students,
+  teacher.students.$studentId, admin.index, admin.users.index,
+  admin.users.$id, admin.notifications}.tsx`.
+- Otros: `AuthProvider.tsx`, `ImpersonationBanner.tsx`, `Pricing.tsx`,
+  `checkout.$planId.tsx`, `login/forgot/reset/auth.callback`,
+  `bootstrap.ts`.
 
-### B9 — Comentarios/anotaciones en el board (opcional, quedó fuera de B1–B8)
-Hilos de comentarios anclados a una selección de texto en Tiptap (tipo Google Docs):
-- Nuevo modelo `BoardComment` (pageId, threadId, userId, body, resolved).
-- Marca en el editor con `Mark` custom que apunta al `threadId`.
-- Panel lateral con hilos, responder y resolver.
-- Broadcast por el mismo gateway con evento `page:comment`.
+# Plan de migración (por fases, cada una construye y typecheckea aislada)
 
-### Pequeñas mejoras transversales (nice-to-have)
-- **Rate limit** por usuario en endpoints sensibles (`/checkout`, `/notifications/read-all`).
-- **Salud pública**: `/health/full` que verifique DB + Redis + Resend + Wompi ping.
-- **Auditoría admin**: tabla `AdminAction` que registre impersonaciones, asignaciones manuales, cambios de payroll.
-- **SEO**: `sitemap.xml` y `robots.txt` en el storefront (hoy sólo hay metadatos por ruta).
-- **i18n mínimo**: el landing está en español fijo; extraer strings del shell para un futuro switch EN/ES.
+## Fase 1 · Cimientos (auth + query)
+- `AuthProvider`: dejar de cachear el usuario en `readDb`. Usar `usersApi.me()`
+  con `useQuery(['me'])`, refresh silencioso y `queryClient.clear()` en logout.
+- Borrar `hydrateFromBackend` (ya no necesario) y `clearLocalState`.
+- `login/signup/forgot/reset/auth.callback`: usar `authApi` directo.
+- Configurar `queryClient` con `staleTime` razonable y `refetchOnWindowFocus`.
 
-## Orden sugerido
+## Fase 2 · Rutas de estudiante
+- `app.index` → `classesApi.upcoming` + `learningApi.progress` + `surveysApi.pending`.
+- `app.calendar` → `classesApi.list` + mutaciones `confirm/reschedule/cancel`.
+- `app.learning` + `app.learning.$moduleId` → `learningApi.modules/module/progress`
+  con `saveLessonProgress` como mutation.
+- `app.checkpoint.$checkpointId` → `learningApi.checkpoint/submitCheckpoint`.
+- `app.subscribe` + `app.settings` + `checkout.$planId` → `plansApi.list`,
+  `subscriptionsApi.mine/cancel/resume`, `checkoutApi`, `usersApi.payments`,
+  `receiptsApi`.
 
-1. **D7** (mayor impacto para admin — usa datos que ya existen).
-2. **D8** (feature que suele pedir el negocio para contabilidad).
-3. **D9** (nice pero rápido y visible para estudiantes).
-4. **B9** solo si quieres cerrar el board 100 % estilo Docs.
-5. Mejoras transversales al final o intercaladas.
+## Fase 3 · Rutas de profesor
+- `teacher.index/schedule/students/students.$id` → `teachersApi.*` con
+  mutaciones para `addNote`, `myAvailability`, `validate`.
 
-## Preguntas
+## Fase 4 · Admin (y endpoints backend faltantes)
+- `admin.index` → `adminApi.metrics` (ya existe).
+- `admin.users.index/$id` → `adminApi.users/userDetail/createUser/updateUser/
+  setUserStatus/softDeleteUser/resetPassword/assignTeacher/impersonate`.
+- `admin.notifications` → `adminApi.notifications/runAutomations`.
+- Añadir en el backend los que faltan (si aparece alguno al migrar):
+  detalle histórico de progreso por lección, notas por alumno para admin,
+  audit log de impersonation.
 
-- ¿Sigo con D7 primero, o priorizas otra?
-- ¿Los recibos D8 deben tener número consecutivo tipo factura fiscal (DIAN) o basta con "recibo interno"? Asumo recibo interno para no meternos con facturación electrónica.
-- ¿PWA la quieres solo para Learning o también para el Board (offline con IndexedDB para Yjs)? Asumo solo Learning en D9.
+## Fase 5 · Impersonation sin localStorage
+- Mover el estado de impersonation a una cookie httpOnly firmada por el
+  backend (o al mismo access token con claim `imp: <targetId>`), leído por
+  `usersApi.me()`. `ImpersonationBanner` consume `me()`; `startImpersonation/
+  stopImpersonation` son endpoints ya existentes.
+
+## Fase 6 · Limpieza final
+- Borrar `lib/domain/repository.ts`, `seed.ts`, `notifications.ts`,
+  `survey.ts`, `admin.ts`, `admin-actions.ts`, `classes.ts` (mock),
+  `learning.ts` (mock), `subscriptions.ts` (mock), `app-settings.ts`,
+  `notification-templates.ts` (queda solo en el backend), `auth.ts` (mock).
+- Mantener SOLO `lib/domain/types.ts` (contratos compartidos) y
+  `lib/domain/plans.ts` si tiene helpers puros (`formatCop`).
+- Borrar `lib/api/bootstrap.ts` y todos los adapters.
+- Grep final: `rg "readDb|writeDb|localStorage|lib/domain/(repository|seed|notifications|survey|admin|admin-actions|classes|learning|subscriptions|app-settings|auth)"` → 0 resultados.
+- Verificación: build + typecheck de storefront y backend, y smoke E2E con
+  Playwright (login → dashboard → clase → learning → checkpoint → admin).
+
+# Detalles técnicos
+
+- Toda query define `queryKey` estable y `queryFn` que llama a `endpoints.ts`.
+  Ej.: `['classes', 'upcoming']`, `['learning', 'module', id]`,
+  `['admin', 'users', q]`. Cada mutación invalida su(s) key(s) padre.
+- Errores: `ApiError` de `client.ts` se muestra en toasts (`use-toast`).
+- Loading: `Skeleton` de shadcn en cada `isPending`.
+- SSR: los loaders siguen ligeros; usamos `ensureQueryData` cuando la ruta
+  necesita datos antes de pintar (login-gated → ya está bajo `_authenticated`,
+  seguro para llamar).
+- Cookies: el refresh token ya vive en cookie httpOnly, el access token en
+  memoria. No queda nada persistido en cliente.
+
+# Alcance / preguntas
+
+Es un refactor grande (~35 archivos tocados, ~10 borrados). Puedo hacerlo
+todo de una sola tirada o entregarlo por fases con build verde en cada una.
+Si prefieres, arranco por Fase 1+2 (auth + estudiante) que es lo que más ve
+el usuario final, y sigo con profesor/admin después.

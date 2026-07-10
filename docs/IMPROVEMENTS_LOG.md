@@ -1,5 +1,15 @@
 ## Round 5 — Checkout Wompi, Onboarding + horarios, Nómina real
 
+## Round 8 — Board colaborativo B3+B4+B6+B7
+
+- **B3 rich editor**: Tiptap con tablas redimensionables, imágenes (upload firmado a S3 vía `POST /boards/:id/uploads/sign`), links, alineación, subrayado, color de texto, resaltado, task lists.
+- **B4 drawing**: Capa SVG superpuesta por página con `perfect-freehand`. Trazos persisten en `Y.Array('strokes')` (mismo Y.Doc que el editor → sincronía tiempo real por el mismo canal). Paleta flotante, tamaños, undo por autor, borrar todo.
+- **B6 snapshots**: `BoardService.snapshotPage` colapsa `yjsState + ops` en un único update y purga ops persistidos cada 50 ops (async, no bloquea al usuario).
+- **B7 invitaciones**: `POST /boards/:id/invite-by-email` + `InviteDialog` que resuelve email → userId y agrega miembro (editor/viewer). Solo owner.
+- Backend: `StorageModule` importado en `BoardModule`; `yjs` agregado como dep server-side.
+- Frontend: 14 nuevas extensiones Tiptap + `perfect-freehand`. Nuevos archivos: `components/board/DrawLayer.tsx`, `components/board/InviteDialog.tsx`, `lib/board/useDrawLayer.ts`.
+
+
 ## Round 6 — NPS por reglas, Wompi Web Checkout real, TRM Superfinanciera
 
 ### D1 (hecho)

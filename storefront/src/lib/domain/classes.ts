@@ -10,6 +10,7 @@
  */
 import type { ClassNote, ClassSession, User } from "./types";
 import { readDb, writeDb, uid } from "./repository";
+import { classesApi, teachersApi } from "@/lib/api/endpoints";
 
 export const RESCHEDULE_LOCK_HOURS = 12;
 
@@ -49,48 +50,67 @@ export function canModify(c: ClassSession): boolean {
   return hoursAhead >= RESCHEDULE_LOCK_HOURS;
 }
 
-export function cancelClass(id: string): { ok: boolean; reason?: string } {
+export async function cancelClass(id: string): Promise<{ ok: boolean; reason?: string }> {
   const c = table()[id];
-  if (!c) return { ok: false, reason: "Clase no encontrada." };
-  if (!canModify(c))
+  if (c && !canModify(c)) {
     return {
       ok: false,
       reason: `No puedes cancelar con menos de ${RESCHEDULE_LOCK_HOURS}h de anticipación.`,
     };
-  writeDb((db) => {
-    (db.classes as Record<string, ClassSession>)[id] = { ...c, status: "canceled" };
-  });
-  return { ok: true };
+  }
+  try {
+    const updated = await classesApi.cancel(id);
+    writeDb((db) => {
+      (db.classes as Record<string, ClassSession>)[id] = { ...(c ?? updated), status: "canceled" };
+    });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message };
+  }
 }
 
-export function rescheduleClass(
+export async function rescheduleClass(
   id: string,
   newStartIso: string,
-): { ok: boolean; reason?: string } {
+): Promise<{ ok: boolean; reason?: string }> {
   const c = table()[id];
-  if (!c) return { ok: false, reason: "Clase no encontrada." };
-  if (!canModify(c))
+  if (c && !canModify(c)) {
     return {
       ok: false,
       reason: `No puedes reprogramar con menos de ${RESCHEDULE_LOCK_HOURS}h de anticipación.`,
     };
-  writeDb((db) => {
-    (db.classes as Record<string, ClassSession>)[id] = { ...c, startsAt: newStartIso };
-  });
-  return { ok: true };
+  }
+  const durationMin = c?.durationMin ?? 50;
+  const endIso = new Date(new Date(newStartIso).getTime() + durationMin * 60_000).toISOString();
+  try {
+    await classesApi.reschedule(id, newStartIso, endIso);
+    writeDb((db) => {
+      const cur = (db.classes as Record<string, ClassSession>)[id];
+      if (cur) (db.classes as Record<string, ClassSession>)[id] = { ...cur, startsAt: newStartIso };
+    });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message };
+  }
 }
 
-export function confirmAttendance(id: string): { ok: boolean; reason?: string } {
-  const c = table()[id];
-  if (!c) return { ok: false, reason: "Clase no encontrada." };
-  writeDb((db) => {
-    (db.classes as Record<string, ClassSession>)[id] = {
-      ...c,
-      status: "completed",
-      studentConfirmedAt: new Date().toISOString(),
-    };
-  });
-  return { ok: true };
+export async function confirmAttendance(id: string): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    await classesApi.confirm(id);
+    writeDb((db) => {
+      const cur = (db.classes as Record<string, ClassSession>)[id];
+      if (cur) {
+        (db.classes as Record<string, ClassSession>)[id] = {
+          ...cur,
+          status: "completed",
+          studentConfirmedAt: new Date().toISOString(),
+        };
+      }
+    });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message };
+  }
 }
 
 // ===========================================================================
@@ -118,20 +138,30 @@ export function teacherUpcoming(teacherId: string): ClassSession[] {
 }
 
 /** Cross-check del profesor sobre la asistencia del estudiante. */
-export function teacherValidateAttendance(
+export async function teacherValidateAttendance(
   id: string,
   attended: boolean,
-): { ok: boolean; reason?: string } {
-  const c = table()[id];
-  if (!c) return { ok: false, reason: "Clase no encontrada." };
-  writeDb((db) => {
-    (db.classes as Record<string, ClassSession>)[id] = {
-      ...c,
-      status: attended ? "completed" : "missed",
-      teacherValidatedAt: new Date().toISOString(),
-    };
-  });
-  return { ok: true };
+): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    if (attended) {
+      await classesApi.validate(id);
+    } else {
+      await classesApi.cancel(id, "no_show");
+    }
+    writeDb((db) => {
+      const cur = (db.classes as Record<string, ClassSession>)[id];
+      if (cur) {
+        (db.classes as Record<string, ClassSession>)[id] = {
+          ...cur,
+          status: attended ? "completed" : "missed",
+          teacherValidatedAt: new Date().toISOString(),
+        };
+      }
+    });
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: (e as Error).message };
+  }
 }
 
 /** Estudiantes únicos asignados a un profesor (derivado de las clases). */
@@ -183,21 +213,23 @@ export function listNotesForStudent(studentId: string, teacherId?: string): Clas
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export function addClassNote(input: {
+export async function addClassNote(input: {
   teacherId: string;
   studentId: string;
   classId?: string;
   body: string;
   rating?: number;
-}): ClassNote {
+}): Promise<ClassNote> {
+  if (!input.classId) throw new Error("Se requiere una clase para asociar la nota.");
+  const saved = await teachersApi.addNote(input.classId, input.rating ?? 3, input.body.trim());
   const note: ClassNote = {
-    id: uid("note"),
+    id: saved?.id ?? uid("note"),
     teacherId: input.teacherId,
     studentId: input.studentId,
     classId: input.classId,
     body: input.body.trim(),
     rating: input.rating,
-    createdAt: new Date().toISOString(),
+    createdAt: saved?.createdAt ?? new Date().toISOString(),
   };
   writeDb((db) => {
     (db.classNotes as Record<string, ClassNote>)[note.id] = note;
@@ -205,38 +237,7 @@ export function addClassNote(input: {
   return note;
 }
 
-/** Crea clases de ejemplo si el estudiante demo todavía no tiene. */
-export function ensureDemoClasses(studentId: string, teacherId: string, teacherName: string) {
-  const existing = listClassesFor(studentId);
-  if (existing.length > 0) return;
-  const today = new Date();
-  today.setHours(19, 0, 0, 0);
-  const offsets = [-2, -1, 0, 1, 3, 5]; // days from today
-  writeDb((db) => {
-    const t = db.classes as Record<string, ClassSession>;
-    for (const d of offsets) {
-      const date = new Date(today);
-      date.setDate(date.getDate() + d);
-      const id = uid("cls");
-      const status: ClassSession["status"] =
-        d < 0 ? "completed" : d === 0 ? "scheduled" : "scheduled";
-      t[id] = {
-        id,
-        studentId,
-        teacherId,
-        teacherName,
-        startsAt: date.toISOString(),
-        durationMin: 50,
-        status,
-        topic:
-          d <= 0
-            ? "Past tenses warm-up"
-            : d === 1
-              ? "Restaurant role-play"
-              : "Business small talk",
-        meetingUrl: "https://meet.google.com/abc-defg-hij",
-        studentConfirmedAt: d < 0 ? date.toISOString() : undefined,
-      };
-    }
-  });
+/** @deprecated los datos de clases vienen del backend; helper conservado como no-op. */
+export function ensureDemoClasses(_studentId: string, _teacherId: string, _teacherName: string) {
+  /* no-op — no seed demo data */
 }

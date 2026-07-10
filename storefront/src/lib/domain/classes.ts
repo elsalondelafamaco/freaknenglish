@@ -11,6 +11,7 @@
 import type { ClassNote, ClassSession, User } from "./types";
 import { readDb, writeDb, uid } from "./repository";
 import { classesApi, teachersApi } from "@/lib/api/endpoints";
+import { refreshFromBackend } from "@/lib/api/bootstrap";
 
 export const RESCHEDULE_LOCK_HOURS = 12;
 
@@ -63,6 +64,7 @@ export async function cancelClass(id: string): Promise<{ ok: boolean; reason?: s
     writeDb((db) => {
       (db.classes as Record<string, ClassSession>)[id] = { ...(c ?? updated), status: "canceled" };
     });
+    refreshFromBackend();
     return { ok: true };
   } catch (e) {
     return { ok: false, reason: (e as Error).message };
@@ -88,6 +90,7 @@ export async function rescheduleClass(
       const cur = (db.classes as Record<string, ClassSession>)[id];
       if (cur) (db.classes as Record<string, ClassSession>)[id] = { ...cur, startsAt: newStartIso };
     });
+    refreshFromBackend();
     return { ok: true };
   } catch (e) {
     return { ok: false, reason: (e as Error).message };
@@ -107,6 +110,7 @@ export async function confirmAttendance(id: string): Promise<{ ok: boolean; reas
         };
       }
     });
+    refreshFromBackend();
     return { ok: true };
   } catch (e) {
     return { ok: false, reason: (e as Error).message };

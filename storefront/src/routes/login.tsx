@@ -12,49 +12,6 @@ import {
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { authService } from "@/lib/domain/auth";
 
-function DemoCredentials({
-  onPick,
-}: {
-  onPick: (email: string, password: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const accounts = [
-    { label: "Estudiante", email: "estudiante@freakn.dev", password: "Freakn123!" },
-    { label: "Profesor", email: "profe@freakn.dev", password: "Freakn123!" },
-    { label: "Administrador", email: "admin@freakn.dev", password: "Freakn123!" },
-  ];
-  return (
-    <div className="mb-5 text-xs">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="text-brand-ink/55 transition-colors hover:text-brand-ink"
-      >
-        {open ? "Ocultar" : "Ver"} cuentas de prueba
-      </button>
-      {open ? (
-        <div className="mt-2 rounded-xl border border-brand-line bg-brand-cream/40 p-3">
-          <p className="text-brand-ink/70">
-            Selecciona una cuenta para autocompletar el formulario.
-          </p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {accounts.map((a) => (
-              <button
-                key={a.email}
-                type="button"
-                onClick={() => onPick(a.email, a.password)}
-                className="rounded-full border border-brand-line bg-white px-2.5 py-1 font-medium text-brand-ink transition-all hover:border-brand-ink hover:bg-brand-ink hover:text-white"
-              >
-                {a.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 const searchSchema = z.object({ redirect: z.string().optional() });
 
 export const Route = createFileRoute("/login")({
@@ -118,7 +75,6 @@ function LoginPage() {
         </>
       }
     >
-      <DemoCredentials onPick={(e, p) => { setEmail(e); setPassword(p); }} />
       <GoogleButton onClick={onGoogle} disabled={busy} label="Continuar con Google" />
       <Divider>o</Divider>
       <form onSubmit={onSubmit} className="flex flex-col gap-4">

@@ -35,20 +35,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Si hay refresh-cookie del backend, restaura la sesión.
+      // Si hay refresh-cookie del backend, restaura la sesión en memoria.
       const restored = await tryRestoreSession();
       if (cancelled) return;
       setUser(restored ?? authService.getCurrentUser());
       setLoading(false);
     })();
-    if (typeof window === "undefined") return () => { cancelled = true; };
-    const onStorage = (e: StorageEvent) => {
-      if (!e.key || e.key.startsWith("freakn.")) refresh();
-    };
-    window.addEventListener("storage", onStorage);
     return () => {
       cancelled = true;
-      window.removeEventListener("storage", onStorage);
     };
   }, [refresh]);
 

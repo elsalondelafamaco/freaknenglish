@@ -51,17 +51,28 @@ function TeacherStudentDetail() {
     );
   }
 
-  function saveNote() {
+  async function saveNote() {
     if (!body.trim()) return;
-    addClassNote({
-      teacherId,
-      studentId,
-      body,
-      rating: rating ?? undefined,
-    });
-    setBody("");
-    setRating(null);
-    setTick((v) => v + 1);
+    // Nota se asocia a la próxima/última clase disponible del alumno con este profesor.
+    const anyClass = classes[0];
+    if (!anyClass) {
+      alert("Aún no hay clases con este alumno para asociar la nota.");
+      return;
+    }
+    try {
+      await addClassNote({
+        teacherId,
+        studentId,
+        classId: anyClass.id,
+        body,
+        rating: rating ?? undefined,
+      });
+      setBody("");
+      setRating(null);
+      setTick((v) => v + 1);
+    } catch (e) {
+      alert((e as Error).message);
+    }
   }
 
   const completed = classes.filter((c) => c.status === "completed").length;

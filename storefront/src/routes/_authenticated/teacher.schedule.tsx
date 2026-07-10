@@ -89,8 +89,8 @@ function TeacherSchedule() {
                     {c.status === "scheduled" || c.studentConfirmedAt ? (
                       <>
                         <button
-                          onClick={() => {
-                            teacherValidateAttendance(c.id, true);
+                          onClick={async () => {
+                            await teacherValidateAttendance(c.id, true);
                             setTick((v) => v + 1);
                           }}
                           className="rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40"
@@ -98,8 +98,8 @@ function TeacherSchedule() {
                           Validar
                         </button>
                         <button
-                          onClick={() => {
-                            teacherValidateAttendance(c.id, false);
+                          onClick={async () => {
+                            await teacherValidateAttendance(c.id, false);
                             setTick((v) => v + 1);
                           }}
                           className="rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"

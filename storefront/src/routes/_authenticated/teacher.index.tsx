@@ -118,8 +118,8 @@ function TeacherHome() {
                     </a>
                   ) : null}
                   <button
-                    onClick={() => {
-                      teacherValidateAttendance(c.id, true);
+                    onClick={async () => {
+                      await teacherValidateAttendance(c.id, true);
                       refresh();
                     }}
                     className="inline-flex items-center gap-1.5 rounded-full border border-brand-line bg-white px-4 py-2 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40"
@@ -127,8 +127,8 @@ function TeacherHome() {
                     <CheckCircle2 className="size-3.5" /> Validar asistencia
                   </button>
                   <button
-                    onClick={() => {
-                      teacherValidateAttendance(c.id, false);
+                    onClick={async () => {
+                      await teacherValidateAttendance(c.id, false);
                       refresh();
                     }}
                     className="inline-flex items-center gap-1.5 rounded-full border border-brand-line bg-white px-4 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"

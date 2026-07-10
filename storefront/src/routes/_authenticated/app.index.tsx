@@ -123,8 +123,8 @@ function DashboardPage() {
                 </a>
               ) : null}
               <button
-                onClick={() => {
-                  confirmAttendance(data.today!.id);
+                onClick={async () => {
+                  await confirmAttendance(data.today!.id);
                   refresh();
                 }}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-brand-ink/20 bg-white px-5 text-sm font-semibold text-brand-ink hover:bg-white/80"

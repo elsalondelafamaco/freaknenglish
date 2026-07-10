@@ -1,13 +1,14 @@
 /**
- * Repositorio en memoria + persistencia `localStorage`.
+ * Caché en memoria de la sesión actual.
  *
- * **Solo para mock/desarrollo.** En producción cada repo será reemplazado por
- * un repositorio Postgres (Drizzle/Prisma) detrás de la misma interfaz.
+ * La fuente de verdad es el backend NestJS. Este módulo mantiene una copia
+ * en memoria (sin `localStorage`, sin persistencia entre sesiones) que se
+ * rellena tras el login vía `hydrateFromBackend` y se limpia en logout.
+ *
+ * Las mutaciones deben hacerse contra `endpoints.ts`; los helpers que
+ * escriben aquí sólo mantienen la caché en memoria coherente hasta que la
+ * ruta correspondiente invalide/refresque sus queries.
  */
-
-const STORAGE_KEY = "freakn.db.v1";
-
-import { seedDemoData } from "./seed";
 
 export interface DbShape {
   users: Record<string, unknown>;
@@ -43,50 +44,19 @@ const emptyDb = (): DbShape => ({
   meta: { passwordsByEmail: {} },
 });
 
-const isBrowser = () => typeof window !== "undefined" && typeof localStorage !== "undefined";
-
-let cache: DbShape | null = null;
+let cache: DbShape = emptyDb();
 
 export function readDb(): DbShape {
-  if (cache) return cache;
-  if (!isBrowser()) {
-    cache = emptyDb();
-    return cache;
-  }
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    cache = raw ? { ...emptyDb(), ...(JSON.parse(raw) as DbShape) } : emptyDb();
-  } catch {
-    cache = emptyDb();
-  }
-  // Seed idempotente: añade usuarios demo si faltan.
-  seedDemoData(cache);
-  if (isBrowser()) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
-    } catch {
-      /* ignore */
-    }
-  }
   return cache;
 }
 
 export function writeDb(update: (db: DbShape) => void): DbShape {
-  const db = readDb();
-  update(db);
-  if (isBrowser()) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-    } catch {
-      /* ignore */
-    }
-  }
-  return db;
+  update(cache);
+  return cache;
 }
 
 export function resetDb() {
   cache = emptyDb();
-  if (isBrowser()) localStorage.removeItem(STORAGE_KEY);
 }
 
 export function uid(prefix = "id"): string {

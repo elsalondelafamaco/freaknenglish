@@ -9,6 +9,12 @@
 - Backend: `StorageModule` importado en `BoardModule`; `yjs` agregado como dep server-side.
 - Frontend: 14 nuevas extensiones Tiptap + `perfect-freehand`. Nuevos archivos: `components/board/DrawLayer.tsx`, `components/board/InviteDialog.tsx`, `lib/board/useDrawLayer.ts`.
 
+### B8 (cierre board)
+- Migración `board_page_versions` + modelo Prisma `BoardPageVersion`.
+- `BoardService.saveVersion` (fuerza snapshot y persiste bytes Yjs), `listVersions`, `restoreVersion` (reemplaza `yjsState` y purga ops → próximos joins reciben el snapshot restaurado).
+- Endpoints REST: `GET/POST /boards/pages/:pageId/versions`, `POST /boards/versions/:versionId/restore`.
+- UI `VersionHistory` (guardar con etiqueta, listar, restaurar con confirmación + reload) y export/print en la toolbar del editor: descarga Markdown convertida desde HTML (`lib/board/exportPage.ts`) y `window.print()` para PDF nativo del navegador.
+
 
 ## Round 6 — NPS por reglas, Wompi Web Checkout real, TRM Superfinanciera
 

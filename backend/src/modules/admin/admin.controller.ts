@@ -18,6 +18,13 @@ export class AdminController {
   @Get('analytics')
   analytics() { return this.svc.analytics() }
 
+  /** @endpoint GET /api/v1/admin/metrics?range=30 */
+  @Get('metrics')
+  metrics(@Query('range') range?: string) {
+    const n = range ? Number(range.replace(/[^0-9]/g, '')) : 30
+    return this.svc.metrics(Number.isFinite(n) && n > 0 ? n : 30)
+  }
+
   /** @endpoint GET /api/v1/admin/users?q=foo */
   @Get('users')
   users(@Query('q') q?: string) { return this.svc.users(q) }

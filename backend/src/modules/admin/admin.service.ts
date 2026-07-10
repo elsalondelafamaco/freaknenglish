@@ -108,13 +108,13 @@ export class AdminService {
     // Churn: subs canceladas en el rango / activas al inicio del rango
     const [cancelledInRange, activeAtStart] = await Promise.all([
       this.prisma.subscription.count({
-        where: { status: 'cancelled', updatedAt: { gte: from, lte: to } },
+        where: { status: 'canceled', updatedAt: { gte: from, lte: to } },
       }),
       this.prisma.subscription.count({
         where: {
           OR: [
             { status: 'active', createdAt: { lte: from } },
-            { status: 'cancelled', updatedAt: { gt: from } },
+            { status: 'canceled', updatedAt: { gt: from } },
           ],
         },
       }),

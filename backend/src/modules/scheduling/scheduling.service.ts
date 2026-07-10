@@ -103,6 +103,7 @@ export class SchedulingService {
         onboardedAt: user.onboardedAt ?? new Date(),
       },
     })
+    if (match) await this.notifyTeacherAssigned(userId, match.id, 'onboarding')
 
     return {
       status,

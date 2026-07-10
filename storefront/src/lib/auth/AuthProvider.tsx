@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { authService, tryRestoreSession, reloadCurrentUser } from "@/lib/domain/auth";
+import { hydrateFromBackend } from "@/lib/api/bootstrap";
 import type { AppRole, User } from "@/lib/domain/types";
 
 export interface AuthContextValue {
@@ -45,6 +46,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [refresh]);
+
+  // Mantén el cache en memoria fresco contra el backend:
+  //  - cuando la pestaña vuelve a estar visible
+  //  - cada 60s mientras la pestaña esté visible
+  // Así las mutaciones hechas desde otra pestaña / otro usuario / cron
+  // se reflejan sin necesidad de re-login.
+  useEffect(() => {
+    if (!user) return;
+    const role = user.roles[0] ?? "student";
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const tick = async () => {
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      const fresh = await hydrateFromBackend(role);
+      if (fresh) setUser(fresh);
+    };
+    const onVisible = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") tick();
+    };
+    timer = setInterval(tick, 60_000);
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisible);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVisible);
+      }
+    };
+  }, [user?.id, user?.roles.join(",")]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

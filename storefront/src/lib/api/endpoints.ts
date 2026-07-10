@@ -39,6 +39,30 @@ export type InAppNotification = {
   readAt: string | null;
   createdAt: string;
 };
+
+// ─── Admin metrics (D7) ───────────────────────────────────────────────
+export type AdminMetrics = {
+  range: { from: string; to: string; days: number };
+  mrrCop: number;
+  arrCop: number;
+  activeSubscriptions: number;
+  totalStudents: number;
+  churnRate: number;
+  attendanceRate: number;
+  nps: number;
+  surveys: number;
+  revenueCop: number;
+  revenueSeries: Array<{ date: string; cents: number }>;
+  classesSeries: Array<{ date: string; count: number }>;
+  topTeachers: Array<{ id: string; fullName: string; validatedClasses: number; hours: number }>;
+  cohorts: Array<{ cohort: string; size: number; retention: number[] }>;
+};
+
+// ─── Payment receipts (D8) ────────────────────────────────────────────
+export const receiptsApi = {
+  downloadUrl: (intentId: string) => `/me/payments/${intentId}/receipt.pdf`,
+};
+
 export const notificationsApi = {
   list: (opts: { unread?: boolean; limit?: number } = {}) =>
     apiGet<InAppNotification[]>("/notifications", {

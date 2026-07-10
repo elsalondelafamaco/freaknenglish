@@ -1,7 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Download } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { getActiveSubscription } from "@/lib/domain/subscriptions";
 import { PLANS } from "@/lib/domain/plans";
+import { usersApi, receiptsApi } from "@/lib/api/endpoints";
+import { apiGetBlob } from "@/lib/api/client";
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
   head: () => ({ meta: [{ title: "Configuración — Freakn English" }] }),
@@ -13,6 +17,27 @@ function SettingsPage() {
   if (!user) return null;
   const sub = getActiveSubscription(user.id);
   const plan = sub ? PLANS.find((p) => p.id === sub.planId) : null;
+  const paymentsQ = useQuery({
+    queryKey: ["me", "payments"],
+    queryFn: () => usersApi.payments(),
+  });
+
+  async function downloadReceipt(intentId: string) {
+    try {
+      const blob = await apiGetBlob(receiptsApi.downloadUrl(intentId));
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `recibo-${intentId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert("No se pudo descargar el recibo.");
+    }
+  }
 
   return (
     <div className="flex flex-col gap-8">
@@ -60,6 +85,42 @@ function SettingsPage() {
           </dl>
         ) : (
           <p className="mt-3 text-sm text-brand-ink/65">No tienes suscripción activa.</p>
+        )}
+      </section>
+
+      <section className="rounded-3xl border border-brand-line bg-white p-6 md:p-8">
+        <h2 className="text-lg font-bold text-brand-ink">Historial de pagos</h2>
+        {paymentsQ.isLoading ? (
+          <p className="mt-3 text-sm text-brand-ink/60">Cargando…</p>
+        ) : (paymentsQ.data?.length ?? 0) === 0 ? (
+          <p className="mt-3 text-sm text-brand-ink/65">Todavía no tienes pagos registrados.</p>
+        ) : (
+          <ul className="mt-4 divide-y divide-brand-line">
+            {paymentsQ.data!.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div>
+                  <div className="text-sm font-semibold text-brand-ink">
+                    {p.planName ?? p.planId} ·{" "}
+                    <span className="font-normal text-brand-ink/70">
+                      {new Intl.NumberFormat("es-CO", { style: "currency", currency: p.currency, maximumFractionDigits: 0 }).format(p.amountInCents / 100)}
+                    </span>
+                  </div>
+                  <div className="text-xs text-brand-ink/55">
+                    {new Date(p.createdAt).toLocaleString("es-CO")} · Ref {p.reference} ·{" "}
+                    <span className={p.status === "APPROVED" ? "text-green-700" : "text-brand-ink/70"}>{p.status}</span>
+                  </div>
+                </div>
+                {p.status === "APPROVED" ? (
+                  <button
+                    onClick={() => downloadReceipt(p.id)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-brand-ink/20 px-3 py-1.5 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40"
+                  >
+                    <Download className="size-3.5" /> Recibo PDF
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

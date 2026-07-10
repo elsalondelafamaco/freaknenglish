@@ -203,6 +203,7 @@ export const adminApi = {
     attendanceRate: number;
     byPlan: Array<{ planId: string; active: number }>;
   }>("/admin/analytics"),
+  metrics: (rangeDays = 30) => apiGet<AdminMetrics>("/admin/metrics", { range: String(rangeDays) }),
   users: (q?: string) => apiGet<User[]>("/admin/users", q ? { q } : undefined),
   userDetail: (id: string) => apiGet<any>(`/admin/users/${id}`),
   payroll: (period: string) =>

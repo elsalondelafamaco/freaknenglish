@@ -13,6 +13,7 @@
 import type { AppRole, User, EnglishLevel } from "./types";
 import { readDb, writeDb } from "./repository";
 import { reloadCurrentUser } from "./auth";
+import { adminApi } from "@/lib/api/endpoints";
 
 export interface CreateUserInput {
   fullName: string;
@@ -21,25 +22,16 @@ export interface CreateUserInput {
   level?: EnglishLevel;
 }
 
-export function createUserByAdmin(input: CreateUserInput): User {
-  const email = input.email.trim().toLowerCase();
-  const db = readDb();
-  const users = db.users as Record<string, User>;
-  const existing = Object.values(users).find((u) => u.email === email);
-  if (existing && !existing.deletedAt) throw new Error("Ya existe un usuario con ese email.");
-  const id = `usr_${Math.random().toString(36).slice(2, 10)}`;
-  const user: User = {
-    id,
-    email,
+export async function createUserByAdmin(input: CreateUserInput): Promise<User> {
+  const r = await adminApi.createUser({
+    email: input.email.trim().toLowerCase(),
     fullName: input.fullName.trim(),
-    roles: [input.role],
-    level: input.role === "student" ? (input.level ?? "beginner") : undefined,
-    createdAt: new Date().toISOString(),
-  };
+    role: input.role,
+    level: input.level,
+  });
+  const user = r.user;
   writeDb((d) => {
-    (d.users as Record<string, User>)[id] = user;
-    // Password temporal; en backend se envía email para que el usuario la setee.
-    d.meta.passwordsByEmail[email] = "Freakn123!";
+    (d.users as Record<string, User>)[user.id] = user;
   });
   return user;
 }
@@ -153,10 +145,11 @@ export function listAssignedStudents(teacherId: string): User[] {
   );
 }
 
-// ─── Impersonación ───────────────────────────────────────────────────────
-
-const IMPERSONATION_KEY = "freakn.impersonation.v1";
-const SAVED_ADMIN_KEY = "freakn.me.original.v1";
+// ─── Impersonación (estado en memoria) ─────────────────────────────────
+//
+// El backend firma un nuevo access token con claim `actAs` cuando se llama a
+// `POST /admin/users/:id/impersonate`. Aquí solo guardamos el estado en
+// memoria para el banner y el flujo de "salir". Sin `localStorage`.
 
 interface ImpersonationState {
   adminId: string;
@@ -164,55 +157,31 @@ interface ImpersonationState {
   startedAt: string;
 }
 
+let impersonationState: ImpersonationState | null = null;
+const impersonationListeners = new Set<() => void>();
+
 export function getImpersonation(): ImpersonationState | null {
-  if (typeof localStorage === "undefined") return null;
-  const raw = localStorage.getItem(IMPERSONATION_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as ImpersonationState;
-  } catch {
-    return null;
-  }
+  return impersonationState;
 }
 
-/**
- * Inicia impersonación. Guarda el id del admin original y reemplaza `me`
- * por el usuario destino. El AuthProvider lo refresca al volver a la app.
- */
+export function onImpersonationChange(cb: () => void): () => void {
+  impersonationListeners.add(cb);
+  return () => impersonationListeners.delete(cb);
+}
+
+function notify() {
+  for (const l of impersonationListeners) l();
+}
+
 export function startImpersonation(adminId: string, targetId: string) {
-  if (typeof localStorage === "undefined") return;
-  const state: ImpersonationState = {
-    adminId,
-    targetId,
-    startedAt: new Date().toISOString(),
-  };
-  localStorage.setItem(IMPERSONATION_KEY, JSON.stringify(state));
-  localStorage.setItem(SAVED_ADMIN_KEY, adminId);
-  localStorage.setItem("freakn.me.v2", targetId);
-  reloadCurrentUser();
-  try {
-    window.dispatchEvent(
-      new StorageEvent("storage", { key: "freakn.me.v2", newValue: targetId }),
-    );
-  } catch {
-    /* no-op */
-  }
+  impersonationState = { adminId, targetId, startedAt: new Date().toISOString() };
+  notify();
 }
 
-/** Finaliza impersonación y restaura al admin original. */
+/** Cierra impersonación local. El caller debe pedir refresh de sesión al backend. */
 export function stopImpersonation(): string | null {
-  if (typeof localStorage === "undefined") return null;
-  const adminId = localStorage.getItem(SAVED_ADMIN_KEY);
-  localStorage.removeItem(IMPERSONATION_KEY);
-  localStorage.removeItem(SAVED_ADMIN_KEY);
-  if (adminId) localStorage.setItem("freakn.me.v2", adminId);
-  reloadCurrentUser();
-  try {
-    window.dispatchEvent(
-      new StorageEvent("storage", { key: "freakn.me.v2", newValue: adminId }),
-    );
-  } catch {
-    /* no-op */
-  }
+  const adminId = impersonationState?.adminId ?? null;
+  impersonationState = null;
+  notify();
   return adminId;
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -12,23 +13,18 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import {
-  getModule,
   isLessonComplete,
   markLessonComplete,
   moduleProgress,
   unmarkLesson,
 } from "@/lib/domain/learning";
+import { learningApi } from "@/lib/api/endpoints";
 import type { LearningModule, Lesson, LessonKind } from "@/lib/domain/types";
 
 export const Route = createFileRoute("/_authenticated/app/learning/$moduleId")({
   head: ({ params }) => ({
     meta: [{ title: `Módulo ${params.moduleId} — Freakn English` }],
   }),
-  loader: ({ params }): { mod: LearningModule } => {
-    const mod = getModule(params.moduleId);
-    if (!mod) throw notFound();
-    return { mod };
-  },
   component: ModuleDetail,
 });
 
@@ -41,15 +37,23 @@ const KIND_ICON: Record<LessonKind, typeof PlayCircle> = {
 };
 
 function ModuleDetail() {
-  const { mod } = Route.useLoaderData() as { mod: LearningModule };
+  const { moduleId } = Route.useParams();
   const { user } = useAuth();
-  const [activeId, setActiveId] = useState<string>(mod.lessons[0]?.id ?? "");
+  const modQ = useQuery({
+    queryKey: ["learning", "module", moduleId],
+    queryFn: () => learningApi.module(moduleId),
+  });
+  const mod = modQ.data as LearningModule | undefined;
+  const [activeId, setActiveId] = useState<string>("");
   const [tick, setTick] = useState(0);
   const refresh = () => setTick((t) => t + 1);
 
   if (!user) return null;
+  if (modQ.isLoading) return <p className="text-sm text-brand-ink/60">Cargando módulo…</p>;
+  if (!mod) return <p className="text-sm text-brand-ink/60">Módulo no encontrado.</p>;
+  const currentActiveId = activeId || mod.lessons[0]?.id || "";
 
-  const active: Lesson | undefined = mod.lessons.find((l) => l.id === activeId);
+  const active: Lesson | undefined = mod.lessons.find((l) => l.id === currentActiveId);
   const prog = moduleProgress(user.id, mod);
   // re-read on tick (no-op, but forces use)
   void tick;
@@ -134,7 +138,7 @@ function ModuleDetail() {
             {mod.lessons.map((l) => {
               const Icon = KIND_ICON[l.kind];
               const done = isLessonComplete(user.id, l.id);
-              const isActive = l.id === activeId;
+              const isActive = l.id === currentActiveId;
               return (
                 <li key={l.id}>
                   <button

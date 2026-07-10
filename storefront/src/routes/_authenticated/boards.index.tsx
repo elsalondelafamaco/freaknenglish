@@ -27,7 +27,16 @@ function BoardsIndex() {
       toast.success("Board creado");
       nav({ to: "/boards/$boardId", params: { boardId: b.id } });
     },
-    onError: (e: any) => toast.error(e?.message ?? "Error"),
+    onError: (e: any) => {
+      console.error("[boards.create]", e);
+      toast.error(
+        e?.status === 401
+          ? "Sesión expirada. Vuelve a iniciar sesión."
+          : e?.message?.includes("Failed to fetch")
+            ? "No se pudo conectar al backend. Verifica que esté corriendo."
+            : e?.message ?? "No se pudo crear el board",
+      );
+    },
   });
 
   return (

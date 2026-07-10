@@ -6,14 +6,25 @@ export class TeachersService {
   constructor(private prisma: PrismaService) {}
 
   async students(teacherId: string) {
+    // Incluye estudiantes explícitamente asignados (aún sin clases) Y
+    // estudiantes con historial de clases con este profesor.
     const classes = await this.prisma.class.findMany({
       where: { teacherId },
       select: { studentId: true },
       distinct: ['studentId'],
     })
+    const classStudentIds = classes.map((c) => c.studentId)
     return this.prisma.user.findMany({
-      where: { id: { in: classes.map((c) => c.studentId) } },
+      where: {
+        deletedAt: null,
+        role: 'student',
+        OR: [
+          { assignedTeacherId: teacherId },
+          ...(classStudentIds.length ? [{ id: { in: classStudentIds } }] : []),
+        ],
+      },
       include: { _count: { select: { classesAsStudent: true } } },
+      orderBy: { fullName: 'asc' },
     })
   }
 

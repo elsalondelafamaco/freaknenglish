@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
+import { NotificationsService } from '../notifications/notifications.service'
 
 /**
  * Bloques semanales de horario del estudiante.
@@ -18,7 +19,27 @@ function isHourInRange(hour: number, startsAt: string, endsAt: string) {
 
 @Injectable()
 export class SchedulingService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private notifications: NotificationsService) {}
+
+  private async notifyTeacherAssigned(studentId: string, teacherId: string, dedupeSuffix: string) {
+    const [student, teacher] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: studentId } }),
+      this.prisma.user.findUnique({ where: { id: teacherId } }),
+    ])
+    if (!student || !teacher) return
+    await this.notifications.enqueue({
+      userId: student.id,
+      toEmail: student.email,
+      template: 'teacher_assigned',
+      subject: 'Tienes un nuevo profesor',
+      dedupeKey: `teacher-assigned:${student.id}:${teacher.id}:${dedupeSuffix}`,
+      vars: { teacherName: teacher.fullName },
+      type: 'teacher',
+      title: 'Nuevo profesor asignado',
+      body: teacher.fullName,
+      linkUrl: '/app',
+    })
+  }
 
   /**
    * Grilla 7×24 (weekday × hour) → cantidad de profesores con disponibilidad.
@@ -126,10 +147,12 @@ export class SchedulingService {
   async assignRequest(studentId: string, teacherId: string) {
     const t = await this.prisma.user.findUnique({ where: { id: teacherId } })
     if (!t || t.role !== 'teacher') throw new BadRequestException('Invalid teacher')
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id: studentId },
       data: { assignedTeacherId: teacherId, scheduleAssignmentStatus: 'auto_assigned' },
     })
+    await this.notifyTeacherAssigned(studentId, teacherId, 'manual')
+    return updated
   }
 
   async getTeacherAvailability(teacherId: string) {
@@ -179,6 +202,7 @@ export class SchedulingService {
           scheduleAssignmentStatus: 'auto_assigned',
         },
       })
+      await this.notifyTeacherAssigned(s.id, teacherId, 'reassign')
       reassigned.push({ id: s.id, fullName: s.fullName })
     }
     return reassigned

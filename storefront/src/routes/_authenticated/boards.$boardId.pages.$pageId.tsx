@@ -243,6 +243,21 @@ function Toolbar({ editor, boardId }: { editor: NonNullable<ReturnType<typeof us
       <span className="mx-1 h-4 w-px bg-brand-line" />
       <button className={btn} onClick={() => (editor as any).chain().focus().undo?.().run()}><Undo2 className="size-4" /></button>
       <button className={btn} onClick={() => (editor as any).chain().focus().redo?.().run()}><Redo2 className="size-4" /></button>
+
+      <span className="mx-1 h-4 w-px bg-brand-line" />
+      <button
+        className={btn}
+        title="Exportar Markdown"
+        onClick={() => {
+          const md = htmlToMarkdown(editor.getHTML());
+          downloadFile(`board-page-${Date.now()}.md`, md, "text/markdown");
+        }}
+      >
+        <Download className="size-4" />
+      </button>
+      <button className={btn} title="Imprimir / PDF" onClick={() => window.print()}>
+        <Printer className="size-4" />
+      </button>
     </div>
   );
 }

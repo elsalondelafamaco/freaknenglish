@@ -14,6 +14,7 @@ import type { AppRole, User, EnglishLevel } from "./types";
 import { readDb, writeDb } from "./repository";
 import { reloadCurrentUser } from "./auth";
 import { adminApi } from "@/lib/api/endpoints";
+import { refreshFromBackend } from "@/lib/api/bootstrap";
 
 export interface CreateUserInput {
   fullName: string;
@@ -33,6 +34,7 @@ export async function createUserByAdmin(input: CreateUserInput): Promise<User> {
   writeDb((d) => {
     (d.users as Record<string, User>)[user.id] = user;
   });
+  refreshFromBackend("admin");
   return user;
 }
 
@@ -44,35 +46,35 @@ export interface UpdateUserInput {
   roles?: AppRole[];
 }
 
-export function updateUserByAdmin(id: string, patch: UpdateUserInput): User {
+export async function updateUserByAdmin(id: string, patch: UpdateUserInput): Promise<User> {
   const db = readDb();
   const users = db.users as Record<string, User>;
   const existing = users[id];
   if (!existing) throw new Error("Usuario no encontrado");
+  const updated = await adminApi.updateUser(id, {
+    ...(patch.fullName !== undefined ? { fullName: patch.fullName.trim() } : {}),
+    ...(patch.phone !== undefined ? { phone: patch.phone } : {}),
+    ...(patch.level !== undefined ? { englishLevel: patch.level } : {}),
+    ...(patch.roles && patch.roles[0] ? { role: patch.roles[0] as "student" | "teacher" | "admin" } : {}),
+  });
   const next: User = {
     ...existing,
-    ...(patch.fullName !== undefined ? { fullName: patch.fullName.trim() } : {}),
-    ...(patch.email !== undefined ? { email: patch.email.trim().toLowerCase() } : {}),
-    ...(patch.phone !== undefined ? { phone: patch.phone } : {}),
-    ...(patch.level !== undefined ? { level: patch.level } : {}),
-    ...(patch.roles !== undefined && patch.roles.length > 0 ? { roles: patch.roles } : {}),
+    ...(updated as any),
+    roles: patch.roles ?? existing.roles,
   };
   writeDb((d) => {
     (d.users as Record<string, User>)[id] = next;
-    if (patch.email && patch.email !== existing.email) {
-      const pw = d.meta.passwordsByEmail[existing.email];
-      delete d.meta.passwordsByEmail[existing.email];
-      d.meta.passwordsByEmail[next.email] = pw ?? "Freakn123!";
-    }
   });
+  refreshFromBackend("admin");
   return next;
 }
 
-export function setUserActive(id: string, active: boolean): User {
+export async function setUserActive(id: string, active: boolean): Promise<User> {
   const db = readDb();
   const users = db.users as Record<string, User>;
   const existing = users[id];
   if (!existing) throw new Error("Usuario no encontrado");
+  await adminApi.setUserStatus(id, !active);
   const next: User = {
     ...existing,
     disabledAt: active ? undefined : new Date().toISOString(),
@@ -80,14 +82,16 @@ export function setUserActive(id: string, active: boolean): User {
   writeDb((d) => {
     (d.users as Record<string, User>)[id] = next;
   });
+  refreshFromBackend("admin");
   return next;
 }
 
-export function softDeleteUser(id: string): void {
+export async function softDeleteUser(id: string): Promise<void> {
   const db = readDb();
   const users = db.users as Record<string, User>;
   const existing = users[id];
   if (!existing) throw new Error("Usuario no encontrado");
+  await adminApi.softDeleteUser(id);
   writeDb((d) => {
     (d.users as Record<string, User>)[id] = {
       ...existing,
@@ -95,29 +99,28 @@ export function softDeleteUser(id: string): void {
       disabledAt: existing.disabledAt ?? new Date().toISOString(),
     };
   });
+  refreshFromBackend("admin");
 }
 
 /**
- * Resetea la contraseña en el mock a una temporal y devuelve el "set-password
- * token" simulado para mostrarlo al admin (en backend, se envía por email).
+ * Pide al backend un link de "set password" para el usuario. El backend
+ * envía el email; devolvemos el link para que el admin pueda copiarlo.
  */
-export function resetUserPassword(id: string): { tempPassword: string; setPasswordToken: string } {
-  const db = readDb();
-  const users = db.users as Record<string, User>;
-  const existing = users[id];
-  if (!existing) throw new Error("Usuario no encontrado");
-  const tempPassword = "Freakn" + Math.random().toString(36).slice(2, 6) + "!";
-  const setPasswordToken = Math.random().toString(36).slice(2) + Date.now().toString(36);
-  writeDb((d) => {
-    d.meta.passwordsByEmail[existing.email] = tempPassword;
-  });
-  return { tempPassword, setPasswordToken };
+export async function resetUserPassword(
+  id: string,
+): Promise<{ tempPassword: string; setPasswordToken: string; link?: string }> {
+  const r = await adminApi.resetPassword(id);
+  return {
+    tempPassword: "(enviada por email)",
+    setPasswordToken: r.link ?? "",
+    link: r.link,
+  };
 }
 
-export function assignTeacherToStudent(
+export async function assignTeacherToStudent(
   studentId: string,
   teacherId: string | null,
-): User {
+): Promise<User> {
   const db = readDb();
   const users = db.users as Record<string, User>;
   const student = users[studentId];
@@ -129,10 +132,12 @@ export function assignTeacherToStudent(
     if (!t || !t.roles.includes("teacher"))
       throw new Error("Profesor inválido");
   }
+  await adminApi.assignTeacher(studentId, teacherId);
   const updated: User = { ...student, assignedTeacherId: teacherId ?? undefined };
   writeDb((d) => {
     (d.users as Record<string, User>)[studentId] = updated;
   });
+  refreshFromBackend("admin");
   return updated;
 }
 

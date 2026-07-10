@@ -404,6 +404,13 @@ export function markLessonComplete(userId: string, lessonId: string): void {
       completedAt: new Date().toISOString(),
     };
   });
+  // Persistir en el backend (fire-and-forget) y re-hidratar.
+  import("@/lib/api/endpoints").then(({ learningApi }) =>
+    learningApi.saveLessonProgress(lessonId, 0, true).catch(() => {}),
+  );
+  import("@/lib/api/bootstrap").then(({ refreshFromBackend }) =>
+    refreshFromBackend(),
+  );
 }
 
 export function unmarkLesson(userId: string, lessonId: string): void {
@@ -449,6 +456,9 @@ export function recordCheckpointAttempt(input: {
   writeDb((db) => {
     (db.checkpointAttempts as Record<string, CheckpointAttempt>)[attempt.id] = attempt;
   });
+  import("@/lib/api/bootstrap").then(({ refreshFromBackend }) =>
+    refreshFromBackend(),
+  );
   return attempt;
 }
 

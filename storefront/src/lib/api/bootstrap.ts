@@ -190,5 +190,20 @@ export function clearLocalState() {
   resetDb();
 }
 
+/**
+ * Dispara una re-hidratación en background del rol dado. Se llama desde
+ * mutaciones (cancelar clase, guardar progreso, etc.) para que la UI vea
+ * el estado real del backend inmediatamente después de mutar, sin esperar
+ * al tick de polling del AuthProvider.
+ */
+let inFlight: Promise<unknown> | null = null;
+export function refreshFromBackend(role: string = "student"): Promise<unknown> {
+  if (inFlight) return inFlight;
+  inFlight = hydrateFromBackend(role).finally(() => {
+    inFlight = null;
+  });
+  return inFlight;
+}
+
 /** Re-exporta adaptadores por si alguna ruta los necesita. */
 export const adapters = { adaptUser, adaptClass, adaptModule, adaptSubscription };

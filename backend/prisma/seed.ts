@@ -45,19 +45,22 @@ async function main() {
     })
   }
 
-  // Active subscription for the demo student
+  // El estudiante demo NO trae suscripción ni horario: así el flujo
+  // onboarding → pago → horario queda visible al iniciar sesión.
+  // Se limpia cualquier estado previo por si el seed ya se corrió antes.
   const student = await prisma.user.findUniqueOrThrow({ where: { email: 'estudiante@freakn.dev' } })
-  await prisma.subscription.upsert({
-    where: { userId: student.id },
-    update: {},
-    create: {
-      userId: student.id,
-      planId: '4-dias',
-      status: SubscriptionStatus.active,
-      startedAt: new Date(),
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  await prisma.subscription.deleteMany({ where: { userId: student.id } })
+  await prisma.user.update({
+    where: { id: student.id },
+    data: {
+      phone: null,
+      documentNumber: null,
+      onboardedAt: null,
+      schedulePreferences: undefined,
+      scheduleAssignmentStatus: null,
     },
   })
+  void SubscriptionStatus // referencia intencional para no romper import si se reactiva
 
   console.log('✔ Seed completo. Credenciales en docs/migration.md')
 }

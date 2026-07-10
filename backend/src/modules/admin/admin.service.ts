@@ -69,6 +69,179 @@ export class AdminService {
     })
   }
 
+  // ─── D7 · Métricas admin reales ────────────────────────────────────
+  /**
+   * Devuelve KPIs agregados y series temporales para el dashboard admin.
+   * `range` en días (30/90/365). Todas las series comparten el mismo eje.
+   */
+  async metrics(rangeDays = 30) {
+    const days = Math.min(Math.max(rangeDays, 7), 365)
+    const to = new Date()
+    const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000)
+    const periodStartMs = from.getTime()
+
+    const [activeSubs, allClasses, payments, surveys, teachers, totalStudents] = await Promise.all([
+      this.prisma.subscription.findMany({ where: { status: 'active' }, include: { plan: true } }),
+      this.prisma.class.findMany({
+        where: { startsAt: { gte: from } },
+        select: { id: true, teacherId: true, studentId: true, status: true, startsAt: true, endsAt: true },
+      }),
+      this.prisma.paymentIntent.findMany({
+        where: { status: 'APPROVED', approvedAt: { gte: from } },
+        select: { amountInCents: true, currency: true, approvedAt: true },
+      }),
+      this.prisma.satisfactionSurvey.findMany({
+        where: { createdAt: { gte: from } },
+        select: { score: true, teacherScore: true },
+      }),
+      this.prisma.user.findMany({
+        where: { role: 'teacher', deletedAt: null },
+        select: { id: true, fullName: true },
+      }),
+      this.prisma.user.count({ where: { role: 'student', deletedAt: null } }),
+    ])
+
+    // MRR/ARR
+    const mrrCop = activeSubs.reduce((s, sub) => s + sub.plan.priceCop, 0)
+    const arrCop = mrrCop * 12
+
+    // Churn: subs canceladas en el rango / activas al inicio del rango
+    const [cancelledInRange, activeAtStart] = await Promise.all([
+      this.prisma.subscription.count({
+        where: { status: 'cancelled', updatedAt: { gte: from, lte: to } },
+      }),
+      this.prisma.subscription.count({
+        where: {
+          OR: [
+            { status: 'active', createdAt: { lte: from } },
+            { status: 'cancelled', updatedAt: { gt: from } },
+          ],
+        },
+      }),
+    ])
+    const churnRate = activeAtStart ? Math.round((cancelledInRange / activeAtStart) * 1000) / 10 : 0
+
+    // Asistencia
+    const validated = allClasses.filter((c) => c.status === 'validated').length
+    const scheduledOrDone = allClasses.filter((c) =>
+      ['scheduled', 'validated', 'rescheduled', 'no_show'].includes(c.status),
+    ).length
+    const attendanceRate = scheduledOrDone ? Math.round((validated / scheduledOrDone) * 100) : 0
+
+    // NPS
+    const promoters = surveys.filter((s) => s.score >= 9).length
+    const detractors = surveys.filter((s) => s.score <= 6).length
+    const nps = surveys.length ? Math.round(((promoters - detractors) / surveys.length) * 100) : 0
+
+    // Serie de ingresos por día
+    const bucketByDay = new Map<string, number>()
+    for (let i = 0; i <= days; i++) {
+      const d = new Date(periodStartMs + i * 86400000)
+      bucketByDay.set(d.toISOString().slice(0, 10), 0)
+    }
+    for (const p of payments) {
+      if (!p.approvedAt) continue
+      const k = p.approvedAt.toISOString().slice(0, 10)
+      bucketByDay.set(k, (bucketByDay.get(k) ?? 0) + p.amountInCents)
+    }
+    const revenueSeries = Array.from(bucketByDay.entries()).map(([date, cents]) => ({ date, cents }))
+    const revenueCop = payments.reduce((s, p) => s + p.amountInCents, 0) / 100
+
+    // Serie de clases validadas por día
+    const classesByDay = new Map<string, number>()
+    for (const [k] of bucketByDay) classesByDay.set(k, 0)
+    for (const c of allClasses) {
+      if (c.status !== 'validated') continue
+      const k = c.startsAt.toISOString().slice(0, 10)
+      if (classesByDay.has(k)) classesByDay.set(k, (classesByDay.get(k) ?? 0) + 1)
+    }
+    const classesSeries = Array.from(classesByDay.entries()).map(([date, count]) => ({ date, count }))
+
+    // Top profesores por clases validadas + horas
+    const teacherStats = new Map<string, { validated: number; minutes: number }>()
+    for (const c of allClasses) {
+      if (!c.teacherId || c.status !== 'validated') continue
+      const cur = teacherStats.get(c.teacherId) ?? { validated: 0, minutes: 0 }
+      cur.validated += 1
+      cur.minutes += Math.round((c.endsAt.getTime() - c.startsAt.getTime()) / 60000)
+      teacherStats.set(c.teacherId, cur)
+    }
+    const topTeachers = teachers
+      .map((t) => ({
+        id: t.id,
+        fullName: t.fullName,
+        validatedClasses: teacherStats.get(t.id)?.validated ?? 0,
+        hours: Math.round(((teacherStats.get(t.id)?.minutes ?? 0) / 60) * 10) / 10,
+      }))
+      .sort((a, b) => b.validatedClasses - a.validatedClasses)
+      .slice(0, 10)
+
+    // Retención cohortes (últimos 6 meses):
+    // cohorte = mes en que el estudiante activó suscripción
+    // retenido = tuvo al menos 1 clase validada en el mes N
+    const cohorts = await this.retentionCohorts(6)
+
+    return {
+      range: { from: from.toISOString(), to: to.toISOString(), days },
+      mrrCop,
+      arrCop,
+      activeSubscriptions: activeSubs.length,
+      totalStudents,
+      churnRate,
+      attendanceRate,
+      nps,
+      surveys: surveys.length,
+      revenueCop,
+      revenueSeries,
+      classesSeries,
+      topTeachers,
+      cohorts,
+    }
+  }
+
+  private async retentionCohorts(months: number) {
+    const now = new Date()
+    const cohortStart = new Date(now.getFullYear(), now.getMonth() - months + 1, 1)
+    const subs = await this.prisma.subscription.findMany({
+      where: { createdAt: { gte: cohortStart } },
+      select: { userId: true, createdAt: true },
+    })
+    if (subs.length === 0) return [] as any[]
+
+    const cohortMap = new Map<string, Set<string>>() // 'YYYY-MM' -> userIds
+    for (const s of subs) {
+      const key = s.createdAt.toISOString().slice(0, 7)
+      const set = cohortMap.get(key) ?? new Set<string>()
+      set.add(s.userId)
+      cohortMap.set(key, set)
+    }
+
+    const allUserIds = Array.from(new Set(subs.map((s) => s.userId)))
+    const validated = await this.prisma.class.findMany({
+      where: { studentId: { in: allUserIds }, status: 'validated', startsAt: { gte: cohortStart } },
+      select: { studentId: true, startsAt: true },
+    })
+
+    return Array.from(cohortMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([cohort, users]) => {
+        const cohortDate = new Date(cohort + '-01')
+        const buckets: number[] = []
+        for (let m = 0; m < months; m++) {
+          const start = new Date(cohortDate.getFullYear(), cohortDate.getMonth() + m, 1)
+          const end = new Date(cohortDate.getFullYear(), cohortDate.getMonth() + m + 1, 1)
+          if (start > now) break
+          const retained = new Set<string>()
+          for (const v of validated) {
+            if (!users.has(v.studentId)) continue
+            if (v.startsAt >= start && v.startsAt < end) retained.add(v.studentId)
+          }
+          buckets.push(Math.round((retained.size / users.size) * 100))
+        }
+        return { cohort, size: users.size, retention: buckets }
+      })
+  }
+
   // ─── Payroll (config + cálculo por horas) ─────────────────────────────
 
   private async getHourlyRateCop(): Promise<number> {

@@ -20,6 +20,7 @@ import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as CheckoutPlanIdRouteImport } from './routes/checkout.$planId'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthenticatedTeacherRouteImport } from './routes/_authenticated/teacher'
+import { Route as AuthenticatedNotificationsRouteImport } from './routes/_authenticated/notifications'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedTeacherIndexRouteImport } from './routes/_authenticated/teacher.index'
@@ -103,6 +104,12 @@ const AuthenticatedTeacherRoute = AuthenticatedTeacherRouteImport.update({
   path: '/teacher',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedNotificationsRoute =
+  AuthenticatedNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
   path: '/app',
@@ -276,6 +283,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/notifications': typeof AuthenticatedNotificationsRoute
   '/teacher': typeof AuthenticatedTeacherRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/checkout/$planId': typeof CheckoutPlanIdRoute
@@ -314,6 +322,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/notifications': typeof AuthenticatedNotificationsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/checkout/$planId': typeof CheckoutPlanIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
@@ -354,6 +363,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/_authenticated/notifications': typeof AuthenticatedNotificationsRoute
   '/_authenticated/teacher': typeof AuthenticatedTeacherRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/checkout/$planId': typeof CheckoutPlanIdRoute
@@ -396,6 +406,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/admin'
     | '/app'
+    | '/notifications'
     | '/teacher'
     | '/auth/callback'
     | '/checkout/$planId'
@@ -434,6 +445,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/sitemap.xml'
+    | '/notifications'
     | '/auth/callback'
     | '/checkout/$planId'
     | '/checkout/return'
@@ -473,6 +485,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/_authenticated/admin'
     | '/_authenticated/app'
+    | '/_authenticated/notifications'
     | '/_authenticated/teacher'
     | '/auth/callback'
     | '/checkout/$planId'
@@ -595,6 +608,13 @@ declare module '@tanstack/react-router' {
       path: '/teacher'
       fullPath: '/teacher'
       preLoaderRoute: typeof AuthenticatedTeacherRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/notifications': {
+      id: '/_authenticated/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AuthenticatedNotificationsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/app': {
@@ -923,6 +943,7 @@ const AuthenticatedBoardsBoardIdRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
+  AuthenticatedNotificationsRoute: typeof AuthenticatedNotificationsRoute
   AuthenticatedTeacherRoute: typeof AuthenticatedTeacherRouteWithChildren
   AuthenticatedBoardsBoardIdRoute: typeof AuthenticatedBoardsBoardIdRouteWithChildren
   AuthenticatedOnboardingProfileRoute: typeof AuthenticatedOnboardingProfileRoute
@@ -933,6 +954,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
+  AuthenticatedNotificationsRoute: AuthenticatedNotificationsRoute,
   AuthenticatedTeacherRoute: AuthenticatedTeacherRouteWithChildren,
   AuthenticatedBoardsBoardIdRoute: AuthenticatedBoardsBoardIdRouteWithChildren,
   AuthenticatedOnboardingProfileRoute: AuthenticatedOnboardingProfileRoute,

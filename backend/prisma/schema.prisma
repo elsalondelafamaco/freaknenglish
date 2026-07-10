@@ -403,19 +403,25 @@ model Notification {
   userId     String?            @map("user_id")
   toEmail    String             @map("to_email")
   channel    String             @default("email") // email | sms | push
-  template   String             // welcome, reminder_24h, reminder_1h, abandoned_cart, nps_monthly, renewal_3d
+  template   String             // welcome, reminder_24h, reminder_1h, abandoned_cart, nps_monthly, renewal_3d, payment_success, class_rescheduled, class_cancelled, teacher_assigned
+  type       String             @default("system") // system | payment | class | teacher | learning
+  title      String?            // short in-app title
+  body       String?            // short in-app body
+  linkUrl    String?            @map("link_url")
   subject    String
   status     NotificationStatus @default(queued)
   dedupeKey  String             @unique @map("dedupe_key")
   vars       Json               @default("{}")
   providerId String?            @map("provider_id")
   sentAt     DateTime?          @map("sent_at")
+  readAt     DateTime?          @map("read_at")
   error      String?
   createdAt  DateTime           @default(now()) @map("created_at")
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
+  @@index([userId, readAt, createdAt])
   @@map("notifications")
 }
 

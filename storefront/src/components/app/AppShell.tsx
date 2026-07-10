@@ -19,6 +19,7 @@ import { Logo } from "@/components/site/Logo";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { cn } from "@/lib/utils";
 import { ImpersonationBanner } from "@/components/app/ImpersonationBanner";
+import { NotificationsBell } from "@/components/app/NotificationsBell";
 
 const STUDENT_NAV = [
   { to: "/app", label: "Inicio", icon: LayoutDashboard, end: true },
@@ -76,9 +77,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       <ImpersonationBanner />
       {/* Sidebar — desktop */}
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-brand-line bg-white p-5 lg:flex">
-        <Link to="/" aria-label="Inicio">
-          <Logo className="h-8 w-auto" />
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link to="/" aria-label="Inicio">
+            <Logo className="h-8 w-auto" />
+          </Link>
+          <NotificationsBell />
+        </div>
         <nav className="mt-8 flex flex-col gap-1">
           {NAV.map((item) => {
             const active = item.end
@@ -104,13 +108,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link to="/" aria-label="Inicio">
           <Logo className="h-7 w-auto" />
         </Link>
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="rounded-full p-2 text-brand-ink hover:bg-brand-cream/50"
-          aria-label="Abrir menú"
-        >
-          {open ? <X className="size-5" /> : <Menu className="size-5" />}
-        </button>
+        <div className="flex items-center gap-1">
+          <NotificationsBell />
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="rounded-full p-2 text-brand-ink hover:bg-brand-cream/50"
+            aria-label="Abrir menú"
+          >
+            {open ? <X className="size-5" /> : <Menu className="size-5" />}
+          </button>
+        </div>
       </header>
 
       {open ? (

@@ -17,6 +17,7 @@ export class ResendTransport {
       to: input.to,
       subject: input.subject,
       html: input.html,
+      ...(env.RESEND_REPLY_TO ? { replyTo: env.RESEND_REPLY_TO } : {}),
     })
     if (res.error) throw new Error(res.error.message)
     return { id: res.data?.id ?? 'unknown' }

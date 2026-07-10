@@ -27,6 +27,29 @@ export const authApi = {
     apiPost<{ ok: true }>("/auth/reset", { token, password }),
 };
 
+// ─── Notifications (in-app inbox) ─────────────────────────────────────
+export type InAppNotification = {
+  id: string;
+  type: "system" | "payment" | "class" | "teacher" | "learning";
+  template: string;
+  title: string | null;
+  body: string | null;
+  linkUrl: string | null;
+  subject: string;
+  readAt: string | null;
+  createdAt: string;
+};
+export const notificationsApi = {
+  list: (opts: { unread?: boolean; limit?: number } = {}) =>
+    apiGet<InAppNotification[]>("/notifications", {
+      ...(opts.unread ? { unread: "1" } : {}),
+      ...(opts.limit ? { limit: String(opts.limit) } : {}),
+    }),
+  unreadCount: () => apiGet<{ count: number }>("/notifications/unread-count"),
+  markRead: (id: string) => apiPost<{ ok: boolean }>(`/notifications/${id}/read`),
+  markAllRead: () => apiPost<{ ok: true; count: number }>("/notifications/read-all"),
+};
+
 // ─── Me / Users ────────────────────────────────────────────────────────
 export const usersApi = {
   me: () => apiGet<any>("/me"),

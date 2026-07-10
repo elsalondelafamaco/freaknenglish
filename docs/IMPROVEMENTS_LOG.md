@@ -296,3 +296,27 @@
 - Pendiente en iteraciones B3–B8: tablas, imágenes con upload, capa de
   dibujo, historial de versiones, auto-provisioning al reservar clase,
   exportar PDF/Markdown y pulido móvil.
+
+## 2026-08-15 — D6 Notificaciones (email + in-app)
+
+- Migración `20260815000000_notifications_inapp`: agrega `type`, `title`,
+  `body`, `link_url`, `read_at` + índice `(user_id, read_at, created_at)`.
+- Templates de email 100 % configurables por env: `BRAND_NAME`, `BRAND_COLOR`,
+  `BRAND_INK`, `BRAND_ACCENT`, `BRAND_LOGO_URL`, `BRAND_TAGLINE`,
+  `BRAND_SUPPORT_EMAIL`, `PUBLIC_SITE_URL`, `RESEND_FROM`, `RESEND_REPLY_TO`.
+  Cabecera del archivo `templates.ts` documenta el bloque de `.env` de ejemplo.
+- Nuevos templates: `payment_success` (ejemplo completo con preheader, CTA,
+  tabla de montos y money formatter), `class_rescheduled`, `class_cancelled`,
+  `teacher_assigned`. Los existentes reformateados con CTA y branding.
+- `NotificationsService.enqueue` acepta `type/title/body/linkUrl/inAppOnly`
+  para alimentar el inbox in-app.
+- Nuevo `NotificationsController` (usuario): `GET /notifications`,
+  `GET /notifications/unread-count`, `POST /notifications/:id/read`,
+  `POST /notifications/read-all`.
+- Triggers cableados: Wompi APPROVED → `payment_success` + `welcome`;
+  Classes `reschedule` → notifica a estudiante y profesor; `cancel` →
+  notifica al profesor; Scheduling `submitPreferences`, `assignRequest` y
+  `reassignPendingForTeacher` → `teacher_assigned` al estudiante.
+- Frontend: `notificationsApi` + `<NotificationsBell/>` con badge y
+  dropdown en `AppShell` (desktop y mobile), ruta
+  `/_authenticated/notifications` con inbox completo y "marcar todas".

@@ -109,6 +109,7 @@ export class WompiService {
         await this.prisma.paymentIntent.update({ where: { id: intent.id }, data: { userId } })
       }
       await this.subs.activateForUser(userId, intent.planId)
+      const plan = await this.prisma.plan.findUnique({ where: { id: intent.planId } })
       await this.notifications.enqueue({
         userId,
         toEmail: intent.customerEmail,
@@ -116,6 +117,28 @@ export class WompiService {
         subject: '¡Bienvenido a Freakn!',
         dedupeKey: `welcome:${userId}`,
         vars: { fullName: intent.customerName },
+        type: 'system',
+        title: '¡Bienvenido!',
+        body: 'Tu cuenta está lista.',
+        linkUrl: '/app',
+      })
+      await this.notifications.enqueue({
+        userId,
+        toEmail: intent.customerEmail,
+        template: 'payment_success',
+        subject: 'Pago confirmado',
+        dedupeKey: `payment:${intent.id}`,
+        vars: {
+          fullName: intent.customerName,
+          planName: plan?.name ?? 'tu plan',
+          amountInCents: intent.amountInCents,
+          currency: intent.currency,
+          reference: intent.reference,
+        },
+        type: 'payment',
+        title: 'Pago confirmado',
+        body: `Recibimos tu pago de ${intent.currency} ${(intent.amountInCents / 100).toLocaleString('es-CO')}.`,
+        linkUrl: '/app/settings',
       })
     }
 

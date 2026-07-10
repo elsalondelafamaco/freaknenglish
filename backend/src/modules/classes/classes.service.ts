@@ -1,12 +1,13 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { ClassStatus } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
+import { NotificationsService } from '../notifications/notifications.service'
 
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000
 
 @Injectable()
 export class ClassesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private notifications: NotificationsService) {}
 
   listForStudent(studentId: string) {
     return this.prisma.class.findMany({
@@ -67,10 +68,43 @@ export class ClassesService {
     if (c.startsAt.getTime() - Date.now() < TWELVE_HOURS_MS) {
       throw new BadRequestException('Cannot reschedule within 12h of class')
     }
-    return this.prisma.class.update({
+    const updated = await this.prisma.class.update({
       where: { id: classId },
       data: { startsAt: newStartsAt, endsAt: newEndsAt, status: ClassStatus.rescheduled },
     })
+    const student = await this.prisma.user.findUnique({ where: { id: studentId } })
+    if (student) {
+      await this.notifications.enqueue({
+        userId: student.id,
+        toEmail: student.email,
+        template: 'class_rescheduled',
+        subject: 'Tu clase fue reprogramada',
+        dedupeKey: `reschedule:${classId}:${newStartsAt.toISOString()}`,
+        vars: { startsAt: newStartsAt.toISOString() },
+        type: 'class',
+        title: 'Clase reprogramada',
+        body: newStartsAt.toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }),
+        linkUrl: '/app/calendar',
+      })
+    }
+    if (c.teacherId) {
+      const teacher = await this.prisma.user.findUnique({ where: { id: c.teacherId } })
+      if (teacher) {
+        await this.notifications.enqueue({
+          userId: teacher.id,
+          toEmail: teacher.email,
+          template: 'class_rescheduled',
+          subject: 'Una clase fue reprogramada',
+          dedupeKey: `reschedule-teacher:${classId}:${newStartsAt.toISOString()}`,
+          vars: { startsAt: newStartsAt.toISOString() },
+          type: 'class',
+          title: 'Clase reprogramada',
+          body: `${student?.fullName ?? 'Un estudiante'} reprogramó su clase.`,
+          linkUrl: '/teacher/schedule',
+        })
+      }
+    }
+    return updated
   }
 
   async cancel(classId: string, studentId: string, reason?: string) {
@@ -79,9 +113,28 @@ export class ClassesService {
     if (c.startsAt.getTime() - Date.now() < TWELVE_HOURS_MS) {
       throw new BadRequestException('Cannot cancel within 12h of class')
     }
-    return this.prisma.class.update({
+    const updated = await this.prisma.class.update({
       where: { id: classId },
       data: { status: ClassStatus.cancelled, cancelledAt: new Date(), cancelReason: reason },
     })
+    if (c.teacherId) {
+      const teacher = await this.prisma.user.findUnique({ where: { id: c.teacherId } })
+      const student = await this.prisma.user.findUnique({ where: { id: studentId } })
+      if (teacher) {
+        await this.notifications.enqueue({
+          userId: teacher.id,
+          toEmail: teacher.email,
+          template: 'class_cancelled',
+          subject: 'Una clase fue cancelada',
+          dedupeKey: `cancel-teacher:${classId}`,
+          vars: { reason: reason ?? '' },
+          type: 'class',
+          title: 'Clase cancelada',
+          body: `${student?.fullName ?? 'Un estudiante'} canceló su clase.`,
+          linkUrl: '/teacher/schedule',
+        })
+      }
+    }
+    return updated
   }
 }

@@ -292,4 +292,15 @@ export const boardsApi = {
       `/boards/pages/${pageId}/ops`,
       { since },
     ),
+  listVersions: (pageId: string) =>
+    apiGet<Array<{ id: string; label: string | null; createdBy: string; sizeBytes: number; createdAt: string }>>(
+      `/boards/pages/${pageId}/versions`,
+    ),
+  saveVersion: (pageId: string, label?: string) =>
+    apiPost<{ id: string; label: string | null; createdAt: string; sizeBytes: number }>(
+      `/boards/pages/${pageId}/versions`,
+      { label },
+    ),
+  restoreVersion: (versionId: string) =>
+    apiPost<{ pageId: string; snapshot: string }>(`/boards/versions/${versionId}/restore`, {}),
 };

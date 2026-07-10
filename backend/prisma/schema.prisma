@@ -526,6 +526,19 @@ model BoardPageOp {
   @@map("board_page_ops")
 }
 
+model BoardPageVersion {
+  id        String   @id @default(uuid())
+  pageId    String   @map("page_id")
+  createdBy String   @map("created_by")
+  label     String?
+  state     Bytes
+  sizeBytes Int      @default(0) @map("size_bytes")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([pageId, createdAt])
+  @@map("board_page_versions")
+}
+
 /// Auditoría de impersonación admin → usuario.
 model ImpersonationLog {
   id          String    @id @default(uuid())

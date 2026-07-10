@@ -249,6 +249,56 @@ export class BoardService {
     }))
   }
 
+  // ─── Versions ─────────────────────────────────────────────────────
+  async listVersions(pageId: string, userId: string) {
+    const page = await this.prisma.boardPage.findUnique({ where: { id: pageId } })
+    if (!page) throw new NotFoundException()
+    await this.ensureMember(page.boardId, userId)
+    return this.prisma.boardPageVersion.findMany({
+      where: { pageId },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, label: true, createdBy: true, sizeBytes: true, createdAt: true },
+      take: 100,
+    })
+  }
+
+  async saveVersion(pageId: string, userId: string, label?: string) {
+    const page = await this.prisma.boardPage.findUnique({ where: { id: pageId } })
+    if (!page) throw new NotFoundException()
+    await this.ensureMember(page.boardId, userId)
+    await this.snapshotPage(pageId)
+    const fresh = await this.prisma.boardPage.findUnique({ where: { id: pageId } })
+    const state = fresh?.yjsState ?? Buffer.alloc(0)
+    return this.prisma.boardPageVersion.create({
+      data: {
+        pageId,
+        createdBy: userId,
+        label: label?.slice(0, 120) ?? null,
+        state: Buffer.from(state),
+        sizeBytes: state.length,
+      },
+      select: { id: true, label: true, createdAt: true, sizeBytes: true },
+    })
+  }
+
+  async restoreVersion(versionId: string, userId: string) {
+    const v = await this.prisma.boardPageVersion.findUnique({ where: { id: versionId } })
+    if (!v) throw new NotFoundException()
+    const page = await this.prisma.boardPage.findUnique({ where: { id: v.pageId } })
+    if (!page) throw new NotFoundException()
+    await this.ensureMember(page.boardId, userId)
+    // Replace page state with version bytes and clear ops → next join
+    // returns this exact snapshot for every client.
+    await this.prisma.$transaction([
+      this.prisma.boardPage.update({
+        where: { id: v.pageId },
+        data: { yjsState: v.state },
+      }),
+      this.prisma.boardPageOp.deleteMany({ where: { pageId: v.pageId } }),
+    ])
+    return { pageId: v.pageId, snapshot: Buffer.from(v.state).toString('base64') }
+  }
+
   /**
    * Colapsa snapshot + ops en un único Y.Doc → guarda estado y purga ops
    * anteriores para que la próxima carga sea O(1).

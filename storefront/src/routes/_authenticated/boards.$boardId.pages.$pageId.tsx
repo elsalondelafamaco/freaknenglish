@@ -22,13 +22,15 @@ import {
   Bold, Italic, Strikethrough, Underline as UnderlineIcon, Heading1, Heading2, Heading3,
   List, ListOrdered, CheckSquare, Quote, Code, Undo2, Redo2, Link as LinkIcon,
   Image as ImageIcon, Table as TableIcon, AlignLeft, AlignCenter, AlignRight, Highlighter,
-  Palette,
+  Palette, Download, Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { boardsApi } from "@/lib/api/endpoints";
 import { colorFor, createPageProvider, type BoardPageProvider } from "@/lib/board/yProvider";
 import { DrawLayer } from "@/components/board/DrawLayer";
+import { VersionHistory } from "@/components/board/VersionHistory";
+import { htmlToMarkdown, downloadFile } from "@/lib/board/exportPage";
 
 export const Route = createFileRoute("/_authenticated/boards/$boardId/pages/$pageId")({
   head: () => ({ meta: [{ title: "Board · Página" }] }),
@@ -107,6 +109,7 @@ function BoardPage() {
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-line pb-3">
         <Toolbar editor={editor} boardId={boardId} />
         <div className="flex items-center gap-2">
+          <VersionHistory pageId={pageId} />
           <PresenceDots peers={peers} selfId={user.id} />
           <StatusPill status={status} />
         </div>
@@ -240,6 +243,21 @@ function Toolbar({ editor, boardId }: { editor: NonNullable<ReturnType<typeof us
       <span className="mx-1 h-4 w-px bg-brand-line" />
       <button className={btn} onClick={() => (editor as any).chain().focus().undo?.().run()}><Undo2 className="size-4" /></button>
       <button className={btn} onClick={() => (editor as any).chain().focus().redo?.().run()}><Redo2 className="size-4" /></button>
+
+      <span className="mx-1 h-4 w-px bg-brand-line" />
+      <button
+        className={btn}
+        title="Exportar Markdown"
+        onClick={() => {
+          const md = htmlToMarkdown(editor.getHTML());
+          downloadFile(`board-page-${Date.now()}.md`, md, "text/markdown");
+        }}
+      >
+        <Download className="size-4" />
+      </button>
+      <button className={btn} title="Imprimir / PDF" onClick={() => window.print()}>
+        <Printer className="size-4" />
+      </button>
     </div>
   );
 }

@@ -1,16 +1,22 @@
-import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Header, Param, Patch, Res, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
+import type { Response } from 'express'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator'
 import { UsersService } from './users.service'
 import { PrismaService } from '../../prisma/prisma.service'
+import { ReceiptsService } from './receipts.service'
 
 @ApiTags('users')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('me')
 export class UsersController {
-  constructor(private users: UsersService, private prisma: PrismaService) {}
+  constructor(
+    private users: UsersService,
+    private prisma: PrismaService,
+    private receipts: ReceiptsService,
+  ) {}
 
   /** @endpoint GET /api/v1/me */
   @Get()
@@ -53,5 +59,23 @@ export class UsersController {
       createdAt: i.createdAt,
       wompiId: i.wompiId,
     }))
+  }
+
+  /**
+   * @endpoint GET /api/v1/me/payments/:intentId/receipt.pdf
+   * PDF de recibo (branding por env). Sólo el dueño del intent puede descargarlo.
+   */
+  @Get('payments/:intentId/receipt.pdf')
+  @Header('Content-Type', 'application/pdf')
+  async receipt(
+    @CurrentUser() user: AuthUser,
+    @Param('intentId') intentId: string,
+    @Res({ passthrough: false }) res: Response,
+  ) {
+    const me = await this.prisma.user.findUnique({ where: { id: user.id } })
+    const buf = await this.receipts.pdfBufferForOwner(intentId, user.id, me?.email ?? '')
+    res.setHeader('Content-Disposition', `attachment; filename="recibo-${intentId}.pdf"`)
+    res.setHeader('Content-Length', String(buf.length))
+    res.end(buf)
   }
 }

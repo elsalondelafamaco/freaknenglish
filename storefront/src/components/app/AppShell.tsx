@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { cn } from "@/lib/utils";
 import { ImpersonationBanner } from "@/components/app/ImpersonationBanner";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
+import { InstallAppButton } from "@/components/app/InstallAppButton";
 
 const STUDENT_NAV = [
   { to: "/app", label: "Inicio", icon: LayoutDashboard, end: true },
@@ -94,6 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mt-auto rounded-2xl bg-brand-cream/60 p-4">
           <div className="text-sm font-semibold text-brand-ink">{user?.fullName}</div>
           <div className="truncate text-xs text-brand-ink/65">{user?.email}</div>
+          <div className="mt-3"><InstallAppButton /></div>
           <button
             onClick={handleSignOut}
             className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-brand-ink/70 hover:text-brand-ink"

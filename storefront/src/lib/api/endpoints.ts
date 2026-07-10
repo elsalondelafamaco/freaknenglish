@@ -39,6 +39,30 @@ export type InAppNotification = {
   readAt: string | null;
   createdAt: string;
 };
+
+// ─── Admin metrics (D7) ───────────────────────────────────────────────
+export type AdminMetrics = {
+  range: { from: string; to: string; days: number };
+  mrrCop: number;
+  arrCop: number;
+  activeSubscriptions: number;
+  totalStudents: number;
+  churnRate: number;
+  attendanceRate: number;
+  nps: number;
+  surveys: number;
+  revenueCop: number;
+  revenueSeries: Array<{ date: string; cents: number }>;
+  classesSeries: Array<{ date: string; count: number }>;
+  topTeachers: Array<{ id: string; fullName: string; validatedClasses: number; hours: number }>;
+  cohorts: Array<{ cohort: string; size: number; retention: number[] }>;
+};
+
+// ─── Payment receipts (D8) ────────────────────────────────────────────
+export const receiptsApi = {
+  downloadUrl: (intentId: string) => `/me/payments/${intentId}/receipt.pdf`,
+};
+
 export const notificationsApi = {
   list: (opts: { unread?: boolean; limit?: number } = {}) =>
     apiGet<InAppNotification[]>("/notifications", {
@@ -203,6 +227,7 @@ export const adminApi = {
     attendanceRate: number;
     byPlan: Array<{ planId: string; active: number }>;
   }>("/admin/analytics"),
+  metrics: (rangeDays = 30) => apiGet<AdminMetrics>("/admin/metrics", { range: String(rangeDays) }),
   users: (q?: string) => apiGet<User[]>("/admin/users", q ? { q } : undefined),
   userDetail: (id: string) => apiGet<any>(`/admin/users/${id}`),
   payroll: (period: string) =>

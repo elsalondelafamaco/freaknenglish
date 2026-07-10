@@ -320,3 +320,23 @@
 - Frontend: `notificationsApi` + `<NotificationsBell/>` con badge y
   dropdown en `AppShell` (desktop y mobile), ruta
   `/_authenticated/notifications` con inbox completo y "marcar todas".
+
+## 2026-08-16 — D7 Métricas admin, D8 recibos PDF, D9 PWA offline
+
+- **D7**: `GET /api/v1/admin/metrics?range=30|90|365` con MRR/ARR, churn,
+  asistencia, NPS, ingresos por día, clases validadas por día, top profesores
+  y cohortes de retención (últimos 6 meses). `admin.index.tsx` reemplaza
+  mocks con `useQuery(adminApi.metrics)` + sparklines SVG y tabla de cohortes
+  heatmap.
+- **D8**: nuevo `ReceiptsService` con `pdfkit` y endpoint
+  `GET /api/v1/me/payments/:intentId/receipt.pdf` (auth por dueño). Branding
+  desde env (`BRAND_NAME`, `BRAND_INK`, `BRAND_ACCENT`, `BRAND_SUPPORT_EMAIL`,
+  `PUBLIC_SITE_URL`). Sección "Historial de pagos" en `app.settings.tsx`
+  con botón "Recibo PDF" para intents `APPROVED`. Nuevo helper
+  `apiGetBlob` en el cliente para descargas binarias autenticadas.
+- **D9**: `vite-plugin-pwa` (`generateSW`, `sw.js`, `NetworkFirst` para
+  navegaciones, SWR para `/api/v1/learning/*`, `CacheFirst` para imágenes).
+  Registro guardado en `src/lib/pwa/register.ts` (nunca dev/iframe/preview
+  de Lovable; soporta kill switch `?sw=off`). Botón "Instalar app"
+  (`beforeinstallprompt`) en el sidebar del `AppShell`. Manifest e icons
+  ya existían.

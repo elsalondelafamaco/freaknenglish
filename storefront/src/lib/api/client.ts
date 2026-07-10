@@ -121,4 +121,10 @@ export const apiPost = <T>(path: string, body?: unknown) => api<T>(path, { metho
 export const apiPatch = <T>(path: string, body?: unknown) => api<T>(path, { method: "PATCH", body });
 export const apiDelete = <T>(path: string) => api<T>(path, { method: "DELETE" });
 
+/** Descarga binaria autenticada (para PDFs, ZIPs, etc.). */
+export async function apiGetBlob(path: string): Promise<Blob> {
+  const res = (await api<Response>(path, { method: "GET", raw: true })) as Response;
+  return await res.blob();
+}
+
 export { API_URL };

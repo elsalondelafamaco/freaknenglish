@@ -45,6 +45,26 @@ export class BoardController {
     return this.svc.invite(id, u.id, body.userId, body.role)
   }
 
+  /** @endpoint POST /api/v1/boards/:id/invite-by-email */
+  @Post(':id/invite-by-email')
+  inviteByEmail(
+    @CurrentUser() u: AuthUser,
+    @Param('id') id: string,
+    @Body() body: { email: string; role?: 'editor' | 'viewer' },
+  ) {
+    return this.svc.inviteByEmail(id, u.id, body.email, body.role)
+  }
+
+  /** @endpoint POST /api/v1/boards/:id/uploads/sign */
+  @Post(':id/uploads/sign')
+  signUpload(
+    @CurrentUser() u: AuthUser,
+    @Param('id') id: string,
+    @Body() body: { filename: string; contentType?: string },
+  ) {
+    return this.svc.signBoardUpload(id, u.id, body)
+  }
+
   // ─── Pages ────────────────────────────────────────────────────────
   /** @endpoint GET /api/v1/boards/:id/pages */
   @Get(':id/pages')

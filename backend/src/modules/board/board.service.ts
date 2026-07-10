@@ -1,9 +1,12 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
+import { StorageService } from '../storage/storage.service'
+import * as Y from 'yjs'
 
 @Injectable()
 export class BoardService {
-  constructor(private prisma: PrismaService) {}
+  private readonly SNAPSHOT_EVERY = 50
+  constructor(private prisma: PrismaService, private storage: StorageService) {}
 
   async ensureMember(boardId: string, userId: string) {
     const m = await this.prisma.boardMember.findUnique({
@@ -89,6 +92,26 @@ export class BoardService {
       where: { boardId_userId: { boardId, userId } },
       update: { role },
       create: { boardId, userId, role },
+    })
+  }
+
+  async inviteByEmail(boardId: string, ownerId: string, email: string, role: 'editor' | 'viewer' = 'editor') {
+    const u = await this.prisma.user.findUnique({ where: { email: email.toLowerCase().trim() }, select: { id: true, email: true, fullName: true } })
+    if (!u) throw new NotFoundException('Usuario no encontrado. Debe registrarse primero.')
+    await this.invite(boardId, ownerId, u.id, role)
+    return { ok: true, user: u }
+  }
+
+  async signBoardUpload(
+    boardId: string,
+    userId: string,
+    body: { filename: string; contentType?: string },
+  ) {
+    await this.ensureMember(boardId, userId)
+    return this.storage.signUpload({
+      filename: body.filename,
+      contentType: body.contentType,
+      prefix: `boards/${boardId}`,
     })
   }
 
@@ -202,6 +225,10 @@ export class BoardService {
       where: { id: input.pageId },
       data: { updatedAt: new Date() },
     })
+    // Periodic snapshot: every N ops, collapse into yjsState
+    if (seq % this.SNAPSHOT_EVERY === 0) {
+      this.snapshotPage(input.pageId).catch(() => undefined)
+    }
     return op
   }
 
@@ -220,5 +247,34 @@ export class BoardService {
       update: Buffer.from(o.update).toString('base64'),
       createdAt: o.createdAt,
     }))
+  }
+
+  /**
+   * Colapsa snapshot + ops en un único Y.Doc → guarda estado y purga ops
+   * anteriores para que la próxima carga sea O(1).
+   */
+  async snapshotPage(pageId: string) {
+    const page = await this.prisma.boardPage.findUnique({ where: { id: pageId } })
+    if (!page) return
+    const doc = new Y.Doc()
+    if (page.yjsState) Y.applyUpdate(doc, new Uint8Array(page.yjsState))
+    const ops = await this.prisma.boardPageOp.findMany({
+      where: { pageId },
+      orderBy: { seq: 'asc' },
+      select: { seq: true, update: true },
+    })
+    let maxSeq = 0
+    for (const o of ops) {
+      Y.applyUpdate(doc, new Uint8Array(o.update))
+      if (o.seq > maxSeq) maxSeq = o.seq
+    }
+    const merged = Buffer.from(Y.encodeStateAsUpdate(doc))
+    await this.prisma.$transaction([
+      this.prisma.boardPage.update({
+        where: { id: pageId },
+        data: { yjsState: merged },
+      }),
+      this.prisma.boardPageOp.deleteMany({ where: { pageId, seq: { lte: maxSeq } } }),
+    ])
   }
 }

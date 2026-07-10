@@ -116,4 +116,26 @@ export class BoardController {
   ) {
     return this.svc.pageOpsSince(pageId, u.id, Number(since) || 0)
   }
+
+  /** @endpoint GET /api/v1/boards/pages/:pageId/versions */
+  @Get('pages/:pageId/versions')
+  listVersions(@CurrentUser() u: AuthUser, @Param('pageId') pageId: string) {
+    return this.svc.listVersions(pageId, u.id)
+  }
+
+  /** @endpoint POST /api/v1/boards/pages/:pageId/versions */
+  @Post('pages/:pageId/versions')
+  saveVersion(
+    @CurrentUser() u: AuthUser,
+    @Param('pageId') pageId: string,
+    @Body() body: { label?: string },
+  ) {
+    return this.svc.saveVersion(pageId, u.id, body?.label)
+  }
+
+  /** @endpoint POST /api/v1/boards/versions/:versionId/restore */
+  @Post('versions/:versionId/restore')
+  restoreVersion(@CurrentUser() u: AuthUser, @Param('versionId') versionId: string) {
+    return this.svc.restoreVersion(versionId, u.id)
+  }
 }

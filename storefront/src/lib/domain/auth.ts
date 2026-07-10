@@ -20,8 +20,6 @@ import { authApi, usersApi } from "@/lib/api/endpoints";
 import { setAccessToken, getAccessToken, API_URL } from "@/lib/api/client";
 import { hydrateFromBackend, clearLocalState } from "@/lib/api/bootstrap";
 
-const SESSION_KEY = "freakn.session.v1";
-
 export interface AuthService {
   signUp(input: SignUpInput): Promise<AuthResult>;
   signIn(input: SignInInput): Promise<AuthResult>;
@@ -44,29 +42,18 @@ export interface SignInInput {
 }
 /* ───────── Cache de usuario en memoria (espejo de readDb) ───────── */
 
-const ME_KEY = "freakn.me.v2";
 let currentUserId: string | null = null;
 
 function persistMeId(id: string | null) {
   currentUserId = id;
-  if (typeof localStorage === "undefined") return;
-  if (id) localStorage.setItem(ME_KEY, id);
-  else localStorage.removeItem(ME_KEY);
 }
 
 function loadMeId(): string | null {
-  if (currentUserId) return currentUserId;
-  if (typeof localStorage === "undefined") return null;
-  currentUserId = localStorage.getItem(ME_KEY);
   return currentUserId;
 }
 
-/**
- * Fuerza una relectura de `localStorage` descartando la cache en memoria.
- * Necesario tras impersonar / restaurar sesión.
- */
+/** Relee el usuario actual desde la caché en memoria. */
 export function reloadCurrentUser(): User | null {
-  currentUserId = null;
   const id = loadMeId();
   return id ? getUserById(id) : null;
 }

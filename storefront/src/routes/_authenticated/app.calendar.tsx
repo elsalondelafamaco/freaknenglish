@@ -42,15 +42,15 @@ function CalendarPage() {
   const upcoming = classes.filter((c) => c.status === "scheduled");
   const past = classes.filter((c) => c.status !== "scheduled").slice(-6).reverse();
 
-  function onCancel(c: ClassSession) {
-    const r = cancelClass(c.id);
+  async function onCancel(c: ClassSession) {
+    const r = await cancelClass(c.id);
     if (!r.ok) setError(r.reason ?? "Error");
     else setError(null);
     setTick((t) => t + 1);
   }
 
-  function onConfirm(c: ClassSession) {
-    confirmAttendance(c.id);
+  async function onConfirm(c: ClassSession) {
+    await confirmAttendance(c.id);
     setTick((t) => t + 1);
   }
 
@@ -173,8 +173,8 @@ function CalendarPage() {
         <RescheduleDialog
           session={editing}
           onClose={() => setEditing(null)}
-          onSave={(iso) => {
-            const r = rescheduleClass(editing.id, iso);
+          onSave={async (iso) => {
+            const r = await rescheduleClass(editing.id, iso);
             if (!r.ok) setError(r.reason ?? "Error");
             else setError(null);
             setEditing(null);

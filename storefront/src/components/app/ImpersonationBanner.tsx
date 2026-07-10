@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { ShieldAlert } from "lucide-react";
-import { getImpersonation, stopImpersonation } from "@/lib/domain/admin-actions";
+import {
+  getImpersonation,
+  onImpersonationChange,
+  stopImpersonation,
+} from "@/lib/domain/admin-actions";
 import { readDb } from "@/lib/domain/repository";
 import type { User } from "@/lib/domain/types";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -11,11 +15,7 @@ export function ImpersonationBanner() {
   const router = useRouter();
   const [state, setState] = useState(() => getImpersonation());
 
-  useEffect(() => {
-    const onStorage = () => setState(getImpersonation());
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  useEffect(() => onImpersonationChange(() => setState(getImpersonation())), []);
 
   if (!state) return null;
 

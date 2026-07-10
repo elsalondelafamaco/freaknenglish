@@ -152,10 +152,10 @@ function CreateUserDialog({
   const [level, setLevel] = useState<EnglishLevel>("beginner");
   const [error, setError] = useState<string | null>(null);
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      createUserByAdmin({ fullName, email, role: userRole, level });
+      await createUserByAdmin({ fullName, email, role: userRole, level });
       onCreated();
     } catch (err) {
       setError((err as Error).message);

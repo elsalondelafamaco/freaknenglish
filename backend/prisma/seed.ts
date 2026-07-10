@@ -4,7 +4,7 @@
  *
  * Run with:  bun run prisma:seed   (or)  npx tsx prisma/seed.ts
  */
-import { PrismaClient, AppRole, EnglishLevel, SubscriptionStatus } from '@prisma/client'
+import { PrismaClient, AppRole, EnglishLevel } from '@prisma/client'
 import * as argon2 from 'argon2'
 
 const prisma = new PrismaClient()
@@ -60,7 +60,6 @@ async function main() {
       scheduleAssignmentStatus: null,
     },
   })
-  void SubscriptionStatus // referencia intencional para no romper import si se reactiva
 
   console.log('✔ Seed completo. Credenciales en docs/migration.md')
 }

@@ -138,7 +138,7 @@ function ModuleDetail() {
             {mod.lessons.map((l) => {
               const Icon = KIND_ICON[l.kind];
               const done = isLessonComplete(user.id, l.id);
-              const isActive = l.id === activeId;
+              const isActive = l.id === currentActiveId;
               return (
                 <li key={l.id}>
                   <button

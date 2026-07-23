@@ -4,8 +4,9 @@ import { InjectQueue } from '@nestjs/bullmq'
 import { Queue } from 'bullmq'
 import { env } from '../../config/env'
 import { JwtService } from '@nestjs/jwt'
-import { randomBytes, randomUUID } from 'crypto'
+import { randomBytes, randomUUID, createHash } from 'crypto'
 import { StorageService } from '../storage/storage.service'
+import { NotificationsService } from '../notifications/notifications.service'
 
 @Injectable()
 export class AdminService {
@@ -20,6 +21,7 @@ export class AdminService {
     @InjectQueue('automations') private automationsQueue: Queue,
     private jwt: JwtService,
     private storage: StorageService,
+    private notifications: NotificationsService,
   ) {}
 
   private async resolveExistingUserId(idOrAlias: string): Promise<string> {
@@ -361,21 +363,37 @@ export class AdminService {
    * El estudiante no queda activo hasta completar pago Wompi.
    */
   async createUser(input: { email: string; fullName: string; role: 'student' | 'teacher'; level?: 'beginner' | 'intermediate' | 'advanced' }) {
-    const exists = await this.prisma.user.findUnique({ where: { email: input.email.toLowerCase() } })
+    const email = input.email.toLowerCase()
+    const exists = await this.prisma.user.findUnique({ where: { email } })
     if (exists) throw new Error('User already exists')
-    const setPasswordToken = randomBytes(32).toString('hex')
     const user = await this.prisma.user.create({
       data: {
-        email: input.email.toLowerCase(),
+        email,
         fullName: input.fullName,
         role: input.role,
         englishLevel: input.level,
-        passwordHash: '',
-        // setPasswordToken se guarda en tabla `password_reset_tokens` con TTL 7 días.
+        passwordHash: null,
       },
     })
-    // TODO emails: enqueue('emails', { template: 'set-password', to: user.email, ctx: { token: setPasswordToken } })
-    return { user, setPasswordToken }
+    // Invitación: link para configurar contraseña (reusa el flujo de reset,
+    // TTL 7 días). Un estudiante creado así NO queda activo hasta pagar Wompi.
+    const token = randomBytes(32).toString('hex')
+    const tokenHash = createHash('sha256').update(token).digest('hex')
+    await this.prisma.passwordReset.create({
+      data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7) },
+    })
+    const link = `${env.PUBLIC_SITE_URL}/reset-password?token=${token}`
+    await this.notifications.enqueue({
+      userId: user.id,
+      toEmail: user.email,
+      template: 'account_invite',
+      subject: 'Configura tu contraseña',
+      dedupeKey: `invite:${user.id}:${token.slice(0, 12)}`,
+      vars: { fullName: user.fullName, link },
+      type: 'system',
+    })
+    // En dev devolvemos el link para poder probar sin SMTP.
+    return { user, link }
   }
 
   /**
@@ -523,11 +541,23 @@ export class AdminService {
    */
   async resetUserPassword(id: string) {
     const resolvedId = await this.resolveExistingUserId(id)
+    const user = await this.prisma.user.findUnique({ where: { id: resolvedId } })
     const token = randomBytes(32).toString('hex')
+    const tokenHash = createHash('sha256').update(token).digest('hex')
     const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24)
-    await this.prisma.passwordReset.create({ data: { userId: resolvedId, tokenHash: token, expiresAt } as any })
+    await this.prisma.passwordReset.create({ data: { userId: resolvedId, tokenHash, expiresAt } })
     const link = `${env.PUBLIC_SITE_URL}/reset-password?token=${token}`
-    // TODO emails: enqueue('emails', { template: 'reset-password', to: user.email, ctx: { link } })
+    if (user) {
+      await this.notifications.enqueue({
+        userId: user.id,
+        toEmail: user.email,
+        template: 'password_reset',
+        subject: 'Restablece tu contraseña',
+        dedupeKey: `pwreset:${user.id}:${token.slice(0, 12)}`,
+        vars: { link },
+        type: 'system',
+      })
+    }
     return { ok: true, link, expiresAt }
   }
 

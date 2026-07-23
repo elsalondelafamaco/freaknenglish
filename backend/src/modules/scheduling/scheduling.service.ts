@@ -4,12 +4,18 @@ import { NotificationsService } from '../notifications/notifications.service'
 
 /**
  * Bloques semanales de horario del estudiante.
- * weekday: 0=Dom..6=Sáb ; hour: 24h (7..21 típico).
+ * weekday: 0=Dom..6=Sáb ; hour: 24h (7..21 típico), en hora local Bogotá.
  */
 export interface ScheduleBlock {
   weekday: number
   hour: number
 }
+
+// Colombia no tiene horario de verano: siempre UTC-5.
+const BOGOTA_OFFSET_MS = 5 * 60 * 60 * 1000
+const CLASS_DURATION_MIN = 50
+// Horizonte de clases generadas por adelantado.
+const GENERATION_WEEKS = 4
 
 function isHourInRange(hour: number, startsAt: string, endsAt: string) {
   const s = parseInt(startsAt.split(':')[0] ?? '0', 10)
@@ -42,6 +48,66 @@ export class SchedulingService {
   }
 
   /**
+   * Convierte (weekday, hour local Bogotá, semanas de offset) en el instante
+   * real (UTC) de la clase.
+   */
+  private buildClassInstant(weekday: number, hour: number, weekOffset: number): Date {
+    const nowLocal = new Date(Date.now() - BOGOTA_OFFSET_MS) // leer campos UTC como hora Bogotá
+    const y = nowLocal.getUTCFullYear()
+    const m = nowLocal.getUTCMonth()
+    const d = nowLocal.getUTCDate()
+    const curWeekday = nowLocal.getUTCDay()
+    let deltaDays = (weekday - curWeekday + 7) % 7
+    deltaDays += weekOffset * 7
+    const wallMs = Date.UTC(y, m, d + deltaDays, hour, 0, 0)
+    return new Date(wallMs + BOGOTA_OFFSET_MS)
+  }
+
+  /**
+   * Materializa las clases recurrentes del estudiante para las próximas
+   * GENERATION_WEEKS semanas a partir de sus `schedulePreferences` y su
+   * profesor asignado. Idempotente: no duplica clases en el mismo instante.
+   * Es la fuente de las clases que ve el calendario y que alimenta la nómina.
+   */
+  async ensureUpcomingClasses(studentId: string): Promise<{ created: number }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      include: { subscription: true },
+    })
+    if (!user || !user.assignedTeacherId) return { created: 0 }
+    if (!user.subscription || user.subscription.status !== 'active') return { created: 0 }
+    const blocks = (user.schedulePreferences as any as ScheduleBlock[] | null) ?? []
+    if (!Array.isArray(blocks) || blocks.length === 0) return { created: 0 }
+
+    const now = new Date()
+    let created = 0
+    for (const b of blocks) {
+      if (typeof b?.weekday !== 'number' || typeof b?.hour !== 'number') continue
+      for (let w = 0; w < GENERATION_WEEKS; w++) {
+        const startsAt = this.buildClassInstant(b.weekday, b.hour, w)
+        if (startsAt.getTime() <= now.getTime()) continue
+        const exists = await this.prisma.class.findFirst({
+          where: { studentId, startsAt },
+          select: { id: true },
+        })
+        if (exists) continue
+        const endsAt = new Date(startsAt.getTime() + CLASS_DURATION_MIN * 60 * 1000)
+        await this.prisma.class.create({
+          data: {
+            studentId,
+            teacherId: user.assignedTeacherId,
+            startsAt,
+            endsAt,
+            status: 'scheduled',
+          },
+        })
+        created++
+      }
+    }
+    return { created }
+  }
+
+  /**
    * Grilla 7×24 (weekday × hour) → cantidad de profesores con disponibilidad.
    * Sólo profesores activos (no deshabilitados/eliminados).
    */
@@ -65,7 +131,7 @@ export class SchedulingService {
   /**
    * Recibe N bloques (== plan.daysPerWeek), busca UN profesor con
    * disponibilidad para TODOS. Si encuentra: assignedTeacherId + status
-   * `auto_assigned`. Si no: `manual_pending`.
+   * `auto_assigned` y genera las clases. Si no: `manual_pending`.
    */
   async submitPreferences(userId: string, blocks: ScheduleBlock[]) {
     if (!Array.isArray(blocks) || blocks.length === 0) throw new BadRequestException('blocks required')
@@ -103,7 +169,10 @@ export class SchedulingService {
         onboardedAt: user.onboardedAt ?? new Date(),
       },
     })
-    if (match) await this.notifyTeacherAssigned(userId, match.id, 'onboarding')
+    if (match) {
+      await this.notifyTeacherAssigned(userId, match.id, 'onboarding')
+      await this.ensureUpcomingClasses(userId)
+    }
 
     return {
       status,
@@ -153,6 +222,7 @@ export class SchedulingService {
       data: { assignedTeacherId: teacherId, scheduleAssignmentStatus: 'auto_assigned' },
     })
     await this.notifyTeacherAssigned(studentId, teacherId, 'manual')
+    await this.ensureUpcomingClasses(studentId)
     return updated
   }
 
@@ -171,8 +241,8 @@ export class SchedulingService {
 
   /**
    * Re-evalúa a los estudiantes con `manual_pending`: si los nuevos
-   * bloques del profesor cubren TODAS sus preferencias, los auto-asigna.
-   * Devuelve el listado de estudiantes reasignados.
+   * bloques del profesor cubren TODAS sus preferencias, los auto-asigna
+   * y genera sus clases. Devuelve el listado de estudiantes reasignados.
    */
   async reassignPendingForTeacher(teacherId: string) {
     const teacher = await this.prisma.user.findUnique({
@@ -204,6 +274,7 @@ export class SchedulingService {
         },
       })
       await this.notifyTeacherAssigned(s.id, teacherId, 'reassign')
+      await this.ensureUpcomingClasses(s.id)
       reassigned.push({ id: s.id, fullName: s.fullName })
     }
     return reassigned

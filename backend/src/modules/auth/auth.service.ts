@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt'
 import * as argon2 from 'argon2'
 import * as crypto from 'crypto'
 import { PrismaService } from '../../prisma/prisma.service'
+import { NotificationsService } from '../notifications/notifications.service'
 import { env } from '../../config/env'
 
 /** Token pair returned to the client. */
@@ -10,7 +11,11 @@ export type Tokens = { accessToken: string; refreshToken: string }
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService, private jwt: JwtService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwt: JwtService,
+    private notifications: NotificationsService,
+  ) {}
 
   async signup(input: { email: string; password: string; fullName: string; phone: string; documentNumber: string }) {
     const email = input.email.trim().toLowerCase()
@@ -85,14 +90,23 @@ export class AuthService {
   }
 
   async forgotPassword(email: string): Promise<string | null> {
-    const user = await this.prisma.user.findUnique({ where: { email } })
+    const user = await this.prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } })
     if (!user) return null
     const token = crypto.randomBytes(32).toString('hex')
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
     await this.prisma.passwordReset.create({
       data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
     })
-    // TODO: send email via NotificationService
+    const link = `${env.PUBLIC_SITE_URL}/reset-password?token=${token}`
+    await this.notifications.enqueue({
+      userId: user.id,
+      toEmail: user.email,
+      template: 'password_reset',
+      subject: 'Restablece tu contraseña',
+      dedupeKey: `pwreset:${user.id}:${token.slice(0, 12)}`,
+      vars: { link },
+      type: 'system',
+    })
     return token
   }
 

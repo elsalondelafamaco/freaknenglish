@@ -27,9 +27,26 @@ const schema = z.object({
   WOMPI_INTEGRITY_SECRET: z.string().optional().default(''),
   WOMPI_EVENTS_SECRET: z.string().optional().default(''),
   WOMPI_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
+  // Wompi rechaza redirect-urls a localhost. Siempre apuntamos a producción,
+  // independientemente de PUBLIC_SITE_URL (que en dev puede ser localhost).
+  WOMPI_REDIRECT_URL: z.string().url().default('https://freaknenglish.com/checkout/return'),
+  // Dispersión de nómina vía Wompi (Payouts). Deshabilitado por defecto:
+  // el admin aprueba/gestiona cada pago manualmente hasta habilitarlo.
+  WOMPI_PAYOUTS_ENABLED: z.enum(['true','false']).default('false').transform((v) => v === 'true'),
   PUBLIC_SITE_URL: z.string().url().default('https://freaknenglish.com'),
   CORS_ORIGINS: z.string().default('https://freaknenglish.com,http://localhost:5173'),
   TEACHER_PAYRATE_COP: z.coerce.number().default(15000),
+  // Ventana (horas) para cancelar/reagendar de forma autónoma. Fallback si
+  // no existe la clave `reschedule_lock_hours` en app_settings.
+  RESCHEDULE_LOCK_HOURS: z.coerce.number().default(24),
+  // ─── WhatsApp (andamiaje: listo pero deshabilitado) ───────────────────
+  // Cuando WHATSAPP_ENABLED=true y hay credenciales, el WhatsAppTransport
+  // enviará mensajes. Mientras esté en false, solo registra (no-op).
+  WHATSAPP_ENABLED: z.enum(['true','false']).default('false').transform((v) => v === 'true'),
+  WHATSAPP_PROVIDER: z.enum(['cloud', 'twilio']).default('cloud'),
+  WHATSAPP_API_TOKEN: z.string().optional().default(''),
+  WHATSAPP_PHONE_ID: z.string().optional().default(''),
+  WHATSAPP_FROM: z.string().optional().default(''),
 })
 
 export const env = schema.parse(process.env)

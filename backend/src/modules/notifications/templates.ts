@@ -102,6 +102,41 @@ export const templates = {
 
   renewal_3d: () =>
     wrap('Tu plan se renueva en 3 días', `<p>Puedes gestionarlo desde tu portal.</p>${cta(`${env.PUBLIC_SITE_URL}/app/settings`, 'Gestionar plan')}`),
+
+  // ─── Password / cuentas ─────────────────────────────────────────────
+  password_reset: (v: { link: string }) =>
+    wrap(
+      'Restablece tu contraseña',
+      `<p>Recibimos una solicitud para restablecer tu contraseña. El enlace vence pronto por seguridad.</p>
+       <p>Si no fuiste tú, ignora este correo.</p>
+       ${cta(v.link, 'Crear nueva contraseña')}`,
+      { preheader: 'Enlace para restablecer tu contraseña' },
+    ),
+
+  account_invite: (v: { fullName: string; link: string }) =>
+    wrap(
+      `Te damos la bienvenida, ${v.fullName}`,
+      `<p>Se creó una cuenta para ti en ${env.BRAND_NAME}. Configura tu contraseña para ingresar.</p>
+       ${cta(v.link, 'Configurar mi contraseña')}`,
+      { preheader: 'Configura tu contraseña para ingresar' },
+    ),
+
+  // ─── Retención / ciclo de vida ──────────────────────────────────────
+  payment_failed: (v: { fullName?: string; planName?: string }) =>
+    wrap(
+      'No pudimos procesar tu pago',
+      `<p>${v.fullName ? `Hola ${v.fullName}, ` : ''}tu pago${v.planName ? ` del plan <b>${v.planName}</b>` : ''} no se pudo procesar. Para no perder el acceso a tus clases, actualiza tu método de pago.</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/app/settings`, 'Actualizar método de pago')}`,
+      { preheader: 'Actualiza tu método de pago para no perder el acceso' },
+    ),
+
+  level_up: (v: { level: string }) =>
+    wrap(
+      '¡Felicitaciones, subiste de nivel! 🎉',
+      `<p>Aprobaste tu checkpoint y avanzaste al nivel <b>${v.level}</b>. Ya tienes desbloqueados los nuevos módulos.</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/app/learning`, 'Ver mis nuevos módulos')}`,
+      { preheader: '¡Subiste de nivel!' },
+    ),
 } as const
 
 export type TemplateKey = keyof typeof templates

@@ -48,7 +48,10 @@ export class CheckoutService {
 
     // Wompi "Web Checkout" — pasarela pre-hosteada. Ver:
     // https://docs.wompi.co/docs/colombia/web-checkout/
-    const redirectUrl = `${env.PUBLIC_SITE_URL}/checkout/return`
+    // IMPORTANTE: Wompi rechaza redirect-urls a localhost, así que SIEMPRE
+    // usamos el dominio de producción (WOMPI_REDIRECT_URL), aunque el resto
+    // de la app corra en local durante desarrollo.
+    const redirectUrl = env.WOMPI_REDIRECT_URL
     const checkoutParams = new URLSearchParams({
       'public-key': env.WOMPI_PUBLIC_KEY,
       currency,

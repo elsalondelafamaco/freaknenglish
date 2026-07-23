@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller'
 import { AuthService } from './auth.service'
 import { JwtStrategy } from './strategies/jwt.strategy'
 import { GoogleStrategy } from './strategies/google.strategy'
+import { NotificationsModule } from '../notifications/notifications.module'
 import { env } from '../../config/env'
 
 @Module({
@@ -14,6 +15,7 @@ import { env } from '../../config/env'
       secret: env.JWT_SECRET,
       signOptions: { expiresIn: env.JWT_EXPIRES_IN },
     }),
+    NotificationsModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, GoogleStrategy],

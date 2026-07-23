@@ -2,12 +2,26 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { ClassStatus } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
-
-const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000
+import { env } from '../../config/env'
 
 @Injectable()
 export class ClassesService {
   constructor(private prisma: PrismaService, private notifications: NotificationsService) {}
+
+  /**
+   * Ventana (ms) para que el estudiante cancele/reagende de forma autónoma.
+   * Configurable en `app_settings` (key `reschedule_lock_hours`); si no existe,
+   * usa RESCHEDULE_LOCK_HOURS (default 24h).
+   */
+  private async rescheduleLockMs(): Promise<number> {
+    const row = await this.prisma.appSetting
+      .findUnique({ where: { key: 'reschedule_lock_hours' } })
+      .catch(() => null)
+    const raw = row?.value as any
+    const hours = typeof raw === 'number' ? raw : Number(raw?.value ?? raw ?? NaN)
+    const effective = Number.isFinite(hours) && hours > 0 ? hours : env.RESCHEDULE_LOCK_HOURS
+    return effective * 60 * 60 * 1000
+  }
 
   listForStudent(studentId: string) {
     return this.prisma.class.findMany({
@@ -43,30 +57,46 @@ export class ClassesService {
     })
   }
 
+  /**
+   * Validación CRUZADA de asistencia (anti-fraude).
+   * - El profesor marca `teacherValidatedAt`.
+   * - El estudiante marca `studentConfirmedAt` (botón "Sí, tomé mi clase").
+   * Solo cuando AMBOS coinciden la clase pasa a `validated` (y `validatedAt`
+   * se setea), que es lo único que cuenta para nómina. Si falta una parte, la
+   * clase queda `scheduled` con el timestamp parcial correspondiente.
+   */
   async validateAttendance(classId: string, teacherId: string) {
     const c = await this.prisma.class.findUnique({ where: { id: classId } })
     if (!c) throw new NotFoundException('Class not found')
     if (c.teacherId && c.teacherId !== teacherId) throw new ForbiddenException()
+    const bothConfirmed = !!c.studentConfirmedAt
     return this.prisma.class.update({
       where: { id: classId },
-      data: { status: ClassStatus.validated, validatedAt: new Date() },
+      data: {
+        teacherValidatedAt: new Date(),
+        ...(bothConfirmed ? { status: ClassStatus.validated, validatedAt: new Date() } : {}),
+      },
     })
   }
 
   async studentConfirm(classId: string, studentId: string) {
     const c = await this.prisma.class.findUnique({ where: { id: classId } })
     if (!c || c.studentId !== studentId) throw new ForbiddenException()
+    const bothConfirmed = !!c.teacherValidatedAt
     return this.prisma.class.update({
       where: { id: classId },
-      data: { status: ClassStatus.validated, validatedAt: new Date() },
+      data: {
+        studentConfirmedAt: new Date(),
+        ...(bothConfirmed ? { status: ClassStatus.validated, validatedAt: new Date() } : {}),
+      },
     })
   }
 
   async reschedule(classId: string, studentId: string, newStartsAt: Date, newEndsAt: Date) {
     const c = await this.prisma.class.findUnique({ where: { id: classId } })
     if (!c || c.studentId !== studentId) throw new ForbiddenException()
-    if (c.startsAt.getTime() - Date.now() < TWELVE_HOURS_MS) {
-      throw new BadRequestException('Cannot reschedule within 12h of class')
+    if (c.startsAt.getTime() - Date.now() < (await this.rescheduleLockMs())) {
+      throw new BadRequestException('Fuera de la ventana permitida para reagendar')
     }
     const updated = await this.prisma.class.update({
       where: { id: classId },
@@ -110,8 +140,8 @@ export class ClassesService {
   async cancel(classId: string, studentId: string, reason?: string) {
     const c = await this.prisma.class.findUnique({ where: { id: classId } })
     if (!c || c.studentId !== studentId) throw new ForbiddenException()
-    if (c.startsAt.getTime() - Date.now() < TWELVE_HOURS_MS) {
-      throw new BadRequestException('Cannot cancel within 12h of class')
+    if (c.startsAt.getTime() - Date.now() < (await this.rescheduleLockMs())) {
+      throw new BadRequestException('Fuera de la ventana permitida para cancelar')
     }
     const updated = await this.prisma.class.update({
       where: { id: classId },

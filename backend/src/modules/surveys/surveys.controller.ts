@@ -108,6 +108,17 @@ export class SurveysController {
       return { pending: true, period, reason: 'period_ended' as const }
     }
 
+    // (c) piso mensual: si nunca respondió, o pasaron >= 30 días desde su
+    // última respuesta, forzamos el popup aunque no apliquen (a)/(b).
+    const last = await this.prisma.satisfactionSurvey.findFirst({
+      where: { userId: u.id },
+      orderBy: { createdAt: 'desc' },
+    })
+    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
+    if (!last || now.getTime() - last.createdAt.getTime() >= THIRTY_DAYS_MS) {
+      return { pending: true, period, reason: 'monthly_floor' as const }
+    }
+
     return { pending: false, period, reason: null }
   }
 

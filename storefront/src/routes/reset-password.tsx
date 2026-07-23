@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { z } from "zod";
 import { AuthShell, ErrorBox, Field, inputClass } from "@/components/site/AuthShell";
-import { authService } from "@/lib/domain/auth";
+import { resetPassword } from "@/lib/auth/session";
 
 const searchSchema = z.object({ token: z.string().optional() });
 
@@ -34,7 +34,7 @@ function ResetPasswordPage() {
     }
     setBusy(true);
     try {
-      await authService.resetPassword(token, password);
+      await resetPassword(token, password);
       navigate({ to: "/login" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo restablecer la contraseña.");

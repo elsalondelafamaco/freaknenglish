@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
+import { NotificationsService } from '../notifications/notifications.service'
 
 @Injectable()
 export class LearningService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private notifications: NotificationsService) {}
 
   listModules(level?: 'beginner' | 'intermediate' | 'advanced') {
     return this.prisma.module.findMany({
@@ -42,8 +43,18 @@ export class LearningService {
     })
   }
 
-  checkpoint(id: string) {
-    return this.prisma.checkpoint.findUnique({ where: { id } })
+  /**
+   * Devuelve el checkpoint SIN correctIndex en las preguntas: exponer la
+   * respuesta correcta permitiria hacer trampa. La calificacion es server-side
+   * en submitCheckpoint leyendo las respuestas desde la BD.
+   */
+  async checkpoint(id: string) {
+    const cp = await this.prisma.checkpoint.findUnique({ where: { id } })
+    if (!cp) return null
+    const questions = Array.isArray(cp.questions)
+      ? (cp.questions as any[]).map(({ correctIndex, ...rest }) => rest)
+      : cp.questions
+    return { ...cp, questions }
   }
 
   async userProgress(userId: string) {
@@ -53,10 +64,24 @@ export class LearningService {
     ])
     return {
       lessonsCompleted: progress.filter((p) => p.completedAt).length,
+      completedLessonIds: progress.filter((p) => p.completedAt).map((p) => p.lessonId),
       totalSecondsWatched: progress.reduce((s, p) => s + (p.secondsWatched ?? 0), 0),
       checkpointsPassed: attempts.filter((a) => a.passed).map((a) => a.checkpointId),
       attempts,
     }
+  }
+
+  /** Checkpoint del nivel (por fromLevel), sin correctIndex. */
+  async levelCheckpoint(level: 'beginner' | 'intermediate' | 'advanced') {
+    const cp = await this.prisma.checkpoint.findFirst({
+      where: { fromLevel: level as any },
+      orderBy: { createdAt: 'asc' },
+    })
+    if (!cp) return null
+    const questions = Array.isArray(cp.questions)
+      ? (cp.questions as any[]).map(({ correctIndex, ...rest }) => rest)
+      : cp.questions
+    return { ...cp, questions }
   }
 
   upsertProgress(userId: string, lessonId: string, secondsWatched: number, completed: boolean) {
@@ -79,6 +104,22 @@ export class LearningService {
     })
     if (passed) {
       await this.prisma.user.update({ where: { id: userId }, data: { englishLevel: cp.toLevel } })
+      const levelLabel: Record<string, string> = { beginner: 'Principiante', intermediate: 'Intermedio', advanced: 'Avanzado' }
+      const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+      if (u) {
+        await this.notifications.enqueue({
+          userId,
+          toEmail: u.email,
+          template: 'level_up',
+          subject: '¡Subiste de nivel!',
+          dedupeKey: `levelup:${userId}:${cp.toLevel}`,
+          vars: { level: levelLabel[cp.toLevel] ?? cp.toLevel },
+          type: 'learning',
+          title: '¡Subiste de nivel!',
+          body: `Avanzaste a ${levelLabel[cp.toLevel] ?? cp.toLevel}.`,
+          linkUrl: '/app/learning',
+        })
+      }
     }
     return attempt
   }

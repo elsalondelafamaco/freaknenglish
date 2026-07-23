@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { InjectQueue } from '@nestjs/bullmq'
 import { Queue } from 'bullmq'
@@ -10,6 +10,7 @@ import { NotificationsService } from '../notifications/notifications.service'
 
 @Injectable()
 export class AdminService {
+  private readonly log = new Logger(AdminService.name)
   private readonly demoUserAliases: Record<string, string> = {
     usr_demo_student: 'estudiante@freakn.dev',
     usr_demo_teacher: 'profe@freakn.dev',
@@ -183,8 +184,38 @@ export class AdminService {
     // retenido = tuvo al menos 1 clase validada en el mes N
     const cohorts = await this.retentionCohorts(6)
 
+    // Pagos fallidos en el rango (finanzas).
+    const failedPayments = await this.prisma.paymentIntent.count({
+      where: { status: { in: ['DECLINED', 'VOIDED', 'ERROR'] }, createdAt: { gte: from } },
+    })
+
+    // Módulos donde los estudiantes se estancan: agrupa a cada estudiante por
+    // el módulo de su última lección completada (dónde está "parado" hoy).
+    const completedProgress = await this.prisma.lessonProgress.findMany({
+      where: { completedAt: { not: null } },
+      select: { userId: true, updatedAt: true, lesson: { select: { moduleId: true, module: { select: { title: true } } } } },
+      orderBy: { updatedAt: 'desc' },
+    })
+    const latestByUser = new Map<string, { moduleId: string; title: string }>()
+    for (const pr of completedProgress) {
+      if (latestByUser.has(pr.userId)) continue
+      latestByUser.set(pr.userId, { moduleId: pr.lesson.moduleId, title: pr.lesson.module?.title ?? pr.lesson.moduleId })
+    }
+    const stuckMap = new Map<string, { title: string; students: number }>()
+    for (const { moduleId, title } of latestByUser.values()) {
+      const cur = stuckMap.get(moduleId) ?? { title, students: 0 }
+      cur.students += 1
+      stuckMap.set(moduleId, cur)
+    }
+    const stuckModules = Array.from(stuckMap.entries())
+      .map(([moduleId, v]) => ({ moduleId, title: v.title, students: v.students }))
+      .sort((a, b) => b.students - a.students)
+      .slice(0, 10)
+
     return {
       range: { from: from.toISOString(), to: to.toISOString(), days },
+      failedPayments,
+      stuckModules,
       mrrCop,
       arrCop,
       activeSubscriptions: activeSubs.length,
@@ -312,6 +343,83 @@ export class AdminService {
       .map((r) => [r.teacherId, JSON.stringify(r.fullName), r.classes, r.hours, r.hourlyRateCop, r.amountCop].join(','))
       .join('\n')
     return `${header}\n${body}\n`
+  }
+
+  // ─── Nómina · persistencia (PayrollRun) + dispersión Wompi ────────────
+  /**
+   * Calcula y PERSISTE la nómina del período como filas `PayrollRun`
+   * (una por profesor, status inicial `pending`). Idempotente por
+   * (period, teacherId): re-generar actualiza montos pero respeta las ya
+   * pagadas. La dispersión NO es automática: el admin revisa y aprueba/paga
+   * cada profesor (ver `payPayrollRun`).
+   */
+  async generatePayrollRuns(period: string) {
+    const rows = await this.payroll(period)
+    for (const r of rows) {
+      const existing = await this.prisma.payrollRun.findUnique({
+        where: { period_teacherId: { period, teacherId: r.teacherId } },
+      })
+      if (existing?.status === 'paid') continue
+      await this.prisma.payrollRun.upsert({
+        where: { period_teacherId: { period, teacherId: r.teacherId } },
+        update: { classes: r.classes, rateCop: r.hourlyRateCop, amountCop: r.amountCop },
+        create: {
+          period,
+          teacherId: r.teacherId,
+          classes: r.classes,
+          rateCop: r.hourlyRateCop,
+          amountCop: r.amountCop,
+          status: 'pending',
+        },
+      })
+    }
+    return this.listPayrollRuns(period)
+  }
+
+  async listPayrollRuns(period: string) {
+    const runs = await this.prisma.payrollRun.findMany({
+      where: { period },
+      orderBy: { amountCop: 'desc' },
+    })
+    const teachers = await this.prisma.user.findMany({
+      where: { id: { in: runs.map((r) => r.teacherId) } },
+      select: { id: true, fullName: true, email: true },
+    })
+    const byId = new Map(teachers.map((t) => [t.id, t]))
+    return runs.map((r) => ({ ...r, teacher: byId.get(r.teacherId) ?? null }))
+  }
+
+  /**
+   * Marca una corrida de nómina como pagada. Si `WOMPI_PAYOUTS_ENABLED=true`
+   * intenta la dispersión vía Wompi; si no (default), queda como pago manual
+   * registrado por el admin. Decisión de producto: dispersión automática vía
+   * Wompi PERO disparada tras la aprobación/revisión del admin, nunca sola.
+   */
+  async payPayrollRun(id: string) {
+    const run = await this.prisma.payrollRun.findUnique({ where: { id } })
+    if (!run) throw new NotFoundException('Payroll run not found')
+    if (run.status === 'paid') return run
+    const payout = await this.dispersePayrollRun(run)
+    return this.prisma.payrollRun.update({
+      where: { id },
+      data: { status: 'paid', paidAt: new Date() },
+    })
+      .then((updated) => ({ ...updated, dispersed: payout.dispersed, reference: payout.reference }))
+  }
+
+  /**
+   * Andamiaje de dispersión Wompi (Payouts). Deshabilitado por defecto
+   * (`WOMPI_PAYOUTS_ENABLED=false`) porque exige KYC/contrato de dispersión.
+   * Cuando se habilite, implementar aquí la transferencia real por profesor.
+   */
+  private async dispersePayrollRun(run: { id: string; teacherId: string; amountCop: number }) {
+    if (!env.WOMPI_PAYOUTS_ENABLED) {
+      return { dispersed: false as const, reference: undefined as string | undefined }
+    }
+    // TODO(payouts): integrar Wompi Payouts/dispersión (requiere KYC + cuenta
+    // del profesor). Por ahora solo se registra la intención.
+    this.log.warn(`[payouts-pending] run ${run.id} teacher ${run.teacherId} amount ${run.amountCop}`)
+    return { dispersed: false as const, reference: undefined as string | undefined }
   }
 
   content() {
@@ -627,6 +735,111 @@ export class AdminService {
   async deleteLesson(id: string) {
     await this.prisma.lesson.delete({ where: { id } })
     return { ok: true }
+  }
+
+  // ─── CMS · checkpoints (exámenes) ─────────────────────────────────────
+  async saveCheckpoint(input: {
+    id?: string
+    moduleId?: string
+    fromLevel?: 'beginner' | 'intermediate' | 'advanced'
+    toLevel?: 'beginner' | 'intermediate' | 'advanced'
+    passingScore?: number
+    questions?: unknown
+  }) {
+    const id = input.id ?? randomUUID()
+    const existing = await this.prisma.checkpoint.findUnique({ where: { id } })
+    const moduleId = input.moduleId ?? existing?.moduleId
+    if (!moduleId) throw new Error('moduleId required')
+    const data = {
+      moduleId,
+      fromLevel: (input.fromLevel ?? existing?.fromLevel) as any,
+      toLevel: (input.toLevel ?? existing?.toLevel) as any,
+      passingScore: input.passingScore ?? existing?.passingScore ?? 70,
+      questions: (input.questions ?? existing?.questions ?? []) as any,
+    }
+    if (existing) return this.prisma.checkpoint.update({ where: { id }, data })
+    return this.prisma.checkpoint.create({ data: { id, ...data } })
+  }
+
+  async deleteCheckpoint(id: string) {
+    await this.prisma.checkpoint.delete({ where: { id } })
+    return { ok: true }
+  }
+
+  // ─── CRM · estudiantes en riesgo ──────────────────────────────────────
+  /**
+   * Segmenta estudiantes con señales de riesgo de churn para seguimiento del
+   * equipo: suscripción con problemas, sin clases recientes, o aprendizaje
+   * inactivo. Devuelve razones + score (nº de señales) ordenado desc.
+   */
+  async atRiskStudents() {
+    const DAY = 86400000
+    const now = Date.now()
+    const NO_CLASS_DAYS = 14
+    const NO_LEARN_DAYS = 21
+
+    const [students, subs, classes, progress] = await Promise.all([
+      this.prisma.user.findMany({
+        where: { role: 'student', deletedAt: null },
+        select: { id: true, fullName: true, email: true, assignedTeacherId: true, createdAt: true },
+      }),
+      this.prisma.subscription.findMany({
+        select: { userId: true, status: true, currentPeriodEnd: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.class.findMany({
+        where: { status: 'validated' },
+        select: { studentId: true, validatedAt: true, startsAt: true },
+        orderBy: { startsAt: 'desc' },
+      }),
+      this.prisma.lessonProgress.findMany({
+        where: { completedAt: { not: null } },
+        select: { userId: true, updatedAt: true },
+        orderBy: { updatedAt: 'desc' },
+      }),
+    ])
+
+    const latestSub = new Map<string, { status: string; currentPeriodEnd: Date | null }>()
+    for (const s2 of subs) if (!latestSub.has(s2.userId)) latestSub.set(s2.userId, s2)
+    const lastClass = new Map<string, Date>()
+    for (const c of classes) {
+      const d = c.validatedAt ?? c.startsAt
+      if (d && !lastClass.has(c.studentId)) lastClass.set(c.studentId, d)
+    }
+    const lastLearn = new Map<string, Date>()
+    for (const pr of progress) if (!lastLearn.has(pr.userId)) lastLearn.set(pr.userId, pr.updatedAt)
+
+    const rows = students.map((st) => {
+      const reasons: string[] = []
+      const sub = latestSub.get(st.id)
+      if (!sub) reasons.push('Sin suscripción')
+      else if (['past_due', 'canceled', 'expired'].includes(sub.status)) reasons.push(`Suscripción ${sub.status}`)
+
+      const lc = lastClass.get(st.id)
+      const daysSinceClass = lc ? Math.floor((now - lc.getTime()) / DAY) : null
+      const daysSinceSignup = Math.floor((now - st.createdAt.getTime()) / DAY)
+      if (!lc && daysSinceSignup > 7) reasons.push('Nunca ha tomado clase')
+      else if (daysSinceClass !== null && daysSinceClass >= NO_CLASS_DAYS) reasons.push(`Sin clases hace ${daysSinceClass}d`)
+
+      const ll = lastLearn.get(st.id)
+      const daysSinceLearn = ll ? Math.floor((now - ll.getTime()) / DAY) : null
+      if (daysSinceLearn === null && daysSinceSignup > 7) reasons.push('Sin avance de aprendizaje')
+      else if (daysSinceLearn !== null && daysSinceLearn >= NO_LEARN_DAYS) reasons.push('Aprendizaje inactivo')
+
+      return {
+        id: st.id,
+        fullName: st.fullName,
+        email: st.email,
+        assignedTeacherId: st.assignedTeacherId,
+        subscriptionStatus: sub?.status ?? null,
+        lastClassAt: lc ?? null,
+        daysSinceClass,
+        reasons,
+        risk: reasons.length,
+      }
+    })
+
+    return rows.filter((r) => r.risk > 0).sort((a, b) => b.risk - a.risk)
   }
 
   signUpload(body: { filename: string; contentType?: string; lessonId?: string }) {

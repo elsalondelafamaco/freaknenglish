@@ -12,7 +12,12 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       secretOrKey: env.JWT_SECRET,
     })
   }
-  validate(payload: { sub: string; email: string; role: string }) {
-    return { id: payload.sub, email: payload.email, role: payload.role }
+  validate(payload: { sub: string; email: string; role: string; impersonatorId?: string; actAs?: string }) {
+    return {
+      id: payload.sub,
+      email: payload.email,
+      role: payload.role,
+      impersonatorId: payload.impersonatorId ?? null,
+    }
   }
 }

@@ -9,5 +9,6 @@ import { BoardGateway } from './board.gateway'
   imports: [AuthModule, StorageModule],
   controllers: [BoardController],
   providers: [BoardService, BoardGateway],
+  exports: [BoardService],
 })
 export class BoardModule {}

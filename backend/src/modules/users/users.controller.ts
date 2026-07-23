@@ -20,7 +20,10 @@ export class UsersController {
 
   /** @endpoint GET /api/v1/me */
   @Get()
-  me(@CurrentUser() user: AuthUser) { return this.users.me(user.id) }
+  async me(@CurrentUser() user: AuthUser) {
+    const me = await this.users.me(user.id)
+    return { ...(me as any), impersonatorId: (user as any).impersonatorId ?? null }
+  }
 
   /** @endpoint PATCH /api/v1/me */
   @Patch()

@@ -1,86 +1,67 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  Circle,
-  Download,
-  FileText,
-  FileCode,
-  PlayCircle,
-  Presentation,
-} from "lucide-react";
-import { useAuth } from "@/lib/auth/AuthProvider";
-import {
-  isLessonComplete,
-  markLessonComplete,
-  moduleProgress,
-  unmarkLesson,
-} from "@/lib/domain/learning";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, CheckCircle2, Circle, Download, FileText, FileCode, PlayCircle, Presentation } from "lucide-react";
 import { learningApi } from "@/lib/api/endpoints";
-import type { LearningModule, Lesson, LessonKind } from "@/lib/domain/types";
 
 export const Route = createFileRoute("/_authenticated/app/learning/$moduleId")({
-  head: ({ params }) => ({
-    meta: [{ title: `Módulo ${params.moduleId} — Freakn English` }],
-  }),
+  head: ({ params }) => ({ meta: [{ title: `Módulo ${params.moduleId} — Freakn English` }] }),
   component: ModuleDetail,
 });
 
-const KIND_ICON: Record<LessonKind, typeof PlayCircle> = {
+const KIND_ICON: Record<string, typeof PlayCircle> = {
   video: PlayCircle,
   pdf: FileText,
   slides: Presentation,
   download: Download,
   html: FileCode,
 };
+const mediaUrl = (l: any) => l.videoUrl || l.slidesUrl || l.pdfUrl || l.url || "";
 
 function ModuleDetail() {
   const { moduleId } = Route.useParams();
-  const { user } = useAuth();
-  const modQ = useQuery({
-    queryKey: ["learning", "module", moduleId],
-    queryFn: () => learningApi.module(moduleId),
-  });
-  const mod = modQ.data as LearningModule | undefined;
+  const qc = useQueryClient();
+  const modQ = useQuery({ queryKey: ["learning", "module", moduleId], queryFn: () => learningApi.module(moduleId) });
+  const progQ = useQuery({ queryKey: ["learning", "progress"], queryFn: () => learningApi.progress() });
+  const mod = modQ.data as any;
   const [activeId, setActiveId] = useState<string>("");
-  const [tick, setTick] = useState(0);
-  const refresh = () => setTick((t) => t + 1);
 
-  if (!user) return null;
+  const toggleM = useMutation({
+    mutationFn: (v: { lessonId: string; completed: boolean }) => learningApi.saveLessonProgress(v.lessonId, 0, v.completed),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["learning", "progress"] });
+      qc.invalidateQueries({ queryKey: ["learning", "modules"] });
+    },
+  });
+
   if (modQ.isLoading) return <p className="text-sm text-brand-ink/60">Cargando módulo…</p>;
   if (!mod) return <p className="text-sm text-brand-ink/60">Módulo no encontrado.</p>;
-  const currentActiveId = activeId || mod.lessons[0]?.id || "";
 
-  const active: Lesson | undefined = mod.lessons.find((l) => l.id === currentActiveId);
-  const prog = moduleProgress(user.id, mod);
-  // re-read on tick (no-op, but forces use)
-  void tick;
+  const lessons: any[] = [...(mod.lessons ?? [])].sort((a, b) => a.position - b.position);
+  const doneIds = new Set(progQ.data?.completedLessonIds ?? []);
+  const currentActiveId = activeId || lessons[0]?.id || "";
+  const active = lessons.find((l) => l.id === currentActiveId);
+  const total = lessons.length;
+  const done = lessons.filter((l) => doneIds.has(l.id)).length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  const activeDone = active ? doneIds.has(active.id) : false;
 
   return (
     <div className="flex flex-col gap-6">
-      <Link
-        to="/app/learning"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-ink/65 hover:text-brand-ink"
-      >
+      <Link to="/app/learning" className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-ink/65 hover:text-brand-ink">
         <ArrowLeft className="size-4" /> Volver a aprendizaje
       </Link>
 
       <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <div className="text-4xl">{mod.coverEmoji}</div>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">
-            {mod.title}
-          </h1>
+          <div className="text-4xl">{mod.coverEmoji ?? "📘"}</div>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">{mod.title}</h1>
           <p className="mt-1 max-w-xl text-[15px] text-brand-ink/65">{mod.summary}</p>
         </div>
         <div className="rounded-2xl border border-brand-line bg-white px-4 py-3 text-sm">
           <div className="text-xs uppercase tracking-wide text-brand-ink/55">Progreso</div>
-          <div className="text-xl font-bold text-brand-ink">{prog.pct}%</div>
-          <div className="text-xs text-brand-ink/55">
-            {prog.done}/{prog.total} lecciones
-          </div>
+          <div className="text-xl font-bold text-brand-ink">{pct}%</div>
+          <div className="text-xs text-brand-ink/55">{done}/{total} lecciones</div>
         </div>
       </header>
 
@@ -91,35 +72,21 @@ function ModuleDetail() {
               <div className="flex items-start justify-between gap-3">
                 <h2 className="text-lg font-bold text-brand-ink">{active.title}</h2>
                 <span className="rounded-full bg-brand-cream px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-brand-ink/65">
-                  {active.kind} · {active.estMinutes} min
+                  {active.kind} · {active.durationMin ?? 0} min
                 </span>
               </div>
               <LessonViewer lesson={active} />
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <button
-                  onClick={() => {
-                    if (isLessonComplete(user.id, active.id)) unmarkLesson(user.id, active.id);
-                    else markLessonComplete(user.id, active.id);
-                    refresh();
-                  }}
-                  className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold ${
-                    isLessonComplete(user.id, active.id)
-                      ? "bg-brand-success/15 text-brand-success"
-                      : "bg-brand-ink text-white hover:bg-brand-ink-soft"
-                  }`}
+                  onClick={() => toggleM.mutate({ lessonId: active.id, completed: !activeDone })}
+                  disabled={toggleM.isPending}
+                  className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold disabled:opacity-60 ${activeDone ? "bg-brand-success/15 text-brand-success" : "bg-brand-ink text-white hover:bg-brand-ink-soft"}`}
                 >
                   <CheckCircle2 className="size-4" />
-                  {isLessonComplete(user.id, active.id)
-                    ? "Lección completada"
-                    : "Marcar como completada"}
+                  {activeDone ? "Lección completada" : "Marcar como completada"}
                 </button>
-                {active.kind === "download" || active.kind === "pdf" ? (
-                  <a
-                    href={active.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-ink/70 hover:text-brand-ink"
-                  >
+                {(active.kind === "download" || active.kind === "pdf") && mediaUrl(active) ? (
+                  <a href={mediaUrl(active)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-ink/70 hover:text-brand-ink">
                     <Download className="size-4" /> Descargar recurso
                   </a>
                 ) : null}
@@ -131,29 +98,16 @@ function ModuleDetail() {
         </article>
 
         <aside className="rounded-3xl border border-brand-line bg-white p-3">
-          <div className="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-brand-ink/55">
-            Lecciones
-          </div>
+          <div className="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-brand-ink/55">Lecciones</div>
           <ul className="flex flex-col">
-            {mod.lessons.map((l) => {
-              const Icon = KIND_ICON[l.kind];
-              const done = isLessonComplete(user.id, l.id);
+            {lessons.map((l) => {
+              const Icon = KIND_ICON[l.kind] ?? FileText;
+              const isDone = doneIds.has(l.id);
               const isActive = l.id === currentActiveId;
               return (
                 <li key={l.id}>
-                  <button
-                    onClick={() => setActiveId(l.id)}
-                    className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm transition ${
-                      isActive
-                        ? "bg-brand-cream text-brand-ink"
-                        : "text-brand-ink/75 hover:bg-brand-cream/50"
-                    }`}
-                  >
-                    {done ? (
-                      <CheckCircle2 className="size-4 text-brand-success" />
-                    ) : (
-                      <Circle className="size-4 text-brand-ink/35" />
-                    )}
+                  <button onClick={() => setActiveId(l.id)} className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm transition ${isActive ? "bg-brand-cream text-brand-ink" : "text-brand-ink/75 hover:bg-brand-cream/50"}`}>
+                    {isDone ? <CheckCircle2 className="size-4 text-brand-success" /> : <Circle className="size-4 text-brand-ink/35" />}
                     <Icon className="size-4 text-brand-ink/60" />
                     <span className="flex-1 font-medium">{l.title}</span>
                   </button>
@@ -167,29 +121,19 @@ function ModuleDetail() {
   );
 }
 
-function LessonViewer({ lesson }: { lesson: Lesson }) {
+function LessonViewer({ lesson }: { lesson: any }) {
+  const url = mediaUrl(lesson);
   if (lesson.kind === "html") {
     return (
       <div className="h-[72vh] w-full overflow-hidden rounded-2xl border border-brand-line bg-white">
-        <iframe
-          title={lesson.title}
-          srcDoc={lesson.contentHtml ?? lesson.url ?? ""}
-          className="h-full w-full bg-white"
-          sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"
-        />
+        <iframe title={lesson.title} srcDoc={lesson.contentHtml ?? url ?? ""} className="h-full w-full bg-white" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin" />
       </div>
     );
   }
   if (lesson.kind === "video" || lesson.kind === "slides") {
     return (
       <div className="aspect-video w-full overflow-hidden rounded-2xl border border-brand-line bg-brand-ink/5">
-        <iframe
-          src={lesson.url}
-          title={lesson.title}
-          className="h-full w-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
+        <iframe src={url} title={lesson.title} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
       </div>
     );
   }
@@ -197,26 +141,15 @@ function LessonViewer({ lesson }: { lesson: Lesson }) {
     return (
       <div className="rounded-2xl border border-brand-line bg-brand-cream/40 p-8 text-center">
         <FileText className="mx-auto size-10 text-brand-ink/60" />
-        <p className="mt-3 text-sm text-brand-ink/70">
-          Documento PDF listo para leer o descargar.
-        </p>
-        <a
-          href={lesson.url}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-5 py-2 text-sm font-semibold text-white hover:bg-brand-ink-soft"
-        >
-          Abrir PDF
-        </a>
+        <p className="mt-3 text-sm text-brand-ink/70">Documento PDF listo para leer o descargar.</p>
+        {url ? <a href={url} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-5 py-2 text-sm font-semibold text-white hover:bg-brand-ink-soft">Abrir PDF</a> : null}
       </div>
     );
   }
   return (
     <div className="rounded-2xl border border-brand-line bg-brand-cream/40 p-8 text-center">
       <Download className="mx-auto size-10 text-brand-ink/60" />
-      <p className="mt-3 text-sm text-brand-ink/70">
-        Recurso descargable. Úsalo offline para practicar entre clases.
-      </p>
+      <p className="mt-3 text-sm text-brand-ink/70">Recurso descargable. Úsalo offline para practicar entre clases.</p>
     </div>
   );
 }

@@ -36,6 +36,9 @@ export class WompiService {
    * https://docs.wompi.co/docs/colombia/eventos
    */
   verifyAndParse(rawBody: string, headerEventId?: string): WompiEvent {
+    if (!env.WOMPI_EVENTS_SECRET) {
+      throw new BadRequestException('Wompi events secret not configured')
+    }
     const payload = JSON.parse(rawBody) as WompiEvent
     const concat = payload.signature.properties
       .map((p) => p.split('.').reduce<any>((acc, k) => acc?.[k], payload.data))

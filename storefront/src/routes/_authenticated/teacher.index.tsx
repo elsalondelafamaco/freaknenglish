@@ -1,55 +1,53 @@
-import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock, Users, Video, XCircle } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import {
-  listClassesForTeacher,
-  listStudentsOfTeacher,
-  teacherTodayClasses,
-  teacherUpcoming,
-  teacherValidateAttendance,
-} from "@/lib/domain/classes";
+import { classesApi, teachersApi } from "@/lib/api/endpoints";
 
 export const Route = createFileRoute("/_authenticated/teacher/")({
   head: () => ({ meta: [{ title: "Hoy — Freakn for Teachers" }] }),
   component: TeacherHome,
 });
 
-const timeFmt = new Intl.DateTimeFormat("es-CO", {
-  hour: "2-digit",
-  minute: "2-digit",
-});
+const timeFmt = new Intl.DateTimeFormat("es-CO", { hour: "2-digit", minute: "2-digit" });
+const durMin = (c: any) =>
+  Math.max(0, Math.round((new Date(c.endsAt).getTime() - new Date(c.startsAt).getTime()) / 60000)) || 50;
 
 function TeacherHome() {
   const { user } = useAuth();
-  const [tick, setTick] = useState(0);
-  const teacherId = user?.id ?? "";
+  const qc = useQueryClient();
 
-  const today = useMemo(() => teacherTodayClasses(teacherId), [teacherId, tick]);
-  const upcoming = useMemo(
-    () => teacherUpcoming(teacherId).slice(0, 5),
-    [teacherId, tick],
-  );
-  const stats = useMemo(() => {
-    const all = listClassesForTeacher(teacherId);
-    return {
-      students: listStudentsOfTeacher(teacherId).length,
-      completedWeek: all.filter((c) => {
-        const ageDays = (Date.now() - new Date(c.startsAt).getTime()) / 864e5;
-        return c.status === "completed" && ageDays < 7;
-      }).length,
-      pending: all.filter(
-        (c) =>
-          c.status === "completed" &&
-          c.studentConfirmedAt &&
-          !c.teacherValidatedAt,
-      ).length,
-    };
-  }, [teacherId, tick]);
+  const todayQ = useQuery({ queryKey: ["teacher", "today"], queryFn: () => classesApi.todayForTeacher() });
+  const upcomingQ = useQuery({ queryKey: ["teacher", "upcoming"], queryFn: () => teachersApi.schedule("upcoming") });
+  const studentsQ = useQuery({ queryKey: ["teacher", "students"], queryFn: () => teachersApi.students() });
+  const allQ = useQuery({ queryKey: ["teacher", "all"], queryFn: () => teachersApi.schedule() });
 
-  function refresh() {
-    setTick((v) => v + 1);
-  }
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["teacher", "today"] });
+    qc.invalidateQueries({ queryKey: ["teacher", "all"] });
+  };
+  const validateM = useMutation({
+    mutationFn: (id: string) => classesApi.validate(id),
+    onSuccess: () => { toast.success("Asistencia validada"); invalidate(); },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo validar"),
+  });
+  const noShowM = useMutation({
+    mutationFn: (id: string) => classesApi.noShow(id),
+    onSuccess: () => { toast.success("Marcado como no asistió"); invalidate(); },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo marcar"),
+  });
+
+  const today = todayQ.data ?? [];
+  const upcoming = (upcomingQ.data ?? []).slice(0, 6);
+  const all = (allQ.data ?? []) as any[];
+  const stats = {
+    students: studentsQ.data?.length ?? 0,
+    completedWeek: all.filter(
+      (c) => c.status === "validated" && (Date.now() - new Date(c.startsAt).getTime()) / 864e5 < 7,
+    ).length,
+    pending: all.filter((c: any) => c.studentConfirmedAt && !c.teacherValidatedAt).length,
+  };
 
   return (
     <div className="flex flex-col gap-8">
@@ -58,80 +56,56 @@ function TeacherHome() {
         <h1 className="mt-1 text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">
           Hola, {user?.fullName.split(" ")[0]} 👋
         </h1>
-        <p className="mt-2 text-brand-ink/70">
-          Estas son tus clases de hoy y el resumen de tu semana.
-        </p>
+        <p className="mt-2 text-brand-ink/70">Estas son tus clases de hoy y el resumen de tu semana.</p>
       </header>
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Stat icon={<Users className="size-4" />} label="Estudiantes activos" value={stats.students} />
-        <Stat
-          icon={<CheckCircle2 className="size-4" />}
-          label="Clases completadas (7 días)"
-          value={stats.completedWeek}
-        />
-        <Stat
-          icon={<Clock className="size-4" />}
-          label="Pendientes por validar"
-          value={stats.pending}
-          highlight={stats.pending > 0}
-        />
+        <Stat icon={<CheckCircle2 className="size-4" />} label="Clases validadas (7 días)" value={stats.completedWeek} />
+        <Stat icon={<Clock className="size-4" />} label="Pendientes por validar" value={stats.pending} highlight={stats.pending > 0} />
       </section>
 
       <section>
         <h2 className="text-lg font-semibold text-brand-ink">Clases de hoy</h2>
         <div className="mt-3 flex flex-col gap-3">
-          {today.length === 0 ? (
+          {todayQ.isLoading ? (
+            <p className="text-sm text-brand-ink/60">Cargando…</p>
+          ) : today.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-brand-line bg-white p-6 text-sm text-brand-ink/65">
               No tienes clases programadas hoy.
             </div>
           ) : (
-            today.map((c) => (
-              <div
-                key={c.id}
-                className="flex flex-col gap-3 rounded-2xl border border-brand-line bg-white p-5 md:flex-row md:items-center md:justify-between"
-              >
+            today.map((c: any) => (
+              <div key={c.id} className="flex flex-col gap-3 rounded-2xl border border-brand-line bg-white p-5 md:flex-row md:items-center md:justify-between">
                 <div>
                   <div className="text-xs font-medium uppercase tracking-wide text-brand-ink/55">
-                    {timeFmt.format(new Date(c.startsAt))} · {c.durationMin} min
+                    {timeFmt.format(new Date(c.startsAt))} · {durMin(c)} min
+                    {c.studentConfirmedAt && !c.teacherValidatedAt ? " · el estudiante confirmó" : ""}
                   </div>
                   <div className="mt-1 font-semibold text-brand-ink">
-                    <Link
-                      to="/teacher/students/$studentId"
-                      params={{ studentId: c.studentId }}
-                      className="hover:underline"
-                    >
-                      Estudiante #{c.studentId.slice(-6)}
+                    <Link to="/teacher/students/$studentId" params={{ studentId: c.studentId }} className="hover:underline">
+                      {c.student?.fullName ?? `Estudiante #${String(c.studentId).slice(-6)}`}
                     </Link>
                   </div>
                   <div className="text-sm text-brand-ink/65">{c.topic ?? "Sesión 1-on-1"}</div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {c.meetingUrl ? (
-                    <a
-                      href={c.meetingUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink-soft"
-                    >
-                      <Video className="size-3.5" /> Abrir Meet
+                    <a href={c.meetingUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink-soft">
+                      <Video className="size-3.5" /> Abrir aula
                     </a>
                   ) : null}
                   <button
-                    onClick={async () => {
-                      await teacherValidateAttendance(c.id, true);
-                      refresh();
-                    }}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-brand-line bg-white px-4 py-2 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40"
+                    disabled={validateM.isPending}
+                    onClick={() => validateM.mutate(c.id)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-brand-line bg-white px-4 py-2 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40 disabled:opacity-60"
                   >
                     <CheckCircle2 className="size-3.5" /> Validar asistencia
                   </button>
                   <button
-                    onClick={async () => {
-                      await teacherValidateAttendance(c.id, false);
-                      refresh();
-                    }}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-brand-line bg-white px-4 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
+                    disabled={noShowM.isPending}
+                    onClick={() => noShowM.mutate(c.id)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-brand-line bg-white px-4 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
                   >
                     <XCircle className="size-3.5" /> No asistió
                   </button>
@@ -145,10 +119,7 @@ function TeacherHome() {
       <section>
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-brand-ink">Próximas clases</h2>
-          <Link
-            to="/teacher/schedule"
-            className="text-sm font-semibold text-brand-ink hover:underline"
-          >
+          <Link to="/teacher/schedule" className="text-sm font-semibold text-brand-ink hover:underline">
             Ver agenda completa →
           </Link>
         </div>
@@ -158,18 +129,14 @@ function TeacherHome() {
               Sin clases programadas próximamente.
             </div>
           ) : (
-            upcoming.map((c) => (
+            upcoming.map((c: any) => (
               <div key={c.id} className="rounded-2xl border border-brand-line bg-white p-4">
                 <div className="text-xs uppercase tracking-wide text-brand-ink/55">
-                  {new Date(c.startsAt).toLocaleDateString("es-CO", {
-                    weekday: "long",
-                    day: "2-digit",
-                    month: "short",
-                  })}{" "}
+                  {new Date(c.startsAt).toLocaleDateString("es-CO", { weekday: "long", day: "2-digit", month: "short" })}{" "}
                   · {timeFmt.format(new Date(c.startsAt))}
                 </div>
                 <div className="mt-1 font-semibold text-brand-ink">
-                  Estudiante #{c.studentId.slice(-6)}
+                  {c.student?.fullName ?? `Estudiante #${String(c.studentId).slice(-6)}`}
                 </div>
                 <div className="text-sm text-brand-ink/65">{c.topic ?? "Sesión 1-on-1"}</div>
               </div>
@@ -181,23 +148,9 @@ function TeacherHome() {
   );
 }
 
-function Stat({
-  icon,
-  label,
-  value,
-  highlight,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  highlight?: boolean;
-}) {
+function Stat({ icon, label, value, highlight }: { icon: React.ReactNode; label: string; value: number; highlight?: boolean }) {
   return (
-    <div
-      className={`rounded-2xl border bg-white p-5 ${
-        highlight ? "border-brand-ink" : "border-brand-line"
-      }`}
-    >
+    <div className={`rounded-2xl border bg-white p-5 ${highlight ? "border-brand-ink" : "border-brand-line"}`}>
       <div className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-ink/65">
         {icon} {label}
       </div>

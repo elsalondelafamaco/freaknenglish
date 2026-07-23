@@ -10,7 +10,7 @@
  */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { finishOAuthLogin } from "@/lib/domain/auth";
+import { finishOAuthLogin } from "@/lib/auth/session";
 
 export const Route = createFileRoute("/auth/callback")({
   component: OAuthCallback,

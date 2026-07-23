@@ -27,6 +27,36 @@ export class BoardService {
     })
   }
 
+  /**
+   * Aula persistente compartida entre profesor y estudiante (se reutiliza en
+   * todas sus clases). Idempotente: si ya existe un board del profesor con el
+   * estudiante como miembro, lo devuelve; si no, lo crea con una página inicial.
+   */
+  async ensureClassroom(teacherId: string, studentId: string) {
+    const existing = await this.prisma.board.findFirst({
+      where: { ownerId: teacherId, members: { some: { userId: studentId } } },
+      orderBy: { createdAt: 'asc' },
+    })
+    if (existing) return existing
+    const student = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      select: { fullName: true },
+    })
+    return this.prisma.board.create({
+      data: {
+        name: `Aula · ${student?.fullName ?? 'Estudiante'}`,
+        ownerId: teacherId,
+        members: {
+          create: [
+            { userId: teacherId, role: 'owner' },
+            { userId: studentId, role: 'editor' },
+          ],
+        },
+        pages: { create: { title: 'Clase 1', position: 1 } },
+      },
+    })
+  }
+
   async list(userId: string) {
     return this.prisma.board.findMany({
       where: { members: { some: { userId } } },

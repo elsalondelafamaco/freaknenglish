@@ -21,34 +21,37 @@ import { cn } from "@/lib/utils";
 import { ImpersonationBanner } from "@/components/app/ImpersonationBanner";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
 import { InstallAppButton } from "@/components/app/InstallAppButton";
+import { useLang } from "@/lib/i18n";
 
 const STUDENT_NAV = [
-  { to: "/app", label: "Inicio", icon: LayoutDashboard, end: true },
-  { to: "/app/calendar", label: "Calendario", icon: CalendarDays, end: false },
-  { to: "/app/learning", label: "Aprendizaje", icon: Sparkles, end: false },
-  { to: "/boards", label: "Boards", icon: LayoutGrid, end: false },
-  { to: "/app/settings", label: "Configuración", icon: Settings, end: false },
+  { to: "/app", label: "Inicio", tKey: "nav.home", icon: LayoutDashboard, end: true },
+  { to: "/app/calendar", label: "Calendario", tKey: "nav.calendar", icon: CalendarDays, end: false },
+  { to: "/app/learning", label: "Aprendizaje", tKey: "nav.learning", icon: Sparkles, end: false },
+  { to: "/boards", label: "Boards", tKey: "nav.boards", icon: LayoutGrid, end: false },
+  { to: "/app/settings", label: "Configuración", tKey: "nav.settings", icon: Settings, end: false },
 ] as const;
 
 const TEACHER_NAV = [
-  { to: "/teacher", label: "Hoy", icon: LayoutDashboard, end: true },
-  { to: "/teacher/schedule", label: "Agenda", icon: CalendarDays, end: false },
-  { to: "/teacher/students", label: "Estudiantes", icon: Users, end: false },
-  { to: "/boards", label: "Boards", icon: LayoutGrid, end: false },
-  { to: "/teacher/availability", label: "Disponibilidad", icon: Settings, end: false },
+  { to: "/teacher", label: "Hoy", tKey: "nav.today", icon: LayoutDashboard, end: true },
+  { to: "/teacher/schedule", label: "Agenda", tKey: "nav.schedule", icon: CalendarDays, end: false },
+  { to: "/teacher/students", label: "Estudiantes", tKey: "nav.students", icon: Users, end: false },
+  { to: "/boards", label: "Boards", tKey: "nav.boards", icon: LayoutGrid, end: false },
+  { to: "/teacher/availability", label: "Disponibilidad", tKey: "nav.availability", icon: Settings, end: false },
+  { to: "/teacher/absences", label: "Ausencias", tKey: "nav.absences", icon: CalendarDays, end: false },
 ] as const;
 
 const ADMIN_NAV = [
-  { to: "/admin", label: "Analítica", icon: LayoutDashboard, end: true },
-  { to: "/admin/users", label: "Usuarios", icon: Users, end: false },
-  { to: "/admin/content", label: "Contenido", icon: Sparkles, end: false },
-  { to: "/admin/payroll", label: "Nómina", icon: ShieldCheck, end: false },
-  { to: "/admin/notifications", label: "Notificaciones", icon: Mail, end: false },
-  { to: "/admin/surveys", label: "Encuestas", icon: Smile, end: false },
+  { to: "/admin", label: "Analítica", tKey: "nav.analytics", icon: LayoutDashboard, end: true },
+  { to: "/admin/users", label: "Usuarios", tKey: "nav.users", icon: Users, end: false },
+  { to: "/admin/content", label: "Contenido", tKey: "nav.content", icon: Sparkles, end: false },
+  { to: "/admin/payroll", label: "Nómina", tKey: "nav.payroll", icon: ShieldCheck, end: false },
+  { to: "/admin/notifications", label: "Notificaciones", tKey: "nav.notifications", icon: Mail, end: false },
+  { to: "/admin/surveys", label: "Encuestas", tKey: "nav.surveys", icon: Smile, end: false },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
+  const { t, lang, setLang } = useLang();
   const navigate = useNavigate();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -89,18 +92,30 @@ export function AppShell({ children }: { children: ReactNode }) {
             const active = item.end
               ? pathname === item.to
               : pathname === item.to || pathname.startsWith(item.to + "/");
-            return <NavItem key={item.to} {...item} active={active} />;
+            return <NavItem key={item.to} {...item} label={t((item as any).tKey, item.label)} active={active} />;
           })}
         </nav>
         <div className="mt-auto rounded-2xl bg-brand-cream/60 p-4">
           <div className="text-sm font-semibold text-brand-ink">{user?.fullName}</div>
           <div className="truncate text-xs text-brand-ink/65">{user?.email}</div>
           <div className="mt-3"><InstallAppButton /></div>
+          <div className="mt-3 flex items-center gap-1 text-xs">
+            <span className="text-brand-ink/50">{t("common.language")}:</span>
+            {(["es", "en"] as const).map((l) => (
+              <button
+                key={l}
+                onClick={() => setLang(l)}
+                className={`rounded px-1.5 py-0.5 font-semibold ${lang === l ? "bg-brand-ink text-white" : "text-brand-ink/60 hover:bg-white"}`}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
           <button
             onClick={handleSignOut}
             className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-brand-ink/70 hover:text-brand-ink"
           >
-            <LogOut className="size-3.5" /> Cerrar sesión
+            <LogOut className="size-3.5" /> {t("action.signout")}
           </button>
         </div>
       </aside>
@@ -133,6 +148,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <NavItem
                   key={item.to}
                   {...item}
+                  label={t((item as any).tKey, item.label)}
                   active={active}
                   onClick={() => setOpen(false)}
                 />
@@ -142,7 +158,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               onClick={handleSignOut}
               className="mt-2 inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-brand-ink/70 hover:bg-brand-cream/40"
             >
-              <LogOut className="size-4" /> Cerrar sesión
+              <LogOut className="size-4" /> {t("action.signout")}
             </button>
           </div>
         </div>

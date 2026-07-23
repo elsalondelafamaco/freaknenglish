@@ -37,6 +37,12 @@ export class ClassesController {
     return this.svc.validateAttendance(id, u.id)
   }
 
+  /** @endpoint POST /api/v1/classes/:id/no-show  (teacher) */
+  @Post(':id/no-show')
+  noShow(@Param('id') id: string, @CurrentUser() u: AuthUser) {
+    return this.svc.markNoShow(id, u.id)
+  }
+
   /** @endpoint POST /api/v1/classes/:id/reschedule */
   @Post(':id/reschedule')
   reschedule(

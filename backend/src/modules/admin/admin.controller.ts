@@ -41,6 +41,18 @@ export class AdminController {
     return this.svc.payrollCsv(period)
   }
 
+  /** @endpoint POST /api/v1/admin/payroll/generate?period=YYYY-MM (persiste PayrollRun) */
+  @Post('payroll/generate')
+  generatePayroll(@Query('period') period: string) { return this.svc.generatePayrollRuns(period) }
+
+  /** @endpoint GET /api/v1/admin/payroll/runs?period=YYYY-MM */
+  @Get('payroll/runs')
+  payrollRuns(@Query('period') period: string) { return this.svc.listPayrollRuns(period) }
+
+  /** @endpoint POST /api/v1/admin/payroll/runs/:id/pay (aprueba + paga/dispersa) */
+  @Post('payroll/runs/:id/pay')
+  payPayrollRun(@Param('id') id: string) { return this.svc.payPayrollRun(id) }
+
   /** @endpoint GET /api/v1/admin/content  (CMS read-only: modules + lessons) */
   @Get('content')
   content() { return this.svc.content() }
@@ -215,6 +227,26 @@ export class AdminController {
   /** @endpoint PATCH /api/v1/admin/content/lessons/:id/delete */
   @Patch('content/lessons/:id/delete')
   deleteLesson(@Param('id') id: string) { return this.svc.deleteLesson(id) }
+
+  /** @endpoint POST /api/v1/admin/content/checkpoints */
+  @Post('content/checkpoints')
+  createCheckpoint(@Body() body: { id?: string; moduleId: string; fromLevel: 'beginner' | 'intermediate' | 'advanced'; toLevel: 'beginner' | 'intermediate' | 'advanced'; passingScore?: number; questions?: unknown }) {
+    return this.svc.saveCheckpoint(body)
+  }
+
+  /** @endpoint PATCH /api/v1/admin/content/checkpoints/:id */
+  @Patch('content/checkpoints/:id')
+  updateCheckpoint(@Param('id') id: string, @Body() body: any) {
+    return this.svc.saveCheckpoint({ id, ...body })
+  }
+
+  /** @endpoint PATCH /api/v1/admin/content/checkpoints/:id/delete */
+  @Patch('content/checkpoints/:id/delete')
+  deleteCheckpoint(@Param('id') id: string) { return this.svc.deleteCheckpoint(id) }
+
+  /** @endpoint GET /api/v1/admin/at-risk  (CRM: estudiantes en riesgo de churn) */
+  @Get('at-risk')
+  atRisk() { return this.svc.atRiskStudents() }
 
   /**
    * @endpoint POST /api/v1/admin/uploads/sign

@@ -11,7 +11,7 @@ import {
   TrendingDown,
   DollarSign,
 } from "lucide-react";
-import { formatCop } from "@/lib/domain/admin";
+import { formatCop } from "@/lib/domain/plans";
 import { adminApi } from "@/lib/api/endpoints";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
@@ -25,6 +25,7 @@ function AdminAnalytics() {
     queryKey: ["admin", "metrics", range],
     queryFn: () => adminApi.metrics(range),
   });
+  const atRiskQ = useQuery({ queryKey: ["admin", "at-risk"], queryFn: () => adminApi.atRisk() });
   const m = q.data;
 
   return (
@@ -66,6 +67,7 @@ function AdminAnalytics() {
             <Card icon={<CheckCircle2 className="size-4" />} label="Asistencia" value={`${m.attendanceRate}%`} />
             <Card icon={<TrendingDown className="size-4" />} label="Churn" value={`${m.churnRate}%`} sub="Cancelaciones vs. activas al inicio" />
             <Card icon={<Smile className="size-4" />} label="NPS" value={`${m.nps}`} sub={`${m.surveys} encuestas`} />
+            <Card icon={<CreditCard className="size-4" />} label="Pagos fallidos" value={`${(m as any).failedPayments ?? 0}`} highlight={((m as any).failedPayments ?? 0) > 0} sub={`últimos ${range}d`} />
           </div>
 
           <section className="grid gap-4 md:grid-cols-2">
@@ -98,6 +100,66 @@ function AdminAnalytics() {
                   ))}
                 </tbody>
               </table>
+            )}
+          </section>
+
+          <section className="rounded-2xl border border-brand-line bg-white p-5">
+            <div className="mb-3 text-sm font-semibold text-brand-ink">Módulos donde se estancan los estudiantes</div>
+            {(((m as any).stuckModules ?? []).length === 0) ? (
+              <div className="text-sm text-brand-ink/60">Sin datos de progreso todavía.</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="text-xs uppercase text-brand-ink/50">
+                  <tr><th className="py-2 text-left">Módulo</th><th className="text-right">Estudiantes estancados</th></tr>
+                </thead>
+                <tbody>
+                  {((m as any).stuckModules ?? []).map((sm: any) => (
+                    <tr key={sm.moduleId} className="border-t border-brand-line">
+                      <td className="py-2">{sm.title}</td>
+                      <td className="text-right font-semibold">{sm.students}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+
+          <section className="rounded-2xl border border-brand-line bg-white p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="text-sm font-semibold text-brand-ink">Estudiantes en riesgo</div>
+              <span className="text-xs text-brand-ink/55">{atRiskQ.data?.length ?? 0} en seguimiento</span>
+            </div>
+            {atRiskQ.isLoading ? (
+              <div className="text-sm text-brand-ink/60">Cargando…</div>
+            ) : (atRiskQ.data?.length ?? 0) === 0 ? (
+              <div className="text-sm text-brand-ink/60">Ningún estudiante en riesgo. 🎉</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-xs uppercase text-brand-ink/50">
+                    <tr><th className="py-2 text-left">Estudiante</th><th className="text-left">Señales</th><th className="text-right">Última clase</th><th className="text-right">Riesgo</th></tr>
+                  </thead>
+                  <tbody>
+                    {(atRiskQ.data ?? []).slice(0, 25).map((r) => (
+                      <tr key={r.id} className="border-t border-brand-line align-top">
+                        <td className="py-2">
+                          <div className="font-semibold text-brand-ink">{r.fullName}</div>
+                          <div className="text-xs text-brand-ink/50">{r.email}</div>
+                        </td>
+                        <td className="py-2">
+                          <div className="flex flex-wrap gap-1">
+                            {r.reasons.map((reason, i) => (
+                              <span key={i} className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">{reason}</span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="py-2 text-right text-xs text-brand-ink/60">{r.daysSinceClass != null ? `hace ${r.daysSinceClass}d` : "—"}</td>
+                        <td className="py-2 text-right font-semibold text-brand-ink">{r.risk}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
 

@@ -175,6 +175,7 @@ export const classesApi = {
   todayForTeacher: () => apiGet<ClassSession[]>("/classes/today"),
   confirm: (id: string) => apiPost<ClassSession>(`/classes/${id}/confirm`),
   validate: (id: string) => apiPost<ClassSession>(`/classes/${id}/validate`),
+  noShow: (id: string) => apiPost<ClassSession>(`/classes/${id}/no-show`),
   reschedule: (id: string, startsAt: string, endsAt: string) =>
     apiPost<ClassSession>(`/classes/${id}/reschedule`, { startsAt, endsAt }),
   cancel: (id: string, reason?: string) => apiPost<ClassSession>(`/classes/${id}/cancel`, { reason }),
@@ -187,10 +188,13 @@ export const learningApi = {
   module: (id: string) => apiGet<LearningModule>(`/learning/modules/${id}`),
   progress: () => apiGet<{
     lessonsCompleted: number;
+    completedLessonIds: string[];
     totalSecondsWatched: number;
     checkpointsPassed: string[];
     attempts: CheckpointAttempt[];
   }>("/learning/progress"),
+  levelCheckpoint: (level: EnglishLevel) =>
+    apiGet<(Checkpoint & { moduleId: string; passingScore: number }) | null>("/learning/level-checkpoint", { level }),
   saveLessonProgress: (lessonId: string, secondsWatched: number, completed: boolean) =>
     apiPost("/learning/progress", { lessonId, secondsWatched, completed }),
   checkpoint: (id: string) => apiGet<Checkpoint>(`/learning/checkpoints/${id}`),
@@ -215,6 +219,13 @@ export const teachersApi = {
       availability: Array<{ id: string; weekday: number; startsAt: string; endsAt: string }>;
       reassigned: Array<{ id: string; fullName: string }>;
     }>("/teacher/availability", { slots }),
+  absences: () =>
+    apiGet<Array<{ id: string; teacherId: string; startsAt: string; endsAt: string; reason?: string }>>(
+      "/teacher/absences",
+    ),
+  createAbsence: (startsAt: string, endsAt: string, reason?: string) =>
+    apiPost<{ absence: any; affected: any[] }>("/teacher/absences", { startsAt, endsAt, reason }),
+  deleteAbsence: (id: string) => apiDelete<{ ok: boolean }>(`/teacher/absences/${id}`),
 };
 
 // ─── Admin ─────────────────────────────────────────────────────────────
@@ -228,6 +239,24 @@ export const adminApi = {
     byPlan: Array<{ planId: string; active: number }>;
   }>("/admin/analytics"),
   metrics: (rangeDays = 30) => apiGet<AdminMetrics>("/admin/metrics", { range: String(rangeDays) }),
+  saveCheckpoint: (body: { id?: string; moduleId: string; fromLevel: string; toLevel: string; passingScore?: number; questions?: unknown }) =>
+    apiPost<any>("/admin/content/checkpoints", body),
+  updateCheckpoint: (id: string, body: any) => apiPatch<any>(`/admin/content/checkpoints/${id}`, body),
+  deleteCheckpoint: (id: string) => apiPatch<any>(`/admin/content/checkpoints/${id}/delete`, {}),
+  atRisk: () =>
+    apiGet<
+      Array<{
+        id: string;
+        fullName: string;
+        email: string;
+        assignedTeacherId: string | null;
+        subscriptionStatus: string | null;
+        lastClassAt: string | null;
+        daysSinceClass: number | null;
+        reasons: string[];
+        risk: number;
+      }>
+    >("/admin/at-risk"),
   users: (q?: string) => apiGet<User[]>("/admin/users", q ? { q } : undefined),
   userDetail: (id: string) => apiGet<any>(`/admin/users/${id}`),
   payroll: (period: string) =>

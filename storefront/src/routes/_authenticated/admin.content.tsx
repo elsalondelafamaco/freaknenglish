@@ -21,6 +21,15 @@ interface BELesson {
   contentHtml?: string | null;
   notes?: string | null;
 }
+interface BECheckpointQuestion { id: string; prompt: string; options: string[]; correctIndex: number }
+interface BECheckpoint {
+  id: string;
+  moduleId: string;
+  fromLevel: Level;
+  toLevel: Level;
+  passingScore: number;
+  questions: BECheckpointQuestion[];
+}
 interface BEModule {
   id: string;
   level: Level;
@@ -28,6 +37,7 @@ interface BEModule {
   summary?: string | null;
   position: number;
   lessons: BELesson[];
+  checkpoints?: BECheckpoint[];
 }
 
 export const Route = createFileRoute("/_authenticated/admin/content")({
@@ -48,6 +58,9 @@ function AdminContent() {
   const [editingModule, setEditingModule] = useState<Partial<BEModule> | null>(null);
   const [editingLesson, setEditingLesson] = useState<
     { moduleId: string; lesson?: BELesson } | null
+  >(null);
+  const [editingCheckpoint, setEditingCheckpoint] = useState<
+    { moduleId: string; level: Level; checkpoint?: BECheckpoint } | null
   >(null);
 
   const modulesQ = useQuery({
@@ -75,6 +88,14 @@ function AdminContent() {
     onSuccess: () => {
       invalidate();
       toast.success("Lección eliminada");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Error"),
+  });
+  const deleteCheckpointM = useMutation({
+    mutationFn: (id: string) => adminApi.deleteCheckpoint(id),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Checkpoint eliminado");
     },
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });
@@ -214,6 +235,32 @@ function AdminContent() {
                                 .then(invalidate);
                             }}
                           />
+                          <div className="mt-4 border-t border-brand-line pt-3">
+                            <div className="mb-2 flex items-center justify-between">
+                              <span className="text-xs font-semibold uppercase tracking-wide text-brand-ink/55">Checkpoint (examen de nivel)</span>
+                              <button
+                                onClick={() => setEditingCheckpoint({ moduleId: m.id, level: m.level, checkpoint: m.checkpoints?.[0] })}
+                                className="inline-flex items-center gap-1 rounded-full border border-brand-line bg-white px-2.5 py-1 text-[11px] font-semibold text-brand-ink/80 hover:-translate-y-0.5"
+                              >
+                                <Plus className="size-3" /> {m.checkpoints?.[0] ? "Editar checkpoint" : "Crear checkpoint"}
+                              </button>
+                            </div>
+                            {m.checkpoints?.[0] ? (
+                              <div className="flex items-center justify-between rounded-lg border border-brand-line bg-white px-3 py-2 text-xs">
+                                <span className="text-brand-ink/80">
+                                  {m.checkpoints[0].fromLevel} → {m.checkpoints[0].toLevel} · {Array.isArray(m.checkpoints[0].questions) ? m.checkpoints[0].questions.length : 0} preguntas · pasa {m.checkpoints[0].passingScore}%
+                                </span>
+                                <button
+                                  onClick={() => { if (confirm("¿Eliminar checkpoint?")) deleteCheckpointM.mutate(m.checkpoints![0].id); }}
+                                  className="rounded-full p-1 text-red-600 hover:bg-red-50"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-brand-ink/55">Sin checkpoint. Al aprobarlo, el estudiante sube de nivel.</p>
+                            )}
+                          </div>
                         </div>
                       ) : null}
                     </li>
@@ -242,6 +289,18 @@ function AdminContent() {
           onClose={() => setEditingLesson(null)}
           onSaved={() => {
             setEditingLesson(null);
+            invalidate();
+          }}
+        />
+      ) : null}
+      {editingCheckpoint ? (
+        <CheckpointDialog
+          moduleId={editingCheckpoint.moduleId}
+          level={editingCheckpoint.level}
+          checkpoint={editingCheckpoint.checkpoint}
+          onClose={() => setEditingCheckpoint(null)}
+          onSaved={() => {
+            setEditingCheckpoint(null);
             invalidate();
           }}
         />
@@ -532,6 +591,116 @@ function Actions({ onClose, pending }: { onClose: () => void; pending?: boolean 
         {pending ? "Guardando…" : "Guardar"}
       </button>
     </div>
+  );
+}
+
+function nextLevel(l: Level): Level {
+  return l === "beginner" ? "intermediate" : l === "intermediate" ? "advanced" : "advanced";
+}
+
+function CheckpointDialog({
+  moduleId,
+  level,
+  checkpoint,
+  onClose,
+  onSaved,
+}: {
+  moduleId: string;
+  level: Level;
+  checkpoint?: BECheckpoint;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [fromLevel, setFromLevel] = useState<Level>((checkpoint?.fromLevel ?? level) as Level);
+  const [toLevel, setToLevel] = useState<Level>((checkpoint?.toLevel ?? nextLevel(level)) as Level);
+  const [passingScore, setPassingScore] = useState<number>(checkpoint?.passingScore ?? 70);
+  const [questions, setQuestions] = useState<BECheckpointQuestion[]>(
+    checkpoint?.questions?.length
+      ? checkpoint.questions.map((q) => ({ ...q, options: [...q.options] }))
+      : [{ id: crypto.randomUUID(), prompt: "", options: ["", ""], correctIndex: 0 }],
+  );
+  const [pending, setPending] = useState(false);
+
+  function patchQ(i: number, patch: Partial<BECheckpointQuestion>) {
+    setQuestions((qs) => qs.map((q, idx) => (idx === i ? { ...q, ...patch } : q)));
+  }
+  function patchOpt(qi: number, oi: number, val: string) {
+    setQuestions((qs) => qs.map((q, idx) => (idx === qi ? { ...q, options: q.options.map((o, j) => (j === oi ? val : o)) } : q)));
+  }
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    for (const q of questions) {
+      if (!q.prompt.trim()) return toast.error("Cada pregunta necesita enunciado");
+      if (q.options.filter((o) => o.trim()).length < 2) return toast.error("Cada pregunta necesita al menos 2 opciones");
+      if (q.correctIndex < 0 || q.correctIndex >= q.options.length) return toast.error("Marca la opción correcta");
+    }
+    setPending(true);
+    try {
+      await adminApi.saveCheckpoint({ id: checkpoint?.id, moduleId, fromLevel, toLevel, passingScore, questions });
+      toast.success("Checkpoint guardado");
+      onSaved();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Error");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <Modal title={checkpoint ? "Editar checkpoint" : "Crear checkpoint"} onClose={onClose}>
+      <form onSubmit={onSubmit} className="grid gap-3">
+        <div className="grid grid-cols-3 gap-3">
+          <Field label="Desde nivel">
+            <select value={fromLevel} onChange={(e) => setFromLevel(e.target.value as Level)} className="input">
+              {LEVELS.map((l) => (<option key={l.id} value={l.id}>{l.label}</option>))}
+            </select>
+          </Field>
+          <Field label="Sube a nivel">
+            <select value={toLevel} onChange={(e) => setToLevel(e.target.value as Level)} className="input">
+              {LEVELS.map((l) => (<option key={l.id} value={l.id}>{l.label}</option>))}
+            </select>
+          </Field>
+          <Field label="Puntaje mínimo (%)">
+            <input type="number" min={1} max={100} value={passingScore} onChange={(e) => setPassingScore(Number(e.target.value))} className="input" />
+          </Field>
+        </div>
+
+        <div className="max-h-[45vh] space-y-3 overflow-y-auto pr-1">
+          {questions.map((q, qi) => (
+            <div key={q.id} className="rounded-xl border border-brand-line bg-brand-cream/20 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-xs font-semibold text-brand-ink/70">Pregunta {qi + 1}</span>
+                <button type="button" onClick={() => setQuestions((qs) => qs.filter((_, i) => i !== qi))} className="text-red-600 hover:text-red-700" aria-label="Eliminar pregunta">
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
+              <input value={q.prompt} onChange={(e) => patchQ(qi, { prompt: e.target.value })} placeholder="Enunciado de la pregunta" className="input mb-2" />
+              <div className="space-y-1.5">
+                {q.options.map((o, oi) => (
+                  <div key={oi} className="flex items-center gap-2">
+                    <input type="radio" name={`correct-${q.id}`} checked={q.correctIndex === oi} onChange={() => patchQ(qi, { correctIndex: oi })} title="Marcar como correcta" />
+                    <input value={o} onChange={(e) => patchOpt(qi, oi, e.target.value)} placeholder={`Opción ${oi + 1}`} className="input flex-1" />
+                    <button type="button" onClick={() => patchQ(qi, { options: q.options.filter((_, j) => j !== oi), correctIndex: Math.max(0, q.correctIndex >= oi ? q.correctIndex - 1 : q.correctIndex) })} disabled={q.options.length <= 2} className="rounded p-1 text-brand-ink/50 hover:bg-white disabled:opacity-30" aria-label="Quitar opción">
+                      <Trash2 className="size-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button type="button" onClick={() => patchQ(qi, { options: [...q.options, ""] })} className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-ink/70 hover:text-brand-ink">
+                <Plus className="size-3" /> Añadir opción
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <button type="button" onClick={() => setQuestions((qs) => [...qs, { id: crypto.randomUUID(), prompt: "", options: ["", ""], correctIndex: 0 }])} className="inline-flex items-center gap-1 self-start rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink/80 hover:-translate-y-0.5">
+          <Plus className="size-3.5" /> Añadir pregunta
+        </button>
+
+        <Actions onClose={onClose} pending={pending} />
+      </form>
+    </Modal>
   );
 }
 

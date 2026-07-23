@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common'
 import { Job } from 'bullmq'
 import { PrismaService } from '../../prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
+import { env } from '../../config/env'
 
 /**
  * Runs the actual automation logic. Triggered by the repeating jobs in
@@ -115,6 +116,58 @@ export class AutomationsProcessor extends WorkerHost {
           dedupeKey: `nps:${u.id}:${period}`,
         })
       }
+
+      // Nómina del mes anterior: persiste PayrollRun (status pending) para que
+      // el admin revise y apruebe/pague. No dispersa automáticamente.
+      await this.generatePayrollForPreviousMonth()
     }
+  }
+
+  /** Tarifa por hora (app_settings.payroll.hourlyRateCop → fallback env). */
+  private async hourlyRateCop(): Promise<number> {
+    const row = await this.prisma.appSetting
+      .findUnique({ where: { key: 'payroll.hourlyRateCop' } })
+      .catch(() => null)
+    const raw = row?.value as any
+    const val = typeof raw === 'number' ? raw : Number(raw?.value ?? raw ?? NaN)
+    return Number.isFinite(val) && val > 0 ? val : env.TEACHER_PAYRATE_COP
+  }
+
+  /**
+   * Genera/actualiza las corridas de nómina del mes anterior sumando las horas
+   * reales de las clases con status='validated' (validación cruzada). Respeta
+   * las corridas ya pagadas.
+   */
+  private async generatePayrollForPreviousMonth() {
+    const now = new Date()
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const end = new Date(now.getFullYear(), now.getMonth(), 1)
+    const period = start.toISOString().slice(0, 7)
+    const classes = await this.prisma.class.findMany({
+      where: { status: 'validated', validatedAt: { gte: start, lt: end }, teacherId: { not: null } },
+      select: { teacherId: true, startsAt: true, endsAt: true },
+    })
+    const minutes = new Map<string, number>()
+    const counts = new Map<string, number>()
+    for (const c of classes) {
+      const tid = c.teacherId!
+      const dur = Math.max(0, Math.round((c.endsAt.getTime() - c.startsAt.getTime()) / 60000)) || 60
+      minutes.set(tid, (minutes.get(tid) ?? 0) + dur)
+      counts.set(tid, (counts.get(tid) ?? 0) + 1)
+    }
+    const rate = await this.hourlyRateCop()
+    for (const [teacherId, mins] of minutes) {
+      const amountCop = Math.round((mins / 60) * rate)
+      const existing = await this.prisma.payrollRun.findUnique({
+        where: { period_teacherId: { period, teacherId } },
+      })
+      if (existing?.status === 'paid') continue
+      await this.prisma.payrollRun.upsert({
+        where: { period_teacherId: { period, teacherId } },
+        update: { classes: counts.get(teacherId) ?? 0, rateCop: rate, amountCop },
+        create: { period, teacherId, classes: counts.get(teacherId) ?? 0, rateCop: rate, amountCop, status: 'pending' },
+      })
+    }
+    this.log.log(`Payroll runs generated for ${period}: ${minutes.size} teachers`)
   }
 }

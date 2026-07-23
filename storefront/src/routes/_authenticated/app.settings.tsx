@@ -2,9 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { getActiveSubscription } from "@/lib/domain/subscriptions";
-import { PLANS } from "@/lib/domain/plans";
-import { usersApi, receiptsApi } from "@/lib/api/endpoints";
+import { usersApi, receiptsApi, subscriptionsApi } from "@/lib/api/endpoints";
 import { apiGetBlob } from "@/lib/api/client";
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
@@ -14,13 +12,17 @@ export const Route = createFileRoute("/_authenticated/app/settings")({
 
 function SettingsPage() {
   const { user, signOut } = useAuth();
-  if (!user) return null;
-  const sub = getActiveSubscription(user.id);
-  const plan = sub ? PLANS.find((p) => p.id === sub.planId) : null;
+  const subQ = useQuery({
+    queryKey: ["me", "subscription"],
+    queryFn: () => subscriptionsApi.mine(),
+  });
   const paymentsQ = useQuery({
     queryKey: ["me", "payments"],
     queryFn: () => usersApi.payments(),
   });
+  if (!user) return null;
+  const sub = subQ.data as any;
+  const plan = sub?.plan ?? null;
 
   async function downloadReceipt(intentId: string) {
     try {
@@ -62,7 +64,9 @@ function SettingsPage() {
 
       <section className="rounded-3xl border border-brand-line bg-white p-6 md:p-8">
         <h2 className="text-lg font-bold text-brand-ink">Suscripción</h2>
-        {sub && plan ? (
+        {subQ.isLoading ? (
+          <p className="mt-3 text-sm text-brand-ink/60">Cargando…</p>
+        ) : sub && plan ? (
           <dl className="mt-4 grid gap-3 text-sm md:grid-cols-2">
             <Row label="Plan" value={plan.name} />
             <Row label="Estado" value={sub.status} />

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { RolesGuard } from '../../common/guards/roles.guard'
@@ -28,7 +28,7 @@ export class TeachersController {
   /** @endpoint GET /api/v1/teacher/students/:id */
   @Get('students/:id')
   studentDetail(@CurrentUser() u: AuthUser, @Param('id') id: string) {
-    return this.svc.studentDetail(u.id, id)
+    return this.svc.studentDetail(u.id, id, u.role === 'admin')
   }
 
   /** @endpoint POST /api/v1/teacher/classes/:classId/notes */
@@ -38,7 +38,7 @@ export class TeachersController {
     @Param('classId') classId: string,
     @Body() body: { rating: number; notes: string },
   ) {
-    return this.svc.addNote(u.id, classId, body.rating, body.notes)
+    return this.svc.addNote(u.id, classId, body.rating, body.notes, u.role === 'admin')
   }
 
   /** @endpoint GET /api/v1/teacher/availability  (self) */
@@ -62,5 +62,21 @@ export class TeachersController {
     const availability = await this.scheduling.setTeacherAvailability(u.id, body.slots ?? [])
     const reassigned = await this.scheduling.reassignPendingForTeacher(u.id)
     return { availability, reassigned }
+  }
+
+  /** @endpoint GET /api/v1/teacher/absences (self) */
+  @Get('absences')
+  getAbsences(@CurrentUser() u: AuthUser) { return this.svc.listAbsences(u.id) }
+
+  /** @endpoint POST /api/v1/teacher/absences (self) Body: { startsAt, endsAt, reason? } */
+  @Post('absences')
+  createAbsence(@CurrentUser() u: AuthUser, @Body() body: { startsAt: string; endsAt: string; reason?: string }) {
+    return this.svc.createAbsence(u.id, new Date(body.startsAt), new Date(body.endsAt), body.reason)
+  }
+
+  /** @endpoint DELETE /api/v1/teacher/absences/:id (self) */
+  @Delete('absences/:id')
+  deleteAbsence(@CurrentUser() u: AuthUser, @Param('id') id: string) {
+    return this.svc.deleteAbsence(u.id, id)
   }
 }

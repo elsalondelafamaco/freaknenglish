@@ -8,7 +8,6 @@ import {
   Power,
   KeyRound,
 } from "lucide-react";
-import { readDb } from "@/lib/domain/repository";
 import type {
   ClassSession,
   SatisfactionSurvey,
@@ -18,13 +17,9 @@ import type {
   AppRole,
 } from "@/lib/domain/types";
 import { getPlan, formatCop } from "@/lib/domain/plans";
-import type { PaymentIntent } from "@/lib/domain/subscriptions";
+type PaymentIntent = Record<string, any>;
 import { adminApi } from "@/lib/api/endpoints";
 import { setAccessToken } from "@/lib/api/client";
-import { hydrateFromBackend } from "@/lib/api/bootstrap";
-import { startImpersonation } from "@/lib/domain/admin-actions";
-import { listNotesForStudent } from "@/lib/domain/classes";
-import { listProgress } from "@/lib/domain/learning";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/_authenticated/admin/users/$id")({
@@ -85,48 +80,7 @@ function AdminUserDetail() {
       const assignedTeacher = remote.user.assignedTeacher ? adaptAdminUser({ ...remote.user.assignedTeacher, role: "teacher" }) : null;
       return { user, isStudent, isTeacher, sub: adaptAdminSubscription(remote.user.subscription), payments, classes, teachers, students, assignedTeacher, surveys, notes, progress };
     }
-    const db = readDb();
-    const users = db.users as Record<string, User>;
-    const user = users[id];
-    if (!user) return null;
-    const isStudent = user.roles.includes("student");
-    const isTeacher = user.roles.includes("teacher");
-    const subs = Object.values(db.subscriptions as Record<string, Subscription>);
-    const payments = Object.values(db.paymentIntents as Record<string, PaymentIntent>).filter(
-      (p) => p.userId === user.id,
-    );
-    const classes = Object.values(db.classes as Record<string, ClassSession>).filter(
-      (c) => c.studentId === user.id || c.teacherId === user.id,
-    );
-    const teachers = Object.values(users).filter(
-      (u) => u.roles.includes("teacher") && !u.deletedAt,
-    );
-    const students = isTeacher
-      ? Object.values(users).filter(
-          (u) => u.roles.includes("student") && u.assignedTeacherId === user.id && !u.deletedAt,
-        )
-      : [];
-    const sub = subs.find((s) => s.userId === user.id) ?? null;
-    const assignedTeacher = user.assignedTeacherId ? users[user.assignedTeacherId] ?? null : null;
-    const surveys = Object.values(
-      db.satisfactionSurveys as Record<string, SatisfactionSurvey>,
-    ).filter((s) => s.userId === user.id);
-    const notes = isStudent ? listNotesForStudent(user.id) : [];
-    const progress = isStudent ? listProgress(user.id) : [];
-    return {
-      user,
-      isStudent,
-      isTeacher,
-      sub,
-      payments,
-      classes,
-      teachers,
-      students,
-      assignedTeacher,
-      surveys,
-      notes,
-      progress,
-    };
+    return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, tick, remote, remoteUsers]);
 
@@ -175,9 +129,7 @@ function AdminUserDetail() {
     if (!confirm(`Vas a navegar como ${user.fullName}. ¿Continuar?`)) return;
     const r = await adminApi.impersonate(user.id);
     setAccessToken(r.accessToken);
-    startImpersonation(me.id, user.id);
-    await hydrateFromBackend(r.target.role);
-    refresh();
+    await refresh();
     const dest = user.roles.includes("admin")
       ? "/admin"
       : user.roles.includes("teacher")

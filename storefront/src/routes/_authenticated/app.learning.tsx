@@ -3,11 +3,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Lock, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import {
-  listAllCheckpoints,
-  bestCheckpointAttempt,
-  moduleProgress,
-} from "@/lib/domain/learning";
 import { learningApi } from "@/lib/api/endpoints";
 import type { EnglishLevel, LearningModule } from "@/lib/domain/types";
 
@@ -21,6 +16,7 @@ const LEVELS: { id: EnglishLevel; label: string }[] = [
   { id: "intermediate", label: "Intermedio" },
   { id: "advanced", label: "Avanzado" },
 ];
+const ORDER: Record<EnglishLevel, number> = { beginner: 0, intermediate: 1, advanced: 2 };
 
 function LearningIndex() {
   const { user } = useAuth();
@@ -29,26 +25,32 @@ function LearningIndex() {
     queryKey: ["learning", "modules", level],
     queryFn: () => learningApi.modules(level),
   });
+  const progressQ = useQuery({ queryKey: ["learning", "progress"], queryFn: () => learningApi.progress() });
   const mods = (modsQ.data ?? []) as LearningModule[];
+  const doneIds = new Set(progressQ.data?.completedLessonIds ?? []);
 
   if (!user) return null;
 
-  // unlock logic
+  const userLevel = (user.level ?? "beginner") as EnglishLevel;
   const unlocked: Record<EnglishLevel, boolean> = {
     beginner: true,
-    intermediate: !!bestCheckpointAttempt(user.id, "chk_beginner")?.passed,
-    advanced: !!bestCheckpointAttempt(user.id, "chk_intermediate")?.passed,
+    intermediate: ORDER[userLevel] >= 1,
+    advanced: ORDER[userLevel] >= 2,
+  };
+
+  const moduleProgress = (m: LearningModule) => {
+    const lessons = (m as any).lessons ?? [];
+    const total = lessons.length || 1;
+    const done = lessons.filter((l: any) => doneIds.has(l.id)).length;
+    return { done, total: lessons.length, pct: Math.round((done / total) * 100), complete: lessons.length > 0 && done === lessons.length };
   };
 
   return (
     <div className="flex flex-col gap-8">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">
-          Aprendizaje
-        </h1>
+        <h1 className="text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">Aprendizaje</h1>
         <p className="mt-2 max-w-xl text-[15px] text-brand-ink/65">
-          Módulos curados por nivel. Completa todas las lecciones y supera el checkpoint para
-          desbloquear el siguiente nivel.
+          Módulos curados por nivel. Completa todas las lecciones y supera el checkpoint para desbloquear el siguiente nivel.
         </p>
       </header>
 
@@ -62,11 +64,7 @@ function LearningIndex() {
               disabled={!isUnlocked}
               onClick={() => setLevel(l.id)}
               className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                active
-                  ? "bg-brand-ink text-white"
-                  : isUnlocked
-                    ? "border border-brand-line bg-white text-brand-ink hover:bg-brand-cream/50"
-                    : "border border-brand-line bg-brand-cream/40 text-brand-ink/40"
+                active ? "bg-brand-ink text-white" : isUnlocked ? "border border-brand-line bg-white text-brand-ink hover:bg-brand-cream/50" : "border border-brand-line bg-brand-cream/40 text-brand-ink/40"
               }`}
             >
               {!isUnlocked ? <Lock className="size-3.5" /> : null}
@@ -83,7 +81,7 @@ function LearningIndex() {
           <p className="text-sm text-brand-ink/60">Aún no hay módulos publicados para este nivel.</p>
         ) : null}
         {mods.map((m: any) => {
-          const prog = moduleProgress(user.id, m);
+          const prog = moduleProgress(m);
           return (
             <Link
               key={m.id}
@@ -106,31 +104,26 @@ function LearningIndex() {
               <h3 className="mt-3 text-lg font-bold text-brand-ink">{m.title}</h3>
               <p className="mt-1 text-sm text-brand-ink/65">{m.summary}</p>
               <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-brand-cream">
-                <div
-                  className="h-full rounded-full bg-brand-ink transition-all"
-                  style={{ width: `${prog.pct}%` }}
-                />
+                <div className="h-full rounded-full bg-brand-ink transition-all" style={{ width: `${prog.pct}%` }} />
               </div>
             </Link>
           );
         })}
       </section>
 
-      <CheckpointBanner level={level} userId={user.id} />
+      <CheckpointBanner level={level} />
     </div>
   );
 }
 
-function CheckpointBanner({
-  level,
-  userId,
-}: {
-  level: EnglishLevel;
-  userId: string;
-}) {
-  const chk = listAllCheckpoints().find((c) => c.level === level);
-  if (!chk) return null;
-  const best = bestCheckpointAttempt(userId, chk.id);
+function CheckpointBanner({ level }: { level: EnglishLevel }) {
+  const chkQ = useQuery({ queryKey: ["learning", "level-checkpoint", level], queryFn: () => learningApi.levelCheckpoint(level) });
+  const progressQ = useQuery({ queryKey: ["learning", "progress"], queryFn: () => learningApi.progress() });
+  const chk = chkQ.data as any;
+  if (chkQ.isLoading || !chk) return null;
+  const qCount = Array.isArray(chk.questions) ? chk.questions.length : 0;
+  const attempts = (progressQ.data?.attempts ?? []).filter((a: any) => a.checkpointId === chk.id);
+  const best = attempts.sort((a: any, b: any) => b.score - a.score)[0];
   const passed = !!best?.passed;
 
   return (
@@ -140,13 +133,13 @@ function CheckpointBanner({
           <div className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1 text-xs font-medium text-brand-ink">
             <Sparkles className="size-3.5" /> Checkpoint de nivel
           </div>
-          <h3 className="mt-3 text-xl font-bold tracking-tight text-brand-ink">{chk.title}</h3>
+          <h3 className="mt-3 text-xl font-bold tracking-tight text-brand-ink">{chk.title ?? "Examen de nivel"}</h3>
           <p className="mt-1 text-sm text-brand-ink/70">
             {passed
-              ? `¡Aprobado con ${best!.score}/${chk.questions.length}!`
+              ? `¡Aprobado con ${best.score}%!`
               : best
-                ? `Mejor intento: ${best.score}/${chk.questions.length}. Necesitas ${chk.passScore}.`
-                : `Responde ${chk.questions.length} preguntas. Necesitas ${chk.passScore} correctas.`}
+                ? `Mejor intento: ${best.score}%. Necesitas ${chk.passingScore}%.`
+                : `Responde ${qCount} preguntas. Necesitas ${chk.passingScore}% para aprobar.`}
           </p>
         </div>
         <Link

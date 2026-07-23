@@ -10,7 +10,7 @@ import {
   inputClass,
 } from "@/components/site/AuthShell";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { authService } from "@/lib/domain/auth";
+import { getSessionSnapshot } from "@/lib/auth/session";
 
 const searchSchema = z.object({ redirect: z.string().optional() });
 
@@ -32,7 +32,7 @@ function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   function defaultRouteForCurrentUser(): string {
-    const u = authService.getCurrentUser();
+    const u = getSessionSnapshot();
     if (u?.roles.includes("admin")) return "/admin";
     if (u?.roles.includes("teacher")) return "/teacher";
     return "/app";

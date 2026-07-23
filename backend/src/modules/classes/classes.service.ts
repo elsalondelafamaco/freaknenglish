@@ -92,6 +92,13 @@ export class ClassesService {
     })
   }
 
+  async markNoShow(classId: string, teacherId: string) {
+    const c = await this.prisma.class.findUnique({ where: { id: classId } })
+    if (!c) throw new NotFoundException('Class not found')
+    if (c.teacherId && c.teacherId !== teacherId) throw new ForbiddenException()
+    return this.prisma.class.update({ where: { id: classId }, data: { status: ClassStatus.no_show } })
+  }
+
   async reschedule(classId: string, studentId: string, newStartsAt: Date, newEndsAt: Date) {
     const c = await this.prisma.class.findUnique({ where: { id: classId } })
     if (!c || c.studentId !== studentId) throw new ForbiddenException()

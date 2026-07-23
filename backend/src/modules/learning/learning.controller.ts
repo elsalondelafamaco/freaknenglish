@@ -37,6 +37,12 @@ export class LearningController {
   @Get('checkpoints/:id')
   checkpoint(@Param('id') id: string) { return this.svc.checkpoint(id) }
 
+  /** @endpoint GET /api/v1/learning/level-checkpoint?level=beginner */
+  @Get('level-checkpoint')
+  levelCheckpoint(@Query('level') level: 'beginner' | 'intermediate' | 'advanced') {
+    return this.svc.levelCheckpoint(level)
+  }
+
   /** @endpoint POST /api/v1/learning/progress */
   @Post('progress')
   upsertProgress(

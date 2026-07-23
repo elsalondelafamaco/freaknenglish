@@ -7,9 +7,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { authService, tryRestoreSession, reloadCurrentUser } from "@/lib/domain/auth";
-import { hydrateFromBackend } from "@/lib/api/bootstrap";
 import type { AppRole, User } from "@/lib/domain/types";
+import * as session from "@/lib/auth/session";
 
 export interface AuthContextValue {
   user: User | null;
@@ -20,7 +19,7 @@ export interface AuthContextValue {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
-  refresh: () => void;
+  refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -29,52 +28,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(() => {
-    setUser(reloadCurrentUser());
+  const refresh = useCallback(async () => {
+    const u = await session.fetchMe();
+    setUser(u);
   }, []);
 
+  // Arranque: restaura sesión desde la cookie de refresh.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Si hay refresh-cookie del backend, restaura la sesión en memoria.
-      const restored = await tryRestoreSession();
+      const restored = await session.tryRestore();
       if (cancelled) return;
-      setUser(restored ?? authService.getCurrentUser());
+      setUser(restored);
       setLoading(false);
     })();
     return () => {
       cancelled = true;
     };
-  }, [refresh]);
+  }, []);
 
-  // Mantén el cache en memoria fresco contra el backend:
-  //  - cuando la pestaña vuelve a estar visible
-  //  - cada 60s mientras la pestaña esté visible
-  // Así las mutaciones hechas desde otra pestaña / otro usuario / cron
-  // se reflejan sin necesidad de re-login.
+  // Mantén el usuario fresco: al volver a la pestaña y cada 60s (visible).
   useEffect(() => {
     if (!user) return;
-    const role = user.roles[0] ?? "student";
     let timer: ReturnType<typeof setInterval> | null = null;
     const tick = async () => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-      const fresh = await hydrateFromBackend(role);
+      const fresh = await session.fetchMe();
       if (fresh) setUser(fresh);
     };
     const onVisible = () => {
       if (typeof document !== "undefined" && document.visibilityState === "visible") tick();
     };
     timer = setInterval(tick, 60_000);
-    if (typeof document !== "undefined") {
-      document.addEventListener("visibilitychange", onVisible);
-    }
+    if (typeof document !== "undefined") document.addEventListener("visibilitychange", onVisible);
     return () => {
       if (timer) clearInterval(timer);
-      if (typeof document !== "undefined") {
-        document.removeEventListener("visibilitychange", onVisible);
-      }
+      if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [user?.id, user?.roles.join(",")]);
+  }, [user?.id]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -83,19 +74,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       hasRole: (role) => !!user?.roles.includes(role),
       async signIn(email, password) {
-        const r = await authService.signIn({ email, password });
-        setUser(r.user);
+        setUser(await session.signIn(email, password));
       },
       async signUp(fullName, email, password) {
-        const r = await authService.signUp({ fullName, email, password });
-        setUser(r.user);
+        setUser(await session.signUp(fullName, email, password));
       },
       async signInWithGoogle() {
-        const r = await authService.signInWithProvider("google");
-        setUser(r.user);
+        session.signInWithGoogle();
       },
       async signOut() {
-        await authService.signOut();
+        await session.signOut();
         setUser(null);
       },
       refresh,
@@ -112,8 +100,8 @@ export function useAuth(): AuthContextValue {
   return ctx;
 }
 
-/** Snapshot síncrono para `beforeLoad` / SSR-safe checks. */
+/** Snapshot síncrono para checks fuera de React (redirects). */
 export function getAuthSnapshot(): { user: User | null; isAuthenticated: boolean } {
-  const user = authService.getCurrentUser();
+  const user = session.getSessionSnapshot();
   return { user, isAuthenticated: !!user };
 }

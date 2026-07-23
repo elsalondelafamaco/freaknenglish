@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
+import { BoardService } from '../board/board.service'
 
 /**
  * Bloques semanales de horario del estudiante.
@@ -25,7 +26,11 @@ function isHourInRange(hour: number, startsAt: string, endsAt: string) {
 
 @Injectable()
 export class SchedulingService {
-  constructor(private prisma: PrismaService, private notifications: NotificationsService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+    private boards: BoardService,
+  ) {}
 
   private async notifyTeacherAssigned(studentId: string, teacherId: string, dedupeSuffix: string) {
     const [student, teacher] = await Promise.all([
@@ -79,6 +84,10 @@ export class SchedulingService {
     const blocks = (user.schedulePreferences as any as ScheduleBlock[] | null) ?? []
     if (!Array.isArray(blocks) || blocks.length === 0) return { created: 0 }
 
+    // Aula colaborativa compartida (board en vivo) para el par profe-estudiante.
+    const classroom = await this.boards.ensureClassroom(user.assignedTeacherId, studentId)
+    const meetingUrl = `/boards/${classroom.id}`
+
     const now = new Date()
     let created = 0
     for (const b of blocks) {
@@ -91,6 +100,12 @@ export class SchedulingService {
           select: { id: true },
         })
         if (exists) continue
+        // Evita doble-reserva del profesor en el mismo instante (1-on-1).
+        const teacherBusy = await this.prisma.class.findFirst({
+          where: { teacherId: user.assignedTeacherId, startsAt, status: { in: ['scheduled', 'rescheduled', 'validated'] } },
+          select: { id: true },
+        })
+        if (teacherBusy) continue
         const endsAt = new Date(startsAt.getTime() + CLASS_DURATION_MIN * 60 * 1000)
         await this.prisma.class.create({
           data: {
@@ -99,6 +114,7 @@ export class SchedulingService {
             startsAt,
             endsAt,
             status: 'scheduled',
+            meetingUrl,
           },
         })
         created++

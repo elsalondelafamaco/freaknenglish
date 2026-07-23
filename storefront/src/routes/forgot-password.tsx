@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AuthShell, ErrorBox, Field, inputClass } from "@/components/site/AuthShell";
-import { authService } from "@/lib/domain/auth";
+import { requestPasswordReset } from "@/lib/auth/session";
 
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
@@ -21,7 +21,7 @@ function ForgotPasswordPage() {
     setError(null);
     setBusy(true);
     try {
-      await authService.requestPasswordReset(email);
+      await requestPasswordReset(email);
       setSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Algo salió mal.");

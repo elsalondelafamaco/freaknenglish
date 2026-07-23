@@ -1,14 +1,9 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Star } from "lucide-react";
-import { useAuth } from "@/lib/auth/AuthProvider";
-import {
-  addClassNote,
-  listClassesForTeacher,
-  listNotesForStudent,
-} from "@/lib/domain/classes";
-import { readDb } from "@/lib/domain/repository";
-import type { User } from "@/lib/domain/types";
+import { toast } from "sonner";
+import { teachersApi } from "@/lib/api/endpoints";
 
 export const Route = createFileRoute("/_authenticated/teacher/students/$studentId")({
   head: () => ({ meta: [{ title: "Estudiante — Freakn for Teachers" }] }),
@@ -17,91 +12,60 @@ export const Route = createFileRoute("/_authenticated/teacher/students/$studentI
 
 function TeacherStudentDetail() {
   const { studentId } = useParams({ from: "/_authenticated/teacher/students/$studentId" });
-  const { user } = useAuth();
-  const teacherId = user?.id ?? "";
-  const [tick, setTick] = useState(0);
+  const qc = useQueryClient();
   const [body, setBody] = useState("");
   const [rating, setRating] = useState<number | null>(null);
 
-  const student = useMemo<User | null>(() => {
-    const u = (readDb().users as Record<string, User>)[studentId];
-    return u ?? null;
-  }, [studentId]);
+  const q = useQuery({ queryKey: ["teacher", "student", studentId], queryFn: () => teachersApi.studentDetail(studentId) });
+  const student = q.data as any;
 
-  const classes = useMemo(
-    () =>
-      listClassesForTeacher(teacherId)
-        .filter((c) => c.studentId === studentId)
-        .sort((a, b) => b.startsAt.localeCompare(a.startsAt)),
-    [teacherId, studentId, tick],
-  );
-  const notes = useMemo(
-    () => listNotesForStudent(studentId, teacherId),
-    [studentId, teacherId, tick],
-  );
+  const classes: any[] = student?.classesAsStudent ?? [];
+  const notes: any[] = classes
+    .flatMap((c) => c.notes ?? [])
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
+  const addM = useMutation({
+    mutationFn: () => teachersApi.addNote(classes[0].id, rating as number, body.trim()),
+    onSuccess: () => { toast.success("Nota guardada"); setBody(""); setRating(null); qc.invalidateQueries({ queryKey: ["teacher", "student", studentId] }); },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo guardar"),
+  });
+
+  if (q.isLoading) return <div className="text-sm text-brand-ink/60">Cargando…</div>;
   if (!student) {
     return (
       <div className="rounded-2xl border border-brand-line bg-white p-6 text-sm text-brand-ink/65">
-        Estudiante no encontrado.{" "}
-        <Link to="/teacher/students" className="font-semibold text-brand-ink hover:underline">
-          Volver
-        </Link>
+        Estudiante no encontrado. <Link to="/teacher/students" className="font-semibold text-brand-ink hover:underline">Volver</Link>
       </div>
     );
   }
 
-  async function saveNote() {
-    if (!body.trim()) return;
-    // Nota se asocia a la próxima/última clase disponible del alumno con este profesor.
-    const anyClass = classes[0];
-    if (!anyClass) {
-      alert("Aún no hay clases con este alumno para asociar la nota.");
-      return;
-    }
-    try {
-      await addClassNote({
-        teacherId,
-        studentId,
-        classId: anyClass.id,
-        body,
-        rating: rating ?? undefined,
-      });
-      setBody("");
-      setRating(null);
-      setTick((v) => v + 1);
-    } catch (e) {
-      alert((e as Error).message);
-    }
-  }
+  const completed = classes.filter((c) => c.status === "validated").length;
+  const missed = classes.filter((c) => c.status === "no_show").length;
 
-  const completed = classes.filter((c) => c.status === "completed").length;
-  const missed = classes.filter((c) => c.status === "missed").length;
+  function saveNote() {
+    if (!body.trim()) return;
+    if (rating == null) return toast.error("Asigna una calificación (1–5).");
+    if (!classes[0]) return toast.error("Aún no hay clases con este alumno para asociar la nota.");
+    addM.mutate();
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link
-          to="/teacher/students"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-ink/70 hover:text-brand-ink"
-        >
+        <Link to="/teacher/students" className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-ink/70 hover:text-brand-ink">
           <ArrowLeft className="size-3.5" /> Volver
         </Link>
       </div>
 
       <header className="flex flex-col gap-2 rounded-2xl border border-brand-line bg-white p-6 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-brand-ink">
-            {student.fullName}
-          </h1>
+          <h1 className="text-2xl font-bold tracking-tight text-brand-ink">{student.fullName}</h1>
           <p className="text-sm text-brand-ink/65">{student.email}</p>
-          <p className="mt-1 text-xs uppercase tracking-wide text-brand-ink/55">
-            Nivel actual: {student.level ?? "sin nivelar"}
-          </p>
+          <p className="mt-1 text-xs uppercase tracking-wide text-brand-ink/55">Nivel actual: {student.englishLevel ?? "sin nivelar"}</p>
         </div>
         <div className="flex gap-2">
           <Mini label="Clases" value={classes.length} />
-          <Mini label="Completadas" value={completed} />
+          <Mini label="Validadas" value={completed} />
           <Mini label="No asistió" value={missed} tone={missed > 0 ? "warn" : undefined} />
         </div>
       </header>
@@ -115,33 +79,15 @@ function TeacherStudentDetail() {
             ) : (
               <table className="w-full text-left text-sm">
                 <thead className="bg-brand-cream/40 text-xs uppercase tracking-wide text-brand-ink/60">
-                  <tr>
-                    <th className="px-4 py-3">Fecha</th>
-                    <th className="px-4 py-3">Tema</th>
-                    <th className="px-4 py-3">Estado</th>
-                  </tr>
+                  <tr><th className="px-4 py-3">Fecha</th><th className="px-4 py-3">Tema</th><th className="px-4 py-3">Estado</th></tr>
                 </thead>
                 <tbody className="divide-y divide-brand-line">
                   {classes.map((c) => (
                     <tr key={c.id}>
-                      <td className="px-4 py-3 text-brand-ink/80">
-                        {new Date(c.startsAt).toLocaleString("es-CO", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </td>
+                      <td className="px-4 py-3 text-brand-ink/80">{new Date(c.startsAt).toLocaleString("es-CO", { day: "2-digit", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
                       <td className="px-4 py-3">{c.topic ?? "—"}</td>
                       <td className="px-4 py-3 capitalize text-brand-ink/70">
-                        {c.status === "completed"
-                          ? "completada"
-                          : c.status === "missed"
-                            ? "no asistió"
-                            : c.status === "canceled"
-                              ? "cancelada"
-                              : "programada"}
+                        {c.status === "validated" ? "validada" : c.status === "no_show" ? "no asistió" : c.status === "cancelled" ? "cancelada" : c.status === "rescheduled" ? "reprogramada" : "programada"}
                       </td>
                     </tr>
                   ))}
@@ -154,35 +100,16 @@ function TeacherStudentDetail() {
         <aside>
           <h2 className="text-lg font-semibold text-brand-ink">Notas privadas</h2>
           <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-brand-line bg-white p-4">
-            <textarea
-              rows={4}
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder="Progreso, observaciones, vocabulario a reforzar…"
-              className="w-full rounded-xl border border-brand-line bg-white p-3 text-sm focus:border-brand-ink focus:outline-none"
-            />
+            <textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Progreso, observaciones, vocabulario a reforzar…" className="w-full rounded-xl border border-brand-line bg-white p-3 text-sm focus:border-brand-ink focus:outline-none" />
             <div className="flex items-center justify-between">
               <div className="flex gap-1">
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => setRating(rating === n ? null : n)}
-                    aria-label={`${n} estrellas`}
-                    className="text-brand-ink/40 hover:text-amber-500"
-                  >
-                    <Star
-                      className={`size-4 ${
-                        rating != null && n <= rating ? "fill-amber-400 text-amber-400" : ""
-                      }`}
-                    />
+                  <button key={n} onClick={() => setRating(rating === n ? null : n)} aria-label={`${n} estrellas`} className="text-brand-ink/40 hover:text-amber-500">
+                    <Star className={`size-4 ${rating != null && n <= rating ? "fill-amber-400 text-amber-400" : ""}`} />
                   </button>
                 ))}
               </div>
-              <button
-                onClick={saveNote}
-                disabled={!body.trim()}
-                className="rounded-full bg-brand-ink px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-50"
-              >
+              <button onClick={saveNote} disabled={!body.trim() || rating == null || addM.isPending} className="rounded-full bg-brand-ink px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-50">
                 Guardar nota
               </button>
             </div>
@@ -194,21 +121,14 @@ function TeacherStudentDetail() {
                 notes.map((n) => (
                   <div key={n.id} className="rounded-xl bg-brand-cream/40 p-3">
                     <div className="flex items-center justify-between text-[10px] uppercase text-brand-ink/55">
-                      <span>
-                        {new Date(n.createdAt).toLocaleDateString("es-CO", {
-                          day: "2-digit",
-                          month: "short",
-                        })}
-                      </span>
+                      <span>{new Date(n.createdAt).toLocaleDateString("es-CO", { day: "2-digit", month: "short" })}</span>
                       {n.rating ? (
                         <span className="inline-flex items-center gap-0.5 text-amber-600">
-                          {Array.from({ length: n.rating }).map((_, i) => (
-                            <Star key={i} className="size-3 fill-amber-400 text-amber-400" />
-                          ))}
+                          {Array.from({ length: n.rating }).map((_, i) => (<Star key={i} className="size-3 fill-amber-400 text-amber-400" />))}
                         </span>
                       ) : null}
                     </div>
-                    <p className="mt-1 whitespace-pre-wrap text-sm text-brand-ink">{n.body}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-brand-ink">{n.notes}</p>
                   </div>
                 ))
               )}
@@ -220,22 +140,10 @@ function TeacherStudentDetail() {
   );
 }
 
-function Mini({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone?: "warn";
-}) {
+function Mini({ label, value, tone }: { label: string; value: number; tone?: "warn" }) {
   return (
     <div className="rounded-xl border border-brand-line bg-white px-4 py-2 text-center">
-      <div
-        className={`text-xl font-bold ${tone === "warn" ? "text-red-700" : "text-brand-ink"}`}
-      >
-        {value}
-      </div>
+      <div className={`text-xl font-bold ${tone === "warn" ? "text-red-700" : "text-brand-ink"}`}>{value}</div>
       <div className="text-[10px] uppercase tracking-wide text-brand-ink/55">{label}</div>
     </div>
   );

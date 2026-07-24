@@ -11,10 +11,13 @@ export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this.
-    // Force the standalone Node server preset (Railway), overriding the wrapper's
-    // cloudflare default. Produces .output/server/index.mjs that listens on PORT.
-    server: { entry: "server", preset: "node-server" },
+    server: { entry: "server" },
   },
+  // Force Nitro's standalone Node server preset for Railway. The Lovable wrapper
+  // defaults Nitro to `cloudflare-module`; this top-level `nitro.preset` override
+  // is the documented way to hard-pin the target outside a Lovable build, so the
+  // build emits a .output/server/index.mjs that opens an HTTP listener on PORT.
+  nitro: { preset: "node-server" },
   vite: {
     plugins: [
       // D9 · PWA offline básica para el catálogo Learning.

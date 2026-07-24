@@ -10,8 +10,10 @@ import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
-    server: { entry: "server" },
+    // nitro/vite builds from this.
+    // Force the standalone Node server preset (Railway), overriding the wrapper's
+    // cloudflare default. Produces .output/server/index.mjs that listens on PORT.
+    server: { entry: "server", preset: "node-server" },
   },
   vite: {
     plugins: [

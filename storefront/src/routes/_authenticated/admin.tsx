@@ -17,7 +17,6 @@ const TABS: ReadonlyArray<{
   { to: "/admin/users", label: "CRM", icon: Users },
   { to: "/admin/content", label: "CMS", icon: BookOpen },
   { to: "/admin/payroll", label: "Nómina", icon: Wallet },
-  { to: "/admin/notifications", label: "Automaciones", icon: Mail },
 ];
 
 function AdminLayout() {

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { learningApi } from "@/lib/api/endpoints";
 
 export const Route = createFileRoute("/_authenticated/app/checkpoint/$checkpointId")({
-  head: () => ({ meta: [{ title: "Checkpoint — Freakn English" }] }),
+  head: () => ({ meta: [{ title: "Checkpoint — FreaknEnglish" }] }),
   component: CheckpointPage,
 });
 

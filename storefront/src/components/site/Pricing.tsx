@@ -8,7 +8,7 @@ import { plansApi } from "@/lib/api/endpoints";
 // Fallback de venta si el backend no responde: nunca frenamos una compra.
 const SALES_WHATSAPP = "573012646770";
 const SALES_WHATSAPP_URL = `https://wa.me/${SALES_WHATSAPP}?text=${encodeURIComponent(
-  "¡Hola! Quiero información sobre los planes de Freakn English 💛",
+  "¡Hola! Quiero información sobre los planes de FreaknEnglish 💛",
 )}`;
 
 type ApiPlan = {

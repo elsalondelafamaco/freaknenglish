@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { classesApi } from "@/lib/api/endpoints";
 
 export const Route = createFileRoute("/_authenticated/app/calendar")({
-  head: () => ({ meta: [{ title: "Calendario — Freakn English" }] }),
+  head: () => ({ meta: [{ title: "Calendario — FreaknEnglish" }] }),
   component: CalendarPage,
 });
 

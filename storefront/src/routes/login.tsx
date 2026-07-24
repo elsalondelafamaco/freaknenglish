@@ -17,7 +17,7 @@ const searchSchema = z.object({ redirect: z.string().optional() });
 
 export const Route = createFileRoute("/login")({
   head: () => ({
-    meta: [{ title: "Inicia sesión — Freakn English" }],
+    meta: [{ title: "Inicia sesión — FreaknEnglish" }],
   }),
   validateSearch: searchSchema,
   component: LoginPage,

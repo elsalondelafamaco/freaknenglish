@@ -23,7 +23,7 @@ export function Navbar() {
   return (
     <header className="absolute inset-x-0 top-0 z-30">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 lg:px-8">
-        <Link to="/" className="flex items-center" aria-label="Freakn English">
+        <Link to="/" className="flex items-center" aria-label="FreaknEnglish">
           <Logo className="h-7 w-auto md:h-8" />
         </Link>
 

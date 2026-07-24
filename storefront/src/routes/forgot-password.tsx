@@ -5,7 +5,7 @@ import { requestPasswordReset } from "@/lib/auth/session";
 
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
-    meta: [{ title: "Recupera tu contraseña — Freakn English" }],
+    meta: [{ title: "Recupera tu contraseña — FreaknEnglish" }],
   }),
   component: ForgotPasswordPage,
 });

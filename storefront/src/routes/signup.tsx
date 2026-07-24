@@ -12,7 +12,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
-    meta: [{ title: "Crea tu cuenta — Freakn English" }],
+    meta: [{ title: "Crea tu cuenta — FreaknEnglish" }],
   }),
   component: SignupPage,
 });

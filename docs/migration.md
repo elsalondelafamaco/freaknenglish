@@ -1,6 +1,6 @@
 # Plan de migración a Next.js + Node + Postgres + Railway
 
-Este documento es el contrato para portar Freakn English desde el stack actual
+Este documento es el contrato para portar FreaknEnglish desde el stack actual
 (TanStack Start + Lovable Cloud) a **Next.js (App Router) + Node + Postgres
 desplegado en Railway**. Toda decisión de arquitectura en este repo se toma
 pensando en esta migración.

@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { classesApi, learningApi, subscriptionsApi } from "@/lib/api/endpoints";
 
 export const Route = createFileRoute("/_authenticated/app/")({
-  head: () => ({ meta: [{ title: "Mi dashboard — Freakn English" }] }),
+  head: () => ({ meta: [{ title: "Mi dashboard — FreaknEnglish" }] }),
   component: DashboardPage,
 });
 

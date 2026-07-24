@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/app/subscribe")({
-  head: () => ({ meta: [{ title: "Elige tu plan — Freakn English" }] }),
+  head: () => ({ meta: [{ title: "Elige tu plan — FreaknEnglish" }] }),
   component: SubscribeRedirect,
 });
 

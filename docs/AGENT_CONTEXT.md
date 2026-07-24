@@ -1,4 +1,4 @@
-# Contexto para agente de migración (Opus) — Freakn English
+# Contexto para agente de migración (Opus) — FreaknEnglish
 
 Este archivo es el **briefing único** para un agente que va a migrar el
 proyecto desde TanStack Start + capa mock a **Next.js 15 + NestJS + Postgres

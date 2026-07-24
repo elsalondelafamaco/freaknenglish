@@ -1,5 +1,5 @@
 /**
- * Tipos del dominio Freakn English.
+ * Tipos del dominio FreaknEnglish.
  *
  * Estos tipos son la fuente de verdad usada por la capa de servicios.
  * Cuando migremos a Postgres, las tablas reflejan estos shapes 1:1

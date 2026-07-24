@@ -81,7 +81,7 @@ async function bootstrap() {
   out('Swagger...')
   const config = new DocumentBuilder()
     .setTitle('Freakn API')
-    .setDescription('Freakn English 1-on-1 backend API')
+    .setDescription('FreaknEnglish 1-on-1 backend API')
     .setVersion('1.0.0')
     .addBearerAuth()
     .build()

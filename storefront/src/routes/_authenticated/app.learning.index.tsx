@@ -7,7 +7,7 @@ import { learningApi } from "@/lib/api/endpoints";
 import type { EnglishLevel, LearningModule } from "@/lib/domain/types";
 
 export const Route = createFileRoute("/_authenticated/app/learning/")({
-  head: () => ({ meta: [{ title: "Aprendizaje — Freakn English" }] }),
+  head: () => ({ meta: [{ title: "Aprendizaje — FreaknEnglish" }] }),
   component: LearningIndex,
 });
 

@@ -20,7 +20,7 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/checkout/return")({
-  head: () => ({ meta: [{ title: "Pago — Freakn English" }] }),
+  head: () => ({ meta: [{ title: "Pago — FreaknEnglish" }] }),
   validateSearch: searchSchema,
   component: ReturnPage,
 });

@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/onboarding/profile")({
-  head: () => ({ meta: [{ title: "Completar perfil — Freakn English" }] }),
+  head: () => ({ meta: [{ title: "Completar perfil — FreaknEnglish" }] }),
   component: OnboardingProfile,
 });
 

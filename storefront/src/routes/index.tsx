@@ -49,13 +49,13 @@ const FAQ_JSONLD = {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Freakn English — Habla inglés con confianza, 1 a 1 en vivo" },
+      { title: "FreaknEnglish — Habla inglés con confianza, 1 a 1 en vivo" },
       {
         name: "description",
         content:
           "Clases 1 a 1 en vivo con profesores reales. Conversaciones prácticas y feedback personalizado para que hables inglés desde el día 1.",
       },
-      { property: "og:title", content: "Freakn English — Habla inglés con confianza" },
+      { property: "og:title", content: "FreaknEnglish — Habla inglés con confianza" },
       {
         property: "og:description",
         content:

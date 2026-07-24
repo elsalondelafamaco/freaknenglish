@@ -1,4 +1,4 @@
-// Freakn English — Prisma schema (Postgres).
+// FreaknEnglish — Prisma schema (Postgres).
 // Mirrors docs/data-model.md. Run: bun run prisma:migrate
 
 generator client {

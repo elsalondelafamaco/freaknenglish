@@ -946,7 +946,7 @@ export class AdminService {
     }
     return {
       whatsappNumber: read('contact.whatsappNumber', '573000000000'),
-      whatsappMessage: read('contact.whatsappMessage', 'Hola, quiero más información de Freakn English'),
+      whatsappMessage: read('contact.whatsappMessage', 'Hola, quiero más información de FreaknEnglish'),
     }
   }
 

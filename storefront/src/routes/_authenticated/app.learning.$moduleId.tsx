@@ -5,7 +5,7 @@ import { ArrowLeft, CheckCircle2, Circle, Download, FileText, FileCode, PlayCirc
 import { learningApi } from "@/lib/api/endpoints";
 
 export const Route = createFileRoute("/_authenticated/app/learning/$moduleId")({
-  head: ({ params }) => ({ meta: [{ title: `Módulo ${params.moduleId} — Freakn English` }] }),
+  head: ({ params }) => ({ meta: [{ title: `Módulo ${params.moduleId} — FreaknEnglish` }] }),
   component: ModuleDetail,
 });
 

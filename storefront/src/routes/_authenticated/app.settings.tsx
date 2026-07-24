@@ -6,7 +6,7 @@ import { usersApi, receiptsApi, subscriptionsApi } from "@/lib/api/endpoints";
 import { apiGetBlob } from "@/lib/api/client";
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
-  head: () => ({ meta: [{ title: "Configuración — Freakn English" }] }),
+  head: () => ({ meta: [{ title: "Configuración — FreaknEnglish" }] }),
   component: SettingsPage,
 });
 

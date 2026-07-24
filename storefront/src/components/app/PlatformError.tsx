@@ -26,7 +26,7 @@ export function BackendDownBanner() {
         </button>
         <a
           href={supportWhatsAppUrl(
-            "Hola, la plataforma de Freakn English me muestra problemas de conexión. ¿Me pueden ayudar?",
+            "Hola, la plataforma de FreaknEnglish me muestra problemas de conexión. ¿Me pueden ayudar?",
           )}
           target="_blank"
           rel="noreferrer"
@@ -69,7 +69,7 @@ export function PlatformError({ onRetry }: { onRetry?: () => void }) {
           </button>
           <a
             href={supportWhatsAppUrl(
-              "Hola, soy estudiante de Freakn English y la plataforma me muestra un error de conexión. ¿Me pueden ayudar?",
+              "Hola, soy estudiante de FreaknEnglish y la plataforma me muestra un error de conexión. ¿Me pueden ayudar?",
             )}
             target="_blank"
             rel="noreferrer"

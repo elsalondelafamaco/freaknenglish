@@ -31,7 +31,7 @@ export function Faq() {
             Si tienes preguntas, tenemos respuestas.
           </h2>
           <p className="mt-4 text-[15px] text-brand-ink/70">
-            Todo lo que necesitas saber sobre Freakn English y cómo entregamos resultados.
+            Todo lo que necesitas saber sobre FreaknEnglish y cómo entregamos resultados.
           </p>
         </div>
         <div className="mt-10 flex flex-col gap-3 lg:mt-0">

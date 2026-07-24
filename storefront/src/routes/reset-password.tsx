@@ -8,7 +8,7 @@ const searchSchema = z.object({ token: z.string().optional() });
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
-    meta: [{ title: "Restablecer contraseña — Freakn English" }],
+    meta: [{ title: "Restablecer contraseña — FreaknEnglish" }],
   }),
   validateSearch: searchSchema,
   component: ResetPasswordPage,

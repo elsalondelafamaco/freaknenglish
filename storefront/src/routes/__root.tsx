@@ -51,7 +51,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-brand-cream px-5 py-14">
       <div className="w-full max-w-md rounded-3xl border border-brand-line bg-white p-8 text-center shadow-soft">
-        <img src="/logo-freakn.svg" alt="Freakn English" className="mx-auto h-8 w-auto" />
+        <img src="/logo-freakn.svg" alt="FreaknEnglish" className="mx-auto h-8 w-auto" />
         <div className="mx-auto mt-6 flex size-14 items-center justify-center rounded-full bg-red-50 text-2xl">😕</div>
         <h1 className="mt-4 text-2xl font-bold tracking-tight text-brand-ink">Algo se rompió</h1>
         <p className="mt-2 text-[15px] text-brand-ink/65">
@@ -82,7 +82,7 @@ const SITE_URL = "https://interface-joy-flow.lovable.app";
 const ORGANIZATION_JSONLD = {
   "@context": "https://schema.org",
   "@type": "EducationalOrganization",
-  name: "Freakn English",
+  name: "FreaknEnglish",
   url: SITE_URL,
   logo: `${SITE_URL}/apple-touch-icon.png`,
   description:
@@ -95,14 +95,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "Freakn English — Habla inglés con confianza, 1 a 1 en vivo" },
+      { title: "FreaknEnglish — Habla inglés con confianza, 1 a 1 en vivo" },
       { name: "description", content: "Clases 1 a 1 en vivo con profesores reales. Conversaciones prácticas y feedback personalizado para que hables inglés con fluidez desde el día 1." },
-      { name: "author", content: "Freakn English" },
-      { property: "og:title", content: "Freakn English — Habla inglés con confianza" },
+      { name: "author", content: "FreaknEnglish" },
+      { property: "og:title", content: "FreaknEnglish — Habla inglés con confianza" },
       { property: "og:description", content: "Clases 1 a 1 en vivo con profesores reales. Habla, no traduzcas." },
       { property: "og:type", content: "website" },
       { property: "og:url", content: SITE_URL },
-      { property: "og:site_name", content: "Freakn English" },
+      { property: "og:site_name", content: "FreaknEnglish" },
       { property: "og:locale", content: "es_CO" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@FreaknEnglish" },

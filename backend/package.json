@@ -1,7 +1,7 @@
 {
   "name": "freakn-backend",
   "version": "0.1.0",
-  "description": "Freakn English 1-on-1 — NestJS backend (Postgres + Redis + Socket.IO).",
+  "description": "FreaknEnglish 1-on-1 — NestJS backend (Postgres + Redis + Socket.IO).",
   "private": true,
   "scripts": {
     "build": "nest build",

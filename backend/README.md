@@ -1,6 +1,6 @@
 # Freakn Backend — NestJS 10 + Prisma + Socket.IO
 
-Backend monorepo package for **Freakn English 1-on-1**. Designed to deploy as a
+Backend monorepo package for **FreaknEnglish 1-on-1**. Designed to deploy as a
 single Docker container on **Railway** with managed **Postgres** + **Redis**.
 
 ## Layout

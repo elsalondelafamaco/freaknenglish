@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/onboarding/schedule")({
-  head: () => ({ meta: [{ title: "Elige tu horario — Freakn English" }] }),
+  head: () => ({ meta: [{ title: "Elige tu horario — FreaknEnglish" }] }),
   component: OnboardingSchedule,
 });
 

@@ -9,7 +9,7 @@ import { checkoutApi, plansApi, scheduleApi, type SlotRef } from "@/lib/api/endp
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/checkout/$planId")({
-  head: () => ({ meta: [{ title: "Checkout — Freakn English" }] }),
+  head: () => ({ meta: [{ title: "Checkout — FreaknEnglish" }] }),
   validateSearch: z.object({ slots: z.string().optional() }),
   component: CheckoutPage,
 });

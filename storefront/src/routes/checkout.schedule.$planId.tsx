@@ -8,7 +8,7 @@ import { plansApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/checkout/schedule/$planId")({
-  head: () => ({ meta: [{ title: "Elige tu horario — Freakn English" }] }),
+  head: () => ({ meta: [{ title: "Elige tu horario — FreaknEnglish" }] }),
   component: SchedulePicker,
 });
 

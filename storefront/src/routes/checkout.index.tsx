@@ -6,7 +6,7 @@ import { plansApi, subscriptionsApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/checkout/")({
-  head: () => ({ meta: [{ title: "Elige tu plan — Freakn English" }] }),
+  head: () => ({ meta: [{ title: "Elige tu plan — FreaknEnglish" }] }),
   component: CheckoutSelect,
 });
 

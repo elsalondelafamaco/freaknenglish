@@ -3,6 +3,8 @@ import * as crypto from 'crypto'
 import { PrismaService } from '../../prisma/prisma.service'
 import { SubscriptionsService } from '../subscriptions/subscriptions.service'
 import { NotificationsService } from '../notifications/notifications.service'
+import { SchedulingService } from '../scheduling/scheduling.service'
+import { SlotsService } from '../scheduling/slots.service'
 import { env } from '../../config/env'
 
 type WompiEvent = {
@@ -28,6 +30,8 @@ export class WompiService {
     private prisma: PrismaService,
     private subs: SubscriptionsService,
     private notifications: NotificationsService,
+    private scheduling: SchedulingService,
+    private slots: SlotsService,
   ) {}
 
   /**
@@ -142,6 +146,10 @@ export class WompiService {
       },
     })
 
+    if (['DECLINED', 'VOIDED', 'ERROR'].includes(tx.status)) {
+      await this.slots.releasePendingForIntent(intent.id).catch(() => null)
+    }
+
     if (tx.status === 'APPROVED') {
       let userId = intent.userId
       if (!userId) {
@@ -166,6 +174,15 @@ export class WompiService {
         await this.prisma.paymentIntent.update({ where: { id: intent.id }, data: { userId } })
       }
       await this.subs.activateForUser(userId, intent.planId)
+      // Materializa el horario comprado: reserva→active / renovación / fallback / manual.
+      try {
+        await this.scheduling.materializePurchase(userId, {
+          id: intent.id,
+          scheduleJson: (intent as any).scheduleJson ?? undefined,
+        })
+      } catch (e) {
+        this.log.error(`materializePurchase failed for intent ${intent.id}: ${(e as Error).message}`)
+      }
       const plan = await this.prisma.plan.findUnique({ where: { id: intent.planId } })
       await this.notifications.enqueue({
         userId,

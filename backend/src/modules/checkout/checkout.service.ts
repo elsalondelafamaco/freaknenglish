@@ -3,10 +3,11 @@ import * as crypto from 'crypto'
 import { PrismaService } from '../../prisma/prisma.service'
 import { env } from '../../config/env'
 import { ExchangeService } from '../exchange/exchange.service'
+import { SlotsService, SlotRef, PENDING_HOLD_MINUTES } from '../scheduling/slots.service'
 
 @Injectable()
 export class CheckoutService {
-  constructor(private prisma: PrismaService, private exchange: ExchangeService) {}
+  constructor(private prisma: PrismaService, private exchange: ExchangeService, private slots: SlotsService) {}
 
   /**
    * Creates a PaymentIntent and returns the payload the Wompi Checkout Widget needs.
@@ -20,6 +21,7 @@ export class CheckoutService {
     customerPhone: string
     customerDocument: string
     userId?: string
+    slots?: SlotRef[]
   }) {
     const plan = await this.prisma.plan.findUnique({ where: { id: input.planId } })
     if (!plan) throw new NotFoundException('Plan not found')
@@ -35,6 +37,13 @@ export class CheckoutService {
     const amountInCents = amountCop * 100
     const currency = 'COP'
 
+    // Selección de horario (SDD-scheduling-v2): validar contra ventana + plan.
+    let assignmentMode: 'auto' | 'manual' | null = null
+    const slots = input.slots ?? []
+    if (slots.length > 0) {
+      await this.slots.validateSelection(slots, plan.daysPerWeek)
+    }
+
     const intent = await this.prisma.paymentIntent.create({
       data: {
         reference,
@@ -46,8 +55,16 @@ export class CheckoutService {
         customerName: input.customerName,
         customerPhone: input.customerPhone,
         customerDocument: input.customerDocument,
+        scheduleJson: slots.length > 0 ? (slots as any) : undefined,
       },
     })
+
+    if (slots.length > 0) {
+      // Reserva de 20 min (decisión Q3). Renovación: los slots propios cuentan.
+      const r = await this.slots.reserveForIntent(intent.id, slots, input.userId)
+      assignmentMode = r.mode
+      await this.prisma.paymentIntent.update({ where: { id: intent.id }, data: { assignmentMode } })
+    }
 
     const signature = crypto
       .createHash('sha256')
@@ -60,8 +77,11 @@ export class CheckoutService {
     // usamos el dominio de producción (WOMPI_REDIRECT_URL), aunque el resto
     // de la app corra en local durante desarrollo.
     const redirectUrl = env.WOMPI_REDIRECT_URL
+    // El link de pago vence junto con la reserva de franjas (20 min).
+    const expirationTime = new Date(Date.now() + PENDING_HOLD_MINUTES * 60 * 1000).toISOString()
     const checkoutParams = new URLSearchParams({
       'public-key': env.WOMPI_PUBLIC_KEY,
+      'expiration-time': expirationTime,
       currency,
       'amount-in-cents': String(amountInCents),
       reference,
@@ -84,6 +104,7 @@ export class CheckoutService {
       publicKey: env.WOMPI_PUBLIC_KEY,
       redirectUrl,
       checkoutUrl,
+      assignmentMode,
     }
   }
 }

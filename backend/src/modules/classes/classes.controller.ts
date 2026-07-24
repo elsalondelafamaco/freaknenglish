@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Post, UseGuards, ForbiddenException } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator'
@@ -50,12 +50,15 @@ export class ClassesController {
     @CurrentUser() u: AuthUser,
     @Body() body: { startsAt: string; endsAt: string },
   ) {
+    // SDD-scheduling-v2 AC-25: el estudiante coordina cambios con su profesor.
+    if (u.role === 'student') throw new ForbiddenException('Coordina el cambio de horario con tu profesor')
     return this.svc.reschedule(id, u.id, new Date(body.startsAt), new Date(body.endsAt))
   }
 
   /** @endpoint POST /api/v1/classes/:id/cancel */
   @Post(':id/cancel')
   cancel(@Param('id') id: string, @CurrentUser() u: AuthUser, @Body() body: { reason?: string }) {
+    if (u.role === 'student') throw new ForbiddenException('Coordina la cancelación con tu profesor')
     return this.svc.cancel(id, u.id, body.reason)
   }
 }

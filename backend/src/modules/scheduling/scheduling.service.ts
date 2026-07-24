@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../../prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { BoardService } from '../board/board.service'
+import { SlotsService, SlotRef } from './slots.service'
 
 /**
  * Bloques semanales de horario del estudiante.
@@ -30,6 +31,7 @@ export class SchedulingService {
     private prisma: PrismaService,
     private notifications: NotificationsService,
     private boards: BoardService,
+    private slots: SlotsService,
   ) {}
 
   private async notifyTeacherAssigned(studentId: string, teacherId: string, dedupeSuffix: string) {
@@ -81,7 +83,14 @@ export class SchedulingService {
     })
     if (!user || !user.assignedTeacherId) return { created: 0 }
     if (!user.subscription || user.subscription.status !== 'active') return { created: 0 }
-    const blocks = (user.schedulePreferences as any as ScheduleBlock[] | null) ?? []
+    // Fuente de verdad: ScheduleSlots activos; fallback legacy a preferencias.
+    const slotRows = await this.prisma.scheduleSlot.findMany({
+      where: { studentId, status: 'active' },
+      select: { weekday: true, hour: true },
+    })
+    const blocks: ScheduleBlock[] = slotRows.length > 0
+      ? slotRows
+      : ((user.schedulePreferences as any as ScheduleBlock[] | null) ?? [])
     if (!Array.isArray(blocks) || blocks.length === 0) return { created: 0 }
 
     // Aula colaborativa compartida (board en vivo) para el par profe-estudiante.
@@ -175,24 +184,40 @@ export class SchedulingService {
       ),
     )
 
-    const status = match ? 'auto_assigned' : 'manual_pending'
+    let effectiveMatch = match ?? null
+    if (effectiveMatch) {
+      const holdRelease = await this.prisma.scheduleSlot.deleteMany({ where: { studentId: userId } })
+      void holdRelease
+      try {
+        await this.prisma.$transaction(
+          blocks.map((b) =>
+            this.prisma.scheduleSlot.create({
+              data: { teacherId: effectiveMatch!.id, studentId: userId, weekday: b.weekday, hour: b.hour, status: 'active' },
+            }),
+          ),
+        )
+      } catch {
+        effectiveMatch = null // franja ocupada: degradar a manual
+      }
+    }
+    const status = effectiveMatch ? 'auto_assigned' : 'manual_pending'
     await this.prisma.user.update({
       where: { id: userId },
       data: {
         schedulePreferences: blocks as any,
         scheduleAssignmentStatus: status,
-        assignedTeacherId: match?.id ?? user.assignedTeacherId ?? null,
+        assignedTeacherId: effectiveMatch?.id ?? user.assignedTeacherId ?? null,
         onboardedAt: user.onboardedAt ?? new Date(),
       },
     })
-    if (match) {
-      await this.notifyTeacherAssigned(userId, match.id, 'onboarding')
+    if (effectiveMatch) {
+      await this.notifyTeacherAssigned(userId, effectiveMatch.id, 'onboarding')
       await this.ensureUpcomingClasses(userId)
     }
 
     return {
       status,
-      teacher: match ? { id: match.id, fullName: match.fullName } : null,
+      teacher: effectiveMatch ? { id: effectiveMatch.id, fullName: effectiveMatch.fullName } : null,
       blocks,
     }
   }
@@ -208,7 +233,8 @@ export class SchedulingService {
         assignedTeacher: { select: { id: true, fullName: true } },
       },
     })
-    return u
+    const slots = await this.slots.slotsOfStudent(userId)
+    return { ...u, slots }
   }
 
   // ── Admin ──────────────────────────────────────────────────────────
@@ -233,6 +259,32 @@ export class SchedulingService {
   async assignRequest(studentId: string, teacherId: string) {
     const t = await this.prisma.user.findUnique({ where: { id: teacherId } })
     if (!t || t.role !== 'teacher') throw new BadRequestException('Invalid teacher')
+    const student = await this.prisma.user.findUnique({ where: { id: studentId }, select: { schedulePreferences: true } })
+    const blocks = (student?.schedulePreferences as any as ScheduleBlock[] | null) ?? []
+    if (blocks.length > 0) {
+      const conflicts = await this.prisma.scheduleSlot.findMany({
+        where: {
+          teacherId,
+          status: { in: ['pending', 'active', 'held'] },
+          OR: blocks.map((b) => ({ weekday: b.weekday, hour: b.hour })),
+          NOT: { studentId },
+        },
+        select: { weekday: true, hour: true },
+      })
+      if (conflicts.length > 0) {
+        throw new BadRequestException(
+          `El profesor ya tiene ocupadas: ${conflicts.map((c) => `d${c.weekday} ${c.hour}:00`).join(', ')}`,
+        )
+      }
+      await this.prisma.scheduleSlot.deleteMany({ where: { studentId } })
+      await this.prisma.$transaction(
+        blocks.map((b) =>
+          this.prisma.scheduleSlot.create({
+            data: { teacherId, studentId, weekday: b.weekday, hour: b.hour, status: 'active' },
+          }),
+        ),
+      )
+    }
     const updated = await this.prisma.user.update({
       where: { id: studentId },
       data: { assignedTeacherId: teacherId, scheduleAssignmentStatus: 'auto_assigned' },
@@ -282,6 +334,18 @@ export class SchedulingService {
         ),
       )
       if (!covers) continue
+      try {
+        await this.prisma.scheduleSlot.deleteMany({ where: { studentId: s.id } })
+        await this.prisma.$transaction(
+          blocks.map((b) =>
+            this.prisma.scheduleSlot.create({
+              data: { teacherId, studentId: s.id, weekday: b.weekday, hour: b.hour, status: 'active' },
+            }),
+          ),
+        )
+      } catch {
+        continue // franja ocupada por otro slot: sigue pendiente
+      }
       await this.prisma.user.update({
         where: { id: s.id },
         data: {
@@ -294,5 +358,143 @@ export class SchedulingService {
       reassigned.push({ id: s.id, fullName: s.fullName })
     }
     return reassigned
+  }
+
+  // ── Compra: materialización del horario tras pago aprobado ─────────
+  /**
+   * Idempotente (la llama finalizeTransaction). Orden de resolución:
+   * 1) slots propios held/active que coinciden con la selección → reactivar.
+   * 2) reserva pending del intent → reclamar (studentId + active).
+   * 3) recomputar candidatos → crear slots con el mejor profe.
+   * 4) sin candidatos → manual_pending + notificación a admins y estudiante.
+   */
+  async materializePurchase(userId: string, intent: { id: string; scheduleJson?: unknown }) {
+    const slots = (intent.scheduleJson as SlotRef[] | null) ?? []
+    if (!Array.isArray(slots) || slots.length === 0) return { mode: 'none' as const }
+
+    const wanted = new Set(slots.map((s) => `${s.weekday}:${s.hour}`))
+    const mine = await this.prisma.scheduleSlot.findMany({
+      where: { studentId: userId, status: { in: ['active', 'held'] } },
+    })
+    const mineKeys = new Set(mine.map((m) => `${m.weekday}:${m.hour}`))
+    const sameSet = mine.length === slots.length && [...wanted].every((k) => mineKeys.has(k))
+
+    let teacherId: string | null = null
+
+    if (sameSet && mine.length > 0) {
+      // Renovación dentro del hold (o recompra igual): reactivar.
+      await this.prisma.scheduleSlot.updateMany({
+        where: { studentId: userId },
+        data: { status: 'active', holdExpiresAt: null },
+      })
+      teacherId = mine[0].teacherId
+      await this.slots.releasePendingForIntent(intent.id)
+    } else {
+      if (mine.length > 0) {
+        await this.prisma.scheduleSlot.deleteMany({ where: { studentId: userId } })
+      }
+      // Reclamar la reserva del intent si sigue viva (puede ser parcial si el
+      // estudiante ya ocupaba parte de las franjas con ese profe).
+      const pend = await this.prisma.scheduleSlot.findMany({ where: { intentId: intent.id, status: 'pending' } })
+      if (pend.length > 0) {
+        const tid = pend[0].teacherId
+        await this.prisma.scheduleSlot.updateMany({
+          where: { intentId: intent.id, status: 'pending' },
+          data: { studentId: userId, status: 'active', holdExpiresAt: null, intentId: null },
+        })
+        const claimed = new Set(pend.map((x) => `${x.weekday}:${x.hour}`))
+        const missing = slots.filter((b) => !claimed.has(`${b.weekday}:${b.hour}`))
+        try {
+          if (missing.length > 0) {
+            await this.prisma.$transaction(
+              missing.map((b) =>
+                this.prisma.scheduleSlot.create({
+                  data: { teacherId: tid, studentId: userId, weekday: b.weekday, hour: b.hour, status: 'active' },
+                }),
+              ),
+            )
+          }
+          teacherId = tid
+        } catch {
+          await this.prisma.scheduleSlot.deleteMany({ where: { studentId: userId } }).catch(() => null)
+        }
+      }
+      if (!teacherId) {
+        await this.slots.releasePendingForIntent(intent.id)
+        // Pago tardío o carrera: recomputar candidatos.
+        const candidates = await this.slots.candidateTeachers(slots)
+        for (const tid of candidates) {
+          try {
+            await this.prisma.$transaction(
+              slots.map((b) =>
+                this.prisma.scheduleSlot.create({
+                  data: { teacherId: tid, studentId: userId, weekday: b.weekday, hour: b.hour, status: 'active' },
+                }),
+              ),
+            )
+            teacherId = tid
+            break
+          } catch {
+            await this.prisma.scheduleSlot.deleteMany({ where: { studentId: userId, status: 'active' } }).catch(() => null)
+          }
+        }
+      }
+    }
+
+    if (teacherId) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          assignedTeacherId: teacherId,
+          scheduleAssignmentStatus: 'auto_assigned',
+          schedulePreferences: slots as any, // espejo de lectura
+        },
+      })
+      await this.notifyTeacherAssigned(userId, teacherId, `purchase:${intent.id}`)
+      await this.ensureUpcomingClasses(userId)
+      return { mode: 'auto' as const, teacherId }
+    }
+
+    // Manual: guardar deseo, notificar a admins + estudiante (in-app).
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        scheduleAssignmentStatus: 'manual_pending',
+        schedulePreferences: slots as any,
+      },
+    })
+    const [student, admins] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId }, select: { fullName: true, email: true } }),
+      this.prisma.user.findMany({ where: { role: 'admin', deletedAt: null }, select: { id: true, email: true } }),
+    ])
+    for (const a of admins) {
+      await this.notifications.enqueue({
+        userId: a.id,
+        toEmail: a.email,
+        template: 'welcome',
+        subject: 'Estudiante por coordinar',
+        dedupeKey: `manual-schedule:${intent.id}:${a.id}`,
+        inAppOnly: true,
+        type: 'system',
+        title: 'Estudiante pagó y espera profesor',
+        body: `${student?.fullName ?? 'Estudiante'} pagó con un horario sin cobertura. Coordina su asignación.`,
+        linkUrl: '/admin/users',
+      })
+    }
+    if (student) {
+      await this.notifications.enqueue({
+        userId,
+        toEmail: student.email,
+        template: 'welcome',
+        subject: 'Estamos coordinando tu profesor',
+        dedupeKey: `manual-schedule-student:${intent.id}`,
+        inAppOnly: true,
+        type: 'system',
+        title: 'Estamos coordinando tu profesor',
+        body: 'Tu cupo está garantizado. Te contactamos en menos de 24 h hábiles.',
+        linkUrl: '/app',
+      })
+    }
+    return { mode: 'manual' as const }
   }
 }

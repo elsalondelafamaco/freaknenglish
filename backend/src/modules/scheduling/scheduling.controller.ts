@@ -5,13 +5,14 @@ import { RolesGuard } from '../../common/guards/roles.guard'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator'
 import { SchedulingService, ScheduleBlock } from './scheduling.service'
+import { SlotsService, SlotRef, ScheduleConfig } from './slots.service'
 
 @ApiTags('scheduling')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller()
 export class SchedulingController {
-  constructor(private svc: SchedulingService) {}
+  constructor(private svc: SchedulingService, private slots: SlotsService) {}
 
   /** @endpoint GET /api/v1/schedule/availability-grid */
   @Get('schedule/availability-grid')
@@ -20,6 +21,22 @@ export class SchedulingController {
   /** @endpoint GET /api/v1/schedule/mine */
   @Get('schedule/mine')
   mine(@CurrentUser() u: AuthUser) { return this.svc.mySchedule(u.id) }
+
+  /** @endpoint POST /api/v1/schedule/availability  (renovación: ignora los slots propios) */
+  @Post('schedule/availability')
+  availability(@CurrentUser() u: AuthUser, @Body() body: { slots?: SlotRef[] }) {
+    return this.slots.hints(body?.slots ?? [], u.id)
+  }
+
+  /** @endpoint GET /api/v1/admin/settings/schedule */
+  @Roles('admin')
+  @Get('admin/settings/schedule')
+  scheduleConfig() { return this.slots.getConfig() }
+
+  /** @endpoint POST /api/v1/admin/settings/schedule */
+  @Roles('admin')
+  @Post('admin/settings/schedule')
+  updateScheduleConfig(@Body() body: Partial<ScheduleConfig>) { return this.slots.updateConfig(body) }
 
   /** @endpoint POST /api/v1/schedule/preferences  Body: { blocks:[{weekday,hour}] } */
   @Post('schedule/preferences')

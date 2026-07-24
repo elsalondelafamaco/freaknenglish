@@ -4,6 +4,7 @@ import { env } from '../../config/env'
 import { AutomationsProcessor } from './automations.processor'
 import { AutomationsService } from './automations.service'
 import { NotificationsModule } from '../notifications/notifications.module'
+import { SchedulingModule } from '../scheduling/scheduling.module'
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { NotificationsModule } from '../notifications/notifications.module'
     }),
     BullModule.registerQueue({ name: 'automations' }),
     NotificationsModule,
+    SchedulingModule,
   ],
   providers: [AutomationsProcessor, AutomationsService],
   exports: [AutomationsService],

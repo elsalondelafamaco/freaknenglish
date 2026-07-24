@@ -90,6 +90,8 @@ model User {
   passwordResets   PasswordReset[]
   paymentIntents   PaymentIntent[]
   availability     TeacherAvailability[]
+  teacherSlots  ScheduleSlot[] @relation("TeacherSlots")
+  studentSlots  ScheduleSlot[] @relation("StudentSlots")
   absences         TeacherAbsence[]
   boards           BoardMember[]
 
@@ -178,6 +180,8 @@ model PaymentIntent {
   customerName    String        @map("customer_name")
   customerPhone   String?       @map("customer_phone")
   customerDocument String?      @map("customer_document")
+  scheduleJson   Json?   @map("schedule_json") // franjas elegidas [{weekday,hour}]
+  assignmentMode String? @map("assignment_mode") // auto | manual
   wompiId         String?       @unique @map("wompi_id")
   approvedAt      DateTime?     @map("approved_at")
   createdAt       DateTime      @default(now()) @map("created_at")
@@ -220,6 +224,7 @@ model Class {
   validatedAt  DateTime?   @map("validated_at")
   studentConfirmedAt DateTime? @map("student_confirmed_at")
   teacherValidatedAt DateTime? @map("teacher_validated_at")
+  autoValidated Boolean @default(false) @map("auto_validated")
   cancelledAt  DateTime?   @map("cancelled_at")
   cancelReason String?     @map("cancel_reason")
   createdAt    DateTime    @default(now()) @map("created_at")
@@ -248,6 +253,31 @@ model ClassNote {
 
   @@index([classId])
   @@map("class_notes")
+}
+
+// Compromiso recurrente semanal profesor<->estudiante. Fuente de verdad de
+// ocupación para el matching de compra. pending = reserva de pago (20 min),
+// active = vigente, held = retenido 5 días hábiles tras vencer la suscripción.
+model ScheduleSlot {
+  id            String    @id @default(uuid())
+  teacherId     String    @map("teacher_id")
+  studentId     String?   @map("student_id")
+  intentId      String?   @map("intent_id") // reserva pre-pago (PaymentIntent)
+  weekday       Int
+  hour          Int
+  status        String    @default("active") // pending | active | held
+  holdExpiresAt DateTime? @map("hold_expires_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  teacher User  @relation("TeacherSlots", fields: [teacherId], references: [id], onDelete: Cascade)
+  student User? @relation("StudentSlots", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, weekday, hour])
+  @@index([studentId])
+  @@index([intentId])
+  @@index([status, holdExpiresAt])
+  @@map("schedule_slots")
 }
 
 model TeacherAvailability {

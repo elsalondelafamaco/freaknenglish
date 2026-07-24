@@ -1,6 +1,6 @@
 import { Body, Controller, Get, NotFoundException, Post, Query } from '@nestjs/common'
 import { ApiTags } from '@nestjs/swagger'
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator'
+import { IsArray, IsEmail, IsOptional, IsString, MinLength } from 'class-validator'
 import { CheckoutService } from './checkout.service'
 import { WompiService } from '../wompi/wompi.service'
 import { PrismaService } from '../../prisma/prisma.service'
@@ -12,6 +12,7 @@ class CreateIntentDto {
   @IsString() @MinLength(6) customerPhone!: string
   @IsString() @MinLength(4) customerDocument!: string
   @IsString() @IsOptional() userId?: string
+  @IsArray() @IsOptional() slots?: Array<{ weekday: number; hour: number }>
 }
 
 @ApiTags('checkout')

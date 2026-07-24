@@ -96,7 +96,19 @@ export class ClassesService {
     const c = await this.prisma.class.findUnique({ where: { id: classId } })
     if (!c) throw new NotFoundException('Class not found')
     if (c.teacherId && c.teacherId !== teacherId) throw new ForbiddenException()
-    return this.prisma.class.update({ where: { id: classId }, data: { status: ClassStatus.no_show } })
+    const now = Date.now()
+    // Ventana (decisión Q2): desde el inicio de la clase hasta 48 h después del fin.
+    if (now < c.startsAt.getTime()) throw new BadRequestException('La clase aún no inicia')
+    if (now > c.endsAt.getTime() + 48 * 60 * 60 * 1000) {
+      throw new BadRequestException('La ventana de 48 h para marcar no tomada ya venció')
+    }
+    if (!['scheduled', 'validated'].includes(c.status)) {
+      throw new BadRequestException('Esta clase no se puede marcar como no tomada')
+    }
+    return this.prisma.class.update({
+      where: { id: classId },
+      data: { status: ClassStatus.no_show, validatedAt: null, autoValidated: false },
+    })
   }
 
   async reschedule(classId: string, studentId: string, newStartsAt: Date, newEndsAt: Date) {

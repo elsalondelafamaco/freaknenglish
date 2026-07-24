@@ -3,9 +3,10 @@ import { WompiController } from './wompi.controller'
 import { WompiService } from './wompi.service'
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module'
 import { NotificationsModule } from '../notifications/notifications.module'
+import { SchedulingModule } from '../scheduling/scheduling.module'
 
 @Module({
-  imports: [SubscriptionsModule, NotificationsModule],
+  imports: [SubscriptionsModule, NotificationsModule, SchedulingModule],
   controllers: [WompiController],
   providers: [WompiService],
   exports: [WompiService],

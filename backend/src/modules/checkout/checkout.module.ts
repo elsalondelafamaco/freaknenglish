@@ -3,9 +3,10 @@ import { CheckoutController } from './checkout.controller'
 import { CheckoutService } from './checkout.service'
 import { WompiModule } from '../wompi/wompi.module'
 import { ExchangeModule } from '../exchange/exchange.module'
+import { SchedulingModule } from '../scheduling/scheduling.module'
 
 @Module({
-  imports: [WompiModule, ExchangeModule],
+  imports: [WompiModule, ExchangeModule, SchedulingModule],
   controllers: [CheckoutController],
   providers: [CheckoutService],
 })

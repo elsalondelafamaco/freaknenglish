@@ -4,6 +4,8 @@ import { Job } from 'bullmq'
 import { PrismaService } from '../../prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { env } from '../../config/env'
+import { SchedulingService } from '../scheduling/scheduling.service'
+import { SlotsService } from '../scheduling/slots.service'
 
 /**
  * Runs the actual automation logic. Triggered by the repeating jobs in
@@ -13,7 +15,12 @@ import { env } from '../../config/env'
 @Processor('automations')
 export class AutomationsProcessor extends WorkerHost {
   private readonly log = new Logger(AutomationsProcessor.name)
-  constructor(private prisma: PrismaService, private notifications: NotificationsService) {
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+    private scheduling: SchedulingService,
+    private slots: SlotsService,
+  ) {
     super()
   }
 
@@ -24,6 +31,16 @@ export class AutomationsProcessor extends WorkerHost {
 
   private async tick5m() {
     const now = new Date()
+
+    // Auto-tomada (decisión Q2: inmediata al terminar; profe corrige 48 h).
+    const auto = await this.prisma.class.updateMany({
+      where: { status: 'scheduled', endsAt: { lt: now } },
+      data: { status: 'validated', autoValidated: true, validatedAt: now },
+    })
+    if (auto.count > 0) this.log.log(`Auto-validated ${auto.count} class(es)`)
+
+    // Libera reservas de pago (pending) vencidas.
+    await this.slots.cleanupExpiredPending()
     const in24 = new Date(now.getTime() + 24 * 60 * 60 * 1000)
     const in1 = new Date(now.getTime() + 60 * 60 * 1000)
 
@@ -93,6 +110,25 @@ export class AutomationsProcessor extends WorkerHost {
       data: { status: 'expired' as any },
     })
     if (expired.count > 0) this.log.log(`Expired ${expired.count} subscriptions`)
+
+    // SDD-scheduling-v2: holds de 5 días hábiles y liberación automática.
+    await this.slots.holdSlotsForExpired()
+    await this.slots.releaseExpiredHolds()
+    // Migración perezosa de horarios legacy a ScheduleSlots (idempotente).
+    await this.slots.backfillFromPreferences()
+    // Mantiene el horizonte de clases generado para estudiantes activos.
+    const activeStudents = await this.prisma.user.findMany({
+      where: {
+        role: 'student',
+        deletedAt: null,
+        assignedTeacherId: { not: null },
+        subscription: { status: 'active' },
+      },
+      select: { id: true },
+    })
+    for (const st of activeStudents) {
+      await this.scheduling.ensureUpcomingClasses(st.id).catch(() => null)
+    }
 
     const in3d = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
     const subs = await this.prisma.subscription.findMany({

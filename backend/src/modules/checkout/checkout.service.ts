@@ -2,10 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 import * as crypto from 'crypto'
 import { PrismaService } from '../../prisma/prisma.service'
 import { env } from '../../config/env'
+import { ExchangeService } from '../exchange/exchange.service'
 
 @Injectable()
 export class CheckoutService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private exchange: ExchangeService) {}
 
   /**
    * Creates a PaymentIntent and returns the payload the Wompi Checkout Widget needs.
@@ -24,7 +25,14 @@ export class CheckoutService {
     if (!plan) throw new NotFoundException('Plan not found')
 
     const reference = `FREAKN-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`
-    const amountInCents = plan.priceCop * 100
+    // El precio del plan está en USD; el cobro a Wompi es en COP convertido con
+    // la TRM (COP/USD) en tiempo real en este instante. Fallback a priceCop.
+    let amountCop = plan.priceCop
+    if (plan.priceUsd && plan.priceUsd > 0) {
+      const trm = await this.exchange.getCurrentTrm()
+      amountCop = Math.round(plan.priceUsd * trm.valueCop)
+    }
+    const amountInCents = amountCop * 100
     const currency = 'COP'
 
     const intent = await this.prisma.paymentIntent.create({

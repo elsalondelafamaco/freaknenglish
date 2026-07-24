@@ -13,12 +13,12 @@ export class BoardController {
 
   /** @endpoint GET /api/v1/boards */
   @Get()
-  list(@CurrentUser() u: AuthUser) { return this.svc.list(u.id) }
+  list(@CurrentUser() u: AuthUser) { return this.svc.list(u.id, u.role) }
 
   /** @endpoint POST /api/v1/boards */
   @Post()
-  create(@CurrentUser() u: AuthUser, @Body() body: { name: string }) {
-    return this.svc.create(u.id, body.name)
+  create(@CurrentUser() u: AuthUser, @Body() body: { name?: string; studentId?: string }) {
+    return this.svc.create(u.id, u.role, body?.name ?? '', body?.studentId)
   }
 
   /** @endpoint GET /api/v1/boards/:id */

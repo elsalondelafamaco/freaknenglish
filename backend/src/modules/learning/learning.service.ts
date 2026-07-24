@@ -75,7 +75,7 @@ export class LearningService {
   async levelCheckpoint(level: 'beginner' | 'intermediate' | 'advanced') {
     const cp = await this.prisma.checkpoint.findFirst({
       where: { fromLevel: level as any },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { id: 'asc' },
     })
     if (!cp) return null
     const questions = Array.isArray(cp.questions)

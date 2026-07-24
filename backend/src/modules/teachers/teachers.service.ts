@@ -47,19 +47,25 @@ export class TeachersService {
           where: isAdmin ? {} : { teacherId },
           orderBy: { startsAt: 'desc' },
           take: 50,
-          include: { notes: true },
+          include: { notes: { orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }] } },
         },
       },
     })
   }
 
-  async addNote(teacherId: string, classId: string, rating: number, notes: string, isAdmin = false) {
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new BadRequestException('rating debe ser 1..5')
+  async addNote(teacherId: string, classId: string, notes: string, isAdmin = false) {
     if (!notes || !notes.trim()) throw new BadRequestException('notes requerido')
     const c = await this.prisma.class.findUnique({ where: { id: classId }, select: { teacherId: true } })
     if (!c) throw new NotFoundException('Clase no encontrada')
     if (!isAdmin && c.teacherId !== teacherId) throw new ForbiddenException('La clase no es tuya')
-    return this.prisma.classNote.create({ data: { teacherId, classId, rating, notes: notes.trim() } })
+    return this.prisma.classNote.create({ data: { teacherId, classId, notes: notes.trim() } })
+  }
+
+  async togglePin(teacherId: string, noteId: string, pinned: boolean, isAdmin = false) {
+    const n = await this.prisma.classNote.findUnique({ where: { id: noteId }, select: { teacherId: true } })
+    if (!n) throw new NotFoundException('Nota no encontrada')
+    if (!isAdmin && n.teacherId !== teacherId) throw new ForbiddenException('La nota no es tuya')
+    return this.prisma.classNote.update({ where: { id: noteId }, data: { pinned } })
   }
 
   schedule(teacherId: string, status?: 'upcoming' | 'past' | 'pending') {

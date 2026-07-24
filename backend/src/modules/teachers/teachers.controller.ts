@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards, Patch } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { RolesGuard } from '../../common/guards/roles.guard'
@@ -36,9 +36,15 @@ export class TeachersController {
   addNote(
     @CurrentUser() u: AuthUser,
     @Param('classId') classId: string,
-    @Body() body: { rating: number; notes: string },
+    @Body() body: { notes: string },
   ) {
-    return this.svc.addNote(u.id, classId, body.rating, body.notes, u.role === 'admin')
+    return this.svc.addNote(u.id, classId, body.notes, u.role === 'admin')
+  }
+
+  /** @endpoint PATCH /api/v1/teacher/notes/:id/pin  Body: { pinned } */
+  @Patch('notes/:id/pin')
+  pinNote(@CurrentUser() u: AuthUser, @Param('id') id: string, @Body() body: { pinned: boolean }) {
+    return this.svc.togglePin(u.id, id, !!body.pinned, u.role === 'admin')
   }
 
   /** @endpoint GET /api/v1/teacher/availability  (self) */

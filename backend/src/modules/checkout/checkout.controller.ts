@@ -2,6 +2,7 @@ import { Body, Controller, Get, NotFoundException, Post, Query } from '@nestjs/c
 import { ApiTags } from '@nestjs/swagger'
 import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator'
 import { CheckoutService } from './checkout.service'
+import { WompiService } from '../wompi/wompi.service'
 import { PrismaService } from '../../prisma/prisma.service'
 
 class CreateIntentDto {
@@ -16,7 +17,7 @@ class CreateIntentDto {
 @ApiTags('checkout')
 @Controller('checkout')
 export class CheckoutController {
-  constructor(private svc: CheckoutService, private prisma: PrismaService) {}
+  constructor(private svc: CheckoutService, private prisma: PrismaService, private wompi: WompiService) {}
   /** @endpoint POST /api/v1/checkout/intents (public) */
   @Post('intents')
   create(@Body() dto: CreateIntentDto) { return this.svc.createIntent(dto) }
@@ -25,11 +26,27 @@ export class CheckoutController {
   @Get('status')
   async status(@Query('reference') reference?: string, @Query('id') wompiId?: string) {
     if (!reference && !wompiId) throw new NotFoundException('reference or id required')
+    // Poll con id de Wompi: verifica contra Wompi y finaliza idempotentemente
+    // (funciona aunque el webhook aún no haya llegado). Resuelve la referencia.
+    if (wompiId) {
+      const r = await this.wompi.finalizeByWompiId(wompiId)
+      if (r.reference) reference = r.reference
+    }
     const intent = await this.prisma.paymentIntent.findFirst({
       where: reference ? { reference } : { wompiId },
       include: { plan: true },
     })
-    if (!intent) throw new NotFoundException('intent not found')
+    if (!intent) {
+      // Todavía sin registro (Wompi aún no expone la tx): el front sigue polleando.
+      return {
+        reference: reference ?? null,
+        status: 'PENDING' as const,
+        planId: null,
+        planName: null,
+        approvedAt: null,
+        customerEmail: null,
+      }
+    }
     return {
       reference: intent.reference,
       status: intent.status,

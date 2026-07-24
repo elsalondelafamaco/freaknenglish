@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { StorageService } from '../storage/storage.service'
 import * as Y from 'yjs'
@@ -12,18 +12,38 @@ export class BoardService {
     const m = await this.prisma.boardMember.findUnique({
       where: { boardId_userId: { boardId, userId } },
     })
-    if (!m) throw new ForbiddenException('Not a member of this board')
-    return m
+    if (m) return m
+    // El admin puede acceder a cualquier board (supervisión).
+    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true } })
+    if (u?.role === 'admin') return { boardId, userId, role: 'owner' } as any
+    throw new ForbiddenException('Not a member of this board')
   }
 
-  async create(ownerId: string, name: string) {
+  /**
+   * Crea un board. Reglas: los estudiantes NO pueden crear; profesor/admin sí y
+   * DEBEN asociar un estudiante (dueño = profe/admin, estudiante = editor).
+   */
+  async create(userId: string, role: string, name: string, studentId?: string) {
+    if (role === 'student') throw new ForbiddenException('Los estudiantes no pueden crear boards')
+    if (!studentId) throw new BadRequestException('Debes asociar un estudiante al board')
+    const student = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      select: { id: true, role: true, fullName: true },
+    })
+    if (!student || student.role !== 'student') throw new BadRequestException('Estudiante inválido')
     return this.prisma.board.create({
       data: {
-        name,
-        ownerId,
-        members: { create: { userId: ownerId, role: 'owner' } },
+        name: name?.trim() || `Aula · ${student.fullName}`,
+        ownerId: userId,
+        members: {
+          create: [
+            { userId, role: 'owner' },
+            ...(userId !== studentId ? [{ userId: studentId, role: 'editor' }] : []),
+          ],
+        },
+        pages: { create: { title: 'Clase 1', position: 1 } },
       },
-      include: { members: true },
+      include: { members: { include: { user: { select: { id: true, fullName: true, role: true } } } } },
     })
   }
 
@@ -57,10 +77,17 @@ export class BoardService {
     })
   }
 
-  async list(userId: string) {
+  async list(userId: string, role?: string) {
+    const include = {
+      members: { include: { user: { select: { id: true, fullName: true, role: true } } } },
+    }
+    if (role === 'admin') {
+      return this.prisma.board.findMany({ orderBy: { updatedAt: 'desc' }, include })
+    }
     return this.prisma.board.findMany({
       where: { members: { some: { userId } } },
       orderBy: { updatedAt: 'desc' },
+      include,
     })
   }
 

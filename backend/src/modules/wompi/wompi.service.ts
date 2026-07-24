@@ -55,28 +55,83 @@ export class WompiService {
   }
 
   async handleEvent(event: WompiEvent) {
-    const tx = event.data.transaction
+    return this.finalizeTransaction(event.data.transaction, event.event, event)
+  }
+
+  private wompiApiBase(): string {
+    return env.WOMPI_ENV === 'production'
+      ? 'https://production.wompi.co/v1'
+      : 'https://sandbox.wompi.co/v1'
+  }
+
+  /** Consulta el estado real de la transacción directamente en Wompi (GET público). */
+  async fetchTransaction(id: string): Promise<WompiEvent['data']['transaction'] | null> {
+    try {
+      const res = await fetch(`${this.wompiApiBase()}/transactions/${id}`, {
+        headers: { Accept: 'application/json' },
+      })
+      if (!res.ok) {
+        this.log.warn(`Wompi tx ${id} fetch -> ${res.status}`)
+        return null
+      }
+      const json = (await res.json()) as any
+      const d = json?.data
+      if (!d) return null
+      return {
+        id: d.id,
+        reference: d.reference,
+        status: d.status,
+        amount_in_cents: d.amount_in_cents,
+        currency: d.currency,
+        customer_email: d.customer_email,
+      }
+    } catch (e) {
+      this.log.warn(`Wompi tx fetch failed: ${(e as Error).message}`)
+      return null
+    }
+  }
+
+  /**
+   * Finaliza vía POLL (return page): consulta el estado en Wompi por id y lo
+   * procesa idempotentemente. Funciona antes o después del webhook.
+   */
+  async finalizeByWompiId(id: string): Promise<{ status: string; reference: string | null }> {
+    const tx = await this.fetchTransaction(id)
+    if (!tx) return { status: 'PENDING', reference: null }
+    await this.finalizeTransaction(tx)
+    return { status: tx.status, reference: tx.reference }
+  }
+
+  /**
+   * Núcleo idempotente compartido por webhook (push) y poll (return page).
+   * La unicidad de `paymentEvent.wompiEventId` garantiza que la activación
+   * ocurra EXACTAMENTE una vez aunque ambos caminos lleguen a la vez.
+   */
+  async finalizeTransaction(
+    tx: WompiEvent['data']['transaction'],
+    eventName = 'transaction.updated',
+    rawEvent?: unknown,
+  ) {
     const intent = await this.prisma.paymentIntent.findUnique({ where: { reference: tx.reference } })
     if (!intent) {
       this.log.warn(`No intent for reference ${tx.reference}`)
-      return { ok: true, ignored: true }
+      return { ok: true, ignored: true, status: tx.status }
     }
 
-    // Idempotency: skip if we already recorded this Wompi tx id with this status
-    const existing = await this.prisma.paymentEvent.findUnique({
-      where: { wompiEventId: `${tx.id}:${tx.status}` },
-    })
-    if (existing) return { ok: true, duplicate: true }
-
-    await this.prisma.paymentEvent.create({
-      data: {
-        intentId: intent.id,
-        wompiEventId: `${tx.id}:${tx.status}`,
-        event: event.event,
-        status: tx.status as any,
-        rawPayload: event as any,
-      },
-    })
+    // Gana quien logre crear el paymentEvent (unique). El resto sale como duplicado.
+    try {
+      await this.prisma.paymentEvent.create({
+        data: {
+          intentId: intent.id,
+          wompiEventId: `${tx.id}:${tx.status}`,
+          event: eventName,
+          status: tx.status as any,
+          rawPayload: (rawEvent ?? tx) as any,
+        },
+      })
+    } catch {
+      return { ok: true, duplicate: true, status: tx.status }
+    }
 
     await this.prisma.paymentIntent.update({
       where: { id: intent.id },
@@ -90,7 +145,6 @@ export class WompiService {
     if (tx.status === 'APPROVED') {
       let userId = intent.userId
       if (!userId) {
-        // Auto-provision student account from the checkout data.
         const email = intent.customerEmail.toLowerCase()
         let user = await this.prisma.user.findUnique({ where: { email } })
         const token = crypto.randomBytes(24).toString('hex')
@@ -145,6 +199,6 @@ export class WompiService {
       })
     }
 
-    return { ok: true }
+    return { ok: true, status: tx.status }
   }
 }

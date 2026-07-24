@@ -248,6 +248,24 @@ export class AdminController {
   @Get('at-risk')
   atRisk() { return this.svc.atRiskStudents() }
 
+  /** @endpoint GET /api/v1/admin/plans */
+  @Get('plans')
+  plans() { return this.svc.listPlans() }
+
+  /** @endpoint PATCH /api/v1/admin/plans/:id */
+  @Patch('plans/:id')
+  updatePlan(@Param('id') id: string, @Body() body: any) { return this.svc.updatePlan(id, body) }
+
+  /** @endpoint GET /api/v1/admin/settings/contact */
+  @Get('settings/contact')
+  getContact() { return this.svc.contactSettings() }
+
+  /** @endpoint PATCH /api/v1/admin/settings/contact */
+  @Patch('settings/contact')
+  setContact(@Body() body: { whatsappNumber?: string; whatsappMessage?: string }) {
+    return this.svc.updateContactSettings(body)
+  }
+
   /**
    * @endpoint POST /api/v1/admin/uploads/sign
    * Devuelve una URL firmada para `PUT` a MinIO/S3 + la URL pública final.

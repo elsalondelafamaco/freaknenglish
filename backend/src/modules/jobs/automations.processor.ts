@@ -85,6 +85,15 @@ export class AutomationsProcessor extends WorkerHost {
 
   private async tickDaily() {
     const now = new Date()
+
+    // Expira automáticamente las suscripciones cuyo período ya venció
+    // (billing recurrente no implementado): status active -> expired.
+    const expired = await this.prisma.subscription.updateMany({
+      where: { status: 'active' as any, currentPeriodEnd: { lt: now } },
+      data: { status: 'expired' as any },
+    })
+    if (expired.count > 0) this.log.log(`Expired ${expired.count} subscriptions`)
+
     const in3d = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
     const subs = await this.prisma.subscription.findMany({
       where: {

@@ -22,7 +22,7 @@ export class AdminService {
     @InjectQueue('automations') private automationsQueue: Queue,
     private jwt: JwtService,
     private storage: StorageService,
-    private notifications: NotificationsService,
+    private notificationsSvc: NotificationsService,
   ) {}
 
   private async resolveExistingUserId(idOrAlias: string): Promise<string> {
@@ -491,7 +491,7 @@ export class AdminService {
       data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7) },
     })
     const link = `${env.PUBLIC_SITE_URL}/reset-password?token=${token}`
-    await this.notifications.enqueue({
+    await this.notificationsSvc.enqueue({
       userId: user.id,
       toEmail: user.email,
       template: 'account_invite',
@@ -656,7 +656,7 @@ export class AdminService {
     await this.prisma.passwordReset.create({ data: { userId: resolvedId, tokenHash, expiresAt } })
     const link = `${env.PUBLIC_SITE_URL}/reset-password?token=${token}`
     if (user) {
-      await this.notifications.enqueue({
+      await this.notificationsSvc.enqueue({
         userId: user.id,
         toEmail: user.email,
         template: 'password_reset',
@@ -840,6 +840,48 @@ export class AdminService {
     })
 
     return rows.filter((r) => r.risk > 0).sort((a, b) => b.risk - a.risk)
+  }
+
+  // ─── Planes (precios configurables) ──────────────────────────────────
+  listPlans() {
+    return this.prisma.plan.findMany({ orderBy: { daysPerWeek: 'asc' } })
+  }
+
+  // ─── Ajustes de contacto (WhatsApp) ──────────────────────────────────
+  async contactSettings() {
+    const rows = await this.prisma.appSetting.findMany({
+      where: { key: { in: ['contact.whatsappNumber', 'contact.whatsappMessage'] } },
+    })
+    const map = new Map(rows.map((r) => [r.key, r.value as any]))
+    const read = (k: string, d: string) => {
+      const v = map.get(k)
+      if (v && typeof v === 'object' && 'value' in v) return String((v as any).value)
+      return v == null ? d : String(v)
+    }
+    return {
+      whatsappNumber: read('contact.whatsappNumber', '573000000000'),
+      whatsappMessage: read('contact.whatsappMessage', 'Hola, quiero más información de Freakn English'),
+    }
+  }
+
+  async updateContactSettings(body: { whatsappNumber?: string; whatsappMessage?: string }) {
+    const set = (key: string, value: string) =>
+      this.prisma.appSetting.upsert({ where: { key }, update: { value: value as any }, create: { key, value: value as any } })
+    if (body.whatsappNumber !== undefined) await set('contact.whatsappNumber', String(body.whatsappNumber).replace(/[^0-9]/g, ''))
+    if (body.whatsappMessage !== undefined) await set('contact.whatsappMessage', String(body.whatsappMessage))
+    return this.contactSettings()
+  }
+
+  async updatePlan(
+    id: string,
+    body: { name?: string; daysPerWeek?: number; priceUsd?: number; priceCop?: number; isActive?: boolean; features?: unknown },
+  ) {
+    const data: any = {}
+    for (const k of ['name', 'daysPerWeek', 'priceUsd', 'priceCop', 'isActive'] as const) {
+      if (body[k] !== undefined) data[k] = body[k]
+    }
+    if (body.features !== undefined) data.features = body.features as any
+    return this.prisma.plan.update({ where: { id }, data })
   }
 
   signUpload(body: { filename: string; contentType?: string; lessonId?: string }) {

@@ -8,5 +8,6 @@ import { NotificationsModule } from '../notifications/notifications.module'
   imports: [SubscriptionsModule, NotificationsModule],
   controllers: [WompiController],
   providers: [WompiService],
+  exports: [WompiService],
 })
 export class WompiModule {}

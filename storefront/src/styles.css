@@ -226,6 +226,12 @@ html {
   }
 }
 
+/* Tailwind v4 preflight deja `cursor: default` en botones; en este sitio todo
+   botón habilitado debe sentirse clickeable. */
+:where(button, [role="button"], label[for], select, summary):not(:disabled) {
+  cursor: pointer;
+}
+
 /* Consistent keyboard focus ring across interactive elements. */
 :where(a, button, [role="button"], input, select, textarea, summary):focus-visible {
   outline: none;

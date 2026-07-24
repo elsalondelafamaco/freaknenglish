@@ -15,6 +15,12 @@ export interface SignUploadInput {
   contentType?: string
   /** Prefix dentro del bucket (e.g. `lessons/${lessonId}`). */
   prefix?: string
+  /**
+   * Clave EXACTA dentro del bucket (sin uuid). Para assets del sitio cuya URL
+   * debe ser estable entre re-subidas (e.g. `site/hero-image`): reemplazar el
+   * archivo no cambia la URL pública.
+   */
+  fixedKey?: string
 }
 
 export interface SignUploadResult {
@@ -102,7 +108,9 @@ export class StorageService implements OnModuleInit {
   async signUpload(input: SignUploadInput): Promise<SignUploadResult> {
     const safe = input.filename.replace(/[^a-zA-Z0-9._-]+/g, '_')
     const prefix = input.prefix?.replace(/^\/+|\/+$/g, '') ?? 'uploads'
-    const storageKey = `${prefix}/${randomUUID()}-${safe}`
+    const storageKey = input.fixedKey
+      ? input.fixedKey.replace(/^\/+/, '')
+      : `${prefix}/${randomUUID()}-${safe}`
     const cmd = new PutObjectCommand({
       Bucket: this.bucket,
       Key: storageKey,

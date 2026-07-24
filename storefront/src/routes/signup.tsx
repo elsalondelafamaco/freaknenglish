@@ -8,6 +8,7 @@ import {
   GoogleButton,
   inputClass,
 } from "@/components/site/AuthShell";
+import { LegalLinks } from "@/components/site/LegalLinks";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/signup")({
@@ -23,6 +24,7 @@ function SignupPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
   const [phone, setPhone] = useState("");
   const [documentNumber, setDocumentNumber] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +35,10 @@ function SignupPage() {
     setError(null);
     if (password.length < 8) {
       setError("La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
+    if (password !== password2) {
+      setError("Las contraseñas no coinciden.");
       return;
     }
     setBusy(true);
@@ -124,22 +130,38 @@ function SignupPage() {
             placeholder="tu@email.com"
           />
         </Field>
-        <Field
-          label="Contraseña"
-          htmlFor="password"
-          hint="Mínimo 8 caracteres."
-        >
-          <input
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            required
-            className={inputClass}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-          />
-        </Field>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Field
+            label="Contraseña"
+            htmlFor="password"
+            hint="Mínimo 8 caracteres."
+          >
+            <input
+              id="password"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              className={inputClass}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </Field>
+          <Field label="Confirmar contraseña" htmlFor="password2">
+            <input
+              id="password2"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              className={inputClass}
+              value={password2}
+              onChange={(e) => setPassword2(e.target.value)}
+              placeholder="••••••••"
+            />
+          </Field>
+        </div>
         <ErrorBox>{error}</ErrorBox>
         <button
           type="submit"
@@ -148,9 +170,7 @@ function SignupPage() {
         >
           {busy ? "Creando cuenta…" : "Crear cuenta"}
         </button>
-        <p className="text-center text-xs text-brand-ink/55">
-          Al continuar aceptas nuestros Términos y la Política de Privacidad.
-        </p>
+        <LegalLinks />
       </form>
     </AuthShell>
   );

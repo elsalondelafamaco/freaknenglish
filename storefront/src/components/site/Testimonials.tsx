@@ -1,9 +1,7 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Play } from "lucide-react";
-import t1 from "@/assets/testimonial-1.jpg";
-import t2 from "@/assets/testimonial-2.jpg";
-import t3 from "@/assets/testimonial-3.jpg";
-import t4 from "@/assets/testimonial-4.jpg";
+import { useSiteContent } from "@/lib/site-content";
+import { VideoModal } from "./VideoModal";
 
 const ITEMS = [
   {
@@ -11,33 +9,39 @@ const ITEMS = [
     body: "Antes me quedaba en blanco, ahora participo y me expreso con confianza.",
     name: "Carlos M.",
     role: "Profesional en Marketing",
-    img: t1,
+    imageSlot: "testimonial-1-image",
+    videoSlot: "testimonial-1-video",
   },
   {
     quote: "Por fin entendí inglés y dejé de traducir todo en mi cabeza.",
     body: "Las clases son dinámicas y los profesores te corrigen de verdad. Se nota el progreso.",
     name: "Valentina R.",
     role: "Estudiante Universitaria",
-    img: t2,
+    imageSlot: "testimonial-2-image",
+    videoSlot: "testimonial-2-video",
   },
   {
     quote: "Ahora puedo viajar y pensar en inglés, fue un antes y un después.",
     body: "Freakn me dio las herramientas para soltarme y disfrutar cada conversación.",
     name: "Andrés T.",
     role: "Emprendedor",
-    img: t3,
+    imageSlot: "testimonial-3-image",
+    videoSlot: "testimonial-3-video",
   },
   {
     quote: "Las clases 1 a 1 son lo mejor, 100% personal y efectivas.",
     body: "Me siento acompañado en todo el proceso y los resultados son increíbles.",
     name: "Mariana G.",
     role: "Diseñadora UX",
-    img: t4,
+    imageSlot: "testimonial-4-image",
+    videoSlot: "testimonial-4-video",
   },
 ] as const;
 
 export function Testimonials() {
   const trackRef = useRef<HTMLDivElement>(null);
+  const { media } = useSiteContent();
+  const [video, setVideo] = useState<{ src: string; title: string } | null>(null);
 
   const scrollBy = (dir: 1 | -1) => {
     const el = trackRef.current;
@@ -62,14 +66,14 @@ export function Testimonials() {
           <div className="flex gap-2 self-start lg:self-end">
             <button
               onClick={() => scrollBy(-1)}
-              className="flex size-11 items-center justify-center rounded-full bg-brand-ink text-white hover:bg-brand-ink-soft"
+              className="flex size-11 items-center justify-center rounded-full bg-brand-ink text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-ink-soft hover:shadow-lg active:scale-95"
               aria-label="Anterior"
             >
               <ArrowLeft className="size-5" />
             </button>
             <button
               onClick={() => scrollBy(1)}
-              className="flex size-11 items-center justify-center rounded-full bg-brand-ink text-white hover:bg-brand-ink-soft"
+              className="flex size-11 items-center justify-center rounded-full bg-brand-ink text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-ink-soft hover:shadow-lg active:scale-95"
               aria-label="Siguiente"
             >
               <ArrowRight className="size-5" />
@@ -81,42 +85,49 @@ export function Testimonials() {
           ref={trackRef}
           className="mt-10 -mx-5 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-4 scrollbar-none lg:mx-0 lg:px-0"
         >
-          {ITEMS.map((item) => (
-            <article
-              key={item.name}
-              data-card
-              className="relative min-w-[85%] snap-center overflow-hidden rounded-3xl border border-brand-line bg-white shadow-soft sm:min-w-[360px] lg:flex-1"
-            >
-              <div className="p-5">
-                <p className="text-[15px] font-semibold leading-snug text-brand-ink">
-                  &ldquo;{item.quote}&rdquo;
-                </p>
-                <p className="mt-2 text-[13px] leading-snug text-brand-ink/65">{item.body}</p>
-              </div>
-              <div className="relative aspect-[3/4]">
-                <img
-                  src={item.img}
-                  alt={item.name}
-                  loading="lazy"
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-                <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 bg-gradient-to-t from-black/70 via-black/40 to-transparent p-4 text-white">
-                  <button
-                    className="flex size-9 items-center justify-center rounded-full bg-white/90"
-                    aria-label="Reproducir testimonio"
-                  >
-                    <Play className="size-4 translate-x-0.5 fill-brand-ink text-brand-ink" />
-                  </button>
-                  <div>
-                    <div className="text-sm font-semibold">{item.name}</div>
-                    <div className="text-xs opacity-80">{item.role}</div>
+          {ITEMS.map((item) => {
+            const videoUrl = media[item.videoSlot];
+            return (
+              <article
+                key={item.name}
+                data-card
+                className="relative min-w-[85%] snap-center overflow-hidden rounded-3xl border border-brand-line bg-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg sm:min-w-[360px] lg:flex-1"
+              >
+                <div className="p-5">
+                  <p className="text-[15px] font-semibold leading-snug text-brand-ink">
+                    &ldquo;{item.quote}&rdquo;
+                  </p>
+                  <p className="mt-2 text-[13px] leading-snug text-brand-ink/65">{item.body}</p>
+                </div>
+                <div className="relative aspect-[3/4]">
+                  <img
+                    src={media[item.imageSlot]}
+                    alt={item.name}
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 bg-gradient-to-t from-black/70 via-black/40 to-transparent p-4 text-white">
+                    {videoUrl ? (
+                      <button
+                        onClick={() => setVideo({ src: videoUrl, title: item.name })}
+                        className="flex size-9 items-center justify-center rounded-full bg-white/90 transition-all duration-200 hover:scale-110 hover:bg-white active:scale-95"
+                        aria-label={`Reproducir testimonio de ${item.name}`}
+                      >
+                        <Play className="size-4 translate-x-0.5 fill-brand-ink text-brand-ink" />
+                      </button>
+                    ) : null}
+                    <div>
+                      <div className="text-sm font-semibold">{item.name}</div>
+                      <div className="text-xs opacity-80">{item.role}</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       </div>
+      {video ? <VideoModal src={video.src} title={video.title} onClose={() => setVideo(null)} /> : null}
     </section>
   );
 }

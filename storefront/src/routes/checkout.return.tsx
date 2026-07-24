@@ -109,7 +109,7 @@ function ReturnPage() {
             <>
               <Loader2 className="mx-auto size-10 animate-spin text-brand-ink/40" />
               <h1 className="mt-4 text-xl font-bold text-brand-ink">Confirmando tu pago…</h1>
-              <p className="mt-2 text-sm text-brand-ink/60">Verificando la transacción con Wompi.</p>
+              <p className="mt-2 text-sm text-brand-ink/60">Verificando la transacción con la pasarela de pago.</p>
             </>
           ) : state.kind === "ok" ? (
             <>

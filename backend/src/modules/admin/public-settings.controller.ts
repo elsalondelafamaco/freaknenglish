@@ -11,4 +11,12 @@ export class PublicSettingsController {
   /** @endpoint GET /api/v1/public/settings */
   @Get()
   contact() { return this.svc.contactSettings() }
+
+  /**
+   * @endpoint GET /api/v1/public/settings/site
+   * Contenido editable de la home (media, FAQs, legal, redes). El storefront
+   * lo mezcla sobre sus defaults quemados.
+   */
+  @Get('site')
+  site() { return this.svc.siteContent() }
 }

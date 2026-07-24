@@ -171,7 +171,7 @@ function PriceCard({ plan }: { plan: ApiPlan }) {
           <span className="text-base font-medium text-brand-ink/60">{unitLabel} / mes</span>
         </div>
         <p className="mt-1 text-xs text-brand-ink/55">
-          Se cobra {formatCop(plan.priceCop)} COP vía Wompi.
+          Se cobra {formatCop(plan.priceCop)} COP.
         </p>
         <Link
           to="/checkout/$planId"

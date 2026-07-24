@@ -5,6 +5,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Check, ShieldCheck, LogOut, UserCog } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { Field, inputClass, ErrorBox } from "@/components/site/AuthShell";
+import { ActivePlanScreen, useActivePlanGate } from "@/components/site/ActivePlanGate";
+import { LegalLinks } from "@/components/site/LegalLinks";
 import { checkoutApi, plansApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
@@ -51,6 +53,7 @@ function CheckoutPage() {
   );
 
   const loggedIn = !!user;
+  const gate = useActivePlanGate();
   const [form, setForm] = useState({ fullName: "", email: "", document: "", phone: "" });
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
@@ -68,6 +71,9 @@ function CheckoutPage() {
       });
     }
   }, [user?.id]);
+
+  // Plan activo lejos de renovación: no puede pagar otro plan.
+  if (gate.blocked) return <ActivePlanScreen end={gate.end} />;
 
   if (plansQ.isLoading) {
     return <main className="min-h-screen bg-brand-cream flex items-center justify-center text-sm text-brand-ink/60">Cargando…</main>;
@@ -138,8 +144,8 @@ function CheckoutPage() {
             </h1>
             <p className="mt-1 text-sm text-brand-ink/65">
               {loggedIn
-                ? "Compras con tu cuenta. Al continuar irás a la pasarela segura de Wompi."
-                : "Los necesitamos para crear tu cuenta. Al continuar serás redirigido a Wompi."}
+                ? "Compras con tu cuenta. Al continuar irás a la pasarela de pago segura."
+                : "Los necesitamos para crear tu cuenta. Al continuar irás a la pasarela de pago segura."}
             </p>
 
             {loggedIn ? (
@@ -210,12 +216,9 @@ function CheckoutPage() {
               <ErrorBox>{error}</ErrorBox>
               <button type="submit" disabled={loading}
                 className="mt-2 inline-flex h-12 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white transition hover:bg-brand-ink-soft disabled:opacity-60">
-                {loading ? "Redirigiendo a Wompi…" : "Continuar al pago"}
+                {loading ? "Redirigiendo al pago…" : "Continuar al pago"}
               </button>
-              <p className="text-center text-xs text-brand-ink/55">
-                Al continuar aceptas nuestros <a href="#" className="underline">Términos</a> y{" "}
-                <a href="#" className="underline">Política de privacidad</a>.
-              </p>
+              <LegalLinks />
             </form>
           </div>
 
@@ -226,7 +229,7 @@ function CheckoutPage() {
               <span className="text-3xl font-bold text-brand-ink">${plan.priceUsd ?? "—"}</span>
               <span className="text-sm text-brand-ink/60">USD / mes</span>
             </div>
-            <p className="mt-1 text-xs text-brand-ink/60">Se cobra {copFmt.format(cop)} vía Wompi (TRM en vivo).</p>
+            <p className="mt-1 text-xs text-brand-ink/60">Se cobra {copFmt.format(cop)} (TRM en vivo).</p>
             {selSlots.length > 0 ? (
               <div className="mt-4 rounded-2xl bg-white/70 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wider text-brand-ink/60">Tu horario semanal</p>
@@ -251,7 +254,7 @@ function CheckoutPage() {
             </ul>
             <div className="mt-6 flex items-center gap-2 rounded-2xl bg-white/70 p-3 text-xs text-brand-ink/70">
               <ShieldCheck className="size-4 text-brand-ink" />
-              Pago procesado por Wompi. Tus datos viajan cifrados.
+              Pago procesado por una pasarela segura. Tus datos viajan cifrados.
             </div>
           </aside>
         </div>

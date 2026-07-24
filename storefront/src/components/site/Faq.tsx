@@ -1,28 +1,11 @@
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const FAQS = [
-  {
-    q: "¿Puedo elegir mi propio horario de clases?",
-    a: "Sí. Al inscribirte seleccionas los horarios fijos que mejor se ajusten a tu rutina. Si necesitas reprogramar, puedes hacerlo desde la plataforma con al menos 12 horas de anticipación.",
-  },
-  {
-    q: "¿Necesito experiencia previa en inglés?",
-    a: "No. Ofrecemos niveles desde principiante hasta avanzado. Al inscribirte realizas una prueba de nivelación para ubicarte en el curso ideal.",
-    open: true,
-  },
-  {
-    q: "¿Las clases son en vivo o grabadas?",
-    a: "Todas las clases son 1 a 1 y completamente en vivo con un profesor real. Adicionalmente tienes acceso a módulos con videos y materiales para reforzar.",
-  },
-  {
-    q: "¿Qué necesito para empezar?",
-    a: "Solo necesitas un computador o celular con conexión a internet, audífonos y muchas ganas de hablar inglés desde la primera clase.",
-  },
-];
+import { useSiteContent } from "@/lib/site-content";
 
 export function Faq() {
+  // Editable desde /admin/site; con la API caída usa defaults quemados.
+  const { faqs } = useSiteContent();
   return (
     <section id="faq" className="bg-white py-20 lg:py-28 scroll-mt-24">
       <div className="mx-auto max-w-6xl px-5 lg:grid lg:grid-cols-[1fr_1.4fr] lg:gap-16 lg:px-8">
@@ -35,8 +18,8 @@ export function Faq() {
           </p>
         </div>
         <div className="mt-10 flex flex-col gap-3 lg:mt-0">
-          {FAQS.map((f, i) => (
-            <FaqItem key={f.q} {...f} defaultOpen={f.open} index={i} />
+          {faqs.map((f, i) => (
+            <FaqItem key={f.q} {...f} defaultOpen={i === 0} index={i} />
           ))}
         </div>
       </div>
@@ -65,7 +48,7 @@ function FaqItem({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-4 text-left transition-colors"
+        className="-mx-5 -my-4 flex w-[calc(100%+2.5rem)] cursor-pointer items-center justify-between gap-4 px-5 py-4 text-left transition-colors"
         aria-expanded={open}
       >
         <span className="text-[15px] font-semibold text-brand-ink">{q}</span>

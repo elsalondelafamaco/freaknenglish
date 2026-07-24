@@ -148,6 +148,16 @@ export const plansApi = {
 
 export const settingsApi = {
   contact: () => apiGet<{ whatsappNumber: string; whatsappMessage: string }>("/public/settings"),
+  site: () => apiGet<SiteContentOverrides>("/public/settings/site"),
+};
+
+// ─── Contenido editable del sitio (home) ───────────────────────────────
+export type SiteFaq = { q: string; a: string };
+export type SiteContentOverrides = {
+  media: Record<string, string>;
+  faqs: SiteFaq[] | null;
+  legal: Record<string, string>;
+  social: Record<string, string>;
 };
 
 export const exchangeApi = {
@@ -301,6 +311,15 @@ export const adminApi = {
   updateScheduleConfig: (body: Partial<{ days: number[]; startHour: number; endHour: number; maxPerDay: number }>) =>
     apiPost<any>("/admin/settings/schedule", body),
   contactSettings: () => apiGet<{ whatsappNumber: string; whatsappMessage: string }>("/admin/settings/contact"),
+  siteContent: () => apiGet<SiteContentOverrides>("/admin/settings/site"),
+  updateSiteContent: (body: {
+    media?: Record<string, string | null>;
+    faqs?: SiteFaq[] | null;
+    legal?: Record<string, string | null>;
+    social?: Record<string, string | null>;
+  }) => apiPatch<SiteContentOverrides>("/admin/settings/site", body),
+  signSiteUpload: (body: { filename: string; contentType?: string; siteSlot: string }) =>
+    apiPost<{ uploadUrl: string; publicUrl: string; storageKey: string }>("/admin/uploads/sign", body),
   updateContact: (body: { whatsappNumber?: string; whatsappMessage?: string }) =>
     apiPatch<{ whatsappNumber: string; whatsappMessage: string }>("/admin/settings/contact", body),
   updatePlan: (id: string, body: Partial<{ name: string; daysPerWeek: number; priceUsd: number; priceCop: number; isActive: boolean; features: unknown }>) =>

@@ -41,6 +41,7 @@ import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppCalendarRouteImport } from './routes/_authenticated/app.calendar'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminSurveysRouteImport } from './routes/_authenticated/admin.surveys'
+import { Route as AuthenticatedAdminSiteRouteImport } from './routes/_authenticated/admin.site'
 import { Route as AuthenticatedAdminScheduleRouteImport } from './routes/_authenticated/admin.schedule'
 import { Route as AuthenticatedAdminPayrollRouteImport } from './routes/_authenticated/admin.payroll'
 import { Route as AuthenticatedAdminContentRouteImport } from './routes/_authenticated/admin.content'
@@ -228,6 +229,11 @@ const AuthenticatedAdminSurveysRoute =
     path: '/surveys',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminSiteRoute = AuthenticatedAdminSiteRouteImport.update({
+  id: '/site',
+  path: '/site',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const AuthenticatedAdminScheduleRoute =
   AuthenticatedAdminScheduleRouteImport.update({
     id: '/schedule',
@@ -326,6 +332,7 @@ export interface FileRoutesByFullPath {
   '/admin/content': typeof AuthenticatedAdminContentRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/admin/schedule': typeof AuthenticatedAdminScheduleRoute
+  '/admin/site': typeof AuthenticatedAdminSiteRoute
   '/admin/surveys': typeof AuthenticatedAdminSurveysRoute
   '/admin/users': typeof AuthenticatedAdminUsersRouteWithChildren
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
@@ -369,6 +376,7 @@ export interface FileRoutesByTo {
   '/admin/content': typeof AuthenticatedAdminContentRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/admin/schedule': typeof AuthenticatedAdminScheduleRoute
+  '/admin/site': typeof AuthenticatedAdminSiteRoute
   '/admin/surveys': typeof AuthenticatedAdminSurveysRoute
   '/app/calendar': typeof AuthenticatedAppCalendarRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
@@ -416,6 +424,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/content': typeof AuthenticatedAdminContentRoute
   '/_authenticated/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/_authenticated/admin/schedule': typeof AuthenticatedAdminScheduleRoute
+  '/_authenticated/admin/site': typeof AuthenticatedAdminSiteRoute
   '/_authenticated/admin/surveys': typeof AuthenticatedAdminSurveysRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRouteWithChildren
   '/_authenticated/app/calendar': typeof AuthenticatedAppCalendarRoute
@@ -464,6 +473,7 @@ export interface FileRouteTypes {
     | '/admin/content'
     | '/admin/payroll'
     | '/admin/schedule'
+    | '/admin/site'
     | '/admin/surveys'
     | '/admin/users'
     | '/app/calendar'
@@ -507,6 +517,7 @@ export interface FileRouteTypes {
     | '/admin/content'
     | '/admin/payroll'
     | '/admin/schedule'
+    | '/admin/site'
     | '/admin/surveys'
     | '/app/calendar'
     | '/app/settings'
@@ -553,6 +564,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/content'
     | '/_authenticated/admin/payroll'
     | '/_authenticated/admin/schedule'
+    | '/_authenticated/admin/site'
     | '/_authenticated/admin/surveys'
     | '/_authenticated/admin/users'
     | '/_authenticated/app/calendar'
@@ -822,6 +834,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSurveysRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/site': {
+      id: '/_authenticated/admin/site'
+      path: '/site'
+      fullPath: '/admin/site'
+      preLoaderRoute: typeof AuthenticatedAdminSiteRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/schedule': {
       id: '/_authenticated/admin/schedule'
       path: '/schedule'
@@ -937,6 +956,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminContentRoute: typeof AuthenticatedAdminContentRoute
   AuthenticatedAdminPayrollRoute: typeof AuthenticatedAdminPayrollRoute
   AuthenticatedAdminScheduleRoute: typeof AuthenticatedAdminScheduleRoute
+  AuthenticatedAdminSiteRoute: typeof AuthenticatedAdminSiteRoute
   AuthenticatedAdminSurveysRoute: typeof AuthenticatedAdminSurveysRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRouteWithChildren
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
@@ -948,6 +968,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminContentRoute: AuthenticatedAdminContentRoute,
   AuthenticatedAdminPayrollRoute: AuthenticatedAdminPayrollRoute,
   AuthenticatedAdminScheduleRoute: AuthenticatedAdminScheduleRoute,
+  AuthenticatedAdminSiteRoute: AuthenticatedAdminSiteRoute,
   AuthenticatedAdminSurveysRoute: AuthenticatedAdminSurveysRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRouteWithChildren,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,

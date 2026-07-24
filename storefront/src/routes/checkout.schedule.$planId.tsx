@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Logo } from "@/components/site/Logo";
+import { ActivePlanScreen, useActivePlanGate } from "@/components/site/ActivePlanGate";
 import { plansApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
@@ -30,6 +31,7 @@ function SchedulePicker() {
   const [selected, setSelected] = useState<SlotRef[]>([]);
   const preloaded = useRef(false);
   const [renewalNotice, setRenewalNotice] = useState(false);
+  const gate = useActivePlanGate();
 
   const configQ = useQuery({ queryKey: ["schedule", "config"], queryFn: () => scheduleApi.config() });
   const plansQ = useQuery({ queryKey: ["plans"], queryFn: () => plansApi.list() });
@@ -68,6 +70,10 @@ function SchedulePicker() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, mineQ.data, hintsQ.data]);
 
+  // Plan activo lejos de renovación: no puede comprar otro plan — se avisa
+  // desde el inicio y se sugiere cerrar sesión.
+  if (gate.blocked) return <ActivePlanScreen end={gate.end} />;
+
   if (configQ.isLoading || plansQ.isLoading) {
     return <main className="min-h-screen bg-brand-cream grid place-items-center text-sm text-brand-ink/60">Cargando…</main>;
   }
@@ -86,6 +92,8 @@ function SchedulePicker() {
   const hours = Array.from({ length: cfg.endHour - cfg.startHour + 1 }, (_, i) => cfg.startHour + i);
   const complete = selected.length === need;
   const assignable = hintsQ.data?.assignable ?? true;
+  // Sin franjas automáticas no hay diferencia que explicar: se oculta la leyenda.
+  const hasAutoSlots = (hintsQ.data?.hints ?? []).some((h) => h.auto);
 
   function toggle(slot: SlotRef) {
     const k = key(slot);
@@ -140,16 +148,18 @@ function SchedulePicker() {
           </div>
         ) : null}
 
-        <div className="mt-3 flex items-center gap-4 text-xs text-brand-ink/60">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="inline-flex size-4 items-center justify-center rounded bg-brand-yellow/70"><Zap className="size-3 text-brand-ink" /></span>
-            Inicio inmediato tras el pago
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block size-4 rounded border border-brand-line bg-white" />
-            Disponible con coordinación
-          </span>
-        </div>
+        {hasAutoSlots ? (
+          <div className="mt-3 flex items-center gap-4 text-xs text-brand-ink/60">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-flex size-4 items-center justify-center rounded bg-brand-yellow/70"><Zap className="size-3 text-brand-ink" /></span>
+              Inicio inmediato tras el pago
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-block size-4 rounded border border-brand-line bg-white" />
+              Disponible con coordinación
+            </span>
+          </div>
+        ) : null}
 
         <div className="mt-4 overflow-x-auto rounded-3xl border border-brand-line bg-white p-4 shadow-soft">
           <div className="min-w-[640px]">
@@ -217,7 +227,7 @@ function FragmentRow({
             key={k}
             onClick={() => onToggle({ weekday: d, hour: h })}
             title={`${h}:00–${h}:${durationMin}`}
-            className={`m-0.5 flex h-11 items-center justify-center rounded-xl border text-[11px] font-semibold transition ${
+            className={`m-0.5 flex h-11 items-center justify-center gap-1 rounded-xl border text-[11px] font-semibold transition ${
               isSel
                 ? "border-brand-ink bg-brand-ink text-white shadow-soft"
                 : isAuto
@@ -225,7 +235,9 @@ function FragmentRow({
                   : "border-brand-line bg-white text-brand-ink/60 hover:bg-brand-cream/50"
             }`}
           >
-            {isSel ? `${h}:00` : isAuto ? <Zap className="size-3.5" /> : `${h}:00`}
+            {/* El rayito marca inicio inmediato, pero la hora siempre se ve. */}
+            {!isSel && isAuto ? <Zap className="size-3.5 shrink-0" /> : null}
+            {h}:00
           </button>
         );
       })}

@@ -285,6 +285,28 @@ export class AdminController {
   @Patch('plans/:id')
   updatePlan(@Param('id') id: string, @Body() body: any) { return this.svc.updatePlan(id, body) }
 
+  /** @endpoint GET /api/v1/admin/settings/site  (contenido editable de la home) */
+  @Get('settings/site')
+  getSiteContent() { return this.svc.siteContent() }
+
+  /**
+   * @endpoint PATCH /api/v1/admin/settings/site
+   * Body parcial: { media?: {slot: url|null}, faqs?: [{q,a}]|null, legal?, social? }
+   * `null`/'' en un slot elimina el override y la home vuelve al default.
+   */
+  @Patch('settings/site')
+  setSiteContent(
+    @Body()
+    body: {
+      media?: Record<string, string | null>
+      faqs?: Array<{ q: string; a: string }> | null
+      legal?: Record<string, string | null>
+      social?: Record<string, string | null>
+    },
+  ) {
+    return this.svc.updateSiteContent(body)
+  }
+
   /** @endpoint GET /api/v1/admin/settings/contact */
   @Get('settings/contact')
   getContact() { return this.svc.contactSettings() }
@@ -301,7 +323,7 @@ export class AdminController {
    * Body: { filename, contentType?, lessonId? }
    */
   @Post('uploads/sign')
-  signUpload(@Body() body: { filename: string; contentType?: string; lessonId?: string }) {
+  signUpload(@Body() body: { filename: string; contentType?: string; lessonId?: string; siteSlot?: string }) {
     return this.svc.signUpload(body)
   }
 

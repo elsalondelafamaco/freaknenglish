@@ -958,6 +958,55 @@ export class AdminService {
     return this.contactSettings()
   }
 
+  // ─── Contenido del sitio público (home) ──────────────────────────────
+  /**
+   * Contenido editable de la home: media (imágenes/videos por slot, URLs de
+   * MinIO), FAQs, documentos legales y redes sociales. El storefront tiene
+   * defaults quemados y hace merge con esto — si la API se cae, la home
+   * sigue funcionando con los defaults/último cache.
+   */
+  async siteContent() {
+    const row = await this.prisma.appSetting
+      .findUnique({ where: { key: 'site.content' } })
+      .catch(() => null)
+    const v = (row?.value as any) ?? {}
+    return {
+      media: v.media && typeof v.media === 'object' ? v.media : {},
+      faqs: Array.isArray(v.faqs) ? v.faqs : null,
+      legal: v.legal && typeof v.legal === 'object' ? v.legal : {},
+      social: v.social && typeof v.social === 'object' ? v.social : {},
+    }
+  }
+
+  async updateSiteContent(patch: {
+    media?: Record<string, string | null>
+    faqs?: Array<{ q: string; a: string }> | null
+    legal?: Record<string, string | null>
+    social?: Record<string, string | null>
+  }) {
+    const current = await this.siteContent()
+    const mergeMap = (base: Record<string, string>, p?: Record<string, string | null>) => {
+      const out: Record<string, string> = { ...base }
+      for (const [k, val] of Object.entries(p ?? {})) {
+        if (val === null || val === '') delete out[k]
+        else out[k] = String(val)
+      }
+      return out
+    }
+    const next = {
+      media: mergeMap(current.media, patch.media),
+      faqs: patch.faqs !== undefined ? patch.faqs : current.faqs,
+      legal: mergeMap(current.legal, patch.legal),
+      social: mergeMap(current.social, patch.social),
+    }
+    await this.prisma.appSetting.upsert({
+      where: { key: 'site.content' },
+      update: { value: next as any },
+      create: { key: 'site.content', value: next as any },
+    })
+    return next
+  }
+
   async updatePlan(
     id: string,
     body: { name?: string; daysPerWeek?: number; priceUsd?: number; priceCop?: number; isActive?: boolean; features?: unknown },
@@ -970,7 +1019,17 @@ export class AdminService {
     return this.prisma.plan.update({ where: { id }, data })
   }
 
-  signUpload(body: { filename: string; contentType?: string; lessonId?: string }) {
+  signUpload(body: { filename: string; contentType?: string; lessonId?: string; siteSlot?: string }) {
+    // `siteSlot`: asset del sitio con clave estable (site/<slot>) — re-subir
+    // reemplaza el objeto y la URL pública no cambia.
+    if (body.siteSlot) {
+      const slot = body.siteSlot.toLowerCase().replace(/[^a-z0-9._-]+/g, '-')
+      return this.storage.signUpload({
+        filename: body.filename,
+        contentType: body.contentType,
+        fixedKey: `site/${slot}`,
+      })
+    }
     return this.storage.signUpload({
       filename: body.filename,
       contentType: body.contentType,

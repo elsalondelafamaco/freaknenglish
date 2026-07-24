@@ -1,6 +1,6 @@
 import { Bookmark, Mic, TrendingUp, Video } from "lucide-react";
-import heroStudent from "@/assets/hero-student.jpg";
 import teacherAvatar from "@/assets/avatar-teacher.jpg";
+import { useSiteContent } from "@/lib/site-content";
 import { DarkPillLink } from "./DarkPillButton";
 
 const WAVE_HEIGHTS = [
@@ -8,6 +8,7 @@ const WAVE_HEIGHTS = [
 ];
 
 export function Hero() {
+  const { media } = useSiteContent();
   return (
     <section className="relative overflow-hidden bg-brand-cream pt-28 lg:pt-32">
       <div className="mx-auto grid max-w-7xl gap-12 px-5 pb-16 lg:grid-cols-[1.05fr_1fr] lg:gap-10 lg:px-8 lg:pb-24">
@@ -37,7 +38,7 @@ export function Hero() {
         <div className="relative mx-auto w-full max-w-[560px]">
           <div className="relative overflow-hidden rounded-[28px] shadow-soft">
             <img
-              src={heroStudent}
+              src={media["hero-image"]}
               alt="Estudiante en clase de inglés en vivo"
               width={1280}
               height={1280}

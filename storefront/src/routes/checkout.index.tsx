@@ -13,7 +13,7 @@ export const Route = createFileRoute("/checkout/")({
 const copFmt = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 
 function CheckoutSelect() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const q = useQuery({ queryKey: ["plans"], queryFn: () => plansApi.list() });
   const subQ = useQuery({
     queryKey: ["me", "subscription"],
@@ -41,6 +41,17 @@ function CheckoutSelect() {
             <Link to="/app" className="mt-6 inline-flex h-12 items-center justify-center rounded-full bg-brand-ink px-6 text-sm font-semibold text-white hover:bg-brand-ink-soft">
               Ir a mi portal
             </Link>
+            <p className="mt-4 text-xs text-brand-ink/55">
+              ¿Quieres comprar un plan para otra persona?{" "}
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                className="font-semibold text-brand-ink underline hover:text-brand-ink-soft"
+              >
+                Cierra sesión
+              </button>{" "}
+              y hazlo con otra cuenta.
+            </p>
           </div>
         </div>
       </main>
@@ -69,7 +80,7 @@ function CheckoutSelect() {
             Escoge tu intensidad y empieza a hablar inglés
           </h1>
           <p className="mt-2 text-[15px] text-brand-ink/70">
-            Selecciona un plan y continúa al pago seguro con Wompi. Puedes cambiar o cancelar cuando quieras.
+            Selecciona un plan y continúa al pago seguro. Puedes cambiar o cancelar cuando quieras.
           </p>
         </header>
 
@@ -91,7 +102,7 @@ function CheckoutSelect() {
                     <span className="text-3xl font-bold text-brand-ink">${plan.priceUsd ?? "—"}</span>
                     <span className="text-sm text-brand-ink/60">USD / mes</span>
                   </div>
-                  <p className="mt-1 text-xs text-brand-ink/55">Se cobra {copFmt.format(cop)} vía Wompi (TRM en vivo).</p>
+                  <p className="mt-1 text-xs text-brand-ink/55">Se cobra {copFmt.format(cop)} (TRM en vivo).</p>
                   <ul className="mt-4 flex-1 space-y-2 text-sm text-brand-ink/85">
                     {(plan.features ?? []).map((f: string) => (
                       <li key={f} className="flex items-start gap-2">

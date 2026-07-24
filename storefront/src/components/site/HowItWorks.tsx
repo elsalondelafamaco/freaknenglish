@@ -1,15 +1,16 @@
+import { useState } from "react";
 import { CalendarDays, Monitor, MessageCircle, Play, Zap } from "lucide-react";
-import how1 from "@/assets/how-1-schedule.jpg";
-import how2 from "@/assets/how-2-classes.jpg";
-import how3 from "@/assets/how-3-confidence.jpg";
+import { useSiteContent } from "@/lib/site-content";
 import { DarkPillLink } from "./DarkPillButton";
+import { VideoModal } from "./VideoModal";
 
 const STEPS = [
   {
     icon: CalendarDays,
     title: "Escoge tu horario",
     body: "Selecciona uno de los horarios que mejor se adapta a tus necesidades.",
-    img: how1,
+    imageSlot: "how-1-image",
+    videoSlot: "how-1-video",
     badge: "Llamada 15 min",
     badgeSub: "Conoce cómo funciona",
   },
@@ -17,7 +18,8 @@ const STEPS = [
     icon: Monitor,
     title: "Empieza tus clases",
     body: "Clases en vivo personalizadas enfocadas en conversación desde el primer día.",
-    img: how2,
+    imageSlot: "how-2-image",
+    videoSlot: "how-2-video",
     badge: "Freakn'",
     badgeSub: "Live class",
   },
@@ -25,13 +27,17 @@ const STEPS = [
     icon: MessageCircle,
     title: "Habla con confianza",
     body: "Practica constantemente y deja de traducir para empezar a pensar en inglés.",
-    img: how3,
+    imageSlot: "how-3-image",
+    videoSlot: "how-3-video",
     badge: "Great job!",
     badgeSub: "Tu pronunciación cada vez es mejor.",
   },
 ] as const;
 
 export function HowItWorks() {
+  const { media } = useSiteContent();
+  const [video, setVideo] = useState<{ src: string; title: string } | null>(null);
+
   return (
     <section id="como-funciona" className="bg-white py-20 lg:py-28 scroll-mt-24">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
@@ -55,11 +61,18 @@ export function HowItWorks() {
         <div className="mt-12 -mx-5 px-5 lg:mx-0 lg:px-0">
           <div className="flex snap-x snap-mandatory gap-5 overflow-x-auto pb-4 scrollbar-none lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible">
             {STEPS.map((s) => (
-              <StepCard key={s.title} {...s} />
+              <StepCard
+                key={s.title}
+                {...s}
+                img={media[s.imageSlot]}
+                videoUrl={media[s.videoSlot]}
+                onPlay={(src) => setVideo({ src, title: s.title })}
+              />
             ))}
           </div>
         </div>
       </div>
+      {video ? <VideoModal src={video.src} title={video.title} onClose={() => setVideo(null)} /> : null}
     </section>
   );
 }
@@ -69,11 +82,22 @@ function StepCard({
   title,
   body,
   img,
+  videoUrl,
   badge,
   badgeSub,
-}: (typeof STEPS)[number]) {
+  onPlay,
+}: {
+  icon: (typeof STEPS)[number]["icon"];
+  title: string;
+  body: string;
+  img: string;
+  videoUrl?: string;
+  badge: string;
+  badgeSub: string;
+  onPlay: (src: string) => void;
+}) {
   return (
-    <article className="relative min-w-[85%] snap-center rounded-3xl border border-brand-line bg-white p-4 shadow-soft lg:min-w-0">
+    <article className="relative min-w-[85%] snap-center rounded-3xl border border-brand-line bg-white p-4 shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg lg:min-w-0">
       <div className="flex items-start gap-3 px-2 pt-2">
         <span className="flex size-9 items-center justify-center rounded-xl bg-brand-yellow">
           <Icon className="size-5 text-brand-ink" strokeWidth={2.4} />
@@ -91,13 +115,16 @@ function StepCard({
           loading="lazy"
           className="h-full w-full object-cover"
         />
-        <button
-          type="button"
-          className="absolute left-1/2 top-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 backdrop-blur transition hover:scale-105"
-          aria-label="Reproducir video"
-        >
-          <Play className="size-5 translate-x-0.5 fill-brand-ink text-brand-ink" />
-        </button>
+        {videoUrl ? (
+          <button
+            type="button"
+            onClick={() => onPlay(videoUrl)}
+            className="absolute left-1/2 top-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 backdrop-blur transition-all duration-200 hover:scale-110 hover:bg-white active:scale-95"
+            aria-label={`Reproducir video: ${title}`}
+          >
+            <Play className="size-5 translate-x-0.5 fill-brand-ink text-brand-ink" />
+          </button>
+        ) : null}
 
         <div className="absolute bottom-3 left-3 rounded-xl bg-white/95 px-2.5 py-1.5 shadow">
           <div className="text-[11px] font-semibold text-brand-ink">{badge}</div>

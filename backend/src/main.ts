@@ -8,8 +8,13 @@ import { AppModule } from './app.module'
 import { RedisIoAdapter } from './modules/board/redis-io.adapter'
 import { env } from './config/env'
 
+// Trazas crudas (stdout directo) para diagnosticar arranques que mueren sin log.
+console.log('[boot] main.ts cargado. PORT=', process.env.PORT, 'NODE_ENV=', process.env.NODE_ENV)
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true })
+  console.log('[boot] creando app Nest...')
+  const app = await NestFactory.create(AppModule, { bufferLogs: false })
+  console.log('[boot] app Nest creada')
   app.useLogger(app.get(Logger))
 
   app.setGlobalPrefix('api')
@@ -30,16 +35,23 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }))
 
-  // Redis adapter for Socket.IO (board realtime). NO fatal: si Redis no está
-  // disponible al arrancar (p. ej. la red privada de Railway aún no resuelve),
-  // degradamos a instancia única en lugar de tumbar todo el backend.
+  // Redis adapter para Socket.IO. Con timeout duro: node-redis puede COLGARSE al
+  // conectar (no rechaza) y dejaría el arranque bloqueado para siempre. Si no
+  // conecta en 8s, seguimos con el adapter por defecto (instancia única).
+  console.log('[boot] conectando Redis (Socket.IO)...')
   try {
     const ioAdapter = new RedisIoAdapter(app)
-    await ioAdapter.connectToRedis()
+    await Promise.race([
+      ioAdapter.connectToRedis(),
+      new Promise((_resolve, reject) =>
+        setTimeout(() => reject(new Error('timeout 8s conectando a Redis')), 8000),
+      ),
+    ])
     app.useWebSocketAdapter(ioAdapter)
+    console.log('[boot] Redis Socket.IO OK')
   } catch (err) {
     console.error(
-      '[bootstrap] Redis Socket.IO adapter no disponible, uso el adapter por defecto:',
+      '[boot] Redis Socket.IO no disponible, sigo con adapter por defecto:',
       (err as Error)?.message ?? err,
     )
   }
@@ -54,12 +66,13 @@ async function bootstrap() {
   const doc = SwaggerModule.createDocument(app, config)
   SwaggerModule.setup('api/docs', app, doc)
 
+  console.log('[boot] app.listen en :' + env.PORT)
   await app.listen(env.PORT, '0.0.0.0')
   console.log(`▲ Freakn backend listening on :${env.PORT}`)
 }
 
 bootstrap().catch((err) => {
-  // Sin esto, un fallo en el arranque muere en silencio por bufferLogs.
+  // Sin esto, un fallo de arranque muere en silencio.
   console.error('[bootstrap] Error fatal al iniciar el backend:', err)
   process.exit(1)
 })

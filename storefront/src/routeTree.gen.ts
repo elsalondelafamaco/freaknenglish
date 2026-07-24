@@ -28,7 +28,9 @@ import { Route as AuthenticatedTeacherIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedBoardsIndexRouteImport } from './routes/_authenticated/boards.index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated/app.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as CheckoutSchedulePlanIdRouteImport } from './routes/checkout.schedule.$planId'
 import { Route as AuthenticatedTeacherScheduleRouteImport } from './routes/_authenticated/teacher.schedule'
+import { Route as AuthenticatedTeacherCalendarRouteImport } from './routes/_authenticated/teacher.calendar'
 import { Route as AuthenticatedTeacherAvailabilityRouteImport } from './routes/_authenticated/teacher.availability'
 import { Route as AuthenticatedTeacherAbsencesRouteImport } from './routes/_authenticated/teacher.absences'
 import { Route as AuthenticatedOnboardingScheduleRouteImport } from './routes/_authenticated/onboarding.schedule'
@@ -44,6 +46,7 @@ import { Route as AuthenticatedAdminScheduleRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminPayrollRouteImport } from './routes/_authenticated/admin.payroll'
 import { Route as AuthenticatedAdminNotificationsRouteImport } from './routes/_authenticated/admin.notifications'
 import { Route as AuthenticatedAdminContentRouteImport } from './routes/_authenticated/admin.content'
+import { Route as AuthenticatedAdminCalendarRouteImport } from './routes/_authenticated/admin.calendar'
 import { Route as AuthenticatedTeacherStudentsIndexRouteImport } from './routes/_authenticated/teacher.students.index'
 import { Route as AuthenticatedAdminUsersIndexRouteImport } from './routes/_authenticated/admin.users.index'
 import { Route as AuthenticatedAdminPlansIndexRouteImport } from './routes/_authenticated/admin.plans.index'
@@ -150,10 +153,21 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const CheckoutSchedulePlanIdRoute = CheckoutSchedulePlanIdRouteImport.update({
+  id: '/checkout/schedule/$planId',
+  path: '/checkout/schedule/$planId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedTeacherScheduleRoute =
   AuthenticatedTeacherScheduleRouteImport.update({
     id: '/schedule',
     path: '/schedule',
+    getParentRoute: () => AuthenticatedTeacherRoute,
+  } as any)
+const AuthenticatedTeacherCalendarRoute =
+  AuthenticatedTeacherCalendarRouteImport.update({
+    id: '/calendar',
+    path: '/calendar',
     getParentRoute: () => AuthenticatedTeacherRoute,
   } as any)
 const AuthenticatedTeacherAvailabilityRoute =
@@ -245,6 +259,12 @@ const AuthenticatedAdminContentRoute =
     path: '/content',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminCalendarRoute =
+  AuthenticatedAdminCalendarRouteImport.update({
+    id: '/calendar',
+    path: '/calendar',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedTeacherStudentsIndexRoute =
   AuthenticatedTeacherStudentsIndexRouteImport.update({
     id: '/students/',
@@ -309,6 +329,7 @@ export interface FileRoutesByFullPath {
   '/checkout/$planId': typeof CheckoutPlanIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/checkout/': typeof CheckoutIndexRoute
+  '/admin/calendar': typeof AuthenticatedAdminCalendarRoute
   '/admin/content': typeof AuthenticatedAdminContentRoute
   '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
@@ -324,7 +345,9 @@ export interface FileRoutesByFullPath {
   '/onboarding/schedule': typeof AuthenticatedOnboardingScheduleRoute
   '/teacher/absences': typeof AuthenticatedTeacherAbsencesRoute
   '/teacher/availability': typeof AuthenticatedTeacherAvailabilityRoute
+  '/teacher/calendar': typeof AuthenticatedTeacherCalendarRoute
   '/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
+  '/checkout/schedule/$planId': typeof CheckoutSchedulePlanIdRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/boards/': typeof AuthenticatedBoardsIndexRoute
@@ -350,6 +373,7 @@ export interface FileRoutesByTo {
   '/checkout/$planId': typeof CheckoutPlanIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/checkout': typeof CheckoutIndexRoute
+  '/admin/calendar': typeof AuthenticatedAdminCalendarRoute
   '/admin/content': typeof AuthenticatedAdminContentRoute
   '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
@@ -364,7 +388,9 @@ export interface FileRoutesByTo {
   '/onboarding/schedule': typeof AuthenticatedOnboardingScheduleRoute
   '/teacher/absences': typeof AuthenticatedTeacherAbsencesRoute
   '/teacher/availability': typeof AuthenticatedTeacherAvailabilityRoute
+  '/teacher/calendar': typeof AuthenticatedTeacherCalendarRoute
   '/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
+  '/checkout/schedule/$planId': typeof CheckoutSchedulePlanIdRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/boards': typeof AuthenticatedBoardsIndexRoute
@@ -395,6 +421,7 @@ export interface FileRoutesById {
   '/checkout/$planId': typeof CheckoutPlanIdRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/checkout/': typeof CheckoutIndexRoute
+  '/_authenticated/admin/calendar': typeof AuthenticatedAdminCalendarRoute
   '/_authenticated/admin/content': typeof AuthenticatedAdminContentRoute
   '/_authenticated/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/_authenticated/admin/payroll': typeof AuthenticatedAdminPayrollRoute
@@ -410,7 +437,9 @@ export interface FileRoutesById {
   '/_authenticated/onboarding/schedule': typeof AuthenticatedOnboardingScheduleRoute
   '/_authenticated/teacher/absences': typeof AuthenticatedTeacherAbsencesRoute
   '/_authenticated/teacher/availability': typeof AuthenticatedTeacherAvailabilityRoute
+  '/_authenticated/teacher/calendar': typeof AuthenticatedTeacherCalendarRoute
   '/_authenticated/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
+  '/checkout/schedule/$planId': typeof CheckoutSchedulePlanIdRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/boards/': typeof AuthenticatedBoardsIndexRoute
@@ -441,6 +470,7 @@ export interface FileRouteTypes {
     | '/checkout/$planId'
     | '/checkout/return'
     | '/checkout/'
+    | '/admin/calendar'
     | '/admin/content'
     | '/admin/notifications'
     | '/admin/payroll'
@@ -456,7 +486,9 @@ export interface FileRouteTypes {
     | '/onboarding/schedule'
     | '/teacher/absences'
     | '/teacher/availability'
+    | '/teacher/calendar'
     | '/teacher/schedule'
+    | '/checkout/schedule/$planId'
     | '/admin/'
     | '/app/'
     | '/boards/'
@@ -482,6 +514,7 @@ export interface FileRouteTypes {
     | '/checkout/$planId'
     | '/checkout/return'
     | '/checkout'
+    | '/admin/calendar'
     | '/admin/content'
     | '/admin/notifications'
     | '/admin/payroll'
@@ -496,7 +529,9 @@ export interface FileRouteTypes {
     | '/onboarding/schedule'
     | '/teacher/absences'
     | '/teacher/availability'
+    | '/teacher/calendar'
     | '/teacher/schedule'
+    | '/checkout/schedule/$planId'
     | '/admin'
     | '/app'
     | '/boards'
@@ -526,6 +561,7 @@ export interface FileRouteTypes {
     | '/checkout/$planId'
     | '/checkout/return'
     | '/checkout/'
+    | '/_authenticated/admin/calendar'
     | '/_authenticated/admin/content'
     | '/_authenticated/admin/notifications'
     | '/_authenticated/admin/payroll'
@@ -541,7 +577,9 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding/schedule'
     | '/_authenticated/teacher/absences'
     | '/_authenticated/teacher/availability'
+    | '/_authenticated/teacher/calendar'
     | '/_authenticated/teacher/schedule'
+    | '/checkout/schedule/$planId'
     | '/_authenticated/admin/'
     | '/_authenticated/app/'
     | '/_authenticated/boards/'
@@ -568,6 +606,7 @@ export interface RootRouteChildren {
   CheckoutPlanIdRoute: typeof CheckoutPlanIdRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   CheckoutIndexRoute: typeof CheckoutIndexRoute
+  CheckoutSchedulePlanIdRoute: typeof CheckoutSchedulePlanIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -705,11 +744,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/checkout/schedule/$planId': {
+      id: '/checkout/schedule/$planId'
+      path: '/checkout/schedule/$planId'
+      fullPath: '/checkout/schedule/$planId'
+      preLoaderRoute: typeof CheckoutSchedulePlanIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/teacher/schedule': {
       id: '/_authenticated/teacher/schedule'
       path: '/schedule'
       fullPath: '/teacher/schedule'
       preLoaderRoute: typeof AuthenticatedTeacherScheduleRouteImport
+      parentRoute: typeof AuthenticatedTeacherRoute
+    }
+    '/_authenticated/teacher/calendar': {
+      id: '/_authenticated/teacher/calendar'
+      path: '/calendar'
+      fullPath: '/teacher/calendar'
+      preLoaderRoute: typeof AuthenticatedTeacherCalendarRouteImport
       parentRoute: typeof AuthenticatedTeacherRoute
     }
     '/_authenticated/teacher/availability': {
@@ -817,6 +870,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminContentRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/calendar': {
+      id: '/_authenticated/admin/calendar'
+      path: '/calendar'
+      fullPath: '/admin/calendar'
+      preLoaderRoute: typeof AuthenticatedAdminCalendarRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/teacher/students/': {
       id: '/_authenticated/teacher/students/'
       path: '/students'
@@ -893,6 +953,7 @@ const AuthenticatedAdminUsersRouteWithChildren =
   )
 
 interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminCalendarRoute: typeof AuthenticatedAdminCalendarRoute
   AuthenticatedAdminContentRoute: typeof AuthenticatedAdminContentRoute
   AuthenticatedAdminNotificationsRoute: typeof AuthenticatedAdminNotificationsRoute
   AuthenticatedAdminPayrollRoute: typeof AuthenticatedAdminPayrollRoute
@@ -904,6 +965,7 @@ interface AuthenticatedAdminRouteChildren {
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminCalendarRoute: AuthenticatedAdminCalendarRoute,
   AuthenticatedAdminContentRoute: AuthenticatedAdminContentRoute,
   AuthenticatedAdminNotificationsRoute: AuthenticatedAdminNotificationsRoute,
   AuthenticatedAdminPayrollRoute: AuthenticatedAdminPayrollRoute,
@@ -957,6 +1019,7 @@ const AuthenticatedAppRouteWithChildren =
 interface AuthenticatedTeacherRouteChildren {
   AuthenticatedTeacherAbsencesRoute: typeof AuthenticatedTeacherAbsencesRoute
   AuthenticatedTeacherAvailabilityRoute: typeof AuthenticatedTeacherAvailabilityRoute
+  AuthenticatedTeacherCalendarRoute: typeof AuthenticatedTeacherCalendarRoute
   AuthenticatedTeacherScheduleRoute: typeof AuthenticatedTeacherScheduleRoute
   AuthenticatedTeacherIndexRoute: typeof AuthenticatedTeacherIndexRoute
   AuthenticatedTeacherStudentsStudentIdRoute: typeof AuthenticatedTeacherStudentsStudentIdRoute
@@ -966,6 +1029,7 @@ interface AuthenticatedTeacherRouteChildren {
 const AuthenticatedTeacherRouteChildren: AuthenticatedTeacherRouteChildren = {
   AuthenticatedTeacherAbsencesRoute: AuthenticatedTeacherAbsencesRoute,
   AuthenticatedTeacherAvailabilityRoute: AuthenticatedTeacherAvailabilityRoute,
+  AuthenticatedTeacherCalendarRoute: AuthenticatedTeacherCalendarRoute,
   AuthenticatedTeacherScheduleRoute: AuthenticatedTeacherScheduleRoute,
   AuthenticatedTeacherIndexRoute: AuthenticatedTeacherIndexRoute,
   AuthenticatedTeacherStudentsStudentIdRoute:
@@ -1030,6 +1094,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutPlanIdRoute: CheckoutPlanIdRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   CheckoutIndexRoute: CheckoutIndexRoute,
+  CheckoutSchedulePlanIdRoute: CheckoutSchedulePlanIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -4,7 +4,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Collaboration from "@tiptap/extension-collaboration";
-import CollaborationCursor from "@tiptap/extension-collaboration-cursor";
+import CollaborationCaret from "@tiptap/extension-collaboration-caret";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
@@ -82,7 +82,7 @@ function BoardPage() {
             TableRow, TableCell, TableHeader,
             Placeholder.configure({ placeholder: "Empieza a escribir…" }),
             Collaboration.configure({ document: provider.doc }),
-            CollaborationCursor.configure({
+            CollaborationCaret.configure({
               provider: { awareness: provider.awareness, doc: provider.doc } as any,
               user: {
                 name: user?.fullName ?? user?.email ?? "Anon",

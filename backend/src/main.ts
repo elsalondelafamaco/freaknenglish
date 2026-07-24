@@ -23,7 +23,7 @@ process.on('unhandledRejection', (e) => {
   process.exit(1)
 })
 
-out('main.ts top reached; PORT=' + process.env.PORT + ' NODE_ENV=' + process.env.NODE_ENV)
+out('BOOT_TRACE_MARKER_V1 main.ts top reached; PORT=' + process.env.PORT + ' NODE_ENV=' + process.env.NODE_ENV)
 
 async function bootstrap() {
   out('import @nestjs/core')

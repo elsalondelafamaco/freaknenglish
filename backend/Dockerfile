@@ -1,4 +1,4 @@
-# ─── Builder ───────────────────────────────────────────────────────────────
+# ─── Builder ─────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 WORKDIR /app
 
@@ -8,14 +8,20 @@ COPY package.json bun.lock* package-lock.json* yarn.lock* pnpm-lock.yaml* ./
 COPY prisma ./prisma
 RUN npm install --legacy-peer-deps
 
-# cache-bust: force fresh recompile of src (Railway was caching RUN npm run build)
-RUN echo "cachebust-2026-07-24T1730Z-v4"
 COPY tsconfig*.json nest-cli.json ./
 COPY src ./src
 RUN npx prisma generate
-RUN npm run build
 
-# ─── Runner ────────────────────────────────────────────────────────────────
+# Clean, non-incremental build. Then PROVE the compiled entrypoint contains the
+# current source (the string only exists in the latest main.ts). If this grep
+# finds 0 matches the build FAILS loudly instead of shipping a stale bundle.
+RUN rm -rf dist tsconfig.tsbuildinfo \
+ && npm run build \
+ && echo "### COMPILED-ENTRY-CHECK ###" \
+ && ls -la dist/src/main.js \
+ && grep -c "BOOT_TRACE_MARKER_V1" dist/src/main.js
+
+# ─── Runner ──────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
 WORKDIR /app
 
@@ -31,4 +37,5 @@ COPY --from=builder /app/prisma ./prisma
 
 EXPOSE 3000
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/src/main.js"]
+# Single source of truth for startup. Self-contained: sync schema then boot.
+CMD ["sh", "-c", "echo '### CMD_START ###'; npx prisma db push --skip-generate && echo '### DBPUSH_OK -> starting node ###' && node dist/src/main.js"]

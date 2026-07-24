@@ -259,6 +259,8 @@ export const teachersApi = {
     ),
   createAbsence: (startsAt: string, endsAt: string, reason?: string) =>
     apiPost<{ absence: any; affected: any[] }>("/teacher/absences", { startsAt, endsAt, reason }),
+  createAbsencesByClasses: (classIds: string[], reason?: string) =>
+    apiPost<{ absences: any[]; cancelled: number }>("/teacher/absences/by-classes", { classIds, reason }),
   deleteAbsence: (id: string) => apiDelete<{ ok: boolean }>(`/teacher/absences/${id}`),
 };
 
@@ -422,6 +424,8 @@ export const boardsApi = {
     apiGet<{ id: string; title: string; kind: string; snapshot: string | null; lastSeq: number }>(
       `/boards/pages/${pageId}/state`,
     ),
+  appendPageOp: (pageId: string, update: string, clientOpId: string) =>
+    apiPost<{ ok: boolean; seq: number }>(`/boards/pages/${pageId}/ops`, { update, clientOpId }),
   pageOpsSince: (pageId: string, since: number) =>
     apiGet<Array<{ seq: number; userId: string; clientOpId: string; update: string }>>(
       `/boards/pages/${pageId}/ops`,

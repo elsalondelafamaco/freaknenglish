@@ -96,6 +96,12 @@ export class TeachersController {
     return this.svc.createAbsence(u.id, new Date(body.startsAt), new Date(body.endsAt), body.reason)
   }
 
+  /** @endpoint POST /api/v1/teacher/absences/by-classes  Body: { classIds[], reason? } */
+  @Post('absences/by-classes')
+  createAbsencesByClasses(@CurrentUser() u: AuthUser, @Body() body: { classIds: string[]; reason?: string }) {
+    return this.svc.createAbsencesForClasses(u.id, body?.classIds ?? [], body?.reason)
+  }
+
   /** @endpoint DELETE /api/v1/teacher/absences/:id (self) */
   @Delete('absences/:id')
   deleteAbsence(@CurrentUser() u: AuthUser, @Param('id') id: string) {

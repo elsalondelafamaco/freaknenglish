@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator'
@@ -105,6 +105,23 @@ export class BoardController {
   @Get('pages/:pageId/state')
   pageState(@CurrentUser() u: AuthUser, @Param('pageId') pageId: string) {
     return this.svc.getPageState(pageId, u.id)
+  }
+
+  /**
+   * @endpoint POST /api/v1/boards/pages/:pageId/ops
+   * Fallback REST de persistencia: si el socket no está disponible, el cliente
+   * guarda los updates Yjs por aquí (idempotente por clientOpId).
+   */
+  @Post('pages/:pageId/ops')
+  async appendPageOp(
+    @CurrentUser() u: AuthUser,
+    @Param('pageId') pageId: string,
+    @Body() body: { update: string; clientOpId: string },
+  ) {
+    const buf = Buffer.from(body?.update ?? '', 'base64')
+    if (buf.length === 0 || buf.length > 256 * 1024) throw new BadRequestException('invalid update size')
+    const op = await this.svc.appendPageOp({ pageId, userId: u.id, update: buf, clientOpId: body.clientOpId })
+    return { ok: true, seq: op.seq }
   }
 
   /** @endpoint GET /api/v1/boards/pages/:pageId/ops?since=N */

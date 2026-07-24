@@ -129,10 +129,76 @@ export class TeachersService {
     return { absence, affected }
   }
 
+  /**
+   * Ausencia por CLASES (tachar clases concretas): cada clase seleccionada se
+   * cancela, el estudiante es notificado y se registra una ausencia con el
+   * horario exacto de esa clase. Las cancelaciones no auto-validan ni pagan.
+   */
+  async createAbsencesForClasses(teacherId: string, classIds: string[], reason?: string) {
+    if (!Array.isArray(classIds) || classIds.length === 0) {
+      throw new BadRequestException('Selecciona al menos una clase')
+    }
+    const classes = await this.prisma.class.findMany({
+      where: { id: { in: classIds }, teacherId, status: 'scheduled', startsAt: { gt: new Date() } },
+      include: { student: { select: { id: true, fullName: true, email: true } } },
+      orderBy: { startsAt: 'asc' },
+    })
+    if (classes.length === 0) throw new BadRequestException('No hay clases futuras válidas en la selección')
+
+    const fmt = (d: Date) =>
+      new Date(d.getTime() - TeachersService.BOG_MS).toISOString().slice(0, 16).replace('T', ' ')
+    const absences = [] as any[]
+    for (const c of classes) {
+      const abs = await this.prisma.teacherAbsence.create({
+        data: { teacherId, startsAt: c.startsAt, endsAt: c.endsAt, reason },
+      })
+      absences.push(abs)
+      await this.prisma.class.update({ where: { id: c.id }, data: { status: 'cancelled' } })
+      await this.notifications.enqueue({
+        userId: c.student.id,
+        toEmail: c.student.email,
+        template: 'class_cancelled',
+        subject: 'Tu clase fue cancelada',
+        dedupeKey: `absence-cancel:${c.id}`,
+        vars: { reason: `Tu profesor no estará disponible el ${fmt(c.startsAt)}. Coordinaremos la reposición.` },
+        type: 'class',
+        title: 'Clase cancelada',
+        body: `Tu clase del ${fmt(c.startsAt)} fue cancelada por ausencia del profesor.`,
+        linkUrl: '/app/calendar',
+      })
+    }
+    const [teacher, admins] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: teacherId }, select: { fullName: true } }),
+      this.prisma.user.findMany({ where: { role: 'admin', deletedAt: null }, select: { id: true, email: true } }),
+    ])
+    for (const a of admins) {
+      await this.notifications.enqueue({
+        userId: a.id,
+        toEmail: a.email,
+        template: 'welcome',
+        subject: 'Ausencia de profesor',
+        dedupeKey: `absence-classes:${classes[0].id}:${a.id}`,
+        inAppOnly: true,
+        type: 'teacher',
+        title: 'Ausencia de profesor',
+        body: `${teacher?.fullName ?? 'Un profesor'} canceló ${classes.length} clase(s)${reason ? ` (${reason})` : ''}. Revisa reemplazos/reposiciones.`,
+        linkUrl: '/admin/calendar',
+      })
+    }
+    return { absences, cancelled: classes.length }
+  }
+
   async deleteAbsence(teacherId: string, id: string) {
     const abs = await this.prisma.teacherAbsence.findUnique({ where: { id } })
     if (!abs || abs.teacherId !== teacherId) throw new ForbiddenException()
     await this.prisma.teacherAbsence.delete({ where: { id } })
+    // Si la ausencia cubría una clase futura cancelada, se restaura.
+    if (abs.startsAt.getTime() > Date.now()) {
+      await this.prisma.class.updateMany({
+        where: { teacherId, status: 'cancelled', startsAt: abs.startsAt },
+        data: { status: 'scheduled' },
+      })
+    }
     return { ok: true }
   }
 

@@ -232,3 +232,12 @@ html {
   box-shadow: 0 0 0 2px var(--brand-cream), 0 0 0 4px var(--brand-ink);
   border-radius: 8px;
 }
+
+
+/* Impresión del board: solo el contenido del editor (SDD board fix #5). */
+@media print {
+  body * { visibility: hidden !important; }
+  .board-print-area, .board-print-area * { visibility: visible !important; }
+  .board-print-area { position: absolute !important; left: 0; top: 0; width: 100%; padding: 0; }
+  .board-print-area .ProseMirror { min-height: auto !important; }
+}

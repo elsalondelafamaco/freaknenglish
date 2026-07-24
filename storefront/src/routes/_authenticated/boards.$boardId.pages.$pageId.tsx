@@ -106,7 +106,7 @@ function BoardPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand-line pb-3">
+      <div className="flex flex-col gap-2 border-b border-brand-line pb-3 md:flex-row md:flex-wrap md:items-center md:justify-between">
         <Toolbar editor={editor} boardId={boardId} />
         <div className="flex items-center gap-2">
           <VersionHistory pageId={pageId} />
@@ -114,7 +114,7 @@ function BoardPage() {
           <StatusPill status={status} />
         </div>
       </div>
-      <div className="relative">
+      <div className="board-print-area relative">
         <EditorContent editor={editor} />
         <DrawLayer doc={provider.doc} authorId={user.id} enabled={drawMode} onToggle={setDrawMode} />
       </div>
@@ -186,7 +186,7 @@ function Toolbar({ editor, boardId }: { editor: NonNullable<ReturnType<typeof us
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-1">
+    <div className="-mx-1 flex max-w-full items-center gap-1 overflow-x-auto px-1 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
       <button className={btn} data-active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}><Bold className="size-4" /></button>
       <button className={btn} data-active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}><Italic className="size-4" /></button>
       <button className={btn} data-active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()}><UnderlineIcon className="size-4" /></button>

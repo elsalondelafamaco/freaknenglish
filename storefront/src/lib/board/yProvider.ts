@@ -130,12 +130,31 @@ export function createPageProvider(pageId: string, user: { id: string; name: str
   socket.on("connect", onConnect);
   socket.on("disconnect", onDisconnect);
 
-  // Local doc → socket
+  // Local doc → servidor. El socket es el camino rápido; si no está conectado
+  // o no confirma (ack) en 3 s, se persiste por REST (idempotente por
+  // clientOpId) — el contenido NUNCA se queda solo en memoria.
+  const persistViaRest = (updateB64: string, clientOpId: string) => {
+    boardsApi.appendPageOp(pageId, updateB64, clientOpId).catch(() => {
+      // Reintento único diferido; si vuelve a fallar, el catch-up por REST al
+      // recargar reconstruirá desde la última seq persistida.
+      setTimeout(() => boardsApi.appendPageOp(pageId, updateB64, clientOpId).catch(() => undefined), 4000);
+    });
+  };
   const docUpdateHandler = (update: Uint8Array, origin: any) => {
     if (origin === "server") return;
     const clientOpId = crypto.randomUUID();
     seenClientOpIds.add(clientOpId);
-    socket.emit("page:update", { pageId, update: bytesToB64(update), clientOpId });
+    const updateB64 = bytesToB64(update);
+    if (socket.connected) {
+      let acked = false;
+      socket.timeout(3000).emit("page:update", { pageId, update: updateB64, clientOpId }, (err: any, res: any) => {
+        acked = true;
+        if (err || !res?.ok) persistViaRest(updateB64, clientOpId);
+      });
+      setTimeout(() => { if (!acked) persistViaRest(updateB64, clientOpId); }, 3500);
+    } else {
+      persistViaRest(updateB64, clientOpId);
+    }
   };
   doc.on("update", docUpdateHandler);
 

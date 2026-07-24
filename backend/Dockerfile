@@ -8,6 +8,8 @@ COPY package.json bun.lock* package-lock.json* yarn.lock* pnpm-lock.yaml* ./
 COPY prisma ./prisma
 RUN npm install --legacy-peer-deps
 
+# cache-bust: force fresh recompile of src (Railway was caching RUN npm run build)
+RUN echo "cachebust-2026-07-24T1730Z-v4"
 COPY tsconfig*.json nest-cli.json ./
 COPY src ./src
 RUN npx prisma generate

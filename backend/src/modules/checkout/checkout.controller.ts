@@ -12,6 +12,7 @@ class CreateIntentDto {
   @IsString() @MinLength(6) customerPhone!: string
   @IsString() @MinLength(4) customerDocument!: string
   @IsString() @IsOptional() userId?: string
+  @IsString() @MinLength(8) @IsOptional() password?: string
   @IsArray() @IsOptional() slots?: Array<{ weekday: number; hour: number }>
 }
 

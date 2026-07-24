@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import * as crypto from 'crypto'
+import * as argon2 from 'argon2'
 import { PrismaService } from '../../prisma/prisma.service'
 import { env } from '../../config/env'
 import { ExchangeService } from '../exchange/exchange.service'
@@ -22,6 +23,7 @@ export class CheckoutService {
     customerDocument: string
     userId?: string
     slots?: SlotRef[]
+    password?: string
   }) {
     const plan = await this.prisma.plan.findUnique({ where: { id: input.planId } })
     if (!plan) throw new NotFoundException('Plan not found')
@@ -74,6 +76,8 @@ export class CheckoutService {
         customerPhone: input.customerPhone,
         customerDocument: input.customerDocument,
         scheduleJson: slots.length > 0 ? (slots as any) : undefined,
+        // Credenciales elegidas en el checkout: solo se guarda el hash.
+        passwordHash: input.password ? await argon2.hash(input.password) : undefined,
       },
     })
 
@@ -87,9 +91,13 @@ export class CheckoutService {
       await this.prisma.paymentIntent.update({ where: { id: intent.id }, data: { assignmentMode } })
     }
 
+    // Wompi: si el checkout lleva expiration-time, la firma DEBE incluirla:
+    // SHA256(reference + amountInCents + currency + expirationTime + secret)
+    // https://docs.wompi.co/docs/colombia/widget-checkout-web/#firma-de-integridad
+    const expirationTime = new Date(Date.now() + PENDING_HOLD_MINUTES * 60 * 1000).toISOString()
     const signature = crypto
       .createHash('sha256')
-      .update(`${reference}${amountInCents}${currency}${env.WOMPI_INTEGRITY_SECRET}`)
+      .update(`${reference}${amountInCents}${currency}${expirationTime}${env.WOMPI_INTEGRITY_SECRET}`)
       .digest('hex')
 
     // Wompi "Web Checkout" — pasarela pre-hosteada. Ver:
@@ -99,7 +107,6 @@ export class CheckoutService {
     // de la app corra en local durante desarrollo.
     const redirectUrl = env.WOMPI_REDIRECT_URL
     // El link de pago vence junto con la reserva de franjas (20 min).
-    const expirationTime = new Date(Date.now() + PENDING_HOLD_MINUTES * 60 * 1000).toISOString()
     const checkoutParams = new URLSearchParams({
       'public-key': env.WOMPI_PUBLIC_KEY,
       'expiration-time': expirationTime,

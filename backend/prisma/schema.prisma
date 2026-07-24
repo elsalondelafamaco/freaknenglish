@@ -181,6 +181,7 @@ model PaymentIntent {
   customerPhone   String?       @map("customer_phone")
   customerDocument String?      @map("customer_document")
   scheduleJson   Json?   @map("schedule_json") // franjas elegidas [{weekday,hour}]
+  passwordHash   String? @map("password_hash") // credenciales elegidas en checkout (argon2)
   assignmentMode String? @map("assignment_mode") // auto | manual
   wompiId         String?       @unique @map("wompi_id")
   approvedAt      DateTime?     @map("approved_at")
@@ -241,17 +242,19 @@ model Class {
 
 model ClassNote {
   id        String   @id @default(uuid())
-  classId   String   @map("class_id")
+  classId   String?  @map("class_id")
+  studentId String?  @map("student_id") // nota a nivel estudiante (sin clase)
   teacherId String   @map("teacher_id")
   rating    Int?     // (deprecado) 1..5
   pinned    Boolean  @default(false)
   notes     String
   createdAt DateTime @default(now()) @map("created_at")
 
-  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
-  teacher User  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class   Class? @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacher User   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   @@index([classId])
+  @@index([studentId])
   @@map("class_notes")
 }
 

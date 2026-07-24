@@ -92,6 +92,28 @@ function BoardPage() {
           ]
         : [StarterKit],
       editorProps: {
+        // Pegar imágenes (captura o archivo): se suben al storage y se insertan
+        // como URL (no base64, para no inflar el doc colaborativo).
+        handlePaste: (view, event) => {
+          const files = Array.from(event.clipboardData?.files ?? []).filter((f) => f.type.startsWith("image/"));
+          if (files.length === 0) return false;
+          event.preventDefault();
+          (async () => {
+            for (const f of files) {
+              try {
+                const sig = await boardsApi.signUpload(boardId, { filename: f.name || `pasted-${Date.now()}.png`, contentType: f.type });
+                const put = await fetch(sig.uploadUrl, { method: "PUT", headers: { "Content-Type": f.type }, body: f });
+                if (!put.ok) throw new Error(`Subida falló (${put.status})`);
+                const { schema } = view.state;
+                const node = schema.nodes.image?.create({ src: sig.publicUrl });
+                if (node) view.dispatch(view.state.tr.replaceSelectionWith(node));
+              } catch (e: any) {
+                toast.error(e?.message ?? "No se pudo pegar la imagen");
+              }
+            }
+          })();
+          return true;
+        },
         attributes: {
           class:
             "prose prose-sm sm:prose-base max-w-none min-h-[60vh] focus:outline-none text-brand-ink [&_table]:border-collapse [&_th]:border [&_th]:border-brand-line [&_th]:bg-brand-cream/40 [&_th]:p-2 [&_td]:border [&_td]:border-brand-line [&_td]:p-2 [&_img]:rounded-lg [&_img]:max-w-full",
@@ -116,7 +138,7 @@ function BoardPage() {
       </div>
       <div className="board-print-area relative">
         <EditorContent editor={editor} />
-        <DrawLayer doc={provider.doc} authorId={user.id} enabled={drawMode} onToggle={setDrawMode} />
+        <DrawLayer key={pageId} doc={provider.doc} authorId={user.id} enabled={drawMode} onToggle={setDrawMode} />
       </div>
     </div>
   );

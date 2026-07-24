@@ -155,7 +155,7 @@ export const exchangeApi = {
 };
 
 export const checkoutApi = {
-  createIntent: (body: { planId: string; customerEmail: string; customerName: string; customerPhone: string; customerDocument: string; userId?: string; slots?: SlotRef[] }) =>
+  createIntent: (body: { planId: string; customerEmail: string; customerName: string; customerPhone: string; customerDocument: string; userId?: string; slots?: SlotRef[]; password?: string }) =>
     apiPost<{
       intentId: string;
       reference: string;
@@ -227,6 +227,8 @@ export const teachersApi = {
     apiGet<ClassSession[]>("/teacher/schedule", status ? { status } : undefined),
   addNote: (classId: string, notes: string) =>
     apiPost<any>(`/teacher/classes/${classId}/notes`, { notes }),
+  addStudentNote: (studentId: string, notes: string) =>
+    apiPost<any>(`/teacher/students/${studentId}/notes`, { notes }),
   pinNote: (noteId: string, pinned: boolean) =>
     apiPatch<any>(`/teacher/notes/${noteId}/pin`, { pinned }),
   calendar: (from: string, to: string) =>

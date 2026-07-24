@@ -18,11 +18,11 @@ function TeacherStudentDetail() {
   const q = useQuery({ queryKey: ["teacher", "student", studentId], queryFn: () => teachersApi.studentDetail(studentId) });
   const student = q.data as any;
   const classes: any[] = student?.classesAsStudent ?? [];
-  const notes: any[] = classes.flatMap((c) => c.notes ?? []);
+  const notes: any[] = student?.teacherNotes ?? [];
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["teacher", "student", studentId] });
   const addM = useMutation({
-    mutationFn: () => teachersApi.addNote(classes[0].id, body.trim()),
+    mutationFn: () => teachersApi.addStudentNote(studentId, body.trim()),
     onSuccess: () => { toast.success("Nota guardada"); setBody(""); invalidate(); },
     onError: (e: any) => toast.error(e?.message ?? "No se pudo guardar"),
   });
@@ -46,7 +46,6 @@ function TeacherStudentDetail() {
 
   function saveNote() {
     if (!body.trim()) return;
-    if (!classes[0]) return toast.error("Aún no hay clases con este alumno para asociar la nota.");
     addM.mutate();
   }
 

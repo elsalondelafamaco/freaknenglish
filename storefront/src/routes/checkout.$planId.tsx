@@ -52,6 +52,8 @@ function CheckoutPage() {
 
   const loggedIn = !!user;
   const [form, setForm] = useState({ fullName: "", email: "", document: "", phone: "" });
+  const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -91,6 +93,10 @@ function CheckoutPage() {
       setError("Nombre, email, documento y celular son obligatorios.");
       return;
     }
+    if (!loggedIn) {
+      if (password.length < 8) { setError("La contraseña debe tener al menos 8 caracteres."); return; }
+      if (password !== password2) { setError("Las contraseñas no coinciden."); return; }
+    }
     setLoading(true);
     try {
       const created = await checkoutApi.createIntent({
@@ -101,6 +107,7 @@ function CheckoutPage() {
         customerPhone: form.phone.trim(),
         userId: user?.id, // si hay sesión, la suscripción se asocia a esta cuenta
         slots: selSlots,
+        password: loggedIn ? undefined : password,
       });
       window.location.href = created.checkoutUrl;
     } catch (err: any) {
@@ -188,6 +195,18 @@ function CheckoutPage() {
                     inputMode="tel" autoComplete="tel" required readOnly={lockField} disabled={lockField} />
                 </Field>
               </div>
+              {!loggedIn ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field label="Contraseña" htmlFor="password" hint="Mínimo 8 caracteres — con ella entrarás a tu portal.">
+                    <input id="password" type="password" className={inputClass} value={password}
+                      onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required minLength={8} />
+                  </Field>
+                  <Field label="Confirmar contraseña" htmlFor="password2">
+                    <input id="password2" type="password" className={inputClass} value={password2}
+                      onChange={(e) => setPassword2(e.target.value)} autoComplete="new-password" required minLength={8} />
+                  </Field>
+                </div>
+              ) : null}
               <ErrorBox>{error}</ErrorBox>
               <button type="submit" disabled={loading}
                 className="mt-2 inline-flex h-12 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white transition hover:bg-brand-ink-soft disabled:opacity-60">

@@ -31,6 +31,16 @@ export class TeachersController {
     return this.svc.studentDetail(u.id, id, u.role === 'admin')
   }
 
+  /** @endpoint POST /api/v1/teacher/students/:studentId/notes  (sin requerir clases) */
+  @Post('students/:studentId/notes')
+  addStudentNote(
+    @CurrentUser() u: AuthUser,
+    @Param('studentId') studentId: string,
+    @Body() body: { notes: string },
+  ) {
+    return this.svc.addStudentNote(u.id, studentId, body.notes, u.role === 'admin')
+  }
+
   /** @endpoint POST /api/v1/teacher/classes/:classId/notes */
   @Post('classes/:classId/notes')
   addNote(

@@ -34,6 +34,9 @@ export function useYStrokes(doc: Y.Doc) {
   const yArr = doc.getArray<Stroke>("strokes");
   const [strokes, setStrokes] = useState<Stroke[]>(() => yArr.toArray());
   useEffect(() => {
+    // Resincroniza al cambiar de página (doc nuevo): sin esto, el estado
+    // inicial conserva los trazos de la página anterior.
+    setStrokes(yArr.toArray());
     const onChange = () => setStrokes(yArr.toArray());
     yArr.observe(onChange);
     return () => yArr.unobserve(onChange);

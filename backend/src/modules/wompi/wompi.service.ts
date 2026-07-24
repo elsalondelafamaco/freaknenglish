@@ -157,6 +157,7 @@ export class WompiService {
         let user = await this.prisma.user.findUnique({ where: { email } })
         const token = crypto.randomBytes(24).toString('hex')
         const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7)
+        const chosenHash = (intent as any).passwordHash as string | null
         if (!user) {
           user = await this.prisma.user.create({
             data: {
@@ -165,10 +166,16 @@ export class WompiService {
               phone: intent.customerPhone ?? undefined,
               documentNumber: intent.customerDocument ?? undefined,
               role: 'student' as any,
-              setPasswordToken: token,
-              setPasswordTokenExpiresAt: expires,
+              // Si eligió contraseña en el checkout, la cuenta nace lista;
+              // si no, flujo de invitación por token.
+              ...(chosenHash
+                ? { passwordHash: chosenHash }
+                : { setPasswordToken: token, setPasswordTokenExpiresAt: expires }),
             },
           })
+        } else if (chosenHash && !user.passwordHash) {
+          // Cuenta invitada sin contraseña: adopta la elegida en el checkout.
+          user = await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash: chosenHash } })
         }
         userId = user.id
         await this.prisma.paymentIntent.update({ where: { id: intent.id }, data: { userId } })

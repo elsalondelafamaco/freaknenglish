@@ -45,17 +45,19 @@ export class TeachersService {
       })
       if (!rel) throw new ForbiddenException('No autorizado sobre este estudiante')
     }
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id: studentId },
       include: {
         classesAsStudent: {
           where: isAdmin ? {} : { teacherId },
           orderBy: { startsAt: 'desc' },
           take: 50,
-          include: { notes: { orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }] } },
         },
       },
     })
+    if (!user) return null
+    const teacherNotes = await this.notesForStudent(teacherId, studentId, isAdmin)
+    return { ...user, teacherNotes }
   }
 
   async addNote(teacherId: string, classId: string, notes: string, isAdmin = false) {
@@ -64,6 +66,34 @@ export class TeachersService {
     if (!c) throw new NotFoundException('Clase no encontrada')
     if (!isAdmin && c.teacherId !== teacherId) throw new ForbiddenException('La clase no es tuya')
     return this.prisma.classNote.create({ data: { teacherId, classId, notes: notes.trim() } })
+  }
+
+  /** Nota privada a nivel ESTUDIANTE (no requiere clases existentes). */
+  async addStudentNote(teacherId: string, studentId: string, notes: string, isAdmin = false) {
+    if (!notes || !notes.trim()) throw new BadRequestException('notes requerido')
+    if (!isAdmin) {
+      const rel = await this.prisma.user.findFirst({
+        where: {
+          id: studentId,
+          OR: [{ assignedTeacherId: teacherId }, { classesAsStudent: { some: { teacherId } } }],
+        },
+        select: { id: true },
+      })
+      if (!rel) throw new ForbiddenException('No autorizado sobre este estudiante')
+    }
+    return this.prisma.classNote.create({ data: { teacherId, studentId, notes: notes.trim() } })
+  }
+
+  /** Todas las notas del profe sobre el estudiante (nivel clase + estudiante). */
+  async notesForStudent(teacherId: string, studentId: string, isAdmin = false) {
+    return this.prisma.classNote.findMany({
+      where: {
+        OR: [{ studentId }, { class: { studentId } }],
+        ...(isAdmin ? {} : { teacherId }),
+      },
+      orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
+      take: 100,
+    })
   }
 
   async togglePin(teacherId: string, noteId: string, pinned: boolean, isAdmin = false) {

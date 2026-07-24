@@ -85,7 +85,8 @@ function AdminCalendar() {
         })}
       </div>
 
-      <div className="freakn-calendar rounded-3xl border border-brand-line bg-white p-4 shadow-soft">
+      <div className="freakn-calendar overflow-x-auto rounded-3xl border border-brand-line bg-white p-2 shadow-soft md:p-4">
+        <div className="min-w-[640px]">
         <FullCalendar
           plugins={[timeGridPlugin]}
           initialView="timeGridWeek"
@@ -115,6 +116,7 @@ function AdminCalendar() {
             );
           }}
         />
+        </div>
       </div>
     </div>
   );

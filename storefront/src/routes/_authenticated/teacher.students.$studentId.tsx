@@ -78,6 +78,7 @@ function TeacherStudentDetail() {
             {classes.length === 0 ? (
               <div className="p-6 text-sm text-brand-ink/65">Sin clases aún.</div>
             ) : (
+              <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className="sticky top-0 bg-brand-cream/60 text-xs uppercase tracking-wide text-brand-ink/60 backdrop-blur">
                   <tr><th className="px-4 py-3">Fecha</th><th className="px-4 py-3">Tema</th><th className="px-4 py-3">Estado</th></tr>
@@ -94,6 +95,7 @@ function TeacherStudentDetail() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>

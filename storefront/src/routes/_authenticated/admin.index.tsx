@@ -86,6 +86,7 @@ function AdminAnalytics() {
             {m.topTeachers.length === 0 ? (
               <div className="text-sm text-brand-ink/60">Sin clases validadas en el rango.</div>
             ) : (
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-xs uppercase text-brand-ink/50">
                   <tr><th className="py-2 text-left">Profesor</th><th className="text-right">Clases</th><th className="text-right">Horas</th></tr>
@@ -100,6 +101,7 @@ function AdminAnalytics() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </section>
 
@@ -108,6 +110,7 @@ function AdminAnalytics() {
             {(((m as any).stuckModules ?? []).length === 0) ? (
               <div className="text-sm text-brand-ink/60">Sin datos de progreso todavía.</div>
             ) : (
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-xs uppercase text-brand-ink/50">
                   <tr><th className="py-2 text-left">Módulo</th><th className="text-right">Estudiantes estancados</th></tr>
@@ -121,6 +124,7 @@ function AdminAnalytics() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </section>
 

@@ -37,6 +37,7 @@ function TeacherStudents() {
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-brand-line bg-white">
+          <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-brand-cream/40 text-xs uppercase tracking-wide text-brand-ink/60">
               <tr>
@@ -72,6 +73,7 @@ function TeacherStudents() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

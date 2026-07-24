@@ -20,7 +20,7 @@ const schema = z.object({
   BRAND_COLOR: z.string().default('#FEF6C7'),
   BRAND_INK: z.string().default('#0A0A0A'),
   BRAND_ACCENT: z.string().default('#0A0A0A'),
-  BRAND_LOGO_URL: z.string().optional().default(''),
+  BRAND_LOGO_URL: z.string().optional().default('https://freaknenglish.com/logo-email.png'),
   BRAND_SUPPORT_EMAIL: z.string().optional().default(''),
   WOMPI_PUBLIC_KEY: z.string().optional().default(''),
   WOMPI_PRIVATE_KEY: z.string().optional().default(''),

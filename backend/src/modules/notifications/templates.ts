@@ -23,28 +23,39 @@
 import { env } from '../../config/env'
 
 function cta(href: string, label: string) {
-  return `<a href="${href}" style="display:inline-block;background:${env.BRAND_ACCENT};color:#fff;text-decoration:none;padding:12px 20px;border-radius:14px;font-weight:600;margin-top:16px">${label}</a>`
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px auto 4px"><tr><td style="background:${env.BRAND_ACCENT};border-radius:999px">
+    <a href="${href}" style="display:inline-block;color:#fff;text-decoration:none;padding:14px 28px;font-weight:700;font-size:15px">${label}</a>
+  </td></tr></table>`
 }
 
 function wrap(title: string, body: string, opts: { preheader?: string } = {}) {
   const logo = env.BRAND_LOGO_URL
-    ? `<img src="${env.BRAND_LOGO_URL}" alt="${env.BRAND_NAME}" style="height:36px;margin-bottom:16px" />`
-    : `<div style="font-weight:800;font-size:20px;margin-bottom:16px;color:${env.BRAND_INK}">${env.BRAND_NAME}</div>`
+    ? `<img src="${env.BRAND_LOGO_URL}" alt="${env.BRAND_NAME}" height="40" style="height:40px;display:block;margin:0 auto" />`
+    : `<div style="font-weight:800;font-size:22px;color:${env.BRAND_INK};text-align:center">${env.BRAND_NAME}</div>`
   const support = env.BRAND_SUPPORT_EMAIL
-    ? `<p style="margin-top:8px;font-size:12px;color:#666">¿Dudas? Escríbenos a <a href="mailto:${env.BRAND_SUPPORT_EMAIL}" style="color:${env.BRAND_INK}">${env.BRAND_SUPPORT_EMAIL}</a></p>`
-    : ''
+    ? `¿Dudas? Escríbenos a <a href="mailto:${env.BRAND_SUPPORT_EMAIL}" style="color:${env.BRAND_INK};font-weight:600">${env.BRAND_SUPPORT_EMAIL}</a> — respondemos rápido.`
+    : 'Responde este correo si necesitas ayuda — lo leemos de verdad.'
   const preheader = opts.preheader
-    ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${opts.preheader}</div>`
+    ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0">${opts.preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>`
     : ''
-  return `<!doctype html><html><body style="font-family:system-ui,Arial,sans-serif;background:${env.BRAND_COLOR};padding:24px;color:${env.BRAND_INK};margin:0">
+  const year = new Date().getFullYear()
+  return `<!doctype html><html lang="es"><body style="font-family:'Segoe UI',system-ui,Arial,sans-serif;background:${env.BRAND_COLOR};padding:0;margin:0;color:${env.BRAND_INK}">
   ${preheader}
-  <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:24px;padding:32px">
-    ${logo}
-    <h1 style="font-size:24px;margin:0 0 12px;color:${env.BRAND_INK}">${title}</h1>
-    ${body}
-    ${support}
-    <p style="margin-top:24px;font-size:12px;color:#888">${env.BRAND_NAME} · ${env.BRAND_TAGLINE}</p>
-  </div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${env.BRAND_COLOR};padding:32px 16px"><tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
+      <tr><td style="padding:0 0 20px;text-align:center">
+        <a href="${env.PUBLIC_SITE_URL}" style="text-decoration:none">${logo}</a>
+      </td></tr>
+      <tr><td style="background:#ffffff;border-radius:24px;padding:36px 32px;text-align:left">
+        <h1 style="font-size:24px;line-height:1.25;margin:0 0 14px;color:${env.BRAND_INK}">${title}</h1>
+        <div style="font-size:15px;line-height:1.65;color:#333">${body}</div>
+      </td></tr>
+      <tr><td style="padding:20px 24px;text-align:center">
+        <p style="margin:0;font-size:12px;color:#8a8a8a;line-height:1.6">${support}</p>
+        <p style="margin:8px 0 0;font-size:12px;color:#aaa">${env.BRAND_NAME} · ${env.BRAND_TAGLINE} · © ${year}</p>
+      </td></tr>
+    </table>
+  </td></tr></table>
 </body></html>`
 }
 
@@ -57,9 +68,15 @@ const fmtDate = (iso: string) =>
 export const templates = {
   welcome: (v: { fullName: string }) =>
     wrap(
-      `¡Bienvenido, ${v.fullName}!`,
-      `<p>Tu cuenta en ${env.BRAND_NAME} está lista.</p>${cta(`${env.PUBLIC_SITE_URL}/app`, 'Entrar a mi cuenta')}`,
-      { preheader: 'Tu cuenta está activa' },
+      `¡Bienvenido a ${env.BRAND_NAME}, ${v.fullName}! 🎉`,
+      `<p>Desde hoy no memorizas inglés: <b>lo hablas</b>. Clases 1 a 1 en vivo, a tu ritmo y con tu propio profesor.</p>
+       <p>Esto es lo que te espera en tu portal:</p>
+       <p style="margin:4px 0">📅 &nbsp;Tu calendario con tus clases fijas de la semana</p>
+       <p style="margin:4px 0">📚 &nbsp;Módulos y prácticas para avanzar entre clases</p>
+       <p style="margin:4px 0">🧑‍🏫 &nbsp;Un aula colaborativa en vivo con tu profesor</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/app`, 'Entrar a mi portal')}
+       <p style="font-size:13px;color:#888;margin-top:16px">Tip: guarda este correo — tu primera clase es el mejor momento para empezar a hablar sin miedo. 💛</p>`,
+      { preheader: 'Tu cuenta está lista — esto es lo que sigue' },
     ),
 
   /**
@@ -94,8 +111,15 @@ export const templates = {
   teacher_assigned: (v: { teacherName: string }) =>
     wrap('Tienes un nuevo profesor', `<p>Fuiste asignado con <b>${v.teacherName}</b>. Ya puedes ver tus clases.</p>${cta(`${env.PUBLIC_SITE_URL}/app`, 'Ver mi horario')}`),
 
-  abandoned_cart: (v: { planName: string }) =>
-    wrap('Tu plan te está esperando', `<p>Completa tu inscripción al plan <b>${v.planName}</b>.</p>${cta(`${env.PUBLIC_SITE_URL}/checkout`, 'Completar inscripción')}`),
+  abandoned_cart: (v: { planName: string; fullName?: string }) =>
+    wrap(
+      'Tu cupo sigue disponible 💛',
+      `<p>${v.fullName ? `Hola ${v.fullName}, vimos` : 'Vimos'} que empezaste tu inscripción al plan <b>${v.planName}</b> y quedó a un paso de completarse.</p>
+       <p>Los horarios con inicio inmediato son los primeros en llenarse — retoma donde quedaste y asegura el tuyo en menos de 2 minutos.</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/checkout`, 'Retomar mi inscripción')}
+       <p style="font-size:13px;color:#888;margin-top:16px">¿Tuviste un problema con el pago o una duda del plan? Responde este correo y te ayudamos al instante.</p>`,
+      { preheader: 'Quedaste a un paso — tu horario aún está libre' },
+    ),
 
   nps_monthly: () =>
     wrap('¿Cómo vamos?', `<p>Cuéntanos del 0 al 10.</p>${cta(`${env.PUBLIC_SITE_URL}/app/settings`, 'Dejar mi opinión')}`),
@@ -136,6 +160,36 @@ export const templates = {
       `<p>Aprobaste tu checkpoint y avanzaste al nivel <b>${v.level}</b>. Ya tienes desbloqueados los nuevos módulos.</p>
        ${cta(`${env.PUBLIC_SITE_URL}/app/learning`, 'Ver mis nuevos módulos')}`,
       { preheader: '¡Subiste de nivel!' },
+    ),
+  // ─── Remarketing / ciclo de renovación ──────────────────────────────
+  renewal_reminder: (v: { fullName?: string; endDate: string; planName?: string }) =>
+    wrap(
+      'Tu plan vence en 5 días',
+      `<p>${v.fullName ? `Hola ${v.fullName}, tu` : 'Tu'} plan${v.planName ? ` <b>${v.planName}</b>` : ''} está activo hasta el <b>${v.endDate}</b>.</p>
+       <p>Renueva hoy y tu nuevo mes <b>empieza justo cuando termine el actual</b> — no pierdes ni un día, y conservas tu horario y tu profesor de siempre.</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/checkout`, 'Renovar mi plan')}
+       <p style="font-size:13px;color:#888;margin-top:16px">Si dejas pasar la fecha, guardamos tu cupo solo por 5 días hábiles.</p>`,
+      { preheader: 'Renueva sin perder tu horario ni tu profesor' },
+    ),
+
+  subscription_expired: (v: { fullName?: string }) =>
+    wrap(
+      'Tus clases quedaron en pausa ⏸️',
+      `<p>${v.fullName ? `Hola ${v.fullName}, tu` : 'Tu'} suscripción venció y tu acceso a las clases quedó en pausa.</p>
+       <p>La buena noticia: <b>tu horario y tu profesor siguen reservados para ti durante 5 días hábiles</b>. Reactiva tu plan y retomas exactamente donde ibas — mismo profe, misma hora, mismo progreso.</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/checkout`, 'Reactivar mi plan')}
+       <p style="font-size:13px;color:#888;margin-top:16px">Pasado ese tiempo tu franja se libera para otros estudiantes. No dejes que se la lleven. 💛</p>`,
+      { preheader: 'Tu horario sigue reservado por 5 días hábiles' },
+    ),
+
+  slot_released: (v: { fullName?: string }) =>
+    wrap(
+      'Liberamos tu horario… pero tu progreso sigue aquí',
+      `<p>${v.fullName ? `Hola ${v.fullName}, pasaron` : 'Pasaron'} los 5 días hábiles y tu franja quedó disponible para otros estudiantes.</p>
+       <p>Lo importante: <b>tu progreso, tu nivel y tu historial siguen intactos</b>. Elige un nuevo horario y vuelve a hablar inglés esta misma semana — te toma 2 minutos.</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/checkout`, 'Elegir mi nuevo horario')}
+       <p style="font-size:13px;color:#888;margin-top:16px">¿Volviste a tener disponibilidad en tu horario de antes? Puede que aún esté libre — revísalo ahora.</p>`,
+      { preheader: 'Tu progreso te espera — elige un nuevo horario' },
     ),
 } as const
 

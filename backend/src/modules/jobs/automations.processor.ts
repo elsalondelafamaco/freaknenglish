@@ -82,20 +82,27 @@ export class AutomationsProcessor extends WorkerHost {
       })
     }
 
-    // Abandoned cart (>30m PENDING)
-    const cutoff = new Date(now.getTime() - 30 * 60 * 1000)
+    // Carrito abandonado: 4 h después de dejar el correo sin completar el pago.
+    // Solo si el comprador NO tiene ningún pago aprobado posterior (remarketing).
+    const cutoff = new Date(now.getTime() - 4 * 60 * 60 * 1000)
     const carts = await this.prisma.paymentIntent.findMany({
-      where: { status: 'PENDING', createdAt: { lt: cutoff } },
+      where: { status: 'PENDING', createdAt: { lt: cutoff }, customerEmail: { not: '' } },
       include: { plan: true },
+      take: 200,
     })
     for (const c of carts) {
+      const paid = await this.prisma.paymentIntent.findFirst({
+        where: { customerEmail: { equals: c.customerEmail, mode: 'insensitive' }, status: 'APPROVED' },
+        select: { id: true },
+      })
+      if (paid) continue
       await this.notifications.enqueue({
         userId: c.userId ?? undefined,
         toEmail: c.customerEmail,
         template: 'abandoned_cart',
-        subject: 'Tu plan te está esperando',
+        subject: 'Tu cupo sigue disponible 💛',
         dedupeKey: `cart:${c.id}`,
-        vars: { planName: c.plan.name },
+        vars: { planName: c.plan.name, fullName: c.customerName?.split(' ')[0] },
       })
     }
   }
@@ -105,15 +112,52 @@ export class AutomationsProcessor extends WorkerHost {
 
     // Expira automáticamente las suscripciones cuyo período ya venció
     // (billing recurrente no implementado): status active -> expired.
-    const expired = await this.prisma.subscription.updateMany({
+    const toExpire = await this.prisma.subscription.findMany({
       where: { status: 'active' as any, currentPeriodEnd: { lt: now } },
-      data: { status: 'expired' as any },
+      include: { user: { select: { id: true, email: true, fullName: true } } },
     })
-    if (expired.count > 0) this.log.log(`Expired ${expired.count} subscriptions`)
+    if (toExpire.length > 0) {
+      await this.prisma.subscription.updateMany({
+        where: { id: { in: toExpire.map((s) => s.id) } },
+        data: { status: 'expired' as any },
+      })
+      this.log.log(`Expired ${toExpire.length} subscriptions`)
+      // Remarketing: acceso pausado, cupo reservado 5 días hábiles.
+      for (const sub of toExpire) {
+        await this.notifications.enqueue({
+          userId: sub.user.id,
+          toEmail: sub.user.email,
+          template: 'subscription_expired',
+          subject: 'Tus clases quedaron en pausa — tu cupo sigue reservado',
+          dedupeKey: `sub-expired:${sub.id}:${sub.currentPeriodEnd?.toISOString().slice(0, 10)}`,
+          vars: { fullName: sub.user.fullName?.split(' ')[0] },
+          type: 'payment',
+          title: 'Tu suscripción venció',
+          body: 'Tu horario queda reservado 5 días hábiles. Reactiva tu plan para seguir.',
+          linkUrl: '/checkout',
+        })
+      }
+    }
 
     // SDD-scheduling-v2: holds de 5 días hábiles y liberación automática.
     await this.slots.holdSlotsForExpired()
-    await this.slots.releaseExpiredHolds()
+    const releasedIds = await this.slots.releaseExpiredHolds()
+    for (const sid of releasedIds) {
+      const u = await this.prisma.user.findUnique({ where: { id: sid }, select: { email: true, fullName: true } })
+      if (!u) continue
+      await this.notifications.enqueue({
+        userId: sid,
+        toEmail: u.email,
+        template: 'slot_released',
+        subject: 'Liberamos tu horario — tu progreso sigue aquí',
+        dedupeKey: `slot-released:${sid}:${now.toISOString().slice(0, 10)}`,
+        vars: { fullName: u.fullName?.split(' ')[0] },
+        type: 'payment',
+        title: 'Tu horario se liberó',
+        body: 'Elige un nuevo horario para volver a clases.',
+        linkUrl: '/checkout',
+      })
+    }
     // Migración perezosa de horarios legacy a ScheduleSlots (idempotente).
     await this.slots.backfillFromPreferences()
     // Mantiene el horizonte de clases generado para estudiantes activos.
@@ -130,21 +174,31 @@ export class AutomationsProcessor extends WorkerHost {
       await this.scheduling.ensureUpcomingClasses(st.id).catch(() => null)
     }
 
-    const in3d = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
+    // Recordatorio de pago: 5 días antes del vencimiento (ventana de renovación).
+    const in5d = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000)
     const subs = await this.prisma.subscription.findMany({
       where: {
         status: 'active',
-        currentPeriodEnd: { gte: new Date(in3d.getTime() - 12 * 60 * 60 * 1000), lte: in3d },
+        currentPeriodEnd: { gte: new Date(in5d.getTime() - 24 * 60 * 60 * 1000), lte: in5d },
       },
-      include: { user: true },
+      include: { user: true, plan: true },
     })
     for (const s of subs) {
       await this.notifications.enqueue({
         userId: s.userId,
         toEmail: s.user.email,
-        template: 'renewal_3d',
-        subject: 'Tu plan se renueva en 3 días',
+        template: 'renewal_reminder',
+        subject: 'Tu plan vence en 5 días — renueva sin perder tu horario',
         dedupeKey: `renewal:${s.id}:${s.currentPeriodEnd?.toISOString().slice(0, 10)}`,
+        vars: {
+          fullName: s.user.fullName?.split(' ')[0],
+          planName: s.plan?.name,
+          endDate: s.currentPeriodEnd?.toLocaleDateString('es-CO', { day: '2-digit', month: 'long' }) ?? '',
+        },
+        type: 'payment',
+        title: 'Tu plan vence en 5 días',
+        body: 'Renueva ahora y tu nuevo mes se suma al actual.',
+        linkUrl: '/checkout',
       })
     }
 

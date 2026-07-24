@@ -7,6 +7,7 @@ import { JwtService } from '@nestjs/jwt'
 import { randomBytes, randomUUID, createHash } from 'crypto'
 import { StorageService } from '../storage/storage.service'
 import { NotificationsService } from '../notifications/notifications.service'
+import { SchedulingService } from '../scheduling/scheduling.service'
 
 @Injectable()
 export class AdminService {
@@ -23,6 +24,7 @@ export class AdminService {
     private jwt: JwtService,
     private storage: StorageService,
     private notificationsSvc: NotificationsService,
+    private schedulingSvc: SchedulingService,
   ) {}
 
   private async resolveExistingUserId(idOrAlias: string): Promise<string> {
@@ -518,10 +520,9 @@ export class AdminService {
       if (!t || t.role !== 'teacher') throw new Error('Invalid teacher')
     }
 
-    return this.prisma.user.update({
-      where: { id: resolvedStudentId },
-      data: { assignedTeacherId: resolvedTeacherId },
-    })
+    // Migración completa (slots, clases, aula) con validación de cruces.
+    await this.schedulingSvc.adminReassignTeacher(resolvedStudentId, resolvedTeacherId)
+    return this.prisma.user.findUnique({ where: { id: resolvedStudentId } })
   }
 
   /**

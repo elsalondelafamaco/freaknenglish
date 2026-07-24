@@ -294,12 +294,12 @@ export class SlotsService {
   }
 
   /** Libera holds vencidos y cancela las clases futuras de esos estudiantes. */
-  async releaseExpiredHolds() {
+  async releaseExpiredHolds(): Promise<string[]> {
     const expired = await this.prisma.scheduleSlot.findMany({
       where: { status: 'held', holdExpiresAt: { lt: new Date() } },
       select: { id: true, studentId: true },
     })
-    if (expired.length === 0) return
+    if (expired.length === 0) return []
     const ids = expired.map((e) => e.id)
     const studentIds = Array.from(new Set(expired.map((e) => e.studentId).filter(Boolean))) as string[]
     await this.prisma.scheduleSlot.deleteMany({ where: { id: { in: ids } } })
@@ -308,6 +308,7 @@ export class SlotsService {
       data: { status: 'cancelled' },
     })
     this.log.log(`Released holds of ${studentIds.length} student(s); future classes cancelled`)
+    return studentIds
   }
 
   // ── Utilidades ──────────────────────────────────────────────────────

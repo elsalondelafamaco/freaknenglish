@@ -391,6 +391,98 @@ export class SchedulingService {
     return reassigned
   }
 
+  // ── Admin: cambio de profesor con migración completa ────────────────
+  private static readonly DAY_NAMES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+
+  /**
+   * Reasigna al estudiante a otro profesor moviendo TODO su estado:
+   * slots recurrentes, clases futuras, aula (board) y espejo de preferencias.
+   * Si el nuevo profe tiene ocupada alguna franja del estudiante (horario
+   * cruzado), falla con el detalle para que el admin lo resuelva primero.
+   */
+  async adminReassignTeacher(studentId: string, newTeacherId: string | null) {
+    const slots = await this.prisma.scheduleSlot.findMany({
+      where: { studentId, status: { in: ['active', 'held'] } },
+    })
+
+    if (!newTeacherId) {
+      // Quitar profesor: libera franjas y cancela clases futuras.
+      await this.prisma.scheduleSlot.deleteMany({ where: { studentId } })
+      await this.prisma.class.updateMany({
+        where: { studentId, status: 'scheduled', startsAt: { gt: new Date() } },
+        data: { status: 'cancelled' },
+      })
+      await this.prisma.user.update({
+        where: { id: studentId },
+        data: { assignedTeacherId: null, scheduleAssignmentStatus: 'manual_pending' },
+      })
+      return { unassigned: true, movedSlots: 0, movedClasses: 0 }
+    }
+
+    // Horarios cruzados: franjas del estudiante ya ocupadas por el nuevo profe.
+    if (slots.length > 0) {
+      const conflicts = await this.prisma.scheduleSlot.findMany({
+        where: {
+          teacherId: newTeacherId,
+          status: { in: ['pending', 'active', 'held'] },
+          OR: slots.map((b) => ({ weekday: b.weekday, hour: b.hour })),
+          NOT: { studentId },
+        },
+        select: { weekday: true, hour: true },
+      })
+      if (conflicts.length > 0) {
+        const detail = conflicts
+          .map((c) => `${SchedulingService.DAY_NAMES[c.weekday]} ${c.hour}:00`)
+          .join(', ')
+        throw new BadRequestException(
+          `Horario cruzado: el nuevo profesor ya tiene ocupado ${detail}. Reprograma esas franjas antes de reasignar.`,
+        )
+      }
+      await this.prisma.scheduleSlot.updateMany({
+        where: { studentId },
+        data: { teacherId: newTeacherId },
+      })
+    }
+
+    // Aula nueva con el nuevo profe y migración de clases futuras.
+    const classroom = await this.boards.ensureClassroom(newTeacherId, studentId)
+    const meetingUrl = `/boards/${classroom.id}`
+    const future = await this.prisma.class.findMany({
+      where: { studentId, status: 'scheduled', startsAt: { gt: new Date() } },
+    })
+    let moved = 0
+    for (const f of future) {
+      // Cruce puntual (clase movida "solo esta semana" del nuevo profe).
+      const clash = await this.prisma.class.findFirst({
+        where: {
+          teacherId: newTeacherId,
+          id: { not: f.id },
+          status: { in: ['scheduled', 'rescheduled'] },
+          startsAt: { lt: f.endsAt },
+          endsAt: { gt: f.startsAt },
+        },
+        select: { id: true },
+      })
+      if (clash) {
+        await this.prisma.class.update({ where: { id: f.id }, data: { status: 'cancelled' } })
+        continue
+      }
+      await this.prisma.class.update({
+        where: { id: f.id },
+        data: { teacherId: newTeacherId, meetingUrl },
+      })
+      moved++
+    }
+
+    await this.prisma.user.update({
+      where: { id: studentId },
+      data: { assignedTeacherId: newTeacherId, scheduleAssignmentStatus: 'auto_assigned' },
+    })
+    await this.notifyTeacherAssigned(studentId, newTeacherId, `admin-reassign:${Date.now()}`)
+    await this.ensureUpcomingClasses(studentId)
+    return { unassigned: false, movedSlots: slots.length, movedClasses: moved }
+  }
+
   // ── Compra: materialización del horario tras pago aprobado ─────────
   /**
    * Idempotente (la llama finalizeTransaction). Orden de resolución:

@@ -45,6 +45,7 @@ function AdminSchedulePage() {
         ) : (pending.data ?? []).length === 0 ? (
           <p className="text-sm text-brand-ink/60">No hay solicitudes pendientes.</p>
         ) : (
+          <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left">
@@ -96,6 +97,7 @@ function AdminSchedulePage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

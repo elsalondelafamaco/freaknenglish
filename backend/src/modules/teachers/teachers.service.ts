@@ -1,10 +1,15 @@
 import { Injectable, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
+import { SlotsService } from '../scheduling/slots.service'
 
 @Injectable()
 export class TeachersService {
-  constructor(private prisma: PrismaService, private notifications: NotificationsService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+    private slots: SlotsService,
+  ) {}
 
   async students(teacherId: string) {
     // Incluye estudiantes explícitamente asignados (aún sin clases) Y
@@ -129,5 +134,184 @@ export class TeachersService {
     if (!abs || abs.teacherId !== teacherId) throw new ForbiddenException()
     await this.prisma.teacherAbsence.delete({ where: { id } })
     return { ok: true }
+  }
+
+  // ─── Calendario del profesor (SDD-scheduling-v2 §8) ──────────────────
+  private static readonly BOG_MS = 5 * 60 * 60 * 1000
+
+  private bogotaParts(d: Date): { weekday: number; hour: number } {
+    const b = new Date(d.getTime() - TeachersService.BOG_MS)
+    return { weekday: b.getUTCDay(), hour: b.getUTCHours() }
+  }
+
+  async calendar(teacherId: string, from: Date, to: Date) {
+    const [classes, absences] = await Promise.all([
+      this.prisma.class.findMany({
+        where: { teacherId, startsAt: { gte: from, lt: to } },
+        include: {
+          student: { select: { id: true, fullName: true, subscription: { select: { status: true } } } },
+        },
+        orderBy: { startsAt: 'asc' },
+      }),
+      this.prisma.teacherAbsence.findMany({
+        where: { teacherId, endsAt: { gte: from }, startsAt: { lt: to } },
+      }),
+    ])
+    return {
+      classes: classes.map((c) => ({
+        id: c.id,
+        startsAt: c.startsAt,
+        endsAt: c.endsAt,
+        status: c.status,
+        autoValidated: c.autoValidated,
+        meetingUrl: c.meetingUrl,
+        student: {
+          id: c.student.id,
+          fullName: c.student.fullName,
+          paymentActive: c.student.subscription?.status === 'active',
+        },
+      })),
+      absences,
+    }
+  }
+
+  /**
+   * Reprogramación por el profesor (drag & drop). scope:
+   *  - 'once'   → mueve SOLO esa clase; no toca el slot recurrente (AC-18).
+   *  - 'forever'→ mueve el ScheduleSlot + todas las clases futuras (AC-19).
+   */
+  async rescheduleClass(teacherId: string, classId: string, newStartsAt: Date, scope: 'once' | 'forever') {
+    const c = await this.prisma.class.findUnique({ where: { id: classId } })
+    if (!c) throw new NotFoundException('Clase no encontrada')
+    if (c.teacherId !== teacherId) throw new ForbiddenException('La clase no es tuya')
+    if (isNaN(newStartsAt.getTime())) throw new BadRequestException('Fecha inválida')
+    const newEndsAt = new Date(newStartsAt.getTime() + 50 * 60 * 1000)
+
+    // AC-20: no soltar sobre otra clase del profe.
+    const clash = await this.prisma.class.findFirst({
+      where: {
+        teacherId,
+        id: { not: classId },
+        status: { in: ['scheduled', 'rescheduled'] },
+        startsAt: { lt: newEndsAt },
+        endsAt: { gt: newStartsAt },
+      },
+      select: { id: true },
+    })
+    if (clash) throw new BadRequestException('Ya tienes una clase en ese horario')
+
+    const student = await this.prisma.user.findUnique({
+      where: { id: c.studentId },
+      select: { id: true, email: true, fullName: true },
+    })
+    const fmt = (d: Date) =>
+      new Date(d.getTime() - TeachersService.BOG_MS).toISOString().slice(0, 16).replace('T', ' ')
+
+    if (scope === 'once') {
+      const updated = await this.prisma.class.update({
+        where: { id: classId },
+        data: { startsAt: newStartsAt, endsAt: newEndsAt },
+      })
+      if (student) {
+        await this.notifications.enqueue({
+          userId: student.id,
+          toEmail: student.email,
+          template: 'class_rescheduled',
+          subject: 'Tu clase cambió de horario',
+          dedupeKey: `teacher-reschedule-once:${classId}:${newStartsAt.toISOString()}`,
+          vars: { fullName: student.fullName, newDate: fmt(newStartsAt) },
+          type: 'class',
+          title: 'Clase reprogramada',
+          body: `Tu profesor movió la clase a ${fmt(newStartsAt)} (solo esta semana).`,
+          linkUrl: '/app/calendar',
+        })
+      }
+      return { scope, class: updated }
+    }
+
+    // scope === 'forever'
+    const oldParts = this.bogotaParts(c.startsAt)
+    const newParts = this.bogotaParts(newStartsAt)
+    const cfg = await this.slots.getConfig()
+    if (!cfg.days.includes(newParts.weekday)) throw new BadRequestException('Día fuera de la ventana permitida')
+    if (newParts.hour < cfg.startHour || newParts.hour > cfg.endHour) {
+      throw new BadRequestException('Hora fuera de la ventana permitida')
+    }
+    // Franja recurrente destino libre (puede ser del mismo estudiante).
+    const occupied = await this.prisma.scheduleSlot.findFirst({
+      where: {
+        teacherId,
+        weekday: newParts.weekday,
+        hour: newParts.hour,
+        status: { in: ['pending', 'active', 'held'] },
+        NOT: { studentId: c.studentId },
+      },
+      select: { id: true },
+    })
+    if (occupied) throw new BadRequestException('Esa franja recurrente ya está ocupada')
+
+    // Mover (o crear, legacy) el slot recurrente.
+    const slot = await this.prisma.scheduleSlot.findFirst({
+      where: { teacherId, studentId: c.studentId, weekday: oldParts.weekday, hour: oldParts.hour },
+    })
+    if (slot) {
+      await this.prisma.scheduleSlot.update({
+        where: { id: slot.id },
+        data: { weekday: newParts.weekday, hour: newParts.hour },
+      })
+    } else {
+      await this.prisma.scheduleSlot.create({
+        data: {
+          teacherId,
+          studentId: c.studentId,
+          weekday: newParts.weekday,
+          hour: newParts.hour,
+          status: 'active',
+        },
+      })
+    }
+    // Espejo de lectura en el usuario.
+    const u = await this.prisma.user.findUnique({ where: { id: c.studentId }, select: { schedulePreferences: true } })
+    const prefs = ((u?.schedulePreferences as any as Array<{ weekday: number; hour: number }>) ?? []).map((b) =>
+      b.weekday === oldParts.weekday && b.hour === oldParts.hour ? { weekday: newParts.weekday, hour: newParts.hour } : b,
+    )
+    await this.prisma.user.update({ where: { id: c.studentId }, data: { schedulePreferences: prefs as any } })
+
+    // Reprogramar TODAS las clases futuras del patrón viejo.
+    const future = await this.prisma.class.findMany({
+      where: { teacherId, studentId: c.studentId, status: 'scheduled', startsAt: { gte: new Date() } },
+    })
+    const deltaDays = newParts.weekday - oldParts.weekday
+    let moved = 0
+    for (const f of future) {
+      const parts = this.bogotaParts(f.startsAt)
+      if (parts.weekday !== oldParts.weekday || parts.hour !== oldParts.hour) continue
+      const wall = new Date(f.startsAt.getTime() - TeachersService.BOG_MS)
+      const newWall = Date.UTC(
+        wall.getUTCFullYear(), wall.getUTCMonth(), wall.getUTCDate() + deltaDays, newParts.hour, 0, 0,
+      )
+      const ns = new Date(newWall + TeachersService.BOG_MS)
+      if (ns.getTime() <= Date.now()) continue // no mover al pasado (ej. Vie→Lun misma semana)
+      await this.prisma.class.update({
+        where: { id: f.id },
+        data: { startsAt: ns, endsAt: new Date(ns.getTime() + 50 * 60 * 1000) },
+      })
+      moved++
+    }
+    if (student) {
+      await this.notifications.enqueue({
+        userId: student.id,
+        toEmail: student.email,
+        template: 'class_rescheduled',
+        subject: 'Tu horario de clases cambió',
+        dedupeKey: `teacher-reschedule-forever:${classId}:${newStartsAt.toISOString()}`,
+        vars: { fullName: student.fullName, newDate: fmt(newStartsAt) },
+        type: 'class',
+        title: 'Horario actualizado',
+        body: `Tus clases pasan a los ${['domingos','lunes','martes','miércoles','jueves','viernes','sábados'][newParts.weekday]} a las ${newParts.hour}:00.`,
+        linkUrl: '/app/calendar',
+      })
+    }
+    return { scope, movedClasses: moved }
   }
 }

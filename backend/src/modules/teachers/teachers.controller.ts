@@ -70,6 +70,22 @@ export class TeachersController {
     return { availability, reassigned }
   }
 
+  /** @endpoint GET /api/v1/teacher/calendar?from=ISO&to=ISO */
+  @Get('calendar')
+  calendar(@CurrentUser() u: AuthUser, @Query('from') from: string, @Query('to') to: string) {
+    return this.svc.calendar(u.id, new Date(from), new Date(to))
+  }
+
+  /** @endpoint POST /api/v1/teacher/classes/:id/reschedule  Body: { startsAt, scope: 'once'|'forever' } */
+  @Post('classes/:id/reschedule')
+  rescheduleClass(
+    @CurrentUser() u: AuthUser,
+    @Param('id') id: string,
+    @Body() body: { startsAt: string; scope: 'once' | 'forever' },
+  ) {
+    return this.svc.rescheduleClass(u.id, id, new Date(body.startsAt), body.scope === 'forever' ? 'forever' : 'once')
+  }
+
   /** @endpoint GET /api/v1/teacher/absences (self) */
   @Get('absences')
   getAbsences(@CurrentUser() u: AuthUser) { return this.svc.listAbsences(u.id) }

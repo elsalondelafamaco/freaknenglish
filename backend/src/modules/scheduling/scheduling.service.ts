@@ -239,6 +239,38 @@ export class SchedulingService {
 
   // ── Admin ──────────────────────────────────────────────────────────
 
+  /** Calendario global: clases de todos los profesores (solo lectura, AC-26). */
+  async adminCalendar(from: Date, to: Date) {
+    const classes = await this.prisma.class.findMany({
+      where: { startsAt: { gte: from, lt: to }, teacherId: { not: null } },
+      include: {
+        teacher: { select: { id: true, fullName: true } },
+        student: { select: { id: true, fullName: true, subscription: { select: { status: true } } } },
+      },
+      orderBy: { startsAt: 'asc' },
+    })
+    const teachers = await this.prisma.user.findMany({
+      where: { role: 'teacher', deletedAt: null },
+      select: { id: true, fullName: true },
+      orderBy: { fullName: 'asc' },
+    })
+    return {
+      teachers,
+      classes: classes.map((c) => ({
+        id: c.id,
+        startsAt: c.startsAt,
+        endsAt: c.endsAt,
+        status: c.status,
+        teacher: c.teacher,
+        student: {
+          id: c.student.id,
+          fullName: c.student.fullName,
+          paymentActive: c.student.subscription?.status === 'active',
+        },
+      })),
+    }
+  }
+
   async pendingRequests() {
     return this.prisma.user.findMany({
       where: { scheduleAssignmentStatus: 'manual_pending', deletedAt: null },

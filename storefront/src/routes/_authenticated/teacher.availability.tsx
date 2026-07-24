@@ -1,137 +1,179 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Paintbrush, Save } from "lucide-react";
 import { toast } from "sonner";
-import { teachersApi } from "@/lib/api/endpoints";
+import { scheduleApi, teachersApi } from "@/lib/api/endpoints";
 
 export const Route = createFileRoute("/_authenticated/teacher/availability")({
-  head: () => ({ meta: [{ title: "Mi disponibilidad — Freakn for Teachers" }] }),
-  component: TeacherAvailability,
+  head: () => ({ meta: [{ title: "Disponibilidad — Freakn for Teachers" }] }),
+  component: AvailabilityEditor,
 });
 
-const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-const HOURS = Array.from({ length: 15 }, (_, i) => i + 7); // 7..21
+const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const DAY_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+const cellKey = (d: number, h: number) => `${d}:${h}`;
 
-function key(w: number, h: number) {
-  return `${w}:${h}`;
+/** Expande rangos {weekday,startsAt,endsAt} → set de celdas "d:h". */
+function rangesToCells(ranges: Array<{ weekday: number; startsAt: string; endsAt: string }>): Set<string> {
+  const set = new Set<string>();
+  for (const r of ranges) {
+    const s = parseInt(r.startsAt.split(":")[0] ?? "0", 10);
+    const e = parseInt(r.endsAt.split(":")[0] ?? "0", 10);
+    for (let h = s; h < e; h++) set.add(cellKey(r.weekday, h));
+  }
+  return set;
 }
 
-function TeacherAvailability() {
+/** Fusiona celdas contiguas por día → rangos para el backend. */
+function cellsToRanges(cells: Set<string>): Array<{ weekday: number; startsAt: string; endsAt: string }> {
+  const byDay = new Map<number, number[]>();
+  for (const k of cells) {
+    const [d, h] = k.split(":").map(Number);
+    if (!byDay.has(d)) byDay.set(d, []);
+    byDay.get(d)!.push(h);
+  }
+  const out: Array<{ weekday: number; startsAt: string; endsAt: string }> = [];
+  for (const [d, hours] of byDay) {
+    hours.sort((a, b) => a - b);
+    let start = hours[0];
+    let prev = hours[0];
+    for (let i = 1; i <= hours.length; i++) {
+      const h = hours[i];
+      if (h !== prev + 1) {
+        out.push({ weekday: d, startsAt: `${String(start).padStart(2, "0")}:00`, endsAt: `${String(prev + 1).padStart(2, "0")}:00` });
+        start = h;
+      }
+      prev = h;
+    }
+  }
+  return out;
+}
+
+function AvailabilityEditor() {
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["teacher", "availability"], queryFn: teachersApi.myAvailability });
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const cfgQ = useQuery({ queryKey: ["schedule", "config"], queryFn: () => scheduleApi.config() });
+  const availQ = useQuery({ queryKey: ["teacher", "availability"], queryFn: () => teachersApi.myAvailability() });
+
+  const [cells, setCells] = useState<Set<string>>(new Set());
+  const [dirty, setDirty] = useState(false);
+  const paintMode = useRef<"add" | "remove" | null>(null);
+  const loaded = useRef(false);
 
   useEffect(() => {
-    if (!q.data) return;
-    const s = new Set<string>();
-    for (const slot of q.data) {
-      const start = parseInt(slot.startsAt.split(":")[0] ?? "0", 10);
-      const end = parseInt(slot.endsAt.split(":")[0] ?? "0", 10);
-      for (let h = start; h < end; h++) s.add(key(slot.weekday, h));
-    }
-    setSelected(s);
-  }, [q.data]);
+    if (loaded.current || !availQ.data) return;
+    setCells(rangesToCells(availQ.data));
+    loaded.current = true;
+  }, [availQ.data]);
 
-  const save = useMutation({
-    mutationFn: () => {
-      // Convertir horas seleccionadas → slots por hora individual.
-      const slots: Array<{ weekday: number; startsAt: string; endsAt: string }> = [];
-      for (const k of selected) {
-        const [w, h] = k.split(":").map(Number);
-        slots.push({
-          weekday: w,
-          startsAt: `${String(h).padStart(2, "0")}:00`,
-          endsAt: `${String(h + 1).padStart(2, "0")}:00`,
-        });
-      }
-      return teachersApi.saveMyAvailability(slots);
-    },
+  const saveM = useMutation({
+    mutationFn: () => teachersApi.saveMyAvailability(cellsToRanges(cells)),
     onSuccess: (r) => {
+      setDirty(false);
       qc.invalidateQueries({ queryKey: ["teacher", "availability"] });
-      qc.invalidateQueries({ queryKey: ["schedule", "grid"] });
-      const n = r.reassigned.length;
-      toast.success(
-        n > 0
-          ? `Disponibilidad guardada. ${n} estudiante(s) asignados automáticamente.`
-          : "Disponibilidad guardada.",
-      );
+      qc.invalidateQueries({ queryKey: ["schedule"] });
+      const n = r?.reassigned?.length ?? 0;
+      toast.success(n > 0 ? `Disponibilidad guardada. ${n} estudiante(s) pendiente(s) asignados.` : "Disponibilidad guardada.");
     },
-    onError: (e: any) => toast.error(e?.message ?? "Error al guardar"),
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo guardar"),
   });
 
-  function toggle(w: number, h: number) {
-    setSelected((prev) => {
+  const cfg = cfgQ.data;
+  const days = useMemo(() => (cfg ? [...cfg.days].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)) : []), [cfg]);
+  const hours = useMemo(
+    () => (cfg ? Array.from({ length: cfg.endHour - cfg.startHour + 1 }, (_, i) => cfg.startHour + i) : []),
+    [cfg],
+  );
+
+  function applyPaint(d: number, h: number) {
+    const k = cellKey(d, h);
+    setCells((prev) => {
       const next = new Set(prev);
-      const k = key(w, h);
-      if (next.has(k)) next.delete(k);
-      else next.add(k);
+      if (paintMode.current === "add") next.add(k);
+      else next.delete(k);
       return next;
     });
+    setDirty(true);
   }
 
+  if (cfgQ.isLoading || availQ.isLoading) return <p className="text-sm text-brand-ink/60">Cargando…</p>;
+
   return (
-    <div className="mx-auto max-w-5xl py-6">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="flex flex-col gap-5" onMouseUp={() => (paintMode.current = null)} onMouseLeave={() => (paintMode.current = null)}>
+      <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-brand-ink">Mi disponibilidad</h1>
-          <p className="text-sm text-brand-ink/65">
-            Marca los bloques en los que puedes dar clase. Al guardar, los estudiantes
-            en lista de espera cuyos horarios queden cubiertos se te asignarán
-            automáticamente.
+          <h1 className="text-3xl font-bold tracking-tight text-brand-ink">Disponibilidad</h1>
+          <p className="mt-1 max-w-xl text-sm text-brand-ink/65">
+            <Paintbrush className="mr-1 inline size-3.5" />
+            Pinta las horas en las que puedes dar clase (click o arrastra). Tus estudiantes actuales no se
+            ven afectados: esto solo aplica para nuevas asignaciones.
           </p>
         </div>
         <button
-          onClick={() => save.mutate()}
-          disabled={save.isPending}
-          className="rounded-full bg-brand-ink px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          onClick={() => saveM.mutate()}
+          disabled={!dirty || saveM.isPending}
+          className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-50"
         >
-          {save.isPending ? "Guardando…" : "Guardar"}
+          <Save className="size-4" /> {saveM.isPending ? "Guardando…" : dirty ? "Guardar cambios" : "Guardado"}
         </button>
+      </header>
+
+      <div className="overflow-x-auto rounded-3xl border border-brand-line bg-white p-4 shadow-soft">
+        <div className="min-w-[560px] select-none">
+          <div className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, 1fr)` }}>
+            <div />
+            {days.map((d) => (
+              <div key={d} className="pb-2 text-center text-xs font-bold uppercase tracking-wide text-brand-ink/70">
+                <span className="hidden md:inline">{DAY_NAMES[d]}</span>
+                <span className="md:hidden">{DAY_SHORT[d]}</span>
+              </div>
+            ))}
+            {hours.map((h) => (
+              <RowCells key={h} h={h} days={days} cells={cells} paintMode={paintMode} onPaint={applyPaint} />
+            ))}
+          </div>
+        </div>
       </div>
 
-      {q.isLoading ? (
-        <p className="text-sm">Cargando…</p>
-      ) : (
-        <div className="overflow-x-auto rounded-2xl border border-brand-line bg-white p-4">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr>
-                <th className="p-2 text-left">Hora</th>
-                {DAYS.map((d, i) => (
-                  <th key={i} className="p-2 text-center">
-                    {d}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {HOURS.map((h) => (
-                <tr key={h}>
-                  <td className="p-2 font-medium">{String(h).padStart(2, "0")}:00</td>
-                  {DAYS.map((_, wd) => {
-                    const isOn = selected.has(key(wd, h));
-                    return (
-                      <td key={wd} className="p-1 text-center">
-                        <button
-                          type="button"
-                          onClick={() => toggle(wd, h)}
-                          className={`h-9 w-full rounded-lg border text-xs transition ${
-                            isOn
-                              ? "border-brand-ink bg-brand-ink text-white"
-                              : "border-brand-line hover:border-brand-ink"
-                          }`}
-                        >
-                          {isOn ? "✓" : ""}
-                        </button>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <p className="text-xs text-brand-ink/55">
+        {cells.size} hora(s) disponibles por semana · Clases de {cfg?.durationMin ?? 50} min
+      </p>
     </div>
+  );
+}
+
+function RowCells({
+  h, days, cells, paintMode, onPaint,
+}: {
+  h: number;
+  days: number[];
+  cells: Set<string>;
+  paintMode: React.MutableRefObject<"add" | "remove" | null>;
+  onPaint: (d: number, h: number) => void;
+}) {
+  return (
+    <>
+      <div className="flex items-center justify-end pr-3 text-[11px] font-medium text-brand-ink/55">{h}:00</div>
+      {days.map((d) => {
+        const on = cells.has(cellKey(d, h));
+        return (
+          <div
+            key={`${d}:${h}`}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              paintMode.current = on ? "remove" : "add";
+              onPaint(d, h);
+            }}
+            onMouseEnter={() => {
+              if (paintMode.current) onPaint(d, h);
+            }}
+            className={`m-0.5 h-10 cursor-pointer rounded-lg border transition ${
+              on ? "border-brand-ink bg-brand-ink/90" : "border-brand-line bg-brand-cream/30 hover:bg-brand-cream/70"
+            }`}
+            title={`${DAY_NAMES[d]} ${h}:00–${h}:50`}
+          />
+        );
+      })}
+    </>
   );
 }

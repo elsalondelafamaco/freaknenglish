@@ -24,7 +24,7 @@ function CheckoutSelect() {
         </Link>
 
         <header className="mt-8 max-w-2xl">
-          <p className="text-xs font-medium uppercase tracking-wider text-brand-ink/55">Paso 1 de 2 · Elige tu plan</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-brand-ink/55">Paso 1 de 3 · Elige tu plan</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">
             Escoge tu intensidad y empieza a hablar inglés
           </h1>
@@ -42,7 +42,7 @@ function CheckoutSelect() {
               return (
                 <Link
                   key={plan.id}
-                  to="/checkout/$planId"
+                  to="/checkout/schedule/$planId"
                   params={{ planId: plan.id }}
                   className="group flex flex-col rounded-3xl border border-brand-line bg-white p-6 shadow-soft transition hover:-translate-y-0.5 hover:border-brand-ink/30"
                 >

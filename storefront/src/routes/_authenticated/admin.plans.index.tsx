@@ -38,8 +38,78 @@ function AdminPlans() {
         </div>
       )}
 
+      <ScheduleCard />
+
       <ContactCard />
     </div>
+  );
+}
+
+const DAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+function ScheduleCard() {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ["admin", "schedule-config"], queryFn: () => adminApi.scheduleConfig() });
+  const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [startHour, setStartHour] = useState(7);
+  const [endHour, setEndHour] = useState(18);
+  const [maxPerDay, setMaxPerDay] = useState(1);
+  useEffect(() => {
+    if (q.data) {
+      setDays(q.data.days);
+      setStartHour(q.data.startHour);
+      setEndHour(q.data.endHour);
+      setMaxPerDay(q.data.maxPerDay);
+    }
+  }, [q.data]);
+  const saveM = useMutation({
+    mutationFn: () => adminApi.updateScheduleConfig({ days, startHour, endHour, maxPerDay }),
+    onSuccess: () => {
+      toast.success("Agenda actualizada");
+      qc.invalidateQueries({ queryKey: ["admin", "schedule-config"] });
+      qc.invalidateQueries({ queryKey: ["schedule"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Error"),
+  });
+  return (
+    <section className="rounded-2xl border border-brand-line bg-white p-5">
+      <h3 className="text-sm font-semibold text-brand-ink">Agenda global</h3>
+      <p className="text-xs text-brand-ink/55">Días y horas en que se pueden agendar clases (aplica al picker de compra).</p>
+      <div className="mt-3 flex flex-wrap items-end gap-4">
+        <div>
+          <div className="text-xs font-semibold text-brand-ink/70">Días</div>
+          <div className="mt-1 flex gap-1">
+            {DAY_LABELS.map((lbl, d) => (
+              <button
+                key={d}
+                onClick={() => setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()))}
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${days.includes(d) ? "bg-brand-ink text-white" : "border border-brand-line text-brand-ink/60"}`}
+              >
+                {lbl}
+              </button>
+            ))}
+          </div>
+        </div>
+        <label className="block text-xs font-semibold text-brand-ink/70">
+          Desde (hora)
+          <input type="number" min={0} max={23} value={startHour} onChange={(e) => setStartHour(Number(e.target.value))} className="mt-1 w-24 rounded-xl border border-brand-line px-3 py-2 text-sm" />
+        </label>
+        <label className="block text-xs font-semibold text-brand-ink/70">
+          Hasta (última clase)
+          <input type="number" min={0} max={23} value={endHour} onChange={(e) => setEndHour(Number(e.target.value))} className="mt-1 w-24 rounded-xl border border-brand-line px-3 py-2 text-sm" />
+        </label>
+        <label className="block text-xs font-semibold text-brand-ink/70">
+          Máx clases/día
+          <input type="number" min={1} max={4} value={maxPerDay} onChange={(e) => setMaxPerDay(Number(e.target.value))} className="mt-1 w-24 rounded-xl border border-brand-line px-3 py-2 text-sm" />
+        </label>
+        <button onClick={() => saveM.mutate()} disabled={saveM.isPending} className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-60">
+          <Save className="size-3.5" /> {saveM.isPending ? "Guardando…" : "Guardar agenda"}
+        </button>
+      </div>
+      <p className="mt-2 text-[11px] text-brand-ink/50">
+        Última franja: {endHour}:00–{endHour}:50 · Clases de 50 min
+      </p>
+    </section>
   );
 }
 

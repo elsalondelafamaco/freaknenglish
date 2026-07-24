@@ -86,7 +86,12 @@
     "vite-tsconfig-paths": "^6.0.2",
     "y-protocols": "^1.0.7",
     "yjs": "^13.6.31",
-    "zod": "^3.24.2"
+    "zod": "^3.24.2",
+    "@fullcalendar/core": "^6.1.15",
+    "@fullcalendar/react": "^6.1.15",
+    "@fullcalendar/timegrid": "^6.1.15",
+    "@fullcalendar/daygrid": "^6.1.15",
+    "@fullcalendar/interaction": "^6.1.15"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",

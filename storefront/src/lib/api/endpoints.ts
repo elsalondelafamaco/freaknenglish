@@ -95,11 +95,23 @@ export const usersApi = {
 };
 
 // ─── Scheduling ────────────────────────────────────────────────────────
+export type SlotRef = { weekday: number; hour: number };
+export type ScheduleHints = { assignable: boolean; hints: Array<SlotRef & { auto: boolean }> };
+
 export const scheduleApi = {
   grid: () => apiGet<{ grid: Record<string, number>; hours: number[] }>("/schedule/availability-grid"),
+  config: () =>
+    apiGet<{ days: number[]; startHour: number; endHour: number; maxPerDay: number; durationMin: number }>(
+      "/public/schedule/config",
+    ),
+  availability: (slots: SlotRef[]) =>
+    apiPost<ScheduleHints>("/public/schedule/availability", { slots }),
+  availabilityMine: (slots: SlotRef[]) =>
+    apiPost<ScheduleHints>("/schedule/availability", { slots }),
   mine: () => apiGet<{
     schedulePreferences: Array<{ weekday: number; hour: number }> | null;
     scheduleAssignmentStatus: "auto_assigned" | "manual_pending" | null;
+    slots?: Array<{ weekday: number; hour: number; status: string }>;
     assignedTeacher: { id: string; fullName: string } | null;
   }>("/schedule/mine"),
   submit: (blocks: Array<{ weekday: number; hour: number }>) =>
@@ -143,7 +155,7 @@ export const exchangeApi = {
 };
 
 export const checkoutApi = {
-  createIntent: (body: { planId: string; customerEmail: string; customerName: string; customerPhone: string; customerDocument: string; userId?: string }) =>
+  createIntent: (body: { planId: string; customerEmail: string; customerName: string; customerPhone: string; customerDocument: string; userId?: string; slots?: SlotRef[] }) =>
     apiPost<{
       intentId: string;
       reference: string;
@@ -153,6 +165,7 @@ export const checkoutApi = {
       publicKey: string;
       redirectUrl: string;
       checkoutUrl: string;
+      assignmentMode: "auto" | "manual" | null;
     }>("/checkout/intents", body),
   status: (params: { reference?: string; id?: string }) =>
     apiGet<{
@@ -216,6 +229,21 @@ export const teachersApi = {
     apiPost<any>(`/teacher/classes/${classId}/notes`, { notes }),
   pinNote: (noteId: string, pinned: boolean) =>
     apiPatch<any>(`/teacher/notes/${noteId}/pin`, { pinned }),
+  calendar: (from: string, to: string) =>
+    apiGet<{
+      classes: Array<{
+        id: string;
+        startsAt: string;
+        endsAt: string;
+        status: string;
+        autoValidated: boolean;
+        meetingUrl: string | null;
+        student: { id: string; fullName: string; paymentActive: boolean };
+      }>;
+      absences: Array<{ id: string; startsAt: string; endsAt: string; reason?: string | null }>;
+    }>("/teacher/calendar", { from, to }),
+  rescheduleClass: (id: string, startsAt: string, scope: "once" | "forever") =>
+    apiPost<any>(`/teacher/classes/${id}/reschedule`, { startsAt, scope }),
   myAvailability: () =>
     apiGet<Array<{ id: string; weekday: number; startsAt: string; endsAt: string }>>(
       "/teacher/availability",
@@ -250,6 +278,24 @@ export const adminApi = {
   updateCheckpoint: (id: string, body: any) => apiPatch<any>(`/admin/content/checkpoints/${id}`, body),
   deleteCheckpoint: (id: string) => apiPatch<any>(`/admin/content/checkpoints/${id}/delete`, {}),
   plans: () => apiGet<any[]>("/admin/plans"),
+  calendar: (from: string, to: string) =>
+    apiGet<{
+      teachers: Array<{ id: string; fullName: string }>;
+      classes: Array<{
+        id: string;
+        startsAt: string;
+        endsAt: string;
+        status: string;
+        teacher: { id: string; fullName: string } | null;
+        student: { id: string; fullName: string; paymentActive: boolean };
+      }>;
+    }>("/admin/calendar", { from, to }),
+  scheduleConfig: () =>
+    apiGet<{ days: number[]; startHour: number; endHour: number; maxPerDay: number; durationMin: number }>(
+      "/admin/settings/schedule",
+    ),
+  updateScheduleConfig: (body: Partial<{ days: number[]; startHour: number; endHour: number; maxPerDay: number }>) =>
+    apiPost<any>("/admin/settings/schedule", body),
   contactSettings: () => apiGet<{ whatsappNumber: string; whatsappMessage: string }>("/admin/settings/contact"),
   updateContact: (body: { whatsappNumber?: string; whatsappMessage?: string }) =>
     apiPatch<{ whatsappNumber: string; whatsappMessage: string }>("/admin/settings/contact", body),

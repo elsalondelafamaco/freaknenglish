@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { RolesGuard } from '../../common/guards/roles.guard'
@@ -42,6 +42,13 @@ export class SchedulingController {
   @Post('schedule/preferences')
   submit(@CurrentUser() u: AuthUser, @Body() body: { blocks: ScheduleBlock[] }) {
     return this.svc.submitPreferences(u.id, body.blocks)
+  }
+
+  /** @endpoint GET /api/v1/admin/calendar?from&to (todas las clases, AC-26) */
+  @Roles('admin')
+  @Get('admin/calendar')
+  adminCalendar(@Query('from') from: string, @Query('to') to: string) {
+    return this.svc.adminCalendar(new Date(from), new Date(to))
   }
 
   /** @endpoint GET /api/v1/admin/schedule/requests */

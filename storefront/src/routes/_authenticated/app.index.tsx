@@ -90,6 +90,18 @@ function DashboardPage() {
         </p>
       </header>
 
+      {user.scheduleAssignmentStatus === "manual_pending" ? (
+        <section className="rounded-3xl border border-brand-line bg-brand-yellow-soft p-6 md:p-7">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-brand-ink">
+            <Sparkles className="size-3.5" /> Estamos coordinando tu profesor
+          </div>
+          <p className="mt-2 max-w-xl text-sm text-brand-ink/75">
+            Tu cupo está garantizado. Nuestro equipo te contacta en menos de 24&nbsp;h hábiles para
+            coordinar tu profesor y el inicio de tus clases. Mientras tanto, puedes avanzar en tus módulos.
+          </p>
+        </section>
+      ) : null}
+
       <section className="grid gap-4 md:grid-cols-3">
         <Stat icon={CalendarDays} label="Próxima clase" value={next ? fmtWhen(next.startsAt) : "Sin agendar"} sub={next ? `Con ${next.teacher?.fullName ?? "tu profe"}` : "Agenda desde el calendario"} />
         <Stat icon={TrendingUp} label={`Progreso ${user.level ?? "beginner"}`} value={`${pct}%`} sub="Completa tus módulos" />

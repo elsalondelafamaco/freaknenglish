@@ -34,6 +34,7 @@ const STUDENT_NAV = [
 
 const TEACHER_NAV = [
   { to: "/teacher", label: "Hoy", tKey: "nav.today", icon: LayoutDashboard, end: true },
+  { to: "/teacher/calendar", label: "Calendario", tKey: "nav.calendar", icon: CalendarDays, end: false },
   { to: "/teacher/schedule", label: "Agenda", tKey: "nav.schedule", icon: CalendarDays, end: false },
   { to: "/teacher/students", label: "Estudiantes", tKey: "nav.students", icon: Users, end: false },
   { to: "/boards", label: "Boards", tKey: "nav.boards", icon: LayoutGrid, end: false },
@@ -43,6 +44,7 @@ const TEACHER_NAV = [
 
 const ADMIN_NAV = [
   { to: "/admin", label: "Analítica", tKey: "nav.analytics", icon: LayoutDashboard, end: true },
+  { to: "/admin/calendar", label: "Calendario", tKey: "nav.calendar", icon: CalendarDays, end: false },
   { to: "/admin/users", label: "Usuarios", tKey: "nav.users", icon: Users, end: false },
   { to: "/admin/content", label: "Contenido", tKey: "nav.content", icon: Sparkles, end: false },
   { to: "/admin/payroll", label: "Nómina", tKey: "nav.payroll", icon: ShieldCheck, end: false },

@@ -41,7 +41,8 @@ function CalendarPage() {
       <header>
         <h1 className="text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">Calendario</h1>
         <p className="mt-2 max-w-xl text-[15px] text-brand-ink/65">
-          Reprograma o cancela con al menos <strong>{RESCHEDULE_LOCK_HOURS}h</strong> de anticipación. Después de ese tiempo la clase queda fija.
+          Tu horario semanal fijo. ¿Necesitas mover o cancelar una clase? Coordínalo directamente con tu
+          profesor: él puede reprogramarla desde su calendario.
         </p>
       </header>
 
@@ -67,9 +68,7 @@ function CalendarPage() {
                       <div className="mt-1 flex items-center gap-1.5 text-xs text-brand-ink/60"><Clock className="size-3.5" /> {fmtDate(c.startsAt)}</div>
                       <div className="mt-0.5 text-xs text-brand-ink/55">{c.teacher?.fullName ?? "tu profe"}</div>
                     </div>
-                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${editable ? "bg-brand-cream text-brand-ink/70" : "bg-brand-ink/5 text-brand-ink/45"}`}>
-                      {editable ? "Editable" : "Fija"}
-                    </span>
+
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {c.meetingUrl ? (
@@ -80,12 +79,9 @@ function CalendarPage() {
                     <button onClick={() => confirmM.mutate(c.id)} disabled={confirmM.isPending} className="rounded-full border border-brand-ink/20 px-3 py-1.5 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40 disabled:opacity-50">
                       Marcar tomada
                     </button>
-                    <button disabled={!editable} onClick={() => setEditing(c)} className="inline-flex items-center gap-1 rounded-full border border-brand-ink/20 px-3 py-1.5 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40 disabled:cursor-not-allowed disabled:opacity-40">
-                      <Pencil className="size-3.5" /> Reprogramar
-                    </button>
-                    <button disabled={!editable || cancelM.isPending} onClick={() => cancelM.mutate(c.id)} className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40">
-                      <X className="size-3.5" /> Cancelar
-                    </button>
+                    <span className="inline-flex items-center rounded-full bg-brand-cream/60 px-3 py-1.5 text-[11px] text-brand-ink/60">
+                      ¿Cambio de horario? Coordínalo con tu profe
+                    </span>
                   </div>
                 </li>
               );
@@ -113,16 +109,7 @@ function CalendarPage() {
         </ul>
       </section>
 
-      {editing ? (
-        <RescheduleDialog
-          session={editing}
-          onClose={() => setEditing(null)}
-          onSave={(iso) => {
-            const durMs = new Date(editing.endsAt).getTime() - new Date(editing.startsAt).getTime() || 50 * 60000;
-            rescheduleM.mutate({ id: editing.id, startsAt: iso, endsAt: new Date(new Date(iso).getTime() + durMs).toISOString() });
-          }}
-        />
-      ) : null}
+
     </div>
   );
 }

@@ -1,23 +1,47 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
 import { Check, ShieldCheck, LogOut, UserCog } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { Field, inputClass, ErrorBox } from "@/components/site/AuthShell";
-import { checkoutApi, plansApi } from "@/lib/api/endpoints";
+import { checkoutApi, plansApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/checkout/$planId")({
   head: () => ({ meta: [{ title: "Checkout — Freakn English" }] }),
+  validateSearch: z.object({ slots: z.string().optional() }),
   component: CheckoutPage,
 });
+
+const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const decodeSlots = (raw: string | undefined): SlotRef[] =>
+  (raw ?? "")
+    .split(",")
+    .map((p) => p.split("-").map(Number))
+    .filter((a) => a.length === 2 && Number.isInteger(a[0]) && Number.isInteger(a[1]))
+    .map(([weekday, hour]) => ({ weekday, hour }));
 
 const copFmt = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 
 function CheckoutPage() {
   const { planId } = Route.useParams();
+  const { slots: slotsRaw } = Route.useSearch();
   const { user, signOut } = useAuth();
   const nav = useNavigate();
+  const selSlots = useMemo(() => decodeSlots(slotsRaw), [slotsRaw]);
+
+  // El horario es un paso obligatorio antes del pago (SDD-scheduling-v2).
+  useEffect(() => {
+    if (selSlots.length === 0) nav({ to: "/checkout/schedule/$planId", params: { planId }, replace: true });
+  }, [selSlots.length, planId, nav]);
+
+  const availQ = useQuery({
+    queryKey: ["schedule", "hints", "confirm", !!user, slotsRaw],
+    queryFn: () => (user ? scheduleApi.availabilityMine(selSlots) : scheduleApi.availability(selSlots)),
+    enabled: selSlots.length > 0,
+  });
+  const assignable = availQ.data?.assignable ?? true;
 
   const plansQ = useQuery({ queryKey: ["plans"], queryFn: () => plansApi.list() });
   const trm = plansQ.data?.trm?.valueCop ?? 0;
@@ -76,6 +100,7 @@ function CheckoutPage() {
         customerDocument: form.document.trim(),
         customerPhone: form.phone.trim(),
         userId: user?.id, // si hay sesión, la suscripción se asocia a esta cuenta
+        slots: selSlots,
       });
       window.location.href = created.checkoutUrl;
     } catch (err: any) {
@@ -93,7 +118,10 @@ function CheckoutPage() {
           <Link to="/" aria-label="Inicio" className="inline-block">
             <Logo className="h-8 w-auto" />
           </Link>
-          <Link to="/checkout" className="text-sm font-medium text-brand-ink/60 hover:text-brand-ink">← Cambiar de plan</Link>
+          <div className="flex items-center gap-4 text-sm font-medium text-brand-ink/60">
+            <Link to="/checkout" className="hover:text-brand-ink">← Plan</Link>
+            <Link to="/checkout/schedule/$planId" params={{ planId }} className="hover:text-brand-ink">← Horario</Link>
+          </div>
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -123,12 +151,19 @@ function CheckoutPage() {
             ) : (
               <div className="mt-4 rounded-2xl bg-brand-cream/50 px-4 py-3 text-sm text-brand-ink/75">
                 ¿Ya tienes cuenta?{" "}
-                <Link to="/login" search={{ redirect: `/checkout/${planId}` }} className="font-semibold text-brand-ink underline">
+                <Link to="/login" search={{ redirect: `/checkout/${planId}${slotsRaw ? `?slots=${slotsRaw}` : ""}` }} className="font-semibold text-brand-ink underline">
                   Inicia sesión
                 </Link>{" "}
                 y volvemos aquí para autocompletar tus datos.
               </div>
             )}
+
+            {selSlots.length > 0 && !availQ.isLoading && !assignable ? (
+              <div className="mt-4 rounded-2xl border border-brand-line bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink">
+                Ese horario está muy solicitado 💛 Completa tu compra con tranquilidad: te contactamos en
+                menos de 24&nbsp;h hábiles para coordinar tu profesor. <strong>Tu cupo queda garantizado.</strong>
+              </div>
+            ) : null}
 
             <form onSubmit={submitForm} className="mt-6 flex flex-col gap-4">
               <Field label="Nombre completo" htmlFor="fullName">
@@ -173,6 +208,20 @@ function CheckoutPage() {
               <span className="text-sm text-brand-ink/60">USD / mes</span>
             </div>
             <p className="mt-1 text-xs text-brand-ink/60">Se cobra {copFmt.format(cop)} vía Wompi (TRM en vivo).</p>
+            {selSlots.length > 0 ? (
+              <div className="mt-4 rounded-2xl bg-white/70 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-brand-ink/60">Tu horario semanal</p>
+                <ul className="mt-1.5 space-y-1 text-sm text-brand-ink/85">
+                  {[...selSlots]
+                    .sort((a, b) => ((a.weekday + 6) % 7) - ((b.weekday + 6) % 7) || a.hour - b.hour)
+                    .map((sl) => (
+                      <li key={`${sl.weekday}-${sl.hour}`}>
+                        {DAY_NAMES[sl.weekday]} · {sl.hour}:00–{sl.hour}:50
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            ) : null}
             <ul className="mt-5 space-y-2 text-sm text-brand-ink/85">
               {(plan.features ?? []).map((f: string) => (
                 <li key={f} className="flex items-start gap-2">

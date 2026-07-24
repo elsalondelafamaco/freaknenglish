@@ -202,19 +202,44 @@ export class AutomationsProcessor extends WorkerHost {
       })
     }
 
-    // NPS monthly: first day of month
-    if (now.getDate() === 1) {
-      const users = await this.prisma.user.findMany({ where: { role: 'student' } })
-      const period = now.toISOString().slice(0, 7)
-      for (const u of users) {
-        await this.notifications.enqueue({
-          userId: u.id,
-          toEmail: u.email,
-          template: 'nps_monthly',
-          subject: '¿Cómo vamos?',
-          dedupeKey: `nps:${u.id}:${period}`,
+    // NPS: alineado con la regla de producto — solo entre la penúltima y la
+    // última clase del período (o al expirar), y una vez por ciclo.
+    const npsCandidates = await this.prisma.subscription.findMany({
+      where: { status: { in: ['active', 'expired'] as any } },
+      include: { user: { select: { id: true, email: true, role: true } } },
+    })
+    for (const sub of npsCandidates) {
+      if (sub.user.role !== 'student') continue
+      const periodStart = sub.startedAt ?? new Date(0)
+      const answered = await this.prisma.satisfactionSurvey.findFirst({
+        where: { userId: sub.userId, createdAt: { gte: periodStart } },
+        select: { id: true },
+      })
+      if (answered) continue
+      let due = false
+      if (sub.status === 'active' && sub.currentPeriodEnd) {
+        const remaining = await this.prisma.class.count({
+          where: { studentId: sub.userId, status: 'scheduled', startsAt: { gt: now, lte: sub.currentPeriodEnd } },
         })
+        const taken = await this.prisma.class.count({
+          where: { studentId: sub.userId, status: 'validated', validatedAt: { gte: periodStart } },
+        })
+        due = remaining === 1 && taken >= 1
+      } else if (sub.status === 'expired') {
+        due = (await this.prisma.class.count({ where: { studentId: sub.userId } })) > 0
       }
+      if (!due) continue
+      await this.notifications.enqueue({
+        userId: sub.userId,
+        toEmail: sub.user.email,
+        template: 'nps_monthly',
+        subject: '¿Cómo vamos?',
+        dedupeKey: `nps:${sub.userId}:${periodStart.toISOString().slice(0, 10)}`,
+      })
+    }
+
+    // Tareas de día 1 del mes
+    if (now.getDate() === 1) {
 
       // Nómina del mes anterior: persiste PayrollRun (status pending) para que
       // el admin revise y apruebe/pague. No dispersa automáticamente.

@@ -23,6 +23,8 @@ function SignupPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
+  const [documentNumber, setDocumentNumber] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -35,7 +37,12 @@ function SignupPage() {
     }
     setBusy(true);
     try {
-      await signUp(fullName, email, password);
+      if (!phone.trim() || !documentNumber.trim()) {
+        setError("Celular y documento son obligatorios.");
+        setBusy(false);
+        return;
+      }
+      await signUp(fullName, email, password, phone.trim(), documentNumber.trim());
       navigate({ to: "/app" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No fue posible crear la cuenta.");
@@ -82,6 +89,29 @@ function SignupPage() {
             placeholder="Tu nombre"
           />
         </Field>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Field label="Celular" htmlFor="phone" hint="Formato internacional (+57...)">
+            <input
+              id="phone"
+              className={inputClass}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              inputMode="tel"
+              autoComplete="tel"
+              required
+            />
+          </Field>
+          <Field label="Documento" htmlFor="documentNumber" hint="Para tu facturación">
+            <input
+              id="documentNumber"
+              className={inputClass}
+              value={documentNumber}
+              onChange={(e) => setDocumentNumber(e.target.value)}
+              inputMode="numeric"
+              required
+            />
+          </Field>
+        </div>
         <Field label="Email" htmlFor="email">
           <input
             id="email"

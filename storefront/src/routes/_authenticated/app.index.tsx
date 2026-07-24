@@ -16,6 +16,8 @@ function fmtWhen(iso: string): string {
 const durMin = (c: any) => Math.max(0, Math.round((new Date(c.endsAt).getTime() - new Date(c.startsAt).getTime()) / 60000)) || 50;
 const isToday = (iso: string) => { const d = new Date(iso), n = new Date(); return d.toDateString() === n.toDateString(); };
 
+const daysLeeftOk = (d: number | null) => d != null && d <= 5 && d >= 0;
+
 function DashboardPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -89,6 +91,32 @@ function DashboardPage() {
           Confirma tus clases, avanza en tus módulos y prepárate para el siguiente checkpoint.
         </p>
       </header>
+
+      {(() => {
+        const end = (subQ.data as any)?.currentPeriodEnd ? new Date((subQ.data as any).currentPeriodEnd) : null;
+        const daysLeft = end ? Math.ceil((end.getTime() - Date.now()) / 86400000) : null;
+        if (subStatus === "active" && daysLeeftOk(daysLeft)) {
+          return (
+            <section className="rounded-3xl border border-amber-200 bg-amber-50 p-5 md:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-bold text-amber-900">
+                    Tu plan vence {daysLeft === 0 ? "hoy" : daysLeft === 1 ? "mañana" : `en ${daysLeft} días`}
+                    {end ? ` (${end.toLocaleDateString("es-CO", { day: "2-digit", month: "long" })})` : ""}
+                  </div>
+                  <p className="mt-0.5 text-xs text-amber-800/80">
+                    Renueva ahora y tu nuevo mes empieza justo cuando termine el actual — sin perder tu horario ni tu profesor.
+                  </p>
+                </div>
+                <a href="/checkout" className="inline-flex h-10 items-center rounded-full bg-brand-ink px-5 text-sm font-semibold text-white hover:bg-brand-ink-soft">
+                  Renovar ahora
+                </a>
+              </div>
+            </section>
+          );
+        }
+        return null;
+      })()}
 
       {user.scheduleAssignmentStatus === "manual_pending" ? (
         <section className="rounded-3xl border border-brand-line bg-brand-yellow-soft p-6 md:p-7">

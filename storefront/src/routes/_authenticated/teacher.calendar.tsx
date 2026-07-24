@@ -125,7 +125,11 @@ function TeacherCalendar() {
           events={events}
           editable
           eventDurationEditable={false}
-          datesSet={(arg) => setRange({ from: arg.start.toISOString(), to: arg.end.toISOString() })}
+          datesSet={(arg) => {
+            const from = arg.start.toISOString();
+            const to = arg.end.toISOString();
+            setRange((prev) => (prev && prev.from === from && prev.to === to ? prev : { from, to }));
+          }}
           eventDrop={(info) => {
             const c = info.event.extendedProps as Selected;
             setPendingMove({

@@ -62,8 +62,14 @@ export async function signIn(email: string, password: string): Promise<User> {
   return u;
 }
 
-export async function signUp(fullName: string, email: string, password: string): Promise<User> {
-  const r = await authApi.signup({ fullName, email, password });
+export async function signUp(
+  fullName: string,
+  email: string,
+  password: string,
+  phone: string,
+  documentNumber: string,
+): Promise<User> {
+  const r = await authApi.signup({ fullName, email, password, phone, documentNumber });
   setAccessToken(r.accessToken);
   const u = await fetchMe();
   if (!u) throw new Error("No se pudo cargar el perfil.");

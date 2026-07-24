@@ -169,9 +169,8 @@ export class SchedulingService {
       throw new BadRequestException('Active subscription required')
     }
     const expected = user.subscription.plan.daysPerWeek
-    if (blocks.length !== expected) {
-      throw new BadRequestException(`Plan requires exactly ${expected} blocks`)
-    }
+    // Valida cantidad, ventana global y máximo por día (config admin).
+    await this.slots.validateSelection(blocks, expected)
 
     // Buscar profesor que cubra todos los bloques.
     const teachers = await this.prisma.user.findMany({

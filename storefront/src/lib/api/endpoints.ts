@@ -18,7 +18,7 @@ import type {
 export const authApi = {
   login: (email: string, password: string) =>
     apiPost<{ accessToken: string; user: { id: string; role: string } }>("/auth/login", { email, password }),
-  signup: (input: { email: string; password: string; fullName: string; phone?: string }) =>
+  signup: (input: { email: string; password: string; fullName: string; phone: string; documentNumber: string }) =>
     apiPost<{ accessToken: string }>("/auth/signup", input),
   refresh: () => apiPost<{ accessToken: string }>("/auth/refresh"),
   logout: () => apiPost<{ ok: true }>("/auth/logout"),

@@ -113,6 +113,17 @@ export class SlotsService {
    * Devuelve mapa teacherId → Set("weekday:hour").
    */
   private async freeSlotsByTeacher(excludeStudentId?: string): Promise<Map<string, Set<string>>> {
+    // Higiene: las reservas vencidas no deben ocupar franjas ni causar conflictos.
+    await this.cleanupExpiredPending()
+    // Los intents PENDING del propio estudiante tampoco lo bloquean (renovación/reintento).
+    let ownIntentIds: string[] = []
+    if (excludeStudentId) {
+      const own = await this.prisma.paymentIntent.findMany({
+        where: { userId: excludeStudentId, status: 'PENDING' },
+        select: { id: true },
+      })
+      ownIntentIds = own.map((o) => o.id)
+    }
     const [teachers, occupied] = await Promise.all([
       this.prisma.user.findMany({
         where: { role: 'teacher', disabledAt: null, deletedAt: null },
@@ -122,7 +133,16 @@ export class SlotsService {
         // Las franjas del propio estudiante (renovación) cuentan como libres para él.
         where: {
           status: { in: ['pending', 'active', 'held'] },
-          ...(excludeStudentId ? { NOT: { studentId: excludeStudentId } } : {}),
+          ...(excludeStudentId
+            ? {
+                NOT: {
+                  OR: [
+                    { studentId: excludeStudentId },
+                    ...(ownIntentIds.length ? [{ intentId: { in: ownIntentIds } }] : []),
+                  ],
+                },
+              }
+            : {}),
         },
         select: { teacherId: true, weekday: true, hour: true },
       }),
@@ -220,6 +240,24 @@ export class SlotsService {
       }
     }
     return { mode: 'manual' }
+  }
+
+  /** Suelta las reservas pending de intents anteriores del mismo comprador. */
+  async releasePreviousPendings(customerEmail: string, userId?: string) {
+    const prev = await this.prisma.paymentIntent.findMany({
+      where: {
+        status: 'PENDING',
+        OR: [
+          { customerEmail: { equals: customerEmail, mode: 'insensitive' } },
+          ...(userId ? [{ userId }] : []),
+        ],
+      },
+      select: { id: true },
+    })
+    if (prev.length === 0) return
+    await this.prisma.scheduleSlot.deleteMany({
+      where: { status: 'pending', intentId: { in: prev.map((p) => p.id) } },
+    })
   }
 
   async releasePendingForIntent(intentId: string) {

@@ -15,7 +15,7 @@ export interface AuthContextValue {
   isAuthenticated: boolean;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (fullName: string, email: string, password: string) => Promise<void>;
+  signUp: (fullName: string, email: string, password: string, phone: string, documentNumber: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
@@ -76,8 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async signIn(email, password) {
         setUser(await session.signIn(email, password));
       },
-      async signUp(fullName, email, password) {
-        setUser(await session.signUp(fullName, email, password));
+      async signUp(fullName, email, password, phone, documentNumber) {
+        setUser(await session.signUp(fullName, email, password, phone, documentNumber));
       },
       async signInWithGoogle() {
         session.signInWithGoogle();

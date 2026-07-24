@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Check, ArrowRight } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
-import { plansApi } from "@/lib/api/endpoints";
+import { plansApi, subscriptionsApi } from "@/lib/api/endpoints";
+import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/checkout/")({
   head: () => ({ meta: [{ title: "Elige tu plan — Freakn English" }] }),
@@ -12,7 +13,39 @@ export const Route = createFileRoute("/checkout/")({
 const copFmt = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
 
 function CheckoutSelect() {
+  const { user } = useAuth();
   const q = useQuery({ queryKey: ["plans"], queryFn: () => plansApi.list() });
+  const subQ = useQuery({
+    queryKey: ["me", "subscription"],
+    queryFn: () => subscriptionsApi.mine(),
+    enabled: !!user,
+  });
+  const sub = subQ.data as any;
+  const end = sub?.currentPeriodEnd ? new Date(sub.currentPeriodEnd) : null;
+  const daysLeft = end ? Math.ceil((end.getTime() - Date.now()) / 86400000) : null;
+  const activeFar = sub?.status === "active" && daysLeft != null && daysLeft > 5;
+  const renewalWindow = sub?.status === "active" && daysLeft != null && daysLeft <= 5;
+
+  if (activeFar) {
+    return (
+      <main className="min-h-screen bg-brand-cream px-5 py-16">
+        <div className="mx-auto max-w-lg">
+          <Link to="/" aria-label="Inicio"><Logo className="h-8 w-auto" /></Link>
+          <div className="mt-8 rounded-3xl border border-brand-line bg-white p-8 text-center shadow-soft">
+            <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-brand-success/10 text-2xl">✅</div>
+            <h1 className="mt-4 text-2xl font-bold text-brand-ink">Ya tienes un plan activo</h1>
+            <p className="mt-2 text-sm text-brand-ink/65">
+              Tu suscripción está vigente hasta el {end!.toLocaleDateString("es-CO", { day: "2-digit", month: "long" })}.
+              Podrás renovar cuando falten 5 días o menos.
+            </p>
+            <Link to="/app" className="mt-6 inline-flex h-12 items-center justify-center rounded-full bg-brand-ink px-6 text-sm font-semibold text-white hover:bg-brand-ink-soft">
+              Ir a mi portal
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
   const trm = q.data?.trm?.valueCop ?? 0;
   const plans = (q.data?.plans ?? []).filter((p: any) => p.isActive !== false);
 
@@ -22,6 +55,13 @@ function CheckoutSelect() {
         <Link to="/" aria-label="Inicio" className="inline-block">
           <Logo className="h-8 w-auto" />
         </Link>
+
+        {renewalWindow ? (
+          <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <strong>Renovación anticipada:</strong> tu nuevo mes empieza cuando termine el actual
+            ({end!.toLocaleDateString("es-CO", { day: "2-digit", month: "long" })}) — conservas tu horario y profesor.
+          </div>
+        ) : null}
 
         <header className="mt-8 max-w-2xl">
           <p className="text-xs font-medium uppercase tracking-wider text-brand-ink/55">Paso 1 de 3 · Elige tu plan</p>

@@ -100,7 +100,11 @@ function AdminCalendar() {
           height="auto"
           nowIndicator
           events={events}
-          datesSet={(arg) => setRange({ from: arg.start.toISOString(), to: arg.end.toISOString() })}
+          datesSet={(arg) => {
+            const from = arg.start.toISOString();
+            const to = arg.end.toISOString();
+            setRange((prev) => (prev && prev.from === from && prev.to === to ? prev : { from, to }));
+          }}
           eventContent={(arg) => {
             const c: any = arg.event.extendedProps;
             return (

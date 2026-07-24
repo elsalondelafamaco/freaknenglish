@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import * as crypto from 'crypto'
 import { PrismaService } from '../../prisma/prisma.service'
 import { env } from '../../config/env'
@@ -37,6 +37,24 @@ export class CheckoutService {
     const amountInCents = amountCop * 100
     const currency = 'COP'
 
+    // ¿Comprador con suscripción activa? Solo se permite renovación anticipada
+    // (últimos 5 días del período) — el nuevo mes se CONCATENA al actual.
+    const buyer = input.userId
+      ? await this.prisma.user.findUnique({ where: { id: input.userId }, include: { subscription: true } })
+      : await this.prisma.user.findFirst({
+          where: { email: input.customerEmail.trim().toLowerCase() },
+          include: { subscription: true },
+        })
+    const sub = buyer?.subscription
+    if (sub?.status === 'active' && sub.currentPeriodEnd) {
+      const msLeft = sub.currentPeriodEnd.getTime() - Date.now()
+      if (msLeft > 5 * 24 * 60 * 60 * 1000) {
+        throw new BadRequestException(
+          'Ya tienes un plan activo. Podrás renovar cuando falten 5 días o menos para el vencimiento.',
+        )
+      }
+    }
+
     // Selección de horario (SDD-scheduling-v2): validar contra ventana + plan.
     let assignmentMode: 'auto' | 'manual' | null = null
     const slots = input.slots ?? []
@@ -60,8 +78,11 @@ export class CheckoutService {
     })
 
     if (slots.length > 0) {
+      // Un intento nuevo del mismo comprador reemplaza sus reservas anteriores
+      // (los pendings abandonados no deben bloquear su propia recompra).
+      await this.slots.releasePreviousPendings(input.customerEmail, input.userId ?? buyer?.id)
       // Reserva de 20 min (decisión Q3). Renovación: los slots propios cuentan.
-      const r = await this.slots.reserveForIntent(intent.id, slots, input.userId)
+      const r = await this.slots.reserveForIntent(intent.id, slots, input.userId ?? buyer?.id)
       assignmentMode = r.mode
       await this.prisma.paymentIntent.update({ where: { id: intent.id }, data: { assignmentMode } })
     }

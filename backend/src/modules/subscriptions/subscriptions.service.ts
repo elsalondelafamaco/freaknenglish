@@ -9,7 +9,13 @@ export class SubscriptionsService {
   /** Activate / extend a subscription after Wompi APPROVED. */
   async activateForUser(userId: string, planId: string) {
     const now = new Date()
-    const nextPeriodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    // Renovación anticipada: el nuevo mes se concatena al período vigente.
+    const existing = await this.prisma.subscription.findUnique({ where: { userId } })
+    const base =
+      existing?.status === 'active' && existing.currentPeriodEnd && existing.currentPeriodEnd > now
+        ? existing.currentPeriodEnd
+        : now
+    const nextPeriodEnd = new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000)
     return this.prisma.subscription.upsert({
       where: { userId },
       update: { status: SubscriptionStatus.active, planId, startedAt: now, currentPeriodEnd: nextPeriodEnd, canceledAt: null, cancelAt: null },

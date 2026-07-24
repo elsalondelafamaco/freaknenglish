@@ -4,9 +4,12 @@
  * Flujo:
  *   1. Usuario click "Sign in with Google" → redirige a `${API_URL}/auth/google`.
  *   2. Backend hace el dance OAuth y al final redirige a:
- *        `${STOREFRONT_URL}/auth/callback?accessToken=...`
+ *        `${STOREFRONT_URL}/auth/callback?token=...`
  *      (y setea la cookie de refresh).
- *   3. Este componente toma el accessToken, hidrata, y navega a /app.
+ *   3. Este componente toma el token, hidrata, y navega según el rol.
+ *      Si la cuenta no existía, el backend la crea (Google actúa como
+ *      registro); el gate de `_authenticated` manda a /onboarding/profile
+ *      a quien le falte teléfono/documento.
  */
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -24,8 +27,11 @@ function OAuthCallback() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const token = params.get("accessToken");
+    // El backend envía `token`; se acepta también `accessToken` por compat.
+    const token = params.get("token") ?? params.get("accessToken");
     const err = params.get("error");
+    // El token no debe quedar en la URL ni en el historial del navegador.
+    window.history.replaceState(null, "", "/auth/callback");
     if (err) { setError(err); return; }
     if (!token) { setError("missing_token"); return; }
     (async () => {

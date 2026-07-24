@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { teachersApi } from "@/lib/api/endpoints";
 
-export const Route = createFileRoute("/_authenticated/teacher/students")({
+export const Route = createFileRoute("/_authenticated/teacher/students/")({
   head: () => ({ meta: [{ title: "Estudiantes — Freakn for Teachers" }] }),
   component: TeacherStudents,
 });

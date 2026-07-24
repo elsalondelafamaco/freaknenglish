@@ -11,6 +11,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { finishOAuthLogin } from "@/lib/auth/session";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/auth/callback")({
   component: OAuthCallback,
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/auth/callback")({
 
 function OAuthCallback() {
   const nav = useNavigate();
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,6 +31,7 @@ function OAuthCallback() {
     (async () => {
       try {
         const u = await finishOAuthLogin(token);
+        queryClient.clear();
         const target = u.roles.includes("admin")
           ? "/admin"
           : u.roles.includes("teacher")

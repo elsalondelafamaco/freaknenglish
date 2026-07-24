@@ -3,7 +3,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
-import { boardsApi } from "@/lib/api/endpoints";
+import { boardsApi, teachersApi } from "@/lib/api/endpoints";
+import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/_authenticated/boards/")({
   head: () => ({ meta: [{ title: "Boards colaborativos" }] }),
@@ -11,17 +12,25 @@ export const Route = createFileRoute("/_authenticated/boards/")({
 });
 
 function BoardsIndex() {
+  const { user } = useAuth();
   const qc = useQueryClient();
   const nav = useNavigate();
   const [name, setName] = useState("");
+  const [studentId, setStudentId] = useState("");
+
+  const isStudent = !!user?.roles.includes("student");
+  const isAdmin = !!user?.roles.includes("admin");
+  const isTeacher = !!user?.roles.includes("teacher");
+
   const listQ = useQuery({ queryKey: ["boards"], queryFn: () => boardsApi.list() });
+  const studentsQ = useQuery({
+    queryKey: ["teacher", "students"],
+    queryFn: () => teachersApi.students(),
+    enabled: isTeacher || isAdmin,
+  });
 
   const createM = useMutation({
-    mutationFn: async (n: string) => {
-      const b = await boardsApi.create(n);
-      await boardsApi.createPage(b.id, { title: "Página 1" });
-      return b;
-    },
+    mutationFn: (v: { name: string; studentId: string }) => boardsApi.create(v.name, v.studentId),
     onSuccess: (b) => {
       qc.invalidateQueries({ queryKey: ["boards"] });
       toast.success("Board creado");
@@ -39,38 +48,67 @@ function BoardsIndex() {
     },
   });
 
+  const students = (studentsQ.data ?? []) as any[];
+
+  function ownerOf(b: any) {
+    const m = (b.members ?? []).find((x: any) => x.role === "owner");
+    return m?.user?.fullName ?? "—";
+  }
+  function studentOf(b: any) {
+    const m = (b.members ?? []).find((x: any) => x.user?.role === "student");
+    return m?.user?.fullName ?? null;
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold text-brand-ink">Boards</h1>
           <p className="text-xs text-brand-ink/55">
-            Documentos colaborativos en tiempo real con tu profesor o estudiantes.
+            {isStudent
+              ? "Aulas colaborativas creadas por tu profesor."
+              : isAdmin
+                ? "Todos los boards de la plataforma."
+                : "Crea un aula colaborativa asociada a un estudiante."}
           </p>
         </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!name.trim()) return;
-            createM.mutate(name.trim());
-            setName("");
-          }}
-          className="flex items-center gap-2"
-        >
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Nombre del board"
-            className="rounded-full border border-brand-line bg-white px-4 py-2 text-sm"
-          />
-          <button
-            type="submit"
-            disabled={createM.isPending}
-            className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-60"
+
+        {isTeacher || isAdmin ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!studentId) return toast.error("Selecciona un estudiante.");
+              createM.mutate({ name: name.trim(), studentId });
+              setName("");
+            }}
+            className="flex flex-wrap items-center gap-2"
           >
-            <Plus className="size-3.5" /> Crear
-          </button>
-        </form>
+            <select
+              value={studentId}
+              onChange={(e) => setStudentId(e.target.value)}
+              className="rounded-full border border-brand-line bg-white px-4 py-2 text-sm"
+              required
+            >
+              <option value="">Estudiante…</option>
+              {students.map((s) => (
+                <option key={s.id} value={s.id}>{s.fullName}</option>
+              ))}
+            </select>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Nombre (opcional)"
+              className="rounded-full border border-brand-line bg-white px-4 py-2 text-sm"
+            />
+            <button
+              type="submit"
+              disabled={createM.isPending || !studentId}
+              className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-60"
+            >
+              <Plus className="size-3.5" /> Crear
+            </button>
+          </form>
+        ) : null}
       </header>
 
       {listQ.isLoading ? (
@@ -78,24 +116,36 @@ function BoardsIndex() {
       ) : (listQ.data ?? []).length === 0 ? (
         <div className="rounded-2xl border border-dashed border-brand-line bg-white p-10 text-center">
           <LayoutGrid className="mx-auto mb-3 size-8 text-brand-ink/40" />
-          <p className="text-sm text-brand-ink/60">Aún no tienes boards. Crea el primero.</p>
+          <p className="text-sm text-brand-ink/60">
+            {isStudent ? "Tu profesor aún no ha creado aulas." : "Aún no hay boards. Crea el primero."}
+          </p>
         </div>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {(listQ.data ?? []).map((b: any) => (
-            <li key={b.id}>
-              <Link
-                to="/boards/$boardId"
-                params={{ boardId: b.id }}
-                className="block rounded-2xl border border-brand-line bg-white p-4 shadow-soft transition hover:-translate-y-0.5"
-              >
-                <div className="text-sm font-semibold text-brand-ink">{b.name}</div>
-                <div className="mt-1 text-xs text-brand-ink/55">
-                  Actualizado {new Date(b.updatedAt).toLocaleString()}
-                </div>
-              </Link>
-            </li>
-          ))}
+          {(listQ.data ?? []).map((b: any) => {
+            const st = studentOf(b);
+            return (
+              <li key={b.id}>
+                <Link
+                  to="/boards/$boardId"
+                  params={{ boardId: b.id }}
+                  className="block rounded-2xl border border-brand-line bg-white p-4 shadow-soft transition hover:-translate-y-0.5"
+                >
+                  <div className="text-sm font-semibold text-brand-ink">{b.name}</div>
+                  {isAdmin ? (
+                    <div className="mt-1 text-xs text-brand-ink/55">
+                      Profe: {ownerOf(b)}{st ? ` · Estudiante: ${st}` : ""}
+                    </div>
+                  ) : st && (isTeacher) ? (
+                    <div className="mt-1 text-xs text-brand-ink/55">Estudiante: {st}</div>
+                  ) : null}
+                  <div className="mt-1 text-xs text-brand-ink/45">
+                    Actualizado {new Date(b.updatedAt).toLocaleString()}
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, CheckCircle2, ExternalLink, Sparkles, TrendingUp, Video } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { classesApi, learningApi } from "@/lib/api/endpoints";
+import { classesApi, learningApi, subscriptionsApi } from "@/lib/api/endpoints";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   head: () => ({ meta: [{ title: "Mi dashboard — Freakn English" }] }),
@@ -19,6 +19,7 @@ const isToday = (iso: string) => { const d = new Date(iso), n = new Date(); retu
 function DashboardPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const subQ = useQuery({ queryKey: ["me", "subscription"], queryFn: () => subscriptionsApi.mine(), staleTime: 0 });
   const firstName = user?.fullName.split(" ")[0] ?? "estudiante";
 
   const allQ = useQuery({ queryKey: ["classes"], queryFn: () => classesApi.list() });
@@ -33,6 +34,42 @@ function DashboardPage() {
   });
 
   if (!user) return null;
+
+  const subStatus = (subQ.data as any)?.status ?? null;
+  const subActive = subStatus === "active";
+  if (!subQ.isLoading && !subActive) {
+    const msg =
+      subStatus === "past_due" || subStatus === "expired"
+        ? "Tu suscripción venció. Renueva tu plan para seguir tomando clases."
+        : subStatus === "pending"
+          ? "Tu pago está en proceso. Te avisaremos apenas se confirme."
+          : "Aún no tienes un plan activo. Elige uno para empezar tus clases 1‑a‑1.";
+    return (
+      <div className="flex flex-col gap-8">
+        <header>
+          <p className="text-sm font-medium text-brand-ink/60">¡Hola, {firstName}!</p>
+          <h1 className="mt-1 text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">Tu cuenta está lista</h1>
+        </header>
+        <section className="rounded-3xl border border-brand-line bg-gradient-to-br from-brand-yellow/70 to-brand-yellow-soft p-8 md:p-10">
+          <div className="max-w-lg">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-brand-ink">
+              Estado de tu suscripción
+            </div>
+            <h2 className="mt-3 text-2xl font-bold tracking-tight text-brand-ink">{msg}</h2>
+            <p className="mt-2 text-sm text-brand-ink/70">
+              Cuando tu plan esté activo se desbloquean tu calendario, tus clases 1‑a‑1 y el módulo de aprendizaje.
+            </p>
+            <a
+              href="/checkout"
+              className="mt-6 inline-flex h-12 items-center justify-center rounded-full bg-brand-ink px-6 text-sm font-semibold text-white hover:bg-brand-ink-soft"
+            >
+              {subStatus === "past_due" || subStatus === "expired" ? "Renovar mi plan" : "Elegir un plan"}
+            </a>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   const all = (allQ.data ?? []) as any[];
   const next = nextQ.data as any;

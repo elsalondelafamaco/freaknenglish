@@ -83,7 +83,7 @@ function BoardPage() {
             Placeholder.configure({ placeholder: "Empieza a escribir…" }),
             Collaboration.configure({ document: provider.doc }),
             CollaborationCursor.configure({
-              provider: { awareness: provider.awareness } as any,
+              provider: { awareness: provider.awareness, doc: provider.doc } as any,
               user: {
                 name: user?.fullName ?? user?.email ?? "Anon",
                 color: colorFor(user?.id ?? "x"),

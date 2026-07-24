@@ -134,6 +134,10 @@ export const plansApi = {
     }>("/plans"),
 };
 
+export const settingsApi = {
+  contact: () => apiGet<{ whatsappNumber: string; whatsappMessage: string }>("/public/settings"),
+};
+
 export const exchangeApi = {
   trm: () => apiGet<{ valueCop: number; validFrom: string; source: string }>("/public/exchange/trm"),
 };
@@ -150,7 +154,7 @@ export const checkoutApi = {
       redirectUrl: string;
       checkoutUrl: string;
     }>("/checkout/intents", body),
-  status: (reference: string) =>
+  status: (params: { reference?: string; id?: string }) =>
     apiGet<{
       reference: string;
       status: "PENDING" | "APPROVED" | "DECLINED" | "VOIDED" | "ERROR";
@@ -158,7 +162,7 @@ export const checkoutApi = {
       planName?: string;
       approvedAt: string | null;
       customerEmail: string;
-    }>("/checkout/status", { reference }),
+    }>("/checkout/status", params),
 };
 
 // ─── Subscriptions ─────────────────────────────────────────────────────
@@ -208,8 +212,10 @@ export const teachersApi = {
   studentDetail: (id: string) => apiGet<any>(`/teacher/students/${id}`),
   schedule: (status?: "upcoming" | "past" | "pending") =>
     apiGet<ClassSession[]>("/teacher/schedule", status ? { status } : undefined),
-  addNote: (classId: string, rating: number, notes: string) =>
-    apiPost<any>(`/teacher/classes/${classId}/notes`, { rating, notes }),
+  addNote: (classId: string, notes: string) =>
+    apiPost<any>(`/teacher/classes/${classId}/notes`, { notes }),
+  pinNote: (noteId: string, pinned: boolean) =>
+    apiPatch<any>(`/teacher/notes/${noteId}/pin`, { pinned }),
   myAvailability: () =>
     apiGet<Array<{ id: string; weekday: number; startsAt: string; endsAt: string }>>(
       "/teacher/availability",
@@ -243,6 +249,12 @@ export const adminApi = {
     apiPost<any>("/admin/content/checkpoints", body),
   updateCheckpoint: (id: string, body: any) => apiPatch<any>(`/admin/content/checkpoints/${id}`, body),
   deleteCheckpoint: (id: string) => apiPatch<any>(`/admin/content/checkpoints/${id}/delete`, {}),
+  plans: () => apiGet<any[]>("/admin/plans"),
+  contactSettings: () => apiGet<{ whatsappNumber: string; whatsappMessage: string }>("/admin/settings/contact"),
+  updateContact: (body: { whatsappNumber?: string; whatsappMessage?: string }) =>
+    apiPatch<{ whatsappNumber: string; whatsappMessage: string }>("/admin/settings/contact", body),
+  updatePlan: (id: string, body: Partial<{ name: string; daysPerWeek: number; priceUsd: number; priceCop: number; isActive: boolean; features: unknown }>) =>
+    apiPatch<any>(`/admin/plans/${id}`, body),
   atRisk: () =>
     apiGet<
       Array<{
@@ -332,7 +344,7 @@ export const surveysApi = {
 // ─── Boards (realtime) ─────────────────────────────────────────────────
 export const boardsApi = {
   list: () => apiGet<any[]>("/boards"),
-  create: (name: string) => apiPost<any>("/boards", { name }),
+  create: (name: string, studentId: string) => apiPost<any>("/boards", { name, studentId }),
   get: (id: string) => apiGet<any>(`/boards/${id}`),
   opsSince: (id: string, since: number) =>
     apiGet<any[]>(`/boards/${id}/ops`, { since }),

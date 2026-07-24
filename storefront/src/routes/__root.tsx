@@ -49,33 +49,31 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+    <main className="flex min-h-screen items-center justify-center bg-brand-cream px-5 py-14">
+      <div className="w-full max-w-md rounded-3xl border border-brand-line bg-white p-8 text-center shadow-soft">
+        <img src="/logo-freakn.svg" alt="Freakn English" className="mx-auto h-8 w-auto" />
+        <div className="mx-auto mt-6 flex size-14 items-center justify-center rounded-full bg-red-50 text-2xl">😕</div>
+        <h1 className="mt-4 text-2xl font-bold tracking-tight text-brand-ink">Algo se rompió</h1>
+        <p className="mt-2 text-[15px] text-brand-ink/65">
+          Tuvimos un problema al cargar esta parte de la app. Puedes reintentar o volver al inicio;
+          tus datos están a salvo.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
-            onClick={() => {
-              router.invalidate();
-              reset();
-            }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            onClick={() => { router.invalidate(); reset(); }}
+            className="inline-flex h-11 items-center justify-center rounded-full bg-brand-ink px-6 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-ink-soft"
           >
-            Try again
+            Reintentar
           </button>
           <a
             href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            className="inline-flex h-11 items-center justify-center rounded-full border border-brand-ink/20 bg-white px-6 text-sm font-semibold text-brand-ink transition hover:bg-brand-cream/40"
           >
-            Go home
+            Ir al inicio
           </a>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -126,9 +124,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "manifest", href: "/manifest.webmanifest" },
-      { rel: "icon", href: "/favicon-32.png", sizes: "32x32", type: "image/png" },
-      { rel: "icon", href: "/favicon-16.png", sizes: "16x16", type: "image/png" },
-      { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
+      { rel: "icon", href: "/favicon.ico", sizes: "any" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/favicon.png" },
       { rel: "canonical", href: SITE_URL },
     ],
     scripts: [

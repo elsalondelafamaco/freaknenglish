@@ -10,6 +10,7 @@ import {
   Menu,
   Settings,
   ShieldCheck,
+  Tag,
   Smile,
   Sparkles,
   Users,
@@ -45,6 +46,8 @@ const ADMIN_NAV = [
   { to: "/admin/users", label: "Usuarios", tKey: "nav.users", icon: Users, end: false },
   { to: "/admin/content", label: "Contenido", tKey: "nav.content", icon: Sparkles, end: false },
   { to: "/admin/payroll", label: "Nómina", tKey: "nav.payroll", icon: ShieldCheck, end: false },
+  { to: "/admin/plans", label: "Planes", tKey: "nav.plans", icon: Tag, end: false },
+  { to: "/boards", label: "Boards", tKey: "nav.boards", icon: LayoutGrid, end: false },
   { to: "/admin/notifications", label: "Notificaciones", tKey: "nav.notifications", icon: Mail, end: false },
   { to: "/admin/surveys", label: "Encuestas", tKey: "nav.surveys", icon: Smile, end: false },
 ] as const;

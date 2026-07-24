@@ -11,6 +11,7 @@ import {
 } from "@/components/site/AuthShell";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { getSessionSnapshot } from "@/lib/auth/session";
+import { useQueryClient } from "@tanstack/react-query";
 
 const searchSchema = z.object({ redirect: z.string().optional() });
 
@@ -26,6 +27,7 @@ function LoginPage() {
   const { redirect } = useSearch({ from: "/login" });
   const navigate = useNavigate();
   const { signIn, signInWithGoogle } = useAuth();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +46,7 @@ function LoginPage() {
     setBusy(true);
     try {
       await signIn(email, password);
+      queryClient.clear();
       navigate({ to: redirect ?? defaultRouteForCurrentUser() });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No fue posible iniciar sesión.");

@@ -47,7 +47,8 @@ function AuthenticatedLayout() {
     queryKey: ["me", "subscription"],
     queryFn: () => subscriptionsApi.mine(),
     enabled: isStudent && isAuthenticated,
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
   const { data: pendingSurvey, refetch: refetchSurvey } = useQuery({
     queryKey: ["me", "survey-pending"],
@@ -58,8 +59,7 @@ function AuthenticatedLayout() {
 
   useEffect(() => {
     if (loading) return;
-    if (!isAuthenticated && !redirected.current) {
-      redirected.current = true;
+    if (!isAuthenticated) {
       navigate({
         to: "/login",
         search: { redirect: initialPath.current },
@@ -85,13 +85,10 @@ function AuthenticatedLayout() {
         const hasSchedule = user.scheduleAssignmentStatus === "auto_assigned"
           || user.scheduleAssignmentStatus === "manual_pending";
         if (missingProfile) target = "/onboarding/profile";
-        else if (
-          !hasActiveSub &&
-          !pathname.startsWith("/checkout") &&
-          pathname !== "/app/subscribe"
-        ) {
-          // Sin suscripción → vista interna del portal (no salimos a la home).
-          target = "/app/subscribe";
+        // Sin suscripción activa: puede ENTRAR a la app pero solo al dashboard
+        // (/app), que muestra su estado y el botón para elegir plan.
+        else if (!hasActiveSub) {
+          if (pathname !== "/app") target = "/app";
         }
         else if (hasActiveSub && !hasSchedule) target = "/onboarding/schedule";
       }

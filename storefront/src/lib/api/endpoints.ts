@@ -350,8 +350,23 @@ export const adminApi = {
   notifications: (status?: "queued" | "sent" | "failed") =>
     apiGet<any[]>("/admin/notifications", status ? { status } : undefined),
   runAutomations: () => apiPost<{ ok: true }>("/admin/notifications/run"),
-  createUser: (body: { email: string; fullName: string; role: "student" | "teacher"; level?: "beginner" | "intermediate" | "advanced" }) =>
-    apiPost<{ user: User; setPasswordToken: string }>("/admin/users", body),
+  createUser: (body: {
+    email: string;
+    fullName: string;
+    role: "student" | "teacher";
+    level?: "beginner" | "intermediate" | "advanced";
+    /** Empalme: activa el plan manualmente (pagos por fuera de Wompi). */
+    plan?: { planId: string; endDate: string };
+  }) => apiPost<{ user: User; link?: string }>("/admin/users", body),
+  setSubscription: (
+    id: string,
+    body: {
+      planId: string;
+      status?: "pending" | "active" | "past_due" | "canceled" | "expired";
+      currentPeriodEnd?: string | null;
+      startedAt?: string | null;
+    },
+  ) => apiPatch<any>(`/admin/users/${id}/subscription`, body),
   updateUser: (id: string, body: Partial<{ fullName: string; phone: string; role: "student" | "teacher" | "admin"; englishLevel: "beginner" | "intermediate" | "advanced" | null }>) =>
     apiPatch<User>(`/admin/users/${id}`, body),
   setUserStatus: (id: string, disabled: boolean) =>

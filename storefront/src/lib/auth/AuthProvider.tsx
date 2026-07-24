@@ -14,6 +14,8 @@ export interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
+  /** true cuando el backend no respondió al restaurar la sesión (caído / sin red). */
+  backendDown: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (fullName: string, email: string, password: string, phone: string, documentNumber: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -27,19 +29,32 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [backendDown, setBackendDown] = useState(false);
 
   const refresh = useCallback(async () => {
-    const u = await session.fetchMe();
-    setUser(u);
+    try {
+      const u = await session.fetchMe();
+      setUser(u);
+      setBackendDown(false);
+    } catch {
+      setBackendDown(true);
+    }
   }, []);
 
   // Arranque: restaura sesión desde la cookie de refresh.
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const restored = await session.tryRestore();
-      if (cancelled) return;
-      setUser(restored);
+      try {
+        const restored = await session.tryRestore();
+        if (cancelled) return;
+        setUser(restored);
+      } catch {
+        // Backend caído: no sabemos si hay sesión. La UI autenticada muestra
+        // la pantalla de error en vez de expulsar al usuario a /login.
+        if (cancelled) return;
+        setBackendDown(true);
+      }
       setLoading(false);
     })();
     return () => {
@@ -53,8 +68,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let timer: ReturnType<typeof setInterval> | null = null;
     const tick = async () => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
-      const fresh = await session.fetchMe();
-      if (fresh) setUser(fresh);
+      try {
+        const fresh = await session.fetchMe();
+        if (fresh) setUser(fresh);
+        setBackendDown(false);
+      } catch {
+        setBackendDown(true);
+      }
     };
     const onVisible = () => {
       if (typeof document !== "undefined" && document.visibilityState === "visible") tick();
@@ -72,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isAuthenticated: !!user,
       loading,
+      backendDown,
       hasRole: (role) => !!user?.roles.includes(role),
       async signIn(email, password) {
         setUser(await session.signIn(email, password));
@@ -88,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       refresh,
     }),
-    [user, loading, refresh],
+    [user, loading, backendDown, refresh],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

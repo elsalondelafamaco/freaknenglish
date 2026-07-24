@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { AppShell } from "@/components/app/AppShell";
+import { BackendDownBanner, PlatformError } from "@/components/app/PlatformError";
 import { subscriptionsApi, surveysApi } from "@/lib/api/endpoints";
 import { useQuery } from "@tanstack/react-query";
 import { SatisfactionDialog } from "@/components/app/SatisfactionDialog";
@@ -27,10 +28,13 @@ export const Route = createFileRoute("/_authenticated")({
     meta: [{ name: "robots", content: "noindex, nofollow" }],
   }),
   component: AuthenticatedLayout,
+  // Cualquier error no controlado dentro del portal (una query que revienta,
+  // un render roto por datos faltantes) cae aquí en vez de dejar pantalla blanca.
+  errorComponent: () => <PlatformError />,
 });
 
 function AuthenticatedLayout() {
-  const { isAuthenticated, loading, user } = useAuth();
+  const { isAuthenticated, loading, user, backendDown } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   // Capture the path we came in on, once, so the redirect target doesn't
@@ -59,6 +63,8 @@ function AuthenticatedLayout() {
 
   useEffect(() => {
     if (loading) return;
+    // Backend caído: no sabemos si hay sesión — no expulses a /login.
+    if (backendDown && !isAuthenticated) return;
     if (!isAuthenticated) {
       navigate({
         to: "/login",
@@ -100,7 +106,12 @@ function AuthenticatedLayout() {
       }
       setChecked(true);
     }
-  }, [isAuthenticated, loading, navigate, user, pathname, mySub]);
+  }, [isAuthenticated, loading, navigate, user, pathname, mySub, backendDown]);
+
+  // El backend no respondió al restaurar la sesión: UI de error con acciones.
+  if (!loading && backendDown && !isAuthenticated) {
+    return <PlatformError />;
+  }
 
   if (!checked) {
     return (
@@ -112,6 +123,7 @@ function AuthenticatedLayout() {
 
   return (
     <AppShell>
+      {backendDown ? <BackendDownBanner /> : null}
       <Outlet />
       {isStudent && pendingSurvey?.pending && user ? (
         <SatisfactionDialog

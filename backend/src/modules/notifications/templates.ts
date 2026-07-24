@@ -137,13 +137,38 @@ export const templates = {
       { preheader: 'Enlace para restablecer tu contraseña' },
     ),
 
-  account_invite: (v: { fullName: string; link: string }) =>
-    wrap(
-      `Te damos la bienvenida, ${v.fullName}`,
-      `<p>Se creó una cuenta para ti en ${env.BRAND_NAME}. Configura tu contraseña para ingresar.</p>
-       ${cta(v.link, 'Configurar mi contraseña')}`,
-      { preheader: 'Configura tu contraseña para ingresar' },
-    ),
+  account_invite: (v: { fullName: string; link: string; role?: 'student' | 'teacher'; planName?: string; planEndsAt?: string }) => {
+    const firstName = v.fullName.split(' ')[0] || v.fullName
+    const isTeacher = v.role === 'teacher'
+    const planBlock = v.planName
+      ? `<div style="background:${env.BRAND_COLOR};border-radius:16px;padding:14px 18px;margin:18px 0">
+           <p style="margin:0;font-size:14px"><b>Tu plan ya está activo</b> ✅</p>
+           <p style="margin:4px 0 0;font-size:14px;color:#444">${v.planName}${v.planEndsAt ? ` · vigente hasta el <b>${new Date(v.planEndsAt).toLocaleDateString('es-CO', { dateStyle: 'long' })}</b>` : ''}. No tienes que pagar nada por ahora.</p>
+         </div>`
+      : ''
+    const intro = isTeacher
+      ? `<p>Hola ${firstName}, ¡bienvenido al equipo de ${env.BRAND_NAME}! 🎉</p>
+         <p>Te invitamos a tu portal de profesor: ahí gestionas tu disponibilidad, ves tu calendario de clases 1 a 1 y llevas el progreso de tus estudiantes.</p>`
+      : `<p>Hola ${firstName}, ¡qué alegría tenerte en ${env.BRAND_NAME}! 🎉</p>
+         <p>Tu cuenta ya está creada. Desde hoy no memorizas inglés: <b>lo hablas</b>, en clases 1 a 1 en vivo con tu propio profesor.</p>`
+    const after = isTeacher
+      ? `<p style="margin:4px 0">🗓️ &nbsp;Configura tu disponibilidad semanal</p>
+         <p style="margin:4px 0">🧑‍🏫 &nbsp;Recibe tus estudiantes asignados</p>
+         <p style="margin:4px 0">✍️ &nbsp;Usa el aula colaborativa en vivo</p>`
+      : `<p style="margin:4px 0">📅 &nbsp;Elige y consulta tus horarios de clase</p>
+         <p style="margin:4px 0">📚 &nbsp;Avanza con módulos y prácticas a tu ritmo</p>
+         <p style="margin:4px 0">🧑‍🏫 &nbsp;Habla en vivo con tu profesor desde la primera clase</p>`
+    return wrap(
+      `Te damos la bienvenida a ${env.BRAND_NAME}, ${firstName} 💛`,
+      `${intro}
+       ${planBlock}
+       <p>Solo falta un paso: crea tu contraseña para entrar a tu portal.</p>
+       ${after}
+       ${cta(v.link, 'Crear mi contraseña y entrar')}
+       <p style="font-size:13px;color:#888;margin-top:16px">Este enlace es personal y vence en 7 días. Si no esperabas esta invitación, puedes ignorar este correo.</p>`,
+      { preheader: v.planName ? 'Tu cuenta está lista y tu plan ya está activo' : 'Tu cuenta está lista — crea tu contraseña para entrar' },
+    )
+  },
 
   // ─── Retención / ciclo de vida ──────────────────────────────────────
   payment_failed: (v: { fullName?: string; planName?: string }) =>

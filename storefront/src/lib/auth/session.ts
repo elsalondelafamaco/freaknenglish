@@ -5,7 +5,27 @@
  */
 import type { AppRole, EnglishLevel, User } from "@/lib/domain/types";
 import { authApi, usersApi } from "@/lib/api/endpoints";
-import { setAccessToken, API_URL } from "@/lib/api/client";
+import { ApiError, setAccessToken, API_URL } from "@/lib/api/client";
+
+/** Error de infraestructura (backend caído / sin red / 5xx), NO de sesión. */
+export class BackendUnavailableError extends Error {
+  constructor(cause?: unknown) {
+    super("No pudimos conectar con el servidor. Intenta de nuevo en unos segundos.");
+    this.cause = cause;
+  }
+}
+
+/**
+ * ¿El fallo es del servidor/red (y no un simple "no hay sesión")?
+ * - `fetch` que no llega al servidor lanza TypeError.
+ * - 5xx = backend con problemas.
+ * - 4xx (401/403/…) = sesión inválida — eso NO es "backend caído".
+ */
+export function isBackendUnavailable(e: unknown): boolean {
+  if (e instanceof BackendUnavailableError) return true;
+  if (e instanceof ApiError) return e.status >= 500;
+  return true;
+}
 
 /** Mapea el usuario del backend (Prisma) al shape del storefront. */
 export function mapUser(u: any): User {
@@ -22,6 +42,7 @@ export function mapUser(u: any): User {
     assignedTeacherId: u.assignedTeacherId ?? undefined,
     schedulePreferences: Array.isArray(u.schedulePreferences) ? u.schedulePreferences : undefined,
     scheduleAssignmentStatus: u.scheduleAssignmentStatus ?? undefined,
+    createdAt: u.createdAt ?? new Date().toISOString(),
   };
 }
 
@@ -36,8 +57,10 @@ export async function fetchMe(): Promise<User | null> {
     const me = await usersApi.me();
     snapshot = mapUser(me);
     return snapshot;
-  } catch {
+  } catch (e) {
     snapshot = null;
+    // Backend caído ≠ "no hay sesión": deja que el caller muestre la UI de error.
+    if (isBackendUnavailable(e)) throw new BackendUnavailableError(e);
     return null;
   }
 }
@@ -47,8 +70,9 @@ export async function tryRestore(): Promise<User | null> {
   try {
     const r = await authApi.refresh();
     setAccessToken(r.accessToken);
-  } catch {
+  } catch (e) {
     snapshot = null;
+    if (isBackendUnavailable(e)) throw new BackendUnavailableError(e);
     return null;
   }
   return fetchMe();

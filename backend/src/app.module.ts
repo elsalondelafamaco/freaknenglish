@@ -7,6 +7,7 @@ import { APP_GUARD } from '@nestjs/core'
 import { ThrottlerGuard } from '@nestjs/throttler'
 
 import { PrismaModule } from './prisma/prisma.module'
+import { BootstrapService } from './bootstrap/bootstrap.service'
 import { AuthModule } from './modules/auth/auth.module'
 import { UsersModule } from './modules/users/users.module'
 import { PlansModule } from './modules/plans/plans.module'
@@ -58,6 +59,6 @@ import { ExchangeModule } from './modules/exchange/exchange.module'
     SchedulingModule,
     ExchangeModule,
   ],
-  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }, BootstrapService],
 })
 export class AppModule {}

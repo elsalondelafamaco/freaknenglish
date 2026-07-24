@@ -84,8 +84,37 @@ export class AdminController {
    * Body: { email, fullName, role: 'student'|'teacher', level? }
    */
   @Post('users')
-  createUser(@Body() body: { email: string; fullName: string; role: 'student' | 'teacher'; level?: 'beginner' | 'intermediate' | 'advanced' }) {
+  createUser(
+    @Body()
+    body: {
+      email: string
+      fullName: string
+      role: 'student' | 'teacher'
+      level?: 'beginner' | 'intermediate' | 'advanced'
+      plan?: { planId: string; endDate: string }
+    },
+  ) {
     return this.svc.createUser(body)
+  }
+
+  /**
+   * @endpoint PATCH /api/v1/admin/users/:id/subscription
+   * Crea o edita a mano la suscripción de un estudiante (empalme de alumnos
+   * que pagaron por fuera de Wompi, extensiones, cortesías).
+   * Body: { planId, status?, currentPeriodEnd?: 'YYYY-MM-DD'|ISO|null, startedAt? }
+   */
+  @Patch('users/:id/subscription')
+  setSubscription(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      planId: string
+      status?: 'pending' | 'active' | 'past_due' | 'canceled' | 'expired'
+      currentPeriodEnd?: string | null
+      startedAt?: string | null
+    },
+  ) {
+    return this.svc.setUserSubscription(id, body)
   }
 
   /**

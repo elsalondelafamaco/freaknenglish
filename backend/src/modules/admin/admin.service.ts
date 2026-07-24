@@ -472,7 +472,15 @@ export class AdminService {
    * Crea un usuario sin contraseña: dispara email "set-password" vía Resend.
    * El estudiante no queda activo hasta completar pago Wompi.
    */
-  async createUser(input: { email: string; fullName: string; role: 'student' | 'teacher'; level?: 'beginner' | 'intermediate' | 'advanced' }) {
+  async createUser(input: {
+    email: string
+    fullName: string
+    role: 'student' | 'teacher'
+    level?: 'beginner' | 'intermediate' | 'advanced'
+    // Empalme: estudiantes que ya pagaron por fuera de Wompi. Si viene, la
+    // suscripción queda activa desde ya y vence en `endDate`.
+    plan?: { planId: string; endDate: string }
+  }) {
     const email = input.email.toLowerCase()
     const exists = await this.prisma.user.findUnique({ where: { email } })
     if (exists) throw new Error('User already exists')
@@ -485,8 +493,21 @@ export class AdminService {
         passwordHash: null,
       },
     })
+
+    let planName: string | undefined
+    let planEndsAt: string | undefined
+    if (input.role === 'student' && input.plan?.planId && input.plan.endDate) {
+      const sub = await this.setUserSubscription(user.id, {
+        planId: input.plan.planId,
+        status: 'active',
+        currentPeriodEnd: input.plan.endDate,
+      })
+      planName = sub.plan.name
+      planEndsAt = sub.currentPeriodEnd?.toISOString()
+    }
+
     // Invitación: link para configurar contraseña (reusa el flujo de reset,
-    // TTL 7 días). Un estudiante creado así NO queda activo hasta pagar Wompi.
+    // TTL 7 días). Sin `plan`, un estudiante NO queda activo hasta pagar Wompi.
     const token = randomBytes(32).toString('hex')
     const tokenHash = createHash('sha256').update(token).digest('hex')
     await this.prisma.passwordReset.create({
@@ -497,13 +518,77 @@ export class AdminService {
       userId: user.id,
       toEmail: user.email,
       template: 'account_invite',
-      subject: 'Configura tu contraseña',
+      subject: `Tu invitación a ${env.BRAND_NAME} 💛`,
       dedupeKey: `invite:${user.id}:${token.slice(0, 12)}`,
-      vars: { fullName: user.fullName, link },
+      vars: {
+        fullName: user.fullName,
+        link,
+        role: input.role,
+        ...(planName ? { planName } : {}),
+        ...(planEndsAt ? { planEndsAt } : {}),
+      },
       type: 'system',
     })
     // En dev devolvemos el link para poder probar sin SMTP.
     return { user, link }
+  }
+
+  /**
+   * Crea/edita la suscripción de un estudiante a mano (empalmes, cortesías,
+   * extensiones). `currentPeriodEnd` acepta 'YYYY-MM-DD' (se normaliza a fin
+   * de día, hora Colombia) o ISO completo; `null` la deja sin vencimiento.
+   */
+  async setUserSubscription(
+    id: string,
+    input: {
+      planId: string
+      status?: 'pending' | 'active' | 'past_due' | 'canceled' | 'expired'
+      currentPeriodEnd?: string | null
+      startedAt?: string | null
+    },
+  ) {
+    const userId = await this.resolveExistingUserId(id)
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } })
+    if (user.role !== 'student') throw new Error('Sólo los estudiantes tienen suscripción')
+    const plan = await this.prisma.plan.findUnique({ where: { id: input.planId } })
+    if (!plan) throw new NotFoundException('Plan not found')
+
+    const parseDate = (v: string | null | undefined): Date | null | undefined => {
+      if (v === undefined) return undefined
+      if (v === null || v === '') return null
+      // Fecha sin hora → fin del día en Colombia (UTC-5): el plan cubre ese día completo.
+      const d = /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(`${v}T23:59:59-05:00`) : new Date(v)
+      if (Number.isNaN(d.getTime())) throw new Error(`Fecha inválida: ${v}`)
+      return d
+    }
+
+    const status = input.status ?? 'active'
+    const currentPeriodEnd = parseDate(input.currentPeriodEnd)
+    const startedAt = parseDate(input.startedAt)
+
+    const existing = await this.prisma.subscription.findUnique({ where: { userId } })
+    const sub = await this.prisma.subscription.upsert({
+      where: { userId },
+      update: {
+        planId: plan.id,
+        status,
+        ...(currentPeriodEnd !== undefined ? { currentPeriodEnd } : {}),
+        ...(startedAt !== undefined ? { startedAt } : {}),
+        ...(status === 'active' ? { canceledAt: null, cancelAt: null } : {}),
+      },
+      create: {
+        userId,
+        planId: plan.id,
+        status,
+        startedAt: startedAt ?? new Date(),
+        currentPeriodEnd: currentPeriodEnd ?? null,
+      },
+      include: { plan: true },
+    })
+    this.log.log(
+      `Suscripción ${existing ? 'actualizada' : 'creada'} manualmente: user=${user.email} plan=${plan.id} status=${status} hasta=${sub.currentPeriodEnd?.toISOString() ?? '—'}`,
+    )
+    return sub
   }
 
   /**

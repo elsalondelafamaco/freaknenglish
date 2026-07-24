@@ -1,4 +1,11 @@
+import * as dotenv from 'dotenv'
 import { z } from 'zod'
+
+// Carga backend/.env ANTES de validar. En Railway no existe el archivo (las
+// vars vienen del entorno) y dotenv es no-op; además dotenv nunca sobreescribe
+// variables ya presentes en process.env. Sin esto, `nest start` local explota
+// con ZodError porque este módulo puede importarse antes que ConfigModule.
+dotenv.config()
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -8,14 +15,19 @@ const schema = z.object({
   JWT_SECRET: z.string().min(16),
   JWT_REFRESH_SECRET: z.string().min(16),
   JWT_EXPIRES_IN: z.string().default('15m'),
+  // ─── Bootstrap de producción ──────────────────────────────────────────
+  // Si al arrancar no existe NINGÚN admin, se crea uno con estas credenciales
+  // (defaults = seed local). Cambia la contraseña apenas entres.
+  ADMIN_EMAIL: z.string().default('admin@freakn.dev'),
+  ADMIN_PASSWORD: z.string().default('Freakn123!'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
   GOOGLE_CLIENT_ID: z.string().optional().default(''),
   GOOGLE_CLIENT_SECRET: z.string().optional().default(''),
   GOOGLE_CALLBACK_URL: z.string().optional().default(''),
   RESEND_API_KEY: z.string().optional().default(''),
-  RESEND_FROM: z.string().default('Freakn <hola@freakn.com>'),
+  RESEND_FROM: z.string().default('Freakn <hola@mail.freaknenglish.com>'),
   RESEND_REPLY_TO: z.string().optional().default(''),
-  BRAND_NAME: z.string().default('Freakn English'),
+  BRAND_NAME: z.string().default('FreaknEnglish'),
   BRAND_TAGLINE: z.string().default('1 a 1 en vivo'),
   BRAND_COLOR: z.string().default('#FEF6C7'),
   BRAND_INK: z.string().default('#0A0A0A'),

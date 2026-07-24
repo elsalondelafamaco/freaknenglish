@@ -1,9 +1,15 @@
-import { Check } from "lucide-react";
+import { Check, MessageCircle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { PLANS, formatCop } from "@/lib/domain/plans";
 import { plansApi } from "@/lib/api/endpoints";
+
+// Fallback de venta si el backend no responde: nunca frenamos una compra.
+const SALES_WHATSAPP = "573012646770";
+const SALES_WHATSAPP_URL = `https://wa.me/${SALES_WHATSAPP}?text=${encodeURIComponent(
+  "¡Hola! Quiero información sobre los planes de Freakn English 💛",
+)}`;
 
 type ApiPlan = {
   id: string;
@@ -18,14 +24,16 @@ type ApiPlan = {
 
 export function Pricing() {
   // Fuente de verdad: backend (`GET /api/v1/plans`) que incluye TRM.
-  // Si el backend no responde (SSR / offline), cae al catálogo local.
-  const { data } = useQuery({
+  // Si el backend falla, NO mostramos precios posiblemente desactualizados:
+  // la sección se convierte en un CTA directo a WhatsApp para no parar ventas.
+  const { data, isError, isPending } = useQuery({
     queryKey: ["plans", "public"],
     queryFn: () => plansApi.list(),
     staleTime: 60_000,
+    retry: 1,
   });
   const trm = data?.trm.valueCop ?? null;
-  const plans: ApiPlan[] =
+  const plans: ApiPlan[] | null =
     data?.plans.map((p) => {
       const local = PLANS.find((l) => l.id === p.id);
       return {
@@ -34,17 +42,9 @@ export function Pricing() {
         tag: local?.tag,
         features: p.features?.length ? p.features : local?.features ?? [],
       };
-    }) ??
-    PLANS.map((p) => ({
-      id: p.id,
-      name: p.name,
-      daysPerWeek: p.daysPerWeek,
-      priceCop: p.priceCop,
-      priceUsd: null,
-      features: p.features,
-      highlight: p.highlight,
-      tag: p.tag,
-    }));
+    }) ?? null;
+
+  if (isError || (data && !data.plans.length)) return <PricingWhatsAppFallback />;
 
   return (
     <section id="precios" className="bg-brand-surface py-20 lg:py-28 scroll-mt-24">
@@ -64,9 +64,82 @@ export function Pricing() {
         </div>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-3 lg:items-center">
-          {plans.map((p) => (
-            <PriceCard key={p.id} plan={p} />
+          {isPending || !plans
+            ? [0, 1, 2].map((i) => <PriceCardSkeleton key={i} />)
+            : plans.map((p) => <PriceCard key={p.id} plan={p} />)}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** Skeleton mientras cargan los precios reales (evita mostrar precios viejos). */
+function PriceCardSkeleton() {
+  return (
+    <div className="animate-pulse rounded-3xl bg-brand-yellow-soft/60 p-1.5">
+      <div className="h-9" />
+      <div className="rounded-[22px] bg-brand-yellow-soft px-6 pb-7 pt-6">
+        <div className="mx-auto h-7 w-2/3 rounded-full bg-brand-ink/10" />
+        <div className="mx-auto mt-3 h-9 w-1/2 rounded-full bg-brand-ink/10" />
+        <div className="mt-5 h-11 w-full rounded-full bg-brand-ink/15" />
+        <div className="mt-6 space-y-2.5">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-4 w-full rounded-full bg-brand-ink/10" />
           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Sección espejo de Pricing para cuando el backend no responde: misma
+ * estética, pero el CTA lleva directo a WhatsApp para cerrar la venta.
+ */
+function PricingWhatsAppFallback() {
+  return (
+    <section id="precios" className="bg-brand-surface py-20 lg:py-28 scroll-mt-24">
+      <div className="mx-auto max-w-6xl px-5 lg:px-8">
+        <div className="text-center">
+          <p className="text-sm font-medium text-brand-ink/60">
+            Planes que se adaptan a tus necesidades
+          </p>
+          <h2 className="mt-2 text-balance text-3xl font-bold leading-tight tracking-tight text-brand-ink sm:text-4xl lg:text-[44px]">
+            Elige cuántos días a la Semana quieres avanzar
+          </h2>
+        </div>
+
+        <div className="mx-auto mt-12 max-w-2xl rounded-3xl bg-brand-yellow-soft p-1.5">
+          <div className="rounded-[22px] bg-brand-yellow-soft px-8 pb-9 pt-8 text-center">
+            <h3 className="text-2xl font-bold text-brand-ink">
+              Cuéntanos tu meta y te armamos el plan perfecto
+            </h3>
+            <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-brand-ink/70">
+              Escríbenos por WhatsApp y en minutos te compartimos los planes,
+              precios y horarios disponibles. Sin esperas, con una persona real.
+            </p>
+            <a
+              href={SALES_WHATSAPP_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-brand-ink px-8 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-ink-soft hover:shadow-lg active:scale-[0.98]"
+            >
+              <MessageCircle className="size-4" /> Hablar por WhatsApp
+            </a>
+            <ul className="mx-auto mt-7 max-w-sm space-y-2.5 text-left">
+              {[
+                "Clases 1 a 1 en vivo con profesor propio",
+                "Planes de 3, 4 o 5 días a la semana",
+                "Horarios fijos que se adaptan a tu rutina",
+                "Respuesta inmediata por WhatsApp",
+              ].map((f) => (
+                <li key={f} className="flex items-start gap-2 text-[14px] text-brand-ink/80">
+                  <Check className="mt-0.5 size-4 shrink-0 text-brand-success" strokeWidth={3} />
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </section>

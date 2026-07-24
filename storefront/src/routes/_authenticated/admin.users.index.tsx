@@ -37,7 +37,7 @@ function AdminCRM() {
             ))}
           </div>
           <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5">
-            <Plus className="size-3.5" /> Crear usuario
+            <Plus className="size-3.5" /> Invitar usuario
           </button>
         </div>
       </div>
@@ -92,11 +92,32 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState("");
   const [userRole, setUserRole] = useState<"student" | "teacher">("student");
   const [level, setLevel] = useState<Level>("beginner");
+  // Empalme: estudiantes que ya pagaron por fuera de Wompi.
+  const [withPlan, setWithPlan] = useState(false);
+  const [planId, setPlanId] = useState("");
+  const [planEndDate, setPlanEndDate] = useState("");
+
+  const plansQ = useQuery({ queryKey: ["admin", "plans"], queryFn: () => adminApi.plans(), enabled: userRole === "student" });
+  const plans = (plansQ.data ?? []) as Array<{ id: string; name: string }>;
 
   const createM = useMutation({
-    mutationFn: () => adminApi.createUser({ fullName, email, role: userRole, level: userRole === "student" ? level : undefined }),
-    onSuccess: (r: any) => {
-      toast.success(r?.link ? "Usuario creado. Link de invitación generado." : "Usuario creado.");
+    mutationFn: () =>
+      adminApi.createUser({
+        fullName,
+        email,
+        role: userRole,
+        level: userRole === "student" ? level : undefined,
+        plan:
+          userRole === "student" && withPlan && planId && planEndDate
+            ? { planId, endDate: planEndDate }
+            : undefined,
+      }),
+    onSuccess: () => {
+      toast.success(
+        withPlan && userRole === "student"
+          ? "Usuario invitado con plan activo. Le llegó el correo de invitación."
+          : "Usuario invitado. Le llegó el correo para crear su contraseña.",
+      );
       qc.invalidateQueries({ queryKey: ["admin", "users"] });
       onClose();
     },
@@ -106,9 +127,9 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <form onSubmit={(e) => { e.preventDefault(); createM.mutate(); }} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-semibold text-brand-ink">Crear usuario</h2>
+        <h2 className="text-lg font-semibold text-brand-ink">Invitar usuario</h2>
         <p className="mt-1 text-xs text-brand-ink/60">
-          Se enviará un email para configurar contraseña. Crear un estudiante <strong>no activa la suscripción</strong> — eso ocurre tras un pago Wompi.
+          Le llegará un correo de invitación con el link para crear su contraseña y entrar. Sin plan manual, un estudiante se activa solo tras pagar por Wompi.
         </p>
 
         <div className="mt-4 flex gap-2">
@@ -128,20 +149,60 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none" />
         </label>
         {userRole === "student" ? (
-          <label className="mt-3 block text-xs font-semibold text-brand-ink/70">
-            Nivel inicial
-            <select value={level} onChange={(e) => setLevel(e.target.value as Level)} className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none">
-              <option value="beginner">Beginner (A1–A2)</option>
-              <option value="intermediate">Intermediate (B1–B2)</option>
-              <option value="advanced">Advanced (C1)</option>
-            </select>
-          </label>
+          <>
+            <label className="mt-3 block text-xs font-semibold text-brand-ink/70">
+              Nivel inicial
+              <select value={level} onChange={(e) => setLevel(e.target.value as Level)} className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none">
+                <option value="beginner">Beginner (A1–A2)</option>
+                <option value="intermediate">Intermediate (B1–B2)</option>
+                <option value="advanced">Advanced (C1)</option>
+              </select>
+            </label>
+
+            <label className="mt-4 flex items-start gap-2 rounded-xl border border-brand-line bg-brand-cream/20 p-3">
+              <input
+                type="checkbox"
+                checked={withPlan}
+                onChange={(e) => setWithPlan(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span className="text-xs text-brand-ink/75">
+                <strong className="block text-brand-ink">Activar plan manualmente</strong>
+                Para estudiantes que ya pagaron por fuera de Wompi. La suscripción queda activa hasta la fecha que definas.
+              </span>
+            </label>
+
+            {withPlan ? (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <label className="block text-xs font-semibold text-brand-ink/70">
+                  Plan
+                  <select value={planId} onChange={(e) => setPlanId(e.target.value)} required className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none">
+                    <option value="" disabled>Selecciona…</option>
+                    {plans.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-xs font-semibold text-brand-ink/70">
+                  Activo hasta
+                  <input
+                    type="date"
+                    value={planEndDate}
+                    onChange={(e) => setPlanEndDate(e.target.value)}
+                    required
+                    min={new Date().toISOString().slice(0, 10)}
+                    className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                  />
+                </label>
+              </div>
+            ) : null}
+          </>
         ) : null}
 
         <div className="mt-5 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-sm font-medium text-brand-ink/70 hover:bg-brand-cream/30">Cancelar</button>
           <button type="submit" disabled={createM.isPending} className="rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white shadow-soft hover:-translate-y-0.5 transition disabled:opacity-60">
-            {createM.isPending ? "Creando…" : "Crear"}
+            {createM.isPending ? "Enviando…" : "Enviar invitación"}
           </button>
         </div>
       </form>

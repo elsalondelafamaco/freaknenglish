@@ -320,27 +320,31 @@ function AdminUserDetail() {
       ) : null}
 
       {tab === "subscription" && isStudent ? (
-        <Card title="Suscripción">
-          {sub ? (
-            <dl className="grid gap-1 text-sm text-brand-ink/75 md:grid-cols-2">
-              <Row k="Plan">{getPlan(sub.planId)?.name ?? sub.planId}</Row>
-              <Row k="Estado">{sub.status.replace("_", " ")}</Row>
-              <Row k="Inicio">
-                {sub.startedAt ? new Date(sub.startedAt).toLocaleDateString("es-CO") : "—"}
-              </Row>
-              <Row k="Próximo cobro">
-                {sub.currentPeriodEnd
-                  ? new Date(sub.currentPeriodEnd).toLocaleDateString("es-CO")
-                  : "—"}
-              </Row>
-              <Row k="Ref. Wompi">{sub.wompiReference ?? "—"}</Row>
-            </dl>
-          ) : (
-            <p className="text-sm text-brand-ink/55">
-              Sin suscripción. La activación ocurre tras un pago Wompi aprobado.
-            </p>
-          )}
-        </Card>
+        <>
+          <Card title="Suscripción">
+            {sub ? (
+              <dl className="grid gap-1 text-sm text-brand-ink/75 md:grid-cols-2">
+                <Row k="Plan">{getPlan(sub.planId)?.name ?? sub.planId}</Row>
+                <Row k="Estado">{sub.status.replace("_", " ")}</Row>
+                <Row k="Inicio">
+                  {sub.startedAt ? new Date(sub.startedAt).toLocaleDateString("es-CO") : "—"}
+                </Row>
+                <Row k="Activa hasta">
+                  {sub.currentPeriodEnd
+                    ? new Date(sub.currentPeriodEnd).toLocaleDateString("es-CO")
+                    : "—"}
+                </Row>
+                <Row k="Ref. Wompi">{sub.wompiReference ?? "—"}</Row>
+              </dl>
+            ) : (
+              <p className="text-sm text-brand-ink/55">
+                Sin suscripción. Actívala manualmente abajo (pagos por fuera de
+                Wompi) o espera un pago Wompi aprobado.
+              </p>
+            )}
+          </Card>
+          <SubscriptionEditor userId={user.id} sub={sub} onSaved={bump} />
+        </>
       ) : null}
 
       {tab === "payments" && isStudent ? (
@@ -677,6 +681,124 @@ function EditUserDialog({
         </div>
       </form>
     </div>
+  );
+}
+
+/**
+ * Edición manual de la suscripción (empalme de estudiantes que pagan por
+ * fuera de Wompi, extensiones, cortesías). El admin puede cambiar plan,
+ * estado y fecha de vencimiento en cualquier momento.
+ */
+function SubscriptionEditor({
+  userId,
+  sub,
+  onSaved,
+}: {
+  userId: string;
+  sub: Subscription | null;
+  onSaved: () => void;
+}) {
+  const [plans, setPlans] = useState<Array<{ id: string; name: string }>>([]);
+  const [planId, setPlanId] = useState<string>(sub?.planId ?? "");
+  const [status, setStatus] = useState<string>(sub?.status ?? "active");
+  const [endDate, setEndDate] = useState<string>(
+    sub?.currentPeriodEnd ? new Date(sub.currentPeriodEnd).toISOString().slice(0, 10) : "",
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState(false);
+
+  useEffect(() => {
+    adminApi
+      .plans()
+      .then((p: any[]) => setPlans(p ?? []))
+      .catch(() => setPlans([]));
+  }, []);
+
+  useEffect(() => {
+    setPlanId(sub?.planId ?? "");
+    setStatus(sub?.status ?? "active");
+    setEndDate(sub?.currentPeriodEnd ? new Date(sub.currentPeriodEnd).toISOString().slice(0, 10) : "");
+  }, [sub?.planId, sub?.status, sub?.currentPeriodEnd]);
+
+  async function onSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    setOk(false);
+    try {
+      await adminApi.setSubscription(userId, {
+        planId,
+        status: status as any,
+        currentPeriodEnd: endDate || null,
+      });
+      setOk(true);
+      onSaved();
+    } catch (err) {
+      setError((err as Error).message ?? "No se pudo guardar");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card title={sub ? "Modificar suscripción (manual)" : "Activar plan manualmente"}>
+      <p className="mb-4 text-xs text-brand-ink/55">
+        Para estudiantes que pagan por fuera de Wompi: define el plan y hasta qué
+        fecha queda activo. Un pago Wompi posterior extiende desde esa fecha.
+      </p>
+      <form onSubmit={onSave} className="grid gap-4 md:grid-cols-3">
+        <Field label="Plan">
+          <select
+            value={planId}
+            onChange={(e) => setPlanId(e.target.value)}
+            required
+            className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+          >
+            <option value="" disabled>
+              Selecciona…
+            </option>
+            {plans.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Estado">
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+          >
+            <option value="active">Activa</option>
+            <option value="pending">Pendiente</option>
+            <option value="past_due">En mora</option>
+            <option value="canceled">Cancelada</option>
+            <option value="expired">Vencida</option>
+          </select>
+        </Field>
+        <Field label="Activa hasta">
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+          />
+        </Field>
+        <div className="md:col-span-3 flex items-center justify-end gap-3">
+          {error ? <p className="text-xs text-red-700">{error}</p> : null}
+          {ok ? <p className="text-xs text-green-700">Suscripción guardada ✓</p> : null}
+          <button
+            type="submit"
+            disabled={saving || !planId}
+            className="rounded-full bg-brand-ink px-5 py-2 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-60"
+          >
+            {saving ? "Guardando…" : sub ? "Guardar cambios" : "Activar plan"}
+          </button>
+        </div>
+      </form>
+    </Card>
   );
 }
 

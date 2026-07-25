@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freakn' Survival Guide: Module 42 (2-Page Edition)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        yellow: '#E4DF33',
+                        charcoal: '#30302F',
+                        skyblue: '#93E5FF',
+                        olive: '#7C7A39',
+                        lightbg: '#FDFCEB',
+                    },
+                    fontFamily: {
+                        bree: ['"Bree Serif"', 'serif'],
+                        montserrat: ['Montserrat', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @media print {
+            body { background-color: white !important; padding: 0 !important; }
+            .survival-guide-container { 
+                box-shadow: none !important; 
+                border: none !important; 
+                width: 100% !important; 
+                max-width: 100% !important; 
+                margin: 0 !important;
+                page-break-after: always;
+            }
+            .no-print { display: none !important; }
+            @page { size: A4; margin: 0; }
+        }
+
+        body {
+            background-color: #F2F2F2;
+            font-family: 'Montserrat', sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .survival-guide-container {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            margin: 20px auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        .golden-nugget-card {
+            border: 2px solid #E5E7EB;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .accent-bar-yellow { border-right: 8px solid #E4DF33; }
+        .accent-bar-sky { border-right: 8px solid #93E5FF; }
+
+        .cheat-sheet-box {
+            background-color: #30302F;
+            border-radius: 20px;
+            color: white;
+        }
+
+        .gossip-header-icon {
+            background: white;
+            border-radius: 50%;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body class="p-0 sm:p-8 space-y-10 text-left">
+
+    <!-- PAGE 1: THE TIME MACHINE (TENSE REVIEW) -->
+    <div class="survival-guide-container">
+        
+        <!-- HEADER -->
+        <header class="bg-charcoal px-8 py-6 flex justify-between items-center border-b-8 border-yellow">
+            <div>
+                <h1 class="font-bree text-yellow text-3xl tracking-tight leading-none uppercase">Freakn' Survival Guide</h1>
+                <p class="text-gray-400 font-montserrat font-bold text-xs uppercase tracking-widest mt-1 text-left">MODULE 42: READY FOR INTERMEDIATE (PAGE 1)</p>
+            </div>
+            <div class="flex items-center space-x-3 text-center">
+                <div class="bg-yellow text-charcoal font-black rounded-full w-10 h-10 flex items-center justify-center text-xl font-bree">U8</div>
+            </div>
+        </header>
+
+        <!-- THE GOSSIP RECAP BAR -->
+        <div class="bg-lightbg py-6 px-10 flex items-center space-x-6 border-b border-gray-100">
+            <div class="gossip-header-icon flex-shrink-0">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-charcoal"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 9h8"></path><path d="M8 13h6"></path></svg>
+            </div>
+            <p class="font-bree italic text-charcoal text-lg leading-snug">
+                "The Gossip Recap: Titó survived his basic classes! Now he's packing his bags for the Intermediate Jungle (B1). Gelmy tells him: 'You can't just speak in the present anymore, you have to master the Time Machine!' Let's review."
+            </p>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex flex-1 p-10 gap-10">
+            
+            <!-- LEFT: THE NUGGETS -->
+            <div class="w-7/12">
+                <div class="flex items-center space-x-2 mb-8">
+                    <h2 class="font-bree text-2xl text-olive uppercase tracking-tight text-left">Time Machine Nuggets</h2>
+                    <span class="text-yellow text-2xl">⏳</span>
+                </div>
+
+                <div class="space-y-6 text-left">
+                    <div class="golden-nugget-card p-5 accent-bar-yellow">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">The Daily Grind (Present)</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">Use **Do/Does** for habits and routines. Use **Am/Is/Are + ING** for things happening right now.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I **work** every day, but today I **am relaxing**."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">The Storyteller (Past)</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">Mix the pasts to tell a great story. Use **Was/Were + ING** to set the scene, and **Simple Past** (ED/V2) for the action.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I **was sleeping** when the phone **rang**."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">The Experience (Present Perfect)</h3>
+                        <p class="text-gray-600 text-sm mt-1">Use **Have/Has + V3** to talk about your life from birth until today. No specific dates!</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I **have been** to Miami twice."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">The Fortune Teller (Future)</h3>
+                        <p class="text-gray-600 text-sm mt-1">Use **Going to** for real plans on your calendar. Use **Will** for promises and instant decisions.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I am **going to** travel. I promise I **will** call you!"</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: CHEAT SHEET -->
+            <div class="w-5/12">
+                <div class="cheat-sheet-box p-6 h-full shadow-xl text-left">
+                    <div class="flex items-center space-x-3 mb-6">
+                        <div class="bg-yellow rounded-full w-6 h-6 flex items-center justify-center text-charcoal font-black text-xs">!</div>
+                        <h2 class="font-bree text-xl text-yellow uppercase tracking-widest text-left">The Matrix</h2>
+                    </div>
+                    <div class="space-y-8">
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-3">The Wall (Helpers)</div>
+                            <ul class="space-y-3 font-montserrat font-bold text-sm text-white">
+                                <li class="pb-2 border-b border-gray-700"><span class="text-skyblue">Present:</span> Do / Does</li>
+                                <li class="pb-2 border-b border-gray-700"><span class="text-skyblue">Past:</span> Did</li>
+                                <li class="pb-2 border-b border-gray-700"><span class="text-yellow">Future:</span> Will</li>
+                                <li class="pb-2 border-b border-gray-700"><span class="text-yellow">Experience:</span> Have / Has</li>
+                            </ul>
+                        </div>
+                        <div class="bg-gray-800 p-4 rounded-lg border-2 border-skyblue mt-auto">
+                            <p class="text-[10px] font-black uppercase text-skyblue tracking-widest mb-2">Street Tip:</p>
+                            <p class="text-[11px] text-white/80 leading-tight italic">If someone asks you a question, listen to the FIRST word. "DO you like...?" -> Yes, I DO. "DID you go...?" -> Yes, I DID. Mirror their helper!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER BAR -->
+        <footer class="py-4 text-center border-t border-gray-100 bg-white">
+            <p class="text-[9px] font-montserrat font-bold text-gray-400 uppercase tracking-[0.4em]">Produced by FreaknEnglish 2026 | PAGE 1</p>
+        </footer>
+    </div>
+
+    <!-- PAGE 2: THE FLUENCY HACKS -->
+    <div class="survival-guide-container">
+        
+        <!-- HEADER -->
+        <header class="bg-charcoal px-8 py-6 flex justify-between items-center border-b-8 border-yellow">
+            <div>
+                <h1 class="font-bree text-yellow text-3xl tracking-tight leading-none uppercase">Freakn' Survival Guide</h1>
+                <p class="text-gray-400 font-montserrat font-bold text-xs uppercase tracking-widest mt-1 text-left">MODULE 42: READY FOR INTERMEDIATE (PAGE 2)</p>
+            </div>
+            <div class="flex items-center space-x-3 text-center">
+                <div class="bg-yellow text-charcoal font-black rounded-full w-10 h-10 flex items-center justify-center text-xl font-bree">U8</div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex flex-1 p-10 gap-10">
+            
+            <!-- LEFT: FLUENCY NUGGETS -->
+            <div class="w-7/12">
+                <div class="flex items-center space-x-2 mb-8">
+                    <h2 class="font-bree text-2xl text-olive uppercase tracking-tight text-left">Fluency Nuggets</h2>
+                    <span class="text-skyblue text-2xl">🗣️</span>
+                </div>
+
+                <div class="space-y-6 text-left">
+                    <div class="golden-nugget-card p-5 accent-bar-sky">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">Stop Translating Word for Word</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">English and Spanish have different formulas. Translate the *idea*, not the exact words. Embrace the English structure!</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I have 20 years." ❌ ➔ "I **am** 20 years old." ✅</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">The Workaround (Circumlocution)</h3>
+                        <p class="text-gray-600 text-sm mt-1">If you forget a word in English, DON'T panic and switch to Spanish. Describe it! Use "It's a thing that..." or "It's when you..."</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"It's the machine you use to clean the carpet." (Vacuum)</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Connect the Dots</h3>
+                        <p class="text-gray-600 text-sm mt-1">Stop speaking like a robot with tiny sentences. Use connectors to flow from one idea to the next.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I was tired, **however**, I went to the gym **because**..."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Buy Time with Fillers</h3>
+                        <p class="text-gray-600 text-sm mt-1">Native speakers don't have perfect answers immediately. They use "filler words" while their brain thinks.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"**Well...** to be honest, **I mean...**"</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: THE B1 STARTER PACK -->
+            <div class="w-5/12">
+                <div class="cheat-sheet-box p-8 h-full shadow-xl text-left">
+                    <div class="flex items-center space-x-3 mb-8">
+                        <div class="bg-yellow rounded-full w-6 h-6 flex items-center justify-center text-charcoal font-black text-xs">!</div>
+                        <h2 class="font-bree text-xl text-yellow uppercase tracking-widest text-left">B1 Starter Pack</h2>
+                    </div>
+                    <div class="space-y-10">
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-4">The Best Connectors</div>
+                            <ul class="space-y-3 font-montserrat font-bold text-xs text-white">
+                                <li class="pb-2 border-b border-gray-700"><span class="text-skyblue">Actually,</span> (De hecho...)</li>
+                                <li class="pb-2 border-b border-gray-700"><span class="text-skyblue">Besides that,</span> (Además...)</li>
+                                <li class="pb-2 border-b border-gray-700"><span class="text-skyblue">Therefore,</span> (Por lo tanto...)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-4">The Mindset</div>
+                            <ul class="space-y-3 font-montserrat font-bold text-xs">
+                                <li class="pb-2 border-b border-gray-700 text-yellow">Mistakes = Growth. Speak up!</li>
+                                <li class="pb-2 border-b border-gray-700 text-yellow">Listen to the rhythm, not just the words.</li>
+                                <li class="pb-2 border-b border-gray-700 text-yellow">Shadowing (repeat after natives).</li>
+                            </ul>
+                        </div>
+                        <div class="bg-gray-800 p-4 rounded-lg border-2 border-skyblue">
+                            <p class="text-[10px] font-black uppercase text-skyblue tracking-widest mb-2">Street Tip:</p>
+                            <p class="text-[11px] leading-tight font-medium">Confidence is 80% of fluency. Even if your grammar is messy, if you speak with confidence and good energy, people will understand you perfectly!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- THE MICRO-MISSION FOOTER -->
+        <div class="bg-skyblue p-8 flex items-center space-x-8 border-t border-gray-200">
+            <div class="bg-charcoal text-white rounded-full w-14 h-14 flex items-center justify-center flex-shrink-0 shadow-lg">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+            </div>
+            <div class="flex-1 text-left">
+                <h4 class="font-montserrat font-black text-charcoal text-xs uppercase tracking-widest mb-1">The Graduation Mission</h4>
+                <p class="font-montserrat font-bold text-charcoal text-lg leading-tight">
+                    Record a final voice note! Tell your teacher: <span class="underline italic">"Actually, I am ready for the next level. I have learned a lot, and I am going to master B1!"</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- FOOTER BAR -->
+        <footer class="py-4 text-center border-t border-gray-100 bg-white">
+            <p class="text-[9px] font-montserrat font-bold text-gray-400 uppercase tracking-[0.4em]">Produced by FreaknEnglish 2026 | PAGE 2</p>
+        </footer>
+
+    </div>
+
+</body>
+</html>

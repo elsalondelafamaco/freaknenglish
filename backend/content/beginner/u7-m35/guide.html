@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freakn' Survival Guide: Module 35 (2-Page Edition)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        yellow: '#E4DF33',
+                        charcoal: '#30302F',
+                        skyblue: '#93E5FF',
+                        olive: '#7C7A39',
+                        lightbg: '#FDFCEB',
+                    },
+                    fontFamily: {
+                        bree: ['"Bree Serif"', 'serif'],
+                        montserrat: ['Montserrat', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @media print {
+            body { background-color: white !important; padding: 0 !important; }
+            .survival-guide-container { 
+                box-shadow: none !important; 
+                border: none !important; 
+                width: 100% !important; 
+                max-width: 100% !important; 
+                margin: 0 !important;
+                page-break-after: always;
+            }
+            .no-print { display: none !important; }
+            @page { size: A4; margin: 0; }
+        }
+
+        body {
+            background-color: #F2F2F2;
+            font-family: 'Montserrat', sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .survival-guide-container {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            margin: 20px auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        .golden-nugget-card {
+            border: 2px solid #E5E7EB;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .accent-bar-yellow { border-right: 8px solid #E4DF33; }
+        .accent-bar-sky { border-right: 8px solid #93E5FF; }
+
+        .cheat-sheet-box {
+            background-color: #30302F;
+            border-radius: 20px;
+            color: white;
+        }
+
+        .gossip-header-icon {
+            background: white;
+            border-radius: 50%;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body class="p-0 sm:p-8 space-y-10 text-left">
+
+    <!-- PAGE 1: THE PASSIVE LOGIC & MATERIALS -->
+    <div class="survival-guide-container">
+        
+        <!-- HEADER -->
+        <header class="bg-charcoal px-8 py-6 flex justify-between items-center border-b-8 border-yellow">
+            <div>
+                <h1 class="font-bree text-yellow text-3xl tracking-tight leading-none uppercase">Freakn' Survival Guide</h1>
+                <p class="text-gray-400 font-montserrat font-bold text-xs uppercase tracking-widest mt-1 text-left">MODULE 35: HOW IT'S MADE (PAGE 1)</p>
+            </div>
+            <div class="flex items-center space-x-3 text-center">
+                <div class="bg-yellow text-charcoal font-black rounded-full w-10 h-10 flex items-center justify-center text-xl font-bree">U7</div>
+            </div>
+        </header>
+
+        <!-- THE GOSSIP RECAP BAR -->
+        <div class="bg-lightbg py-6 px-10 flex items-center space-x-6 border-b border-gray-100">
+            <div class="gossip-header-icon flex-shrink-0">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-charcoal"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 9h8"></path><path d="M8 13h6"></path></svg>
+            </div>
+            <p class="font-bree italic text-charcoal text-lg leading-snug">
+                "The Gossip Recap: Gelmy bought a weird statue for the living room. Titó hates it and wants to know who made it. Gelmy doesn't care who made it, she only cares that 'it is made of pure gold.' Let's learn how to focus on the object!"
+            </p>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex flex-1 p-10 gap-10">
+            
+            <!-- LEFT: THE NUGGETS -->
+            <div class="w-7/12">
+                <div class="flex items-center space-x-2 mb-8">
+                    <h2 class="font-bree text-2xl text-olive uppercase tracking-tight text-left">The Passive Nuggets</h2>
+                    <span class="text-yellow text-2xl">🛠️</span>
+                </div>
+
+                <div class="space-y-6 text-left">
+                    <div class="golden-nugget-card p-5 accent-bar-yellow">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">The Focus Shift</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">When the object is more important than the creator, put the object FIRST.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"The song **was sung**." (We don't care who sang it!)</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">Is / Are made (Present)</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">Use this for general facts, daily processes, and materials.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"These shoes **are made** in Italy."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Was / Were built (Past)</h3>
+                        <p class="text-gray-600 text-sm mt-1">Use this for history. Things that were created, built, or painted in the past.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"The Eiffel Tower **was built** a long time ago."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Made OF vs. IN</h3>
+                        <p class="text-gray-600 text-sm mt-1">**Of** = The material. **In** = The location/country.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"Made **of** wood." vs. "Made **in** Japan."</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: CHEAT SHEET -->
+            <div class="w-5/12">
+                <div class="cheat-sheet-box p-6 h-full shadow-xl text-left">
+                    <div class="flex items-center space-x-3 mb-6">
+                        <div class="bg-yellow rounded-full w-6 h-6 flex items-center justify-center text-charcoal font-black text-xs">!</div>
+                        <h2 class="font-bree text-xl text-yellow uppercase tracking-widest text-left">The Factory</h2>
+                    </div>
+                    <div class="space-y-8">
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-3">Materials (Made of...)</div>
+                            <ul class="space-y-2 font-montserrat font-bold text-sm text-white">
+                                <li class="pb-1 border-b border-gray-700">Wood (Madera)</li>
+                                <li class="pb-1 border-b border-gray-700">Glass (Vidrio)</li>
+                                <li class="pb-1 border-b border-gray-700">Metal / Gold</li>
+                                <li class="pb-1 border-b border-gray-700">Plastic / Cotton</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-3">The Formula</div>
+                            <ul class="space-y-2 font-montserrat font-bold text-sm">
+                                <li class="pb-1 border-b border-gray-700 italic text-skyblue">1. The Object (The car)</li>
+                                <li class="pb-1 border-b border-gray-700 italic text-skyblue">2. Is / Are / Was / Were</li>
+                                <li class="pb-1 border-b border-gray-700 italic text-skyblue">3. Action (Made/Built/Sold)</li>
+                            </ul>
+                        </div>
+                        <div class="bg-yellow/10 p-3 rounded-lg border border-yellow/20 mt-auto">
+                            <p class="text-[9px] font-black text-yellow uppercase tracking-wider mb-1">Paisa Secret:</p>
+                            <p class="text-[10px] text-white/80 leading-tight italic">We call this the "Passive Voice", but don't panic! It just means starting your sentence with the thing, not the person.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER BAR -->
+        <footer class="py-4 text-center border-t border-gray-100 bg-white">
+            <p class="text-[9px] font-montserrat font-bold text-gray-400 uppercase tracking-[0.4em]">Produced by FreaknEnglish 2026 | PAGE 1</p>
+        </footer>
+    </div>
+
+    <!-- PAGE 2: CREATION VERBS & THE 'BY' RULE -->
+    <div class="survival-guide-container">
+        
+        <!-- HEADER -->
+        <header class="bg-charcoal px-8 py-6 flex justify-between items-center border-b-8 border-yellow">
+            <div>
+                <h1 class="font-bree text-yellow text-3xl tracking-tight leading-none uppercase">Freakn' Survival Guide</h1>
+                <p class="text-gray-400 font-montserrat font-bold text-xs uppercase tracking-widest mt-1 text-left">MODULE 35: HOW IT'S MADE (PAGE 2)</p>
+            </div>
+            <div class="flex items-center space-x-3 text-center">
+                <div class="bg-yellow text-charcoal font-black rounded-full w-10 h-10 flex items-center justify-center text-xl font-bree">U7</div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex flex-1 p-10 gap-10">
+            
+            <!-- LEFT: CREATION NUGGETS -->
+            <div class="w-7/12">
+                <div class="flex items-center space-x-2 mb-8">
+                    <h2 class="font-bree text-2xl text-olive uppercase tracking-tight text-left">Creation Nuggets</h2>
+                    <span class="text-skyblue text-2xl">🎨</span>
+                </div>
+
+                <div class="space-y-6 text-left">
+                    <div class="golden-nugget-card p-5 accent-bar-sky">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">The "By" Tag</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">If you *really* want to mention who created it, throw them at the end with **BY**.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"It was directed **by** Spielberg."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Painted / Drawn</h3>
+                        <p class="text-gray-600 text-sm mt-1">Used for art and masterpieces.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"The Mona Lisa was **painted** by Da Vinci."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Written / Directed</h3>
+                        <p class="text-gray-600 text-sm mt-1">Used for books, songs, and movies.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"Harry Potter was **written** by J.K. Rowling."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Discovered / Invented</h3>
+                        <p class="text-gray-600 text-sm mt-1">Used for science, technology, and geography.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"The telephone was **invented** in 1876."</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: GALLERY CHEAT SHEET -->
+            <div class="w-5/12">
+                <div class="cheat-sheet-box p-8 h-full shadow-xl text-left">
+                    <div class="flex items-center space-x-3 mb-8">
+                        <div class="bg-yellow rounded-full w-6 h-6 flex items-center justify-center text-charcoal font-black text-xs">!</div>
+                        <h2 class="font-bree text-xl text-yellow uppercase tracking-widest text-left">The Gallery</h2>
+                    </div>
+                    <div class="space-y-10">
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-4">Media Verbs</div>
+                            <ul class="space-y-4 font-montserrat font-bold text-xs text-white">
+                                <li class="pb-2 border-b border-gray-700">Was <span class="text-skyblue">directed</span> (Movies)</li>
+                                <li class="pb-2 border-b border-gray-700">Was <span class="text-skyblue">written</span> (Books/Songs)</li>
+                                <li class="pb-2 border-b border-gray-700">Was <span class="text-skyblue">published</span> (Articles)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-4">Creation Verbs</div>
+                            <ul class="space-y-4 font-montserrat font-bold text-xs text-white">
+                                <li class="pb-2 border-b border-gray-700">Was <span class="text-yellow">built</span> (Houses/Bridges)</li>
+                                <li class="pb-2 border-b border-gray-700">Was <span class="text-yellow">designed</span> (Clothes/Apps)</li>
+                                <li class="pb-2 border-b border-gray-700">Was <span class="text-yellow">invented</span> (Machines)</li>
+                            </ul>
+                        </div>
+                        <div class="bg-gray-800 p-4 rounded-lg border-2 border-skyblue">
+                            <p class="text-[10px] font-black uppercase text-skyblue tracking-widest mb-2">Street Tip:</p>
+                            <p class="text-[11px] leading-tight font-medium">Don't stress about memorizing 100 irregular verbs. Just memorize the top 5 (made, built, written, painted, directed) and you're good for 90% of conversations!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- THE MICRO-MISSION FOOTER -->
+        <div class="bg-skyblue p-8 flex items-center space-x-8 border-t border-gray-200">
+            <div class="bg-charcoal text-white rounded-full w-14 h-14 flex items-center justify-center flex-shrink-0 shadow-lg">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+            </div>
+            <div class="flex-1 text-left">
+                <h4 class="font-montserrat font-black text-charcoal text-xs uppercase tracking-widest mb-1">The Gallery Mission</h4>
+                <p class="font-montserrat font-bold text-charcoal text-lg leading-tight">
+                    Look around your room. Pick one object and record a voice note saying: <span class="underline italic">"This [Object] is made of [Material]. I think it was made in [Country]!"</span> Sound like an expert!
+                </p>
+            </div>
+        </div>
+
+        <!-- FOOTER BAR -->
+        <footer class="py-4 text-center border-t border-gray-100 bg-white">
+            <p class="text-[9px] font-montserrat font-bold text-gray-400 uppercase tracking-[0.4em]">Produced by FreaknEnglish 2026 | PAGE 2</p>
+        </footer>
+
+    </div>
+
+</body>
+</html>

@@ -69,6 +69,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // Detalle de módulo (/app/learning/<id>): el HTML de la lección va a sangre.
+  const isLessonViewer = /^\/app\/learning\/[^/]+/.test(pathname);
 
   async function handleSignOut() {
     try {
@@ -213,13 +215,17 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <main className="lg:pl-64">
         {/* Board y aprendizaje usan todo el ancho (se sienten estrechos con
-            max-w-6xl); el resto conserva el contenedor centrado. */}
+            max-w-6xl); el visor de lección va a sangre en mobile para que el
+            HTML del deck aproveche los 375px completos. El resto conserva el
+            contenedor centrado. */}
         <div
           className={cn(
-            "mx-auto py-6 lg:py-10",
-            pathname.startsWith("/boards") || pathname.startsWith("/app/learning")
-              ? "max-w-none px-2 sm:px-4 lg:px-6"
-              : "max-w-6xl px-4 sm:px-5",
+            "mx-auto",
+            isLessonViewer
+              ? "max-w-none px-0 py-0 sm:px-4 sm:py-6 lg:px-6 lg:py-10"
+              : pathname.startsWith("/boards") || pathname.startsWith("/app/learning")
+                ? "max-w-none px-2 py-6 sm:px-4 lg:px-6 lg:py-10"
+                : "max-w-6xl px-4 py-6 sm:px-5 lg:py-10",
           )}
         >
           {children}

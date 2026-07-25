@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 35: How It's Made</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:ital,wght@0,400;0,700;0,900;1,400;1,900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        freakYellow: '#E4DF33',
+                        freakDark: '#30302F',
+                        freakBlue: '#93E5FF',
+                        freakBg: '#111111',
+                        freakGreen: '#4ade80',
+                        freakRed: '#f87171',
+                        galleryWall: '#e5e5e5',
+                        plaqueGold: '#d4af37'
+                    },
+                    fontFamily: {
+                        bree: ['"Bree Serif"', 'serif'],
+                        mont: ['Montserrat', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #111111; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; overflow: hidden; }
+        #app-container { width: 1280px; height: 720px; position: relative; background-color: #30302F; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        
+        .title-freak { font-family: 'Bree Serif', serif; font-weight: 400; text-transform: uppercase; }
+        .text-freak { font-family: 'Montserrat', sans-serif; }
+        
+        .btn-freak {
+            background-color: #93E5FF; color: #30302F; font-family: 'Montserrat', sans-serif; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.05em; padding: 1rem 2rem; border: none;
+            transition: all 0.2s ease; cursor: pointer; display: inline-block;
+        }
+        .btn-freak:hover { background-color: #E4DF33; transform: scale(1.05); }
+        .btn-freak:disabled { opacity: 0.5; cursor: not-allowed; transform: none; background-color: #ccc; color: #666; }
+        
+        .slide-enter { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Level 2: Archive UI */
+        .archive-btn {
+            background: #111;
+            border: 2px solid #555;
+            color: #ccc;
+            transition: all 0.2s;
+        }
+        .archive-btn:hover:not(:disabled) {
+            border-color: #93E5FF;
+            color: #93E5FF;
+            transform: translateY(-2px);
+        }
+        .archive-btn.correct { background: #4ade80; color: #111; border-color: #4ade80; box-shadow: 0 0 15px rgba(74,222,128,0.5); font-weight: 900; }
+        .archive-btn.wrong { background: #f87171; color: white; border-color: #f87171; opacity: 0.6; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #30302F; }
+        ::-webkit-scrollbar-thumb { background: #E4DF33; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div id="global-score" class="absolute top-8 right-8 text-freakYellow font-mont font-black text-4xl z-50 hidden">SCORE: 0/30</div>
+        <div id="slide-mount" class="w-full h-full flex slide-enter"></div>
+    </div>
+
+    <script>
+        const lessonData = [
+            // SLIDE 0: INTRO
+            {
+                type: 'intro',
+                unitModule: "UNIT 7 • MODULE 35",
+                title: "HOW IT'S MADE",
+                objective: "Learn the Passive Voice. Stop talking about WHO did it, and start focusing on the ART, the MEDIA, and the PRODUCT.",
+                bottomTag: "THE LOGIC OF LIFE • PART 5"
+            },
+            
+            // --- THE CHEAT CODE ---
+            {
+                type: 'cheatsheet',
+                title: "THE STUDIO",
+                subtitle: "The rules for focusing on the product, not the person.",
+                rules: [
+                    { title: "THE FOCUS SHIFT", desc: "Active = Focus on the Creator.<br>Passive = Focus on the Creation.", example: "• Active: Da Vinci painted it.<br>• Passive: It was painted by Da Vinci." },
+                    { title: "THE FORMULA", desc: "Subject (The Art) + To Be + Past Participle.", example: "• Present: Books ARE written.<br>• Past: The song WAS sung." },
+                    { title: "THE ARTS & MEDIA VERBS", desc: "Memorize these irregulars.", example: "• Paint ➔ Painted<br>• Write ➔ Written<br>• Sing ➔ Sung<br>• Draw ➔ Drawn" }
+                ]
+            },
+
+            // --- LEVEL 1: THE RECOGNITION (Floating Card) ---
+            { type: 'transition', level: 1, title: "LEVEL 1", subtitle: "RECOGNITION", desc: "Read the sentence. Who is the star of the show? Is it the Artist (Active) or the Artwork (Passive)?" },
+            
+            { qType: 'recognize', level: 1, qNum: 1, q: "Da Vinci painted the Mona Lisa.", options: ["A) Active (Focus on the Artist)", "B) Passive (Focus on the Art)"], correct: 0, rationale: "The sentence starts with Da Vinci. The creator is the focus.", teacherPrompt: "👉 TEACHER: Ask: Who is the most famous painter from your country?" },
+            { qType: 'recognize', level: 1, qNum: 2, q: "The song was sung by Shakira.", options: ["A) Active (Focus on the Artist)", "B) Passive (Focus on the Art)"], correct: 1, rationale: "The sentence starts with 'The song'. The artwork is the subject.", teacherPrompt: "👉 TEACHER: Ask: What is your favorite Shakira song?" },
+            { qType: 'recognize', level: 1, qNum: 3, q: "Gabriel García Márquez wrote this book.", options: ["A) Active (Focus on the Artist)", "B) Passive (Focus on the Art)"], correct: 0, rationale: "The subject is the author, performing the action of writing.", teacherPrompt: "👉 TEACHER: Ask: Do you prefer reading books or watching movies?" },
+            { qType: 'recognize', level: 1, qNum: 4, q: "This picture was drawn with a pencil.", options: ["A) Active (Focus on the Artist)", "B) Passive (Focus on the Art)"], correct: 1, rationale: "We don't even know who drew it! The focus is 100% on the picture.", teacherPrompt: "👉 TEACHER: Ask: Can you draw well, or are you terrible at art?" },
+            { qType: 'recognize', level: 1, qNum: 5, q: "Gelmy paints beautiful landscapes on Sundays.", options: ["A) Active (Focus on the Artist)", "B) Passive (Focus on the Art)"], correct: 0, rationale: "Gelmy is the subject actively doing the painting.", teacherPrompt: "👉 TEACHER: Ask: What is a relaxing hobby you do on Sundays?" },
+            { qType: 'recognize', level: 1, qNum: 6, q: "The traditional dance was performed at the festival.", options: ["A) Active (Focus on the Artist)", "B) Passive (Focus on the Art)"], correct: 1, rationale: "The dance is the subject. We don't care about the specific dancers right now.", teacherPrompt: "👉 TEACHER: Ask: Have you ever performed a dance in front of people?" },
+            { qType: 'recognize', level: 1, qNum: 7, q: "Millions of books are sold every year.", options: ["A) Active (Focus on the Artist)", "B) Passive (Focus on the Art)"], correct: 1, rationale: "The books are the focus. 'Are sold' is the passive verb.", teacherPrompt: "👉 TEACHER: Ask: Do you still buy physical books, or only digital?" },
+            { qType: 'recognize', level: 1, qNum: 8, q: "Titó sings traditional paisa songs in the shower.", options: ["A) Active (Focus on the Artist)", "B) Passive (Focus on the Art)"], correct: 0, rationale: "Titó is the one doing the action loudly in the shower.", teacherPrompt: "👉 TEACHER: Ask: Do you sing in the shower? What songs?" },
+            { qType: 'recognize', level: 1, qNum: 9, q: "The new action movie was directed by Spielberg.", options: ["A) Active (Focus on the Artist)", "B) Passive (Focus on the Art)"], correct: 1, rationale: "The movie comes first, using 'was directed by' to show the creator later.", teacherPrompt: "👉 TEACHER: Ask: What is the best action movie you have ever seen?" },
+            { qType: 'recognize', level: 1, qNum: 10, q: "El pa writes rap lyrics in his notebook.", options: ["A) Active (Focus on the Artist)", "B) Passive (Focus on the Art)"], correct: 0, rationale: "El pa is actively writing. He is the focus.", teacherPrompt: "👉 TEACHER: Ask: Do you like rap music? Why or why not?" },
+
+            // --- LEVEL 2: THE ARCHIVE (Media Catalog UI) ---
+            { type: 'transition', level: 2, title: "LEVEL 2", subtitle: "MEDIA ARCHIVE", desc: "You are the head archivist. Complete the historical record for each piece of media using the correct passive voice verb." },
+
+            { qType: 'archive', level: 2, qNum: 11, category: "VISUAL ARTS", context: "The portrait ___ (paint) by a famous artist in 1990.", options: ["was painted", "paints"], correct: 0, rationale: "It happened in the past (1990) to the portrait. 'Was painted'.", teacherPrompt: "👉 TEACHER: Ask: Have you ever paid someone to paint your portrait?" },
+            { qType: 'archive', level: 2, qNum: 12, category: "MUSIC", context: "These traditional songs ___ (sing) at every Colombian party today.", options: ["are sung", "were sung"], correct: 0, rationale: "It happens generally 'today', so it's Present Passive for plural: 'are sung'.", teacherPrompt: "👉 TEACHER: Ask: What song is mandatory at a Colombian party?" },
+            { qType: 'archive', level: 2, qNum: 13, category: "LITERATURE", context: "The article about Medellin ___ (write) yesterday by a journalist.", options: ["was written", "is written"], correct: 0, rationale: "Yesterday = Past. Singular subject = 'was written'.", teacherPrompt: "👉 TEACHER: Ask: Do you read the news every day?" },
+            { qType: 'archive', level: 2, qNum: 14, category: "PERFORMANCE", context: "This type of salsa ___ (dance) all over the world right now.", options: ["is danced", "was danced"], correct: 0, rationale: "It happens 'right now' generally. Present Passive: 'is danced'.", teacherPrompt: "👉 TEACHER: Ask: Are you a good salsa dancer?" },
+            { qType: 'archive', level: 2, qNum: 15, category: "STREET ART", context: "The beautiful murals in Comuna 13 ___ (draw) by local artists years ago.", options: ["were drawn", "was drawn"], correct: 0, rationale: "Murals (plural) in the past = 'were drawn'.", teacherPrompt: "👉 TEACHER: Ask: Have you visited the graffiti in Comuna 13?" },
+            { qType: 'archive', level: 2, qNum: 16, category: "CINEMA", context: "The script for the movie ___ (write) in just two weeks!", options: ["was written", "wrote"], correct: 0, rationale: "The script didn't write itself. It 'was written'.", teacherPrompt: "👉 TEACHER: Ask: If you wrote a movie, what genre would it be?" },
+            { qType: 'archive', level: 2, qNum: 17, category: "PHOTOGRAPHY", context: "Hundreds of pictures ___ (take) at the museum every single day.", options: ["are taken", "were taken"], correct: 0, rationale: "Happens 'every day' to plural pictures. 'Are taken'.", teacherPrompt: "👉 TEACHER: Ask: Are you someone who takes photos of everything?" },
+            { qType: 'archive', level: 2, qNum: 18, category: "MUSIC", context: "That famous pop song ___ (sing) by a computer, not a human!", options: ["was sung", "was singed"], correct: 0, rationale: "The past participle of sing is 'sung'. Singed is not a word here.", teacherPrompt: "👉 TEACHER: Ask: Do you think AI will replace human singers?" },
+            { qType: 'archive', level: 2, qNum: 19, category: "ARCHITECTURE", context: "The gallery walls ___ (paint) bright yellow for the exhibition last night.", options: ["were painted", "was painted"], correct: 0, rationale: "Walls (plural) in the past = 'were painted'.", teacherPrompt: "👉 TEACHER: Ask: What color are the walls in your bedroom?" },
+            { qType: 'archive', level: 2, qNum: 20, category: "AWARDS", context: "The winning book ___ (choose) by the judges last night.", options: ["was chosen", "is chosen"], correct: 0, rationale: "Past tense event. Singular book. 'Was chosen'.", teacherPrompt: "👉 TEACHER: Ask: Have you ever won a prize or an award?" },
+
+            // --- LEVEL 3: THE MUSEUM PLAQUE (Exhibition UI) ---
+            { type: 'transition', level: 3, title: "LEVEL 3", subtitle: "MUSEUM PLAQUE", desc: "You are the museum curator. Read the sloppy active sentence and 'engrave' the official plaque using the Passive Voice." },
+
+            { qType: 'plaque', level: 3, qNum: 21, prompt: "Change to Passive: 'Da Vinci painted this artwork.'", hint: "Start with: This artwork...", acceptable: "This artwork was painted by Da Vinci.", teacherPrompt: "👉 TEACHER: Ask: Do you think Da Vinci was a genius?" },
+            { qType: 'plaque', level: 3, qNum: 22, prompt: "Answer using Passive: 'Who wrote Harry Potter?'", hint: "Start with: It...", acceptable: "It was written by J.K. Rowling.", teacherPrompt: "👉 TEACHER: Ask: Have you read or watched Harry Potter?" },
+            { qType: 'plaque', level: 3, qNum: 23, prompt: "Change to Passive: 'Shakira sang Waka Waka.'", hint: "Start with: Waka Waka...", acceptable: "Waka Waka was sung by Shakira.", teacherPrompt: "👉 TEACHER: Ask: Do you remember the 2010 World Cup?" },
+            { qType: 'plaque', level: 3, qNum: 24, prompt: "Change to Passive: 'Gelmy cooked the best sancocho.'", hint: "Start with: The best sancocho...", acceptable: "The best sancocho was cooked by Gelmy.", teacherPrompt: "👉 TEACHER: Ask: Who cooks the best food in your family?" },
+            { qType: 'plaque', level: 3, qNum: 25, prompt: "Answer using Passive: 'Who directed your favorite movie?'", hint: "Start with: It was directed by...", acceptable: "It was directed by [Director's Name].", teacherPrompt: "👉 TEACHER: Check their answer and ask why they love that movie." },
+            { qType: 'plaque', level: 3, qNum: 26, prompt: "Focus on the painting! 'Someone stole the famous painting!'", hint: "Start with: The famous painting...", acceptable: "The famous painting was stolen!", teacherPrompt: "👉 TEACHER: Ask: Have you ever seen a movie about an art heist?" },
+            { qType: 'plaque', level: 3, qNum: 27, prompt: "Change to Passive: 'They paint these hats by hand.'", hint: "Start with: These hats...", acceptable: "These hats are painted by hand.", teacherPrompt: "👉 TEACHER: Ask: Do you own a traditional 'sombrero vueltiao'?" },
+            { qType: 'plaque', level: 3, qNum: 28, prompt: "Answer using Passive: 'Who sang your favorite song?'", hint: "Start with: It was sung by...", acceptable: "It was sung by [Singer's Name].", teacherPrompt: "👉 TEACHER: Ask them to sing a little bit of the song!" },
+            { qType: 'plaque', level: 3, qNum: 29, prompt: "Change to Passive: 'People dance salsa all over Colombia.'", hint: "Start with: Salsa...", acceptable: "Salsa is danced all over Colombia.", teacherPrompt: "👉 TEACHER: Ask: Is salsa the best dance in the world?" },
+            { qType: 'plaque', level: 3, qNum: 30, prompt: "Focus on the window! 'El pa broke the museum window!'", hint: "Start with: The museum window...", acceptable: "The museum window was broken by El pa.", teacherPrompt: "👉 TEACHER: Ask: What is the most expensive thing you have ever broken?" }
+        ];
+
+        let currentSlide = 0;
+        let score = 0;
+        let answeredQuestions = new Set();
+        let selectedAnswers = {}; 
+        let isGradingState = false;
+
+        const appContainer = document.getElementById('slide-mount');
+        const scoreDisplay = document.getElementById('global-score');
+
+        function renderSlide() {
+            const data = lessonData[currentSlide];
+            appContainer.innerHTML = '';
+            appContainer.className = 'w-full h-full flex slide-enter'; 
+
+            if (['intro', 'cheatsheet', 'outro', 'transition'].includes(data.type)) {
+                scoreDisplay.classList.add('hidden');
+            } else {
+                scoreDisplay.classList.remove('hidden');
+                scoreDisplay.innerText = `SCORE: ${score}/30`;
+            }
+
+            const buildNav = (isAnswered) => `
+                <div class="absolute bottom-6 w-full px-12 flex justify-between items-center z-40">
+                    <button onclick="nav(-1)" class="btn-freak bg-transparent text-white border-2 border-white hover:bg-white hover:text-freakDark text-sm py-2 px-6 shadow-none">PREVIOUS</button>
+                    ${isAnswered && data.qType !== 'plaque' ? `<button onclick="nav(1)" class="btn-freak bg-freakYellow text-freakDark py-2 px-6 shadow-[4px_4px_0px_#111] animate-bounce">NEXT STEP ➔</button>` : ``}
+                    ${isAnswered && data.qType === 'plaque' && !isGradingState ? `<button onclick="nav(1)" class="btn-freak bg-freakYellow text-freakDark py-2 px-6 shadow-[4px_4px_0px_#111] animate-bounce">NEXT STEP ➔</button>` : ``}
+                </div>
+            `;
+
+            // SLIDE: INTRO
+            if (data.type === 'intro') {
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col items-center justify-center text-center p-12 relative h-full bg-[#111]">
+                        <div class="inline-block bg-freakYellow text-freakDark font-mont font-black uppercase text-xl px-10 py-2 transform -skew-x-12 mb-6 mt-10">
+                            <span class="block transform skew-x-12">${data.unitModule}</span>
+                        </div>
+                        <h1 class="title-freak text-[110px] text-freakYellow mb-8 leading-none">${data.title}</h1>
+                        <p class="text-white font-mont font-bold text-3xl max-w-5xl leading-relaxed mb-12">${data.objective}</p>
+                        <div class="border-4 border-white px-12 py-4 mb-16 inline-block">
+                            <span class="text-freakBlue font-mont font-black text-3xl uppercase tracking-widest">${data.bottomTag}</span>
+                        </div>
+                        <div class="flex gap-6 mt-8">
+                            <button class="bg-[#888] text-freakDark font-mont font-black uppercase px-10 py-3 opacity-70 cursor-not-allowed">PREVIOUS</button>
+                            <button class="bg-freakYellow text-freakDark font-mont font-black uppercase px-10 py-3 hover:scale-105 transition-transform cursor-pointer shadow-[6px_6px_0px_#111]" onclick="nav(1)">NEXT STEP ➔</button>
+                        </div>
+                    </div>
+                `;
+            } 
+            // SLIDE: CHEATSHEET
+            else if (data.type === 'cheatsheet') {
+                let rulesHtml = '';
+                data.rules.forEach((rule, idx) => {
+                    rulesHtml += `
+                        <div class="bg-[#222] p-8 border-l-8 border-freakBlue flex flex-col h-full shadow-lg">
+                            <h3 class="font-bree text-3xl text-freakYellow mb-4">${rule.title}</h3>
+                            <p class="font-mont font-bold text-white text-xl mb-6 flex-grow">${rule.desc}</p>
+                            <div class="bg-black p-4 font-mont text-lg font-medium text-gray-300 italic border-l-4 border-freakYellow">
+                                ${rule.example}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col justify-center items-center p-12 bg-freakDark text-white relative h-full">
+                        <h2 class="title-freak text-7xl text-white mb-2">${data.title}</h2>
+                        <p class="font-mont text-2xl font-bold mb-12 text-freakBlue">${data.subtitle}</p>
+                        <div class="grid grid-cols-3 gap-8 w-full max-w-6xl">${rulesHtml}</div>
+                        <div class="absolute bottom-8 right-12">
+                            <button onclick="nav(1)" class="btn-freak bg-freakYellow hover:bg-white text-sm py-3 px-6 animate-bounce shadow-[4px_4px_0px_#111]">START LEVEL 1 ➔</button>
+                        </div>
+                        <div class="absolute bottom-8 left-12">
+                            <button onclick="nav(-1)" class="btn-freak bg-transparent text-white border-2 border-white hover:bg-white hover:text-freakDark shadow-none py-3 px-6 text-sm">PREVIOUS</button>
+                        </div>
+                    </div>
+                `;
+            }
+            // SLIDE: TRANSITION
+            else if (data.type === 'transition') {
+                appContainer.innerHTML = `
+                    <div class="w-1/2 h-full bg-freakYellow flex flex-col justify-center p-16 relative overflow-hidden">
+                        <div class="text-freakDark font-mont font-black italic text-[35px] mb-4 tracking-tight">${data.title}</div>
+                        <h1 class="font-mont font-black text-[60px] leading-[1] text-white uppercase tracking-tight">${data.subtitle.replace(' ', '<br>')}</h1>
+                    </div>
+                    <div class="w-1/2 h-full bg-freakDark flex flex-col justify-center items-start p-20 text-white relative">
+                        <div class="border-l-[8px] border-freakBlue pl-8 mb-12">
+                            <p class="font-mont text-[38px] font-bold leading-[1.3] tracking-tight">${data.desc}</p>
+                        </div>
+                        <div class="absolute bottom-20 flex items-center gap-10 pl-8">
+                            <button onclick="nav(-1)" class="font-mont font-black text-white text-xl uppercase tracking-wider hover:text-gray-300 transition-colors">PREVIOUS</button>
+                            <button onclick="nav(1)" class="bg-freakBlue text-freakDark font-mont font-black text-xl uppercase tracking-wider py-4 px-8 hover:bg-white transition-colors">BEGIN ➔</button>
+                        </div>
+                    </div>
+                `;
+            }
+            // LEVEL 1: RECOGNITION (Floating Card Design)
+            else if (data.qType === 'recognize') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                const selectedOpt = selectedAnswers[currentSlide];
+
+                let optionsHtml = '';
+                data.options.forEach((opt, idx) => {
+                    let btnClass = "bg-[#222] text-white border-4 border-[#444] hover:border-freakYellow hover:text-freakYellow transition-all transform hover:-translate-y-2 hover:shadow-[8px_8px_0px_#E4DF33] cursor-pointer";
+                    let disabled = isAnswered ? "disabled" : "";
+                    
+                    if (isAnswered) {
+                        if (idx === data.correct) btnClass = "bg-green-400 text-freakDark border-4 border-green-600 font-black shadow-[8px_8px_0px_#14532d] z-10 scale-105";
+                        else if (idx === selectedOpt && idx !== data.correct) btnClass = "bg-red-500 text-white border-4 border-red-700 opacity-80 shadow-[4px_4px_0px_#7f1d1d]";
+                        else btnClass = "bg-[#111] text-gray-600 border-4 border-[#222] opacity-40";
+                    }
+
+                    optionsHtml += `<button ${disabled} onclick="handleAnswer(${idx})" class="w-full text-center font-mont font-black text-2xl p-8 flex flex-col items-center justify-center ${btnClass}">${opt}</button>`;
+                });
+
+                let feedbackHtml = isAnswered ? `
+                    <div class="mt-8 w-full max-w-5xl bg-freakYellow border-4 border-freakDark p-5 shadow-[8px_8px_0px_#30302F] animate-[fadeIn_0.3s_ease-out] flex items-center justify-between z-30">
+                        <div class="pr-6 border-r-4 border-freakDark flex-1">
+                            <h4 class="font-bree text-freakDark text-3xl uppercase mb-1">${selectedOpt === data.correct ? '🎯 MASTERPIECE.' : '🎨 MESSY STROKES.'}</h4>
+                            <p class="font-mont text-freakDark text-lg font-bold leading-snug">${data.rationale}</p>
+                        </div>
+                        <div class="pl-6 w-1/3 flex-shrink-0">
+                            <div class="bg-white text-freakDark p-3 font-bold font-mont text-sm border-2 border-freakDark transform rotate-1 text-center shadow-md">
+                                ${data.teacherPrompt}
+                            </div>
+                        </div>
+                    </div>` : '';
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-[#111] flex flex-col justify-center items-center relative p-12 pb-24">
+                        
+                        <div class="absolute top-8 left-12 flex items-center gap-4">
+                            <div class="bg-freakYellow text-freakDark font-mont font-black px-4 py-1 transform -skew-x-12 text-xl">LEVEL ${data.level}</div>
+                            <div class="text-gray-500 font-mont font-bold uppercase tracking-widest text-xl">${data.subtitle}</div>
+                        </div>
+                        <div class="absolute top-8 right-12 text-freakYellow font-mont font-black text-2xl">
+                            ${data.qNum} / 10
+                        </div>
+
+                        <!-- Quote Card -->
+                        <div class="bg-freakDark border-4 border-freakBlue p-10 mb-8 mt-6 relative w-full max-w-5xl shadow-[12px_12px_0px_#93E5FF] transform -rotate-1">
+                            <div class="absolute -top-10 -left-6 text-freakBlue text-[100px] font-bree leading-none">"</div>
+                            <h3 class="text-white font-mont font-black text-[45px] text-center leading-tight relative z-10 px-8">
+                                ${data.q}
+                            </h3>
+                            <div class="absolute -bottom-16 -right-4 text-freakBlue text-[100px] font-bree leading-none">"</div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-8 w-full max-w-5xl">
+                            ${optionsHtml}
+                        </div>
+
+                        ${feedbackHtml}
+                    </div>
+                    ${buildNav(isAnswered)}
+                `;
+            }
+            // LEVEL 2: MEDIA ARCHIVE (Catalog UI)
+            else if (data.qType === 'archive') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                const selectedOpt = selectedAnswers[currentSlide];
+
+                let optionsHtml = '';
+                data.options.forEach((opt, idx) => {
+                    let btnClass = "archive-btn";
+                    let disabled = isAnswered ? "disabled" : "";
+                    
+                    if (isAnswered) {
+                        if (idx === data.correct) btnClass += " correct";
+                        else if (idx === selectedOpt && idx !== data.correct) btnClass += " wrong";
+                        else btnClass += " opacity-30 border-[#333]";
+                    }
+
+                    optionsHtml += `<button ${disabled} onclick="handleAnswer(${idx})" class="w-full text-2xl py-6 rounded uppercase font-mont font-bold ${btnClass}">${opt}</button>`;
+                });
+
+                let displayContext = data.context;
+                if (isAnswered && selectedOpt === data.correct) {
+                    displayContext = displayContext.replace('___', `<span class="bg-green-400 text-freakDark px-2 font-bold uppercase">${data.options[data.correct]}</span>`);
+                } else if (isAnswered) {
+                    displayContext = displayContext.replace('___', `<span class="bg-red-500 text-white px-2 line-through uppercase">${data.options[selectedOpt]}</span> <span class="bg-green-400 text-freakDark px-2 font-bold uppercase">${data.options[data.correct]}</span>`);
+                } else {
+                    displayContext = displayContext.replace('___', `<span class="text-freakBlue border-b-2 border-freakBlue">______</span>`);
+                }
+
+                let feedbackHtml = isAnswered ? `
+                    <div class="w-full max-w-4xl mt-6 bg-[#222] border-l-8 border-freakYellow p-4 flex gap-4 items-center animate-[fadeIn_0.3s_ease-out]">
+                        <div class="flex-1 font-mont text-gray-300 text-lg">
+                            <span class="text-freakYellow font-black">LOG:</span> ${data.rationale}
+                        </div>
+                        <div class="w-[40%] bg-white text-freakDark p-2 font-bold font-mont text-sm text-center">
+                            ${data.teacherPrompt}
+                        </div>
+                    </div>` : '';
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-[#0a0a0a] flex flex-col items-center justify-center relative p-8 pb-20">
+                        
+                        <!-- Top Bar -->
+                        <div class="w-full max-w-4xl flex justify-between items-end mb-4 border-b-2 border-[#333] pb-2">
+                            <div class="text-freakBlue font-mont font-bold tracking-[0.2em] uppercase">SYSTEM.ARCHIVE.ENTRY // ${data.qNum}</div>
+                            <div class="text-gray-500 font-mont text-sm">CATALOG: <span class="text-white font-bold">${data.category}</span></div>
+                        </div>
+                        
+                        <!-- Record Screen -->
+                        <div class="bg-[#151515] w-full max-w-4xl min-h-[300px] p-10 relative flex flex-col border border-[#333] z-10 shadow-2xl mb-8">
+                            <div class="flex-grow flex flex-col justify-center">
+                                <p class="font-mont text-[34px] leading-relaxed text-gray-200 text-center font-light">${displayContext}</p>
+                            </div>
+                        </div>
+
+                        <!-- Options -->
+                        <div class="w-full max-w-4xl grid grid-cols-2 gap-8">
+                            ${optionsHtml}
+                        </div>
+                        
+                        <div class="z-10 w-full max-w-4xl flex justify-center">${feedbackHtml}</div>
+                    </div>
+                    ${buildNav(isAnswered)}
+                `;
+            }
+            // LEVEL 3: MUSEUM PLAQUE (Gallery UI)
+            else if (data.qType === 'plaque') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                
+                let contentHtml = '';
+
+                if (!isGradingState && !isAnswered) {
+                    contentHtml = `
+                        <!-- Plaque -->
+                        <div class="bg-[#e2ce9a] border-[8px] border-[#8a6a3b] p-8 shadow-[0_15px_30px_rgba(0,0,0,0.4)] w-[700px] flex flex-col relative z-20">
+                            <!-- Screws -->
+                            <div class="absolute top-2 left-2 w-3 h-3 rounded-full bg-[#6a4c28]"></div>
+                            <div class="absolute top-2 right-2 w-3 h-3 rounded-full bg-[#6a4c28]"></div>
+                            <div class="absolute bottom-2 left-2 w-3 h-3 rounded-full bg-[#6a4c28]"></div>
+                            <div class="absolute bottom-2 right-2 w-3 h-3 rounded-full bg-[#6a4c28]"></div>
+                            
+                            <h3 class="text-[#6a4c28] font-mont font-black text-sm tracking-widest uppercase mb-4 text-center">EXHIBIT ${data.qNum}</h3>
+                            
+                            <div class="bg-[#cba867] p-4 mb-6 text-center border border-[#a88243]">
+                                <p class="text-[#4a3417] font-mont font-bold text-lg mb-1">ORIGINAL TEXT:</p>
+                                <p class="font-bree text-[#2a1a08] text-2xl">"${data.prompt}"</p>
+                            </div>
+
+                            <p class="text-[#6a4c28] font-mont font-bold text-xs uppercase mb-1 text-center">${data.hint}</p>
+                            
+                            <textarea id="diagnose-input" placeholder="Engrave passive text here..." autocomplete="off"
+                                class="w-full bg-transparent text-[#2a1a08] font-bree text-3xl outline-none resize-none border-b-2 border-[#a88243] text-center h-24 focus:border-[#4a3417] transition-colors leading-relaxed"></textarea>
+                        </div>
+                        
+                        <div class="mt-8 z-20">
+                            <button onclick="submitWriting()" class="btn-freak bg-freakDark text-freakYellow border-2 border-freakDark hover:bg-white hover:text-freakDark text-xl py-4 px-10 shadow-[6px_6px_0px_#111]">ENGRAVE PLAQUE ➔</button>
+                        </div>
+                    `;
+                } else if (isGradingState) {
+                    const userText = selectedAnswers[currentSlide];
+                    contentHtml = `
+                        <div class="flex gap-8 w-full max-w-6xl mb-6 z-20">
+                            <!-- Left: User Answer Plaque -->
+                            <div class="w-1/2 bg-[#e2ce9a] border-[8px] border-[#8a6a3b] p-8 shadow-xl relative">
+                                <h4 class="font-mont font-black text-[#6a4c28] text-sm tracking-widest mb-4 uppercase text-center">YOUR ENGRAVING:</h4>
+                                <p class="font-bree text-[#2a1a08] text-3xl text-center">"${userText}"</p>
+                            </div>
+                            
+                            <!-- Right: Expected Answer -->
+                            <div class="w-1/2 bg-white rounded-lg border-t-[12px] border-freakBlue p-8 shadow-xl">
+                                <h4 class="font-mont font-bold text-gray-400 text-sm tracking-widest mb-4 uppercase">MUSEUM ARCHIVES (EXPECTED):</h4>
+                                <p class="font-mont text-freakDark text-2xl font-bold">${data.acceptable}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="w-full max-w-6xl bg-freakBlue p-4 mb-6 border-4 border-freakDark text-center shadow-md z-20">
+                            <p class="font-mont font-black text-freakDark text-lg">${data.teacherPrompt}</p>
+                        </div>
+
+                        <!-- Grading Decision -->
+                        <div class="w-full max-w-6xl bg-black border-2 border-gray-700 p-6 text-center shadow-2xl z-20">
+                            <h3 class="font-bree text-freakYellow text-2xl mb-2">CURATOR'S REVIEW</h3>
+                            <p class="font-mont text-gray-400 text-sm mb-6">Did you successfully shift the focus to the artwork using the Passive Voice?</p>
+                            <div class="flex justify-center gap-6">
+                                <button onclick="selfGrade(false)" class="btn-freak bg-red-500 text-white hover:bg-red-600 shadow-none py-3 px-6">DESTROY IT (0 PT)</button>
+                                <button onclick="selfGrade(true)" class="btn-freak bg-green-500 text-freakDark hover:bg-green-600 shadow-none py-3 px-6">DISPLAY IT (+1 PT)</button>
+                            </div>
+                        </div>
+                    `;
+                } else if (isAnswered) {
+                    const userText = selectedAnswers[currentSlide];
+                    contentHtml = `
+                         <div class="w-full max-w-4xl bg-[#e2ce9a] border-[8px] border-[#8a6a3b] p-10 shadow-xl opacity-80 flex flex-col items-center justify-center relative z-20">
+                            <h4 class="font-mont font-black text-[#6a4c28] text-sm tracking-widest mb-4 uppercase">PLAQUE INSTALLED:</h4>
+                            <p class="font-bree text-[#2a1a08] text-4xl text-center">"${userText}"</p>
+                        </div>
+                        <div class="mt-6 text-center font-mont text-freakDark font-bold text-xl uppercase tracking-widest z-20 bg-white px-4 py-1">Move to the next exhibit.</div>
+                    `;
+                }
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-galleryWall flex flex-col justify-center items-center relative p-12 pb-20">
+                        <!-- Studio Lighting gradient -->
+                        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white via-transparent to-[#b3b3b3] opacity-80 z-0"></div>
+                        
+                        <div class="absolute top-8 left-8 text-gray-500 font-mont font-black italic text-2xl z-20">Q${data.qNum}/30 | EXHIBITION</div>
+                        
+                        <div class="w-full max-w-6xl flex flex-col items-center justify-center h-full mt-4 z-20">
+                            ${contentHtml}
+                        </div>
+                    </div>
+                    ${buildNav(isAnswered && !isGradingState)}
+                `;
+                
+                const inputEl = document.getElementById('diagnose-input');
+                if(inputEl) inputEl.focus();
+            }
+            // OUTRO
+            else if (data.type === 'outro') {
+                const percentage = Math.round((score / 30) * 100);
+                let message = "";
+                if (percentage >= 90) message = "MASTER CURATOR. You protect the art.";
+                else if (percentage >= 70) message = "GOOD CRITIC. The gallery is safe.";
+                else message = "ART THIEF. We need to review the passive rules.";
+
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col justify-center items-center text-center p-12 bg-freakYellow text-freakDark relative h-full">
+                        <h1 class="font-bree text-[110px] mb-2 leading-none uppercase">EXHIBITION<br>CLOSED</h1>
+                        <div class="bg-freakDark text-white p-12 mt-8 w-[600px] shadow-[16px_16px_0px_#93E5FF]">
+                            <h2 class="font-mont font-black italic text-3xl mb-4 text-gray-400">FINAL REVIEW</h2>
+                            <p class="font-mont text-[100px] font-black text-freakGreen leading-none mb-4">${score} / 30</p>
+                            <p class="font-mont text-2xl font-bold bg-white text-freakDark inline-block px-6 py-2 transform -skew-x-6 mt-4">${message}</p>
+                        </div>
+                        <div class="mt-16">
+                            <button onclick="location.reload()" class="btn-freak bg-white text-freakDark hover:bg-freakBlue shadow-[6px_6px_0px_#111]">REVIEW AGAIN ➔</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        window.handleAnswer = function(optIndex) {
+            const data = lessonData[currentSlide];
+            if (answeredQuestions.has(currentSlide)) return; 
+            
+            selectedAnswers[currentSlide] = optIndex;
+            answeredQuestions.add(currentSlide);
+            
+            if (optIndex === data.correct) score++;
+            
+            renderSlide(); 
+        }
+
+        window.submitWriting = function() {
+            const inputEl = document.getElementById('diagnose-input');
+            const userText = inputEl ? inputEl.value.trim() : "";
+            if (!userText) {
+                // Shake or red outline logic
+                inputEl.classList.add('border-red-600', 'bg-red-50');
+                return; 
+            }
+            selectedAnswers[currentSlide] = userText;
+            isGradingState = true;
+            renderSlide();
+        }
+
+        window.selfGrade = function(isCorrect) {
+            isGradingState = false;
+            answeredQuestions.add(currentSlide);
+            if (isCorrect) score++;
+            nav(1); 
+        }
+
+        window.nav = function(dir) {
+            let nextSlide = currentSlide + dir;
+            if (nextSlide >= 0 && nextSlide < lessonData.length) {
+                currentSlide = nextSlide;
+                renderSlide();
+            } else if (nextSlide >= lessonData.length) {
+                lessonData.push({type: 'outro'});
+                currentSlide = lessonData.length -1;
+                renderSlide();
+            }
+        }
+
+        document.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter' && lessonData[currentSlide]?.qType === 'plaque' && !isGradingState && !answeredQuestions.has(currentSlide)) {
+                if (!e.shiftKey) {
+                    e.preventDefault();
+                    submitWriting();
+                }
+            }
+        });
+
+        // Init
+        renderSlide();
+    </script>
+</body>
+</html>

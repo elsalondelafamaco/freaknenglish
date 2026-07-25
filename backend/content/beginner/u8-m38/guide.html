@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:ital,wght@0,400;0,500;0,700;0,900;1,400;1,500;1,700&display=swap" rel="stylesheet">
+  <style>
+    /* Strict 2-Page Print Styling */
+    @media print {
+      @page { margin: 0; size: A4; }
+      body { 
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important; 
+        background-color: #F2F2F2 !important; 
+        padding: 0 !important; 
+        margin: 0 !important;
+      }
+      .survival-guide-container { 
+        box-shadow: none !important; 
+        border: 4px solid #E4DF33 !important; 
+        margin: 10mm auto !important; 
+        width: 190mm !important;
+        height: 277mm !important; /* Fits perfectly inside A4 */
+        max-height: 277mm !important;
+        page-break-after: always; 
+        box-sizing: border-box;
+      }
+      /* PREVENTS THE BLANK 3RD PAGE */
+      .survival-guide-container:last-child {
+        page-break-after: auto !important;
+      }
+      .no-print { display: none !important; }
+    }
+    
+    h1, h2, h3, .bree { font-family: 'Bree Serif', serif; }
+    body, .montserrat { font-family: 'Montserrat', sans-serif; }
+    body { color: #30302F; }
+  </style>
+</head>
+<body class="bg-[#F2F2F2] flex flex-col items-center p-4 sm:p-10 gap-10">
+
+  <!-- ==================== PAGE 1 ==================== -->
+  <div class="survival-guide-container w-full max-w-[800px] bg-white rounded-[24px] shadow-[0_20px_50px_rgba(228,223,51,0.3)] overflow-hidden flex flex-col min-h-[1050px]">
+    
+    <header class="bg-[#30302F] p-8 flex justify-between items-center border-b-8 border-[#E4DF33]">
+      <div>
+        <h1 class="text-[#E4DF33] text-3xl sm:text-4xl uppercase tracking-tight">Freakn' Survival Guide</h1>
+        <p class="text-white opacity-70 font-bold text-[11px] uppercase tracking-widest mt-2">Module 38: Daily Actions 2.0 (Page 1)</p>
+      </div>
+      <div class="bg-[#E4DF33] text-[#30302F] rounded-full w-12 h-12 flex items-center justify-center text-xl font-black bree shadow-lg">
+        U8
+      </div>
+    </header>
+
+    <section class="p-8 bg-[#E4DF33]/10 italic border-b border-gray-100">
+      <p class="bree text-xl text-[#7C7A39] leading-snug">
+        "The Gossip Recap: Titó's room is a disaster. Gelmy tells him to 'pick his clothes up' and 'turn the TV off'. Titó yells, 'I will pick up them!' Gelmy sighs. Let's learn the Phrasal Verb Sandwich rule before she throws his stuff out the window!"
+      </p>
+    </section>
+
+    <section class="p-8 flex-1">
+      <h2 class="bree text-[#7C7A39] text-2xl mb-8 uppercase">The Golden Nuggets 🍔</h2>
+      
+      <div class="grid gap-6 md:grid-cols-[1.2fr_1fr]">
+        
+        <!-- Left Side: Core Nuggets -->
+        <div class="space-y-5">
+            <div class="p-5 border-l-8 border-[#E4DF33] bg-[#F9F9F9] rounded-r-xl">
+              <span class="montserrat font-black text-lg uppercase text-[#30302F]">The "IT" Sandwich</span>
+              <p class="montserrat text-sm text-gray-600 mt-2">If you replace the object with a pronoun (IT or THEM), it MUST go in the middle. It becomes the meat of the sandwich.</p>
+              <p class="mt-3 text-sm italic font-bold text-[#7C7A39]">Example: "Turn IT off." (Not: Turn off it)</p>
+            </div>
+
+            <div class="p-5 border-l-8 border-[#93E5FF] bg-[#F9F9F9] rounded-r-xl">
+              <span class="montserrat font-black text-lg uppercase text-[#30302F]">Turn on / Turn off</span>
+              <p class="montserrat text-sm text-gray-600 mt-2">Use these for anything with electricity, batteries, or a switch (TV, lights, phone).</p>
+              <p class="mt-3 text-sm italic font-bold text-[#7C7A39]">Example: "Turn the lights off before you sleep."</p>
+            </div>
+
+            <div class="p-5 border-l-8 border-[#E4DF33] bg-[#F9F9F9] rounded-r-xl">
+              <span class="montserrat font-black text-lg uppercase text-[#30302F]">Put on / Take off</span>
+              <p class="montserrat text-sm text-gray-600 mt-2">Use these ONLY for clothing, shoes, and accessories. Do NOT say "use a jacket".</p>
+              <p class="mt-3 text-sm italic font-bold text-[#7C7A39]">Example: "It's cold. Put on your jacket."</p>
+            </div>
+        </div>
+
+        <!-- Right Side: The Cheat Sheet -->
+        <div class="bg-[#30302F] rounded-[20px] p-7 text-white shadow-xl flex flex-col justify-between">
+            <div>
+                <h3 class="bree text-[#E4DF33] text-2xl uppercase mb-6 flex items-center gap-3">
+                    <span class="bg-[#E4DF33] text-[#30302F] rounded-full w-6 h-6 flex items-center justify-center text-sm">!</span> 
+                    The Menu
+                </h3>
+                
+                <div class="mb-8">
+                    <p class="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-3">With the Noun (2 Options)</p>
+                    <ul class="text-sm font-bold space-y-3 montserrat">
+                        <li class="border-b border-gray-700 pb-2">✓ Turn <span class="text-[#93E5FF]">off</span> the TV.</li>
+                        <li class="border-b border-gray-700 pb-2">✓ Turn the TV <span class="text-[#93E5FF]">off</span>.</li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <p class="text-[10px] uppercase font-black text-gray-400 tracking-widest mb-3">With Pronouns (IT / THEM)</p>
+                    <ul class="text-sm font-bold space-y-3 montserrat">
+                        <li class="border-b border-gray-700 pb-2">✓ Turn <span class="text-[#E4DF33]">it</span> off.</li>
+                        <li class="border-b border-gray-700 pb-2 text-red-400">❌ Turn off it. <span class="text-xs opacity-70">(ILLEGAL!)</span></li>
+                        <li class="border-b border-gray-700 pb-2">✓ Put <span class="text-[#E4DF33]">them</span> on.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="bg-[#E4DF33]/10 p-4 rounded-xl border border-[#E4DF33]/20 mt-6">
+                <p class="text-[10px] font-black text-[#E4DF33] uppercase tracking-wider mb-2">Paisa Secret:</p>
+                <p class="text-xs text-white/90 leading-relaxed italic montserrat font-medium">When natives speak fast, the pronoun blends in. "Turn it off" sounds like <strong>"Turn-i-doff"</strong>. "Put it on" sounds like <strong>"Puh-di-don"</strong>.</p>
+            </div>
+        </div>
+
+      </div>
+    </section>
+
+    <footer class="p-6 text-center border-t border-gray-100 bg-white mt-auto">
+      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.4em] montserrat">PRODUCED BY FREAKN' ENGLISH ©️ 2026 | PAGE 1</p>
+    </footer>
+  </div>
+
+
+  <!-- ==================== PAGE 2 ==================== -->
+  <div class="survival-guide-container w-full max-w-[800px] bg-white rounded-[24px] shadow-[0_20px_50px_rgba(228,223,51,0.3)] overflow-hidden flex flex-col min-h-[1050px]">
+    
+    <header class="bg-[#30302F] p-8 flex justify-between items-center border-b-8 border-[#93E5FF]">
+      <div>
+        <h1 class="text-[#E4DF33] text-3xl sm:text-4xl uppercase tracking-tight">Freakn' Survival Guide</h1>
+        <p class="text-white opacity-70 font-bold text-[11px] uppercase tracking-widest mt-2">Module 38: Chores & Unbreakables (Page 2)</p>
+      </div>
+      <div class="bg-[#E4DF33] text-[#30302F] rounded-full w-12 h-12 flex items-center justify-center text-xl font-black bree shadow-lg">
+        U8
+      </div>
+    </header>
+
+    <section class="p-8 flex-1">
+      <h2 class="bree text-[#7C7A39] text-2xl mb-8 uppercase">Chore Nuggets 🧹</h2>
+      
+      <div class="grid gap-6 md:grid-cols-[1.2fr_1fr]">
+        
+        <!-- Left Side: Chore Actions -->
+        <div class="space-y-5">
+            <div class="p-5 border-l-8 border-[#93E5FF] bg-[#F9F9F9] rounded-r-xl">
+              <span class="montserrat font-black text-lg uppercase text-[#30302F]">Pick up / Put down</span>
+              <p class="montserrat text-sm text-gray-600 mt-2"><strong>Pick up</strong> = Lift from the floor/table.<br><strong>Put down</strong> = Return it to the surface.</p>
+              <p class="mt-3 text-sm italic font-bold text-[#7C7A39]">Example: "Pick up your shoes and put them down in the closet."</p>
+            </div>
+
+            <div class="p-5 border-l-8 border-[#E4DF33] bg-[#F9F9F9] rounded-r-xl">
+              <span class="montserrat font-black text-lg uppercase text-[#30302F]">Throw away</span>
+              <p class="montserrat text-sm text-gray-600 mt-2">To put something in the trash. It is 100% garbage now.</p>
+              <p class="mt-3 text-sm italic font-bold text-[#7C7A39]">Example: "This pizza is old. Throw it away."</p>
+            </div>
+
+            <div class="p-5 border-l-8 border-[#93E5FF] bg-[#F9F9F9] rounded-r-xl">
+              <span class="montserrat font-black text-lg uppercase text-[#30302F]">Put away</span>
+              <p class="montserrat text-sm text-gray-600 mt-2">Different from throwing away! This means putting things back in their proper storage place.</p>
+              <p class="mt-3 text-sm italic font-bold text-[#7C7A39]">Example: "Put away the clean dishes."</p>
+            </div>
+            
+            <div class="p-5 border-l-8 border-red-400 bg-red-50 rounded-r-xl">
+              <span class="montserrat font-black text-lg uppercase text-[#30302F]">Look for (Unbreakable)</span>
+              <p class="montserrat text-sm text-gray-600 mt-2">This verb is <strong>Unbreakable</strong>. You can NEVER separate it. The "it" goes at the very end.</p>
+              <p class="mt-3 text-sm italic font-bold text-[#7C7A39]">Example: "I lost my keys. I am looking for them."</p>
+            </div>
+        </div>
+
+        <!-- Right Side: Chore Chart -->
+        <div class="bg-gray-50 rounded-[20px] p-7 text-[#30302F] shadow-sm border-2 border-gray-200 flex flex-col justify-between">
+            <div>
+                <h3 class="bree text-[#30302F] text-2xl uppercase mb-6 flex items-center gap-3">
+                    <span class="bg-[#30302F] text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">!</span> 
+                    Chore Chart
+                </h3>
+                
+                <div class="mb-8">
+                    <p class="text-[10px] uppercase font-black text-gray-500 tracking-widest mb-3">Cleaning Up</p>
+                    <ul class="text-sm font-bold space-y-3 montserrat">
+                        <li class="border-b border-gray-300 pb-2">Take <span class="text-[#7C7A39]">out</span> the trash.</li>
+                        <li class="border-b border-gray-300 pb-2">Clean <span class="text-[#7C7A39]">up</span> the kitchen.</li>
+                        <li class="border-b border-gray-300 pb-2">Wash <span class="text-[#7C7A39]">up</span> after eating.</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <p class="text-[10px] uppercase font-black text-gray-500 tracking-widest mb-3">Paperwork</p>
+                    <ul class="text-sm font-bold space-y-3 montserrat">
+                        <li class="border-b border-gray-300 pb-2 flex justify-between">
+                            <span>Fill <span class="text-[#7C7A39]">out</span> the form.</span> 
+                            <span class="text-xs font-normal italic text-gray-500">(Llenar)</span>
+                        </li>
+                        <li class="border-b border-gray-300 pb-2 flex justify-between">
+                            <span>Write it <span class="text-[#7C7A39]">down</span>.</span> 
+                            <span class="text-xs font-normal italic text-gray-500">(Anotar)</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="bg-[#30302F] p-5 rounded-xl border-2 border-[#93E5FF] mt-6 shadow-lg">
+                <p class="text-[10px] font-black uppercase text-[#93E5FF] tracking-widest mb-2">Street Tip:</p>
+                <p class="text-xs text-white leading-relaxed font-medium">To sound like an angry roommate, combine them quickly: <br><span class="italic text-[#E4DF33]">"Pick it up, clean it up, and take it out!"</span></p>
+            </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- THE MICRO-MISSION -->
+    <section class="mx-8 mb-8 mt-4 p-8 bg-[#93E5FF] rounded-[20px] border-4 border-[#30302F] flex items-center space-x-6 shadow-lg">
+        <div class="bg-[#30302F] text-white rounded-full w-16 h-16 flex items-center justify-center flex-shrink-0 shadow-inner">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E4DF33" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>
+        </div>
+        <div>
+          <h3 class="bree uppercase text-xl mb-1 text-[#30302F]">🚀 The Roommate Mission</h3>
+          <p class="montserrat text-sm font-bold text-[#30302F] leading-snug">
+            Record a voice note giving orders to a lazy roommate. Use the pronouns! Say: <br>
+            <span class="italic text-lg block mt-2 text-[#7C7A39] bg-white/50 inline-block px-3 py-1 rounded">"Your shirt is on the floor. Pick it up! The TV is loud. Turn it off!"</span>
+          </p>
+        </div>
+    </section>
+
+    <footer class="p-6 text-center border-t border-gray-100 bg-white mt-auto">
+      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.4em] montserrat">PRODUCED BY FREAKN' ENGLISH ©️ 2026 | PAGE 2</p>
+    </footer>
+  </div>
+
+</body>
+</html>

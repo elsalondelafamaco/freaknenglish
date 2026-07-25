@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freakn' Survival Guide: Module 10 (2-Page Edition)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        yellow: '#E4DF33',
+                        charcoal: '#30302F',
+                        skyblue: '#93E5FF',
+                        olive: '#7C7A39',
+                        lightbg: '#FDFCEB',
+                    },
+                    fontFamily: {
+                        bree: ['"Bree Serif"', 'serif'],
+                        montserrat: ['Montserrat', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @media print {
+            body { background-color: white !important; padding: 0 !important; }
+            .survival-guide-container { 
+                box-shadow: none !important; 
+                border: none !important; 
+                width: 100% !important; 
+                max-width: 100% !important; 
+                margin: 0 !important;
+                page-break-after: always;
+            }
+            .no-print { display: none !important; }
+            @page { size: A4; margin: 0; }
+        }
+
+        body {
+            background-color: #F2F2F2;
+            font-family: 'Montserrat', sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .survival-guide-container {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            margin: 20px auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        .golden-nugget-card {
+            border: 2px solid #E5E7EB;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .accent-bar-yellow { border-right: 8px solid #E4DF33; }
+        .accent-bar-sky { border-right: 8px solid #93E5FF; }
+
+        .cheat-sheet-box {
+            background-color: #30302F;
+            border-radius: 20px;
+            color: white;
+        }
+
+        .gossip-header-icon {
+            background: white;
+            border-radius: 50%;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body class="p-0 sm:p-8 space-y-10 text-left">
+
+    <!-- PAGE 1: THE FLIP & THE MIRROR -->
+    <div class="survival-guide-container">
+        
+        <!-- HEADER -->
+        <header class="bg-charcoal px-8 py-6 flex justify-between items-center border-b-8 border-yellow">
+            <div>
+                <h1 class="font-bree text-yellow text-3xl tracking-tight leading-none uppercase">Freakn' Survival Guide</h1>
+                <p class="text-gray-400 font-montserrat font-bold text-xs uppercase tracking-widest mt-1 text-left">MODULE 10: QUESTION TAGS (PAGE 1)</p>
+            </div>
+            <div class="flex items-center space-x-3 text-center">
+                <div class="bg-yellow text-charcoal font-black rounded-full w-10 h-10 flex items-center justify-center text-xl font-bree">U2</div>
+            </div>
+        </header>
+
+        <!-- THE GOSSIP RECAP BAR -->
+        <div class="bg-lightbg py-6 px-10 flex items-center space-x-6 border-b border-gray-100">
+            <div class="gossip-header-icon flex-shrink-0">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-charcoal"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 9h8"></path><path d="M8 13h6"></path></svg>
+            </div>
+            <p class="font-bree italic text-charcoal text-lg leading-snug">
+                "The Gossip Recap: Gelmy knows a secret about Titó, but she wants him to confess. In Spanish, we just say '¿cierto?'. In English, you have to use a 'Question Tag' to confirm the rumor. Let's learn how to trap Titó!"
+            </p>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex flex-1 p-10 gap-10">
+            
+            <!-- LEFT: THE NUGGETS -->
+            <div class="w-7/12">
+                <div class="flex items-center space-x-2 mb-8">
+                    <h2 class="font-bree text-2xl text-olive uppercase tracking-tight text-left">The Tag Nuggets</h2>
+                    <span class="text-yellow text-2xl">🪝</span>
+                </div>
+
+                <div class="space-y-6 text-left">
+                    <div class="golden-nugget-card p-5 accent-bar-yellow">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">The Flip (+ to -)</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">If the main sentence is Positive, the tag at the end MUST be Negative.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"You **are** Titó, **aren't** you?"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">The Flip (- to +)</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">If the main sentence is Negative, the tag at the end MUST be Positive.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"You **don't** like pizza, **do** you?"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">The Pronoun Rule</h3>
+                        <p class="text-gray-600 text-sm mt-1">Never use a name in the tag. Always shrink it to a pronoun (He, She, It, They).</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"Gelmy is here, isn't **she**?" (Not: isn't Gelmy)</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">The Comma</h3>
+                        <p class="text-gray-600 text-sm mt-1">The tag is separated from the sentence by a comma. It's a quick pause before the trap!</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"He works here**,** doesn't he?"</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: CHEAT SHEET -->
+            <div class="w-5/12">
+                <div class="cheat-sheet-box p-6 h-full shadow-xl text-left">
+                    <div class="flex items-center space-x-3 mb-6">
+                        <div class="bg-yellow rounded-full w-6 h-6 flex items-center justify-center text-charcoal font-black text-xs">!</div>
+                        <h2 class="font-bree text-xl text-yellow uppercase tracking-widest text-left">The Mirrors</h2>
+                    </div>
+                    <div class="space-y-8">
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-3">To Be (The Boss)</div>
+                            <ul class="space-y-2 font-montserrat font-bold text-sm text-white">
+                                <li class="pb-1 border-b border-gray-700">Is ➔ <span class="text-skyblue ml-2">Isn't</span></li>
+                                <li class="pb-1 border-b border-gray-700">Are ➔ <span class="text-skyblue ml-2">Aren't</span></li>
+                                <li class="pb-1 border-b border-gray-700">Was ➔ <span class="text-skyblue ml-2">Wasn't</span></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-3">Normal Actions</div>
+                            <ul class="space-y-2 font-montserrat font-bold text-sm">
+                                <li class="pb-1 border-b border-gray-700">Play(s) ➔ <span class="text-yellow ml-2">Don't / Doesn't</span></li>
+                                <li class="pb-1 border-b border-gray-700">Played ➔ <span class="text-yellow ml-2">Didn't</span></li>
+                            </ul>
+                        </div>
+                        <div class="bg-yellow/10 p-3 rounded-lg border border-yellow/20 mt-auto">
+                            <p class="text-[9px] font-black text-yellow uppercase tracking-wider mb-1">Paisa Secret:</p>
+                            <p class="text-[10px] text-white/80 leading-tight italic">Do not say "You like coffee, no?" or "You like coffee, right?". That's pure Spanglish. Use the Mirror + Pronoun!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER BAR -->
+        <footer class="py-4 text-center border-t border-gray-100 bg-white">
+            <p class="text-[9px] font-montserrat font-bold text-gray-400 uppercase tracking-[0.4em]">Produced by FreaknEnglish 2026 | PAGE 1</p>
+        </footer>
+    </div>
+
+    <!-- PAGE 2: EXCEPTIONS & SOUND LOGIC -->
+    <div class="survival-guide-container">
+        
+        <!-- HEADER -->
+        <header class="bg-charcoal px-8 py-6 flex justify-between items-center border-b-8 border-yellow">
+            <div>
+                <h1 class="font-bree text-yellow text-3xl tracking-tight leading-none uppercase">Freakn' Survival Guide</h1>
+                <p class="text-gray-400 font-montserrat font-bold text-xs uppercase tracking-widest mt-1 text-left">MODULE 10: QUESTION TAGS (PAGE 2)</p>
+            </div>
+            <div class="flex items-center space-x-3 text-center">
+                <div class="bg-yellow text-charcoal font-black rounded-full w-10 h-10 flex items-center justify-center text-xl font-bree">U2</div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex flex-1 p-10 gap-10">
+            
+            <!-- LEFT: SOUND NUGGETS -->
+            <div class="w-7/12">
+                <div class="flex items-center space-x-2 mb-8">
+                    <h2 class="font-bree text-2xl text-olive uppercase tracking-tight text-left">Vibe Nuggets</h2>
+                    <span class="text-skyblue text-2xl">🗣️</span>
+                </div>
+
+                <div class="space-y-6 text-left">
+                    <div class="golden-nugget-card p-5 accent-bar-sky">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">Pitch UP ↗️</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">If your voice goes UP at the end, it means you genuinely don't know the answer. It's a real question!</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"You locked the door, didn't you? ↗️"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Pitch DOWN ↘️</h3>
+                        <p class="text-gray-600 text-sm mt-1">If your voice goes DOWN, you are just confirming gossip. You already know the truth.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"You are tired, aren't you? ↘️"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">The "I am" Trap</h3>
+                        <p class="text-gray-600 text-sm mt-1">The weirdest rule in English. There is no "amn't I". You MUST use "aren't I" when flipping "I am".</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I am late, **aren't I**?"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Answering the Tag</h3>
+                        <p class="text-gray-600 text-sm mt-1">Don't overthink it. Just answer the reality of the situation with Yes or No.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"You didn't go, did you?" ➔ "No, I didn't."</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: CONSTRUCTION CHEAT SHEET -->
+            <div class="w-5/12">
+                <div class="cheat-sheet-box p-8 h-full shadow-xl text-left">
+                    <div class="flex items-center space-x-3 mb-8">
+                        <div class="bg-yellow rounded-full w-6 h-6 flex items-center justify-center text-charcoal font-black text-xs">!</div>
+                        <h2 class="font-bree text-xl text-yellow uppercase tracking-widest text-left">How to Build It</h2>
+                    </div>
+                    <div class="space-y-10">
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-4">Step-by-Step</div>
+                            <ul class="space-y-4 font-montserrat font-bold text-xs text-white">
+                                <li class="pb-2 border-b border-gray-700">
+                                    <span class="text-skyblue block text-[10px] uppercase">Step 1: The Vibe</span>
+                                    Identify if the sentence is (+) or (-).
+                                </li>
+                                <li class="pb-2 border-b border-gray-700">
+                                    <span class="text-yellow block text-[10px] uppercase">Step 2: The Mirror</span>
+                                    Find the matching verb (Be, Do, Does, Did) and FLIP it.
+                                </li>
+                                <li class="pb-2 border-b border-gray-700">
+                                    <span class="text-skyblue block text-[10px] uppercase">Step 3: The Pronoun</span>
+                                    Add He/She/It/They at the very end.
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="bg-gray-800 p-4 rounded-lg border-2 border-skyblue">
+                            <p class="text-[10px] font-black uppercase text-skyblue tracking-widest mb-2">Street Tip:</p>
+                            <p class="text-[11px] leading-tight font-medium">When you drop your pitch (Pitch DOWN), it sounds super confident. It's the best way to make someone confess!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- THE MICRO-MISSION FOOTER -->
+        <div class="bg-skyblue p-8 flex items-center space-x-8 border-t border-gray-200">
+            <div class="bg-charcoal text-white rounded-full w-14 h-14 flex items-center justify-center flex-shrink-0 shadow-lg">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+            </div>
+            <div class="flex-1 text-left">
+                <h4 class="font-montserrat font-black text-charcoal text-xs uppercase tracking-widest mb-1">The Gossip Mission</h4>
+                <p class="font-montserrat font-bold text-charcoal text-lg leading-tight">
+                    Record a voice note confirming a rumor about your teacher! Say: <span class="underline italic">"You live in Colombia, don't you? You didn't sleep well, did you?"</span> Pitch DOWN!
+                </p>
+            </div>
+        </div>
+
+        <!-- FOOTER BAR -->
+        <footer class="py-4 text-center border-t border-gray-100 bg-white">
+            <p class="text-[9px] font-montserrat font-bold text-gray-400 uppercase tracking-[0.4em]">Produced by FreaknEnglish 2026 | PAGE 2</p>
+        </footer>
+
+    </div>
+
+</body>
+</html>

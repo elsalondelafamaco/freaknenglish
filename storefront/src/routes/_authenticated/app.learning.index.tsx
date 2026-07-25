@@ -74,46 +74,80 @@ function LearningIndex() {
         })}
       </div>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        {modsQ.isLoading ? (
-          <p className="text-sm text-brand-ink/60">Cargando módulos…</p>
-        ) : mods.length === 0 ? (
-          <p className="text-sm text-brand-ink/60">Aún no hay módulos publicados para este nivel.</p>
-        ) : null}
-        {mods.map((m: any) => {
-          const prog = moduleProgress(m);
-          return (
-            <Link
-              key={m.id}
-              to="/app/learning/$moduleId"
-              params={{ moduleId: m.id }}
-              className="group rounded-3xl border border-brand-line bg-white p-6 transition hover:border-brand-ink/30 hover:shadow-soft"
-            >
-              <div className="flex items-start justify-between">
-                <div className="text-3xl">{m.coverEmoji ?? "📘"}</div>
-                {prog.complete ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-success/15 px-2.5 py-1 text-[11px] font-medium text-brand-success">
-                    <CheckCircle2 className="size-3.5" /> Completo
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-brand-cream px-2.5 py-1 text-[11px] font-medium text-brand-ink/65">
-                    {prog.done}/{prog.total} lecciones
-                  </span>
-                )}
-              </div>
-              <h3 className="mt-3 text-lg font-bold text-brand-ink">{m.title}</h3>
-              <p className="mt-1 text-sm text-brand-ink/65">{m.summary}</p>
-              <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-brand-cream">
-                <div className="h-full rounded-full bg-brand-ink transition-all" style={{ width: `${prog.pct}%` }} />
-              </div>
-            </Link>
-          );
-        })}
-      </section>
+      {modsQ.isLoading ? (
+        <p className="text-sm text-brand-ink/60">Cargando módulos…</p>
+      ) : mods.length === 0 ? (
+        <p className="text-sm text-brand-ink/60">Aún no hay módulos publicados para este nivel.</p>
+      ) : null}
+
+      {/* Los módulos se agrupan por unidad. Los que no tienen unidad asignada
+          (contenido antiguo o creado a mano en el CMS) van en un grupo final. */}
+      {groupByUnit(mods).map(([unit, group]) => (
+        <section key={unit ?? "sin-unidad"} className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-brand-ink/70">
+              {unit != null ? `Unidad ${unit}` : "Otros módulos"}
+            </h2>
+            <span className="text-xs text-brand-ink/45">{group.length} módulos</span>
+            <span className="h-px flex-1 bg-brand-line" />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {group.map((m: any) => {
+              const prog = moduleProgress(m);
+              const isCheckpoint = /checkpoint/i.test(m.id);
+              return (
+                <Link
+                  key={m.id}
+                  to="/app/learning/$moduleId"
+                  params={{ moduleId: m.id }}
+                  className={`group rounded-3xl border p-6 transition hover:shadow-soft ${
+                    isCheckpoint
+                      ? "border-brand-yellow bg-brand-yellow/10 hover:border-brand-ink/30"
+                      : "border-brand-line bg-white hover:border-brand-ink/30"
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="text-3xl">{m.coverEmoji ?? (isCheckpoint ? "🏁" : "📘")}</div>
+                    {prog.complete ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-brand-success/15 px-2.5 py-1 text-[11px] font-medium text-brand-success">
+                        <CheckCircle2 className="size-3.5" /> Completo
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-brand-cream px-2.5 py-1 text-[11px] font-medium text-brand-ink/65">
+                        {prog.done}/{prog.total} lecciones
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="mt-3 text-lg font-bold text-brand-ink">{m.title}</h3>
+                  <p className="mt-1 text-sm text-brand-ink/65">{m.summary ?? m.description}</p>
+                  <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-brand-cream">
+                    <div className="h-full rounded-full bg-brand-ink transition-all" style={{ width: `${prog.pct}%` }} />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ))}
 
       <CheckpointBanner level={level} />
     </div>
   );
+}
+
+/** Agrupa módulos por `unit` conservando el orden de `position`. */
+function groupByUnit(mods: any[]): Array<[number | null, any[]]> {
+  const map = new Map<number | null, any[]>();
+  for (const m of mods) {
+    const u = typeof m.unit === "number" ? m.unit : null;
+    if (!map.has(u)) map.set(u, []);
+    map.get(u)!.push(m);
+  }
+  return [...map.entries()].sort((a, b) => {
+    if (a[0] == null) return 1; // "Otros módulos" al final
+    if (b[0] == null) return -1;
+    return a[0] - b[0];
+  });
 }
 
 function CheckpointBanner({ level }: { level: EnglishLevel }) {

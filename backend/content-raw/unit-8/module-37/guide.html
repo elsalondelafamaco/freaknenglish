@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freakn' Survival Guide: Module 37 (2-Page Edition)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        yellow: '#E4DF33',
+                        charcoal: '#30302F',
+                        skyblue: '#93E5FF',
+                        olive: '#7C7A39',
+                        lightbg: '#FDFCEB',
+                    },
+                    fontFamily: {
+                        bree: ['"Bree Serif"', 'serif'],
+                        montserrat: ['Montserrat', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F2F2F2;
+            font-family: 'Montserrat', sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .survival-guide-container {
+            width: 210mm;
+            height: 297mm; /* Strict A4 height */
+            background: white;
+            margin: 20px auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+            box-sizing: border-box;
+        }
+
+        .golden-nugget-card {
+            border: 2px solid #E5E7EB;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .accent-bar-yellow { border-right: 8px solid #E4DF33; }
+        .accent-bar-sky { border-right: 8px solid #93E5FF; }
+
+        .cheat-sheet-box {
+            background-color: #30302F;
+            border-radius: 20px;
+            color: white;
+        }
+
+        .gossip-header-icon {
+            background: white;
+            border-radius: 50%;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        @media print {
+            @page { size: A4; margin: 0; }
+            body { 
+                background-color: white !important; 
+                padding: 0 !important; 
+                margin: 0 !important;
+            }
+            /* Kill the space-y-10 tailwind class during print so it doesn't force a page break */
+            .space-y-10 > :not([hidden]) ~ :not([hidden]) {
+                margin-top: 0 !important;
+            }
+            .survival-guide-container { 
+                box-shadow: none !important; 
+                border: none !important; 
+                width: 210mm !important; 
+                height: 297mm !important; 
+                margin: 0 !important;
+                page-break-after: always;
+                page-break-inside: avoid;
+                overflow: hidden !important;
+            }
+            .survival-guide-container:last-child {
+                page-break-after: auto;
+            }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="p-0 sm:p-8 space-y-10 text-left">
+
+    <!-- PAGE 1: THE MIRROR LOGIC & LAZY MATCHES -->
+    <div class="survival-guide-container">
+        
+        <!-- HEADER -->
+        <header class="bg-charcoal px-8 py-4 flex justify-between items-center border-b-8 border-yellow">
+            <div>
+                <h1 class="font-bree text-yellow text-3xl tracking-tight leading-none uppercase">Freakn' Survival Guide</h1>
+                <p class="text-gray-400 font-montserrat font-bold text-xs uppercase tracking-widest mt-1 text-left">MODULE 37: MATCHING VIBES (PAGE 1)</p>
+            </div>
+            <div class="flex items-center space-x-3 text-center">
+                <div class="bg-yellow text-charcoal font-black rounded-full w-10 h-10 flex items-center justify-center text-xl font-bree">U8</div>
+            </div>
+        </header>
+
+        <!-- THE GOSSIP RECAP BAR -->
+        <div class="bg-lightbg py-4 px-8 flex items-center space-x-6 border-b border-gray-100">
+            <div class="gossip-header-icon flex-shrink-0">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-charcoal"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 9h8"></path><path d="M8 13h6"></path></svg>
+            </div>
+            <p class="font-bree italic text-charcoal text-base leading-snug">
+                "The Gossip Recap: Titó said, 'I don't like waking up early.' Gelmy replied, 'Me too!' Titó laughed because that is a classic Spanglish mistake. Let's learn how to agree properly before you ruin the vibe!"
+            </p>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex flex-1 p-8 gap-8">
+            
+            <!-- LEFT: THE NUGGETS -->
+            <div class="w-7/12">
+                <div class="flex items-center space-x-2 mb-6">
+                    <h2 class="font-bree text-2xl text-olive uppercase tracking-tight text-left">Matching Nuggets</h2>
+                    <span class="text-yellow text-2xl">🤝</span>
+                </div>
+
+                <div class="space-y-4 text-left">
+                    <div class="golden-nugget-card p-4 accent-bar-yellow">
+                        <h3 class="font-montserrat font-black text-lg text-charcoal uppercase text-left">The Lazy Match</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">If the original sentence is positive, say **Me too**. If it's negative (has a 'NOT'), say **Me neither**.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I am tired." ➔ "**Me too.**"<br>"I am not tired." ➔ "**Me neither.**"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-4 accent-bar-sky">
+                        <h3 class="font-montserrat font-black text-lg text-charcoal uppercase text-left">The "SO" Mirror (+)</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">To sound fluent, mirror their helper verb! If they say a POSITIVE sentence, use **SO**.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I **am** hungry." ➔ "**So am I.**"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-4 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-lg text-charcoal uppercase">The "NEITHER" Mirror (-)</h3>
+                        <p class="text-gray-600 text-sm mt-1">If they say a NEGATIVE sentence, use **NEITHER**. (Don't use 'not' in your answer, neither is already negative!)</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I **don't** like cats." ➔ "**Neither do I.**"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-4 accent-bar-sky text-left">
+                        <h3 class="font-montserrat font-black text-lg text-charcoal uppercase">The "DO" Rescue</h3>
+                        <p class="text-gray-600 text-sm mt-1">If the person uses a normal action verb (like, work, play) with NO helper, rescue the sentence with **DO**.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I love pizza." ➔ "**So do I.**"</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: CHEAT SHEET -->
+            <div class="w-5/12 flex flex-col justify-between">
+                <div class="cheat-sheet-box p-6 shadow-xl text-left flex-1 flex flex-col">
+                    <div class="flex items-center space-x-3 mb-6">
+                        <div class="bg-yellow rounded-full w-6 h-6 flex items-center justify-center text-charcoal font-black text-xs">!</div>
+                        <h2 class="font-bree text-xl text-yellow uppercase tracking-widest text-left">The Formulas</h2>
+                    </div>
+                    <div class="space-y-6 flex-1">
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-3">Positive Agreement (Yo también)</div>
+                            <ul class="space-y-2 font-montserrat font-bold text-sm text-white">
+                                <li class="pb-1 border-b border-gray-700">So + <span class="text-skyblue">am</span> + I</li>
+                                <li class="pb-1 border-b border-gray-700">So + <span class="text-skyblue">do</span> + I</li>
+                                <li class="pb-1 border-b border-gray-700">So + <span class="text-skyblue">can</span> + I</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-3">Negative Agreement (Yo tampoco)</div>
+                            <ul class="space-y-2 font-montserrat font-bold text-sm text-white">
+                                <li class="pb-1 border-b border-gray-700">Neither + <span class="text-yellow">am</span> + I</li>
+                                <li class="pb-1 border-b border-gray-700">Neither + <span class="text-yellow">do</span> + I</li>
+                                <li class="pb-1 border-b border-gray-700">Neither + <span class="text-yellow">can</span> + I</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="bg-yellow/10 p-3 rounded-lg border border-yellow/20 mt-4">
+                        <p class="text-[9px] font-black text-yellow uppercase tracking-wider mb-1">Paisa Secret:</p>
+                        <p class="text-[10px] text-white/80 leading-tight italic">If someone says "I hate traffic", you say "Me too" (or "So do I"). Why? Because "hate" is a POSITIVE grammar word! It doesn't have a "not".</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER BAR -->
+        <footer class="py-3 text-center border-t border-gray-100 bg-white">
+            <p class="text-[9px] font-montserrat font-bold text-gray-400 uppercase tracking-[0.4em]">Produced by FreaknEnglish 2026 | PAGE 1</p>
+        </footer>
+    </div>
+
+    <!-- PAGE 2: DISAGREEMENTS & ADVANCED MIRRORS -->
+    <div class="survival-guide-container">
+        
+        <!-- HEADER -->
+        <header class="bg-charcoal px-8 py-4 flex justify-between items-center border-b-8 border-yellow">
+            <div>
+                <h1 class="font-bree text-yellow text-3xl tracking-tight leading-none uppercase">Freakn' Survival Guide</h1>
+                <p class="text-gray-400 font-montserrat font-bold text-xs uppercase tracking-widest mt-1 text-left">MODULE 37: MATCHING VIBES (PAGE 2)</p>
+            </div>
+            <div class="flex items-center space-x-3 text-center">
+                <div class="bg-yellow text-charcoal font-black rounded-full w-10 h-10 flex items-center justify-center text-xl font-bree">U8</div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex flex-1 p-8 gap-8">
+            
+            <!-- LEFT: ADVANCED NUGGETS -->
+            <div class="w-7/12">
+                <div class="flex items-center space-x-2 mb-6">
+                    <h2 class="font-bree text-2xl text-olive uppercase tracking-tight text-left">Advanced Nuggets</h2>
+                    <span class="text-skyblue text-2xl">⚡</span>
+                </div>
+
+                <div class="space-y-4 text-left">
+                    <div class="golden-nugget-card p-4 accent-bar-sky">
+                        <h3 class="font-montserrat font-black text-lg text-charcoal uppercase text-left">Breaking the Vibe (Disagreeing)</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">If you don't agree, don't use 'So' or 'Neither'. Just use the OPPOSITE helper verb and claim it!</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I love sushi." ➔ "**I don't!**"<br>"I am not tired." ➔ "**I am!**"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-4 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-lg text-charcoal uppercase">The Past Mirror (Did)</h3>
+                        <p class="text-gray-600 text-sm mt-1">If their sentence happened yesterday, your mirror must be in the past.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I went out last night." ➔ "**So did I.**"<br>"I didn't sleep." ➔ "**Neither did I.**"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-4 accent-bar-sky text-left">
+                        <h3 class="font-montserrat font-black text-lg text-charcoal uppercase">The Future Mirror (Will)</h3>
+                        <p class="text-gray-600 text-sm mt-1">If they are talking about tomorrow, reflect their 'Will' or 'Won't'.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I will travel soon." ➔ "**So will I.**"<br>"I won't quit." ➔ "**Neither will I.**"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-4 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-lg text-charcoal uppercase">The Experience Mirror (Have)</h3>
+                        <p class="text-gray-600 text-sm mt-1">If they brag about an experience using Present Perfect, mirror the 'Have'.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I have been to Paris." ➔ "**So have I.**"</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: THE REACTION MATRIX CHEAT SHEET -->
+            <div class="w-5/12 flex flex-col justify-between">
+                <div class="cheat-sheet-box p-6 shadow-xl text-left flex-1 flex flex-col">
+                    <div class="flex items-center space-x-3 mb-6">
+                        <div class="bg-yellow rounded-full w-6 h-6 flex items-center justify-center text-charcoal font-black text-xs">!</div>
+                        <h2 class="font-bree text-xl text-yellow uppercase tracking-widest text-left">The Matrix</h2>
+                    </div>
+                    <div class="space-y-6 flex-1">
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-3">You say: "I love it."</div>
+                            <ul class="space-y-2 font-montserrat font-bold text-xs text-white">
+                                <li class="pb-1 border-b border-gray-700">Agree ➔ <span class="text-skyblue">So do I.</span> (Me too)</li>
+                                <li class="pb-1 border-b border-gray-700">Disagree ➔ <span class="text-yellow">I don't!</span></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-3">You say: "I didn't go."</div>
+                            <ul class="space-y-2 font-montserrat font-bold text-xs">
+                                <li class="pb-1 border-b border-gray-700">Agree ➔ <span class="text-skyblue">Neither did I.</span> (Me neither)</li>
+                                <li class="pb-1 border-b border-gray-700">Disagree ➔ <span class="text-yellow">I did!</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="bg-gray-800 p-3 rounded-lg border-2 border-skyblue mt-4">
+                        <p class="text-[10px] font-black uppercase text-skyblue tracking-widest mb-1">Street Tip:</p>
+                        <p class="text-[10px] leading-tight font-medium">To sound incredibly natural and empathetic, link the sentences: "Wow, **so did I!**" or "Really? **Neither do I.**"</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- THE MICRO-MISSION FOOTER -->
+        <div class="bg-skyblue p-6 flex items-center space-x-6 border-t border-gray-200">
+            <div class="bg-charcoal text-white rounded-full w-12 h-12 flex items-center justify-center flex-shrink-0 shadow-lg">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+            </div>
+            <div class="flex-1 text-left">
+                <h4 class="font-montserrat font-black text-charcoal text-xs uppercase tracking-widest mb-1">The Twin Mission</h4>
+                <p class="font-montserrat font-bold text-charcoal text-base leading-tight">
+                    Record a voice note finding things in common with a friend. Say: <span class="underline italic">"If you say 'I [Action]', I will say '[So do I / Neither do I]'! We are twins!"</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- FOOTER BAR -->
+        <footer class="py-3 text-center border-t border-gray-100 bg-white">
+            <p class="text-[9px] font-montserrat font-bold text-gray-400 uppercase tracking-[0.4em]">Produced by FreaknEnglish 2026 | PAGE 2</p>
+        </footer>
+
+    </div>
+
+</body>
+</html>

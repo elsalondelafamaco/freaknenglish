@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freakn' Survival Guide: Module 14 (2-Page Edition)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        yellow: '#E4DF33',
+                        charcoal: '#30302F',
+                        skyblue: '#93E5FF',
+                        olive: '#7C7A39',
+                        lightbg: '#FDFCEB',
+                    },
+                    fontFamily: {
+                        bree: ['"Bree Serif"', 'serif'],
+                        montserrat: ['Montserrat', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @media print {
+            body { background-color: white !important; padding: 0 !important; }
+            .survival-guide-container { 
+                box-shadow: none !important; 
+                border: none !important; 
+                width: 100% !important; 
+                max-width: 100% !important; 
+                margin: 0 !important;
+                page-break-after: always;
+            }
+            .no-print { display: none !important; }
+            @page { size: A4; margin: 0; }
+        }
+
+        body {
+            background-color: #F2F2F2;
+            font-family: 'Montserrat', sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .survival-guide-container {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            margin: 20px auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        .golden-nugget-card {
+            border: 2px solid #E5E7EB;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .accent-bar-yellow { border-right: 8px solid #E4DF33; }
+        .accent-bar-sky { border-right: 8px solid #93E5FF; }
+
+        .cheat-sheet-box {
+            background-color: #30302F;
+            border-radius: 20px;
+            color: white;
+        }
+
+        .gossip-header-icon {
+            background: white;
+            border-radius: 50%;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body class="p-0 sm:p-8 space-y-10 text-left">
+
+    <!-- PAGE 1: THE GET MASTERCLASS -->
+    <div class="survival-guide-container">
+        
+        <!-- HEADER -->
+        <header class="bg-charcoal px-8 py-6 flex justify-between items-center border-b-8 border-yellow">
+            <div>
+                <h1 class="font-bree text-yellow text-3xl tracking-tight leading-none uppercase">Freakn' Survival Guide</h1>
+                <p class="text-gray-400 font-montserrat font-bold text-xs uppercase tracking-widest mt-1">MODULE 14: CHANGES & TRANSITIONS (PAGE 1)</p>
+            </div>
+            <div class="flex items-center space-x-3 text-center">
+                <div class="bg-yellow text-charcoal font-black rounded-full w-10 h-10 flex items-center justify-center text-xl font-bree">U3</div>
+            </div>
+        </header>
+
+        <!-- THE GOSSIP RECAP BAR -->
+        <div class="bg-lightbg py-6 px-10 flex items-center space-x-6 border-b border-gray-100">
+            <div class="gossip-header-icon flex-shrink-0">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-charcoal"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 9h8"></path><path d="M8 13h6"></path></svg>
+            </div>
+            <p class="font-bree italic text-charcoal text-lg leading-snug">
+                "The Gossip Recap: El Pa had a chaotic day. He got lost, he got angry, and he finally got home. Titó is confused because El Pa uses 'GET' for everything. Let's master the magic verb!"
+            </p>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex flex-1 p-10 gap-10">
+            
+            <!-- LEFT: THE NUGGETS -->
+            <div class="w-7/12">
+                <div class="flex items-center space-x-2 mb-8">
+                    <h2 class="font-bree text-2xl text-olive uppercase tracking-tight text-left">The "Get" Nuggets</h2>
+                    <span class="text-yellow text-2xl">🪄</span>
+                </div>
+
+                <div class="space-y-6 text-left">
+                    <div class="golden-nugget-card p-5 accent-bar-yellow">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">GET = Become</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">Use this for emotions or physical states. You weren't X before, but now you are.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I **got** angry." / "I **got** tired."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">GET = Arrive</h3>
+                        <p class="text-gray-600 text-sm mt-1">Use this for locations. (Past: **Got**). For home, don't use 'to'.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I **got** home." / "I **got** to work."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">GET = Obtain</h3>
+                        <p class="text-gray-600 text-sm mt-1">Use this when you receive or buy something. (Past: **Got**).</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I **got** a new job!" / "I **got** a pizza."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Get Lost</h3>
+                        <p class="text-gray-600 text-sm mt-1">When you don't know where you are. Titó's favorite activity!</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I **got lost** in the city yesterday."</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: CHEAT SHEET -->
+            <div class="w-5/12">
+                <div class="cheat-sheet-box p-6 h-full shadow-xl text-left">
+                    <div class="flex items-center space-x-3 mb-6">
+                        <div class="bg-yellow rounded-full w-6 h-6 flex items-center justify-center text-charcoal font-black text-xs">!</div>
+                        <h2 class="font-bree text-xl text-yellow uppercase tracking-widest text-left uppercase">Get Vibes</h2>
+                    </div>
+                    <div class="space-y-8">
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-3">Emotions</div>
+                            <ul class="space-y-2 font-montserrat font-bold text-sm text-white">
+                                <li class="pb-1 border-b border-gray-700 italic">Get happy</li>
+                                <li class="pb-1 border-b border-gray-700 italic">Get excited</li>
+                                <li class="pb-1 border-b border-gray-700 italic text-skyblue">Get sick</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-3">States</div>
+                            <ul class="space-y-2 font-montserrat font-bold text-sm">
+                                <li class="pb-1 border-b border-gray-700">Get hungry</li>
+                                <li class="pb-1 border-b border-gray-700">Get thirsty</li>
+                                <li class="pb-1 border-b border-gray-700">Get ready</li>
+                            </ul>
+                        </div>
+                        <div class="bg-yellow/10 p-3 rounded-lg border border-yellow/20 mt-auto">
+                            <p class="text-[9px] font-black text-yellow uppercase tracking-wider mb-1">Paisa Secret:</p>
+                            <p class="text-[10px] text-white/80 leading-tight italic">Natives use 'GET' for everything because it's fast. Use it and you'll sound 100% more natural!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER BAR -->
+        <footer class="py-4 text-center border-t border-gray-100 bg-white">
+            <p class="text-[9px] font-montserrat font-bold text-gray-400 uppercase tracking-[0.4em]">Produced by FreaknEnglish 2026 | PAGE 1</p>
+        </footer>
+    </div>
+
+    <!-- PAGE 2: THE ACTION SQUAD -->
+    <div class="survival-guide-container">
+        
+        <!-- HEADER -->
+        <header class="bg-charcoal px-8 py-6 flex justify-between items-center border-b-8 border-yellow">
+            <div>
+                <h1 class="font-bree text-yellow text-3xl tracking-tight leading-none uppercase">Freakn' Survival Guide</h1>
+                <p class="text-gray-400 font-montserrat font-bold text-xs uppercase tracking-widest mt-1 text-left">MODULE 14: CHANGES & TRANSITIONS (PAGE 2)</p>
+            </div>
+            <div class="flex items-center space-x-3 text-center">
+                <div class="bg-yellow text-charcoal font-black rounded-full w-10 h-10 flex items-center justify-center text-xl font-bree">U3</div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex flex-1 p-10 gap-10">
+            
+            <!-- LEFT: ACTION NUGGETS -->
+            <div class="w-7/12">
+                <div class="flex items-center space-x-2 mb-8">
+                    <h2 class="font-bree text-2xl text-olive uppercase tracking-tight text-left">Action Squad</h2>
+                    <span class="text-skyblue text-2xl">🏃</span>
+                </div>
+
+                <div class="space-y-6 text-left">
+                    <div class="golden-nugget-card p-5 accent-bar-sky">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">Take vs. Bring</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">**Take** = Move it AWAY (->). **Bring** = Move it HERE (<-).</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"**Take** your trash with you!" / "**Bring** me a coffee!"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Catch</h3>
+                        <p class="text-gray-600 text-sm mt-1">Use this for moving vehicles or for getting a virus.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"I **caught** the bus." / "I **caught** a cold."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Fetch</h3>
+                        <p class="text-gray-600 text-sm mt-1">The "Yo-Yo" action. Go to a place, get the object, and come back.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"Can you **fetch** my keys from the car?"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Take a Taxi</h3>
+                        <p class="text-gray-600 text-sm mt-1">Always use **Take** for Ubers, Taxis, or Trains when you travel away.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"We **took** a taxi to the airport."</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: DIRECTION CHEAT SHEET -->
+            <div class="w-5/12">
+                <div class="cheat-sheet-box p-8 h-full shadow-xl text-left">
+                    <div class="flex items-center space-x-3 mb-8">
+                        <div class="bg-yellow rounded-full w-6 h-6 flex items-center justify-center text-charcoal font-black text-xs">!</div>
+                        <h2 class="font-bree text-xl text-yellow uppercase tracking-widest text-left">Direction</h2>
+                    </div>
+                    <div class="space-y-10">
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-4">The Compass</div>
+                            <ul class="space-y-3 font-montserrat font-bold text-xs text-white">
+                                <li class="pb-2 border-b border-gray-700 italic">Away (->): <span class="text-skyblue">TAKE</span></li>
+                                <li class="pb-2 border-b border-gray-700 italic">Toward (<-): <span class="text-yellow">BRING</span></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-4">Transport</div>
+                            <ul class="space-y-3 font-montserrat font-bold text-xs">
+                                <li class="pb-2 border-b border-gray-700">Moving (Public) -> **Catch**</li>
+                                <li class="pb-2 border-b border-gray-700">Private -> **Take**</li>
+                            </ul>
+                        </div>
+                        <div class="bg-gray-800 p-4 rounded-lg border-2 border-skyblue">
+                            <p class="text-[10px] font-black uppercase text-skyblue tracking-widest mb-2">Street Tip:</p>
+                            <p class="text-[11px] leading-tight font-medium">If you say "I bring my bag to work", it's wrong because work is AWAY from home. Say: "I **take** my bag to work."</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- THE MICRO-MISSION FOOTER -->
+        <div class="bg-skyblue p-8 flex items-center space-x-8 border-t border-gray-200">
+            <div class="bg-charcoal text-white rounded-full w-14 h-14 flex items-center justify-center flex-shrink-0 shadow-lg">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+            </div>
+            <div class="flex-1 text-left">
+                <h4 class="font-montserrat font-black text-charcoal text-xs uppercase tracking-widest mb-1">The Chaos Mission</h4>
+                <p class="font-montserrat font-bold text-charcoal text-lg leading-tight">
+                    Record a voice note about your morning. Use: <span class="underline">"I **got** to work at [Time]. I **took** my [Object] with me. I **got** really [Emotion] because of the traffic!"</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- FOOTER BAR -->
+        <footer class="py-4 text-center border-t border-gray-100 bg-white">
+            <p class="text-[9px] font-montserrat font-bold text-gray-400 uppercase tracking-[0.4em]">Produced by FreaknEnglish 2026 | PAGE 2</p>
+        </footer>
+
+    </div>
+
+</body>
+</html>

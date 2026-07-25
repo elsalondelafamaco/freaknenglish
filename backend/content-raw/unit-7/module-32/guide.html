@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freakn' Survival Guide: Module 32 (2-Page Edition)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        yellow: '#E4DF33',
+                        charcoal: '#30302F',
+                        skyblue: '#93E5FF',
+                        olive: '#7C7A39',
+                        lightbg: '#FDFCEB',
+                    },
+                    fontFamily: {
+                        bree: ['"Bree Serif"', 'serif'],
+                        montserrat: ['Montserrat', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @media print {
+            body { background-color: white !important; padding: 0 !important; }
+            .survival-guide-container { 
+                box-shadow: none !important; 
+                border: none !important; 
+                width: 100% !important; 
+                max-width: 100% !important; 
+                margin: 0 !important;
+                page-break-after: always;
+            }
+            .no-print { display: none !important; }
+            @page { size: A4; margin: 0; }
+        }
+
+        body {
+            background-color: #F2F2F2;
+            font-family: 'Montserrat', sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .survival-guide-container {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            margin: 20px auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        .golden-nugget-card {
+            border: 2px solid #E5E7EB;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .accent-bar-yellow { border-right: 8px solid #E4DF33; }
+        .accent-bar-sky { border-right: 8px solid #93E5FF; }
+
+        .cheat-sheet-box {
+            background-color: #30302F;
+            border-radius: 20px;
+            color: white;
+        }
+
+        .gossip-header-icon {
+            background: white;
+            border-radius: 50%;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body class="p-0 sm:p-8 space-y-10 text-left">
+
+    <!-- PAGE 1: ASKING FOR DIRECTIONS -->
+    <div class="survival-guide-container">
+        
+        <!-- HEADER -->
+        <header class="bg-charcoal px-8 py-6 flex justify-between items-center border-b-8 border-yellow">
+            <div>
+                <h1 class="font-bree text-yellow text-3xl tracking-tight leading-none uppercase">Freakn' Survival Guide</h1>
+                <p class="text-gray-400 font-montserrat font-bold text-xs uppercase tracking-widest mt-1 text-left">MODULE 32: LOST IN THE CITY (PAGE 1)</p>
+            </div>
+            <div class="flex items-center space-x-3 text-center">
+                <div class="bg-yellow text-charcoal font-black rounded-full w-10 h-10 flex items-center justify-center text-xl font-bree">U7</div>
+            </div>
+        </header>
+
+        <!-- THE GOSSIP RECAP BAR -->
+        <div class="bg-lightbg py-6 px-10 flex items-center space-x-6 border-b border-gray-100">
+            <div class="gossip-header-icon flex-shrink-0">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-charcoal"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 9h8"></path><path d="M8 13h6"></path></svg>
+            </div>
+            <p class="font-bree italic text-charcoal text-lg leading-snug">
+                "The Gossip Recap: Titó's phone died and he is completely lost downtown. He needs to find the subway station but he keeps walking in circles. Let's help him ask for directions before it gets dark!"
+            </p>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex flex-1 p-10 gap-10">
+            
+            <!-- LEFT: THE NUGGETS -->
+            <div class="w-7/12">
+                <div class="flex items-center space-x-2 mb-8">
+                    <h2 class="font-bree text-2xl text-olive uppercase tracking-tight text-left">Navigation Nuggets</h2>
+                    <span class="text-yellow text-2xl">🗺️</span>
+                </div>
+
+                <div class="space-y-6 text-left">
+                    <div class="golden-nugget-card p-5 accent-bar-yellow">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">Excuse me...</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">The Golden Rule. Never just yell a question at a stranger. Always start with this!</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"**Excuse me**, can you help me?"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">How do I get to...?</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">The ultimate question to ask for directions to a specific place.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"**How do I get to** the hospital?"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Is there a [place] near here?</h3>
+                        <p class="text-gray-600 text-sm mt-1">Use this when you need something (like an ATM), but you don't know the address.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"**Is there a** pharmacy **near here**?"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">It's on...</h3>
+                        <p class="text-gray-600 text-sm mt-1">Use the preposition **ON** for street and avenue names.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"The bank is **on** Main Street."</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: CHEAT SHEET -->
+            <div class="w-5/12">
+                <div class="cheat-sheet-box p-6 h-full shadow-xl text-left">
+                    <div class="flex items-center space-x-3 mb-6">
+                        <div class="bg-yellow rounded-full w-6 h-6 flex items-center justify-center text-charcoal font-black text-xs">!</div>
+                        <h2 class="font-bree text-xl text-yellow uppercase tracking-widest text-left">The City Map</h2>
+                    </div>
+                    <div class="space-y-8">
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-3">City Structure</div>
+                            <ul class="space-y-2 font-montserrat font-bold text-sm text-white">
+                                <li class="pb-1 border-b border-gray-700">Block (Cuadra)</li>
+                                <li class="pb-1 border-b border-gray-700">Corner (Esquina)</li>
+                                <li class="pb-1 border-b border-gray-700">Intersection</li>
+                                <li class="pb-1 border-b border-gray-700">Traffic light (Semáforo)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-3">Transport Hubs</div>
+                            <ul class="space-y-2 font-montserrat font-bold text-sm">
+                                <li class="pb-1 border-b border-gray-700 italic text-skyblue">Subway station</li>
+                                <li class="pb-1 border-b border-gray-700 italic text-skyblue">Bus stop</li>
+                                <li class="pb-1 border-b border-gray-700 italic text-skyblue">Airport</li>
+                            </ul>
+                        </div>
+                        <div class="bg-yellow/10 p-3 rounded-lg border border-yellow/20 mt-auto">
+                            <p class="text-[9px] font-black text-yellow uppercase tracking-wider mb-1">Paisa Secret:</p>
+                            <p class="text-[10px] text-white/80 leading-tight italic">Try not to ask "Where is the pharmacy?". It sounds a little rude or demanding. Start with "How do I get to...?" to sound friendly.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER BAR -->
+        <footer class="py-4 text-center border-t border-gray-100 bg-white">
+            <p class="text-[9px] font-montserrat font-bold text-gray-400 uppercase tracking-[0.4em]">Produced by FreaknEnglish 2026 | PAGE 1</p>
+        </footer>
+    </div>
+
+    <!-- PAGE 2: GIVING DIRECTIONS & PREPOSITIONS -->
+    <div class="survival-guide-container">
+        
+        <!-- HEADER -->
+        <header class="bg-charcoal px-8 py-6 flex justify-between items-center border-b-8 border-yellow">
+            <div>
+                <h1 class="font-bree text-yellow text-3xl tracking-tight leading-none uppercase">Freakn' Survival Guide</h1>
+                <p class="text-gray-400 font-montserrat font-bold text-xs uppercase tracking-widest mt-1 text-left">MODULE 32: LOST IN THE CITY (PAGE 2)</p>
+            </div>
+            <div class="flex items-center space-x-3 text-center">
+                <div class="bg-yellow text-charcoal font-black rounded-full w-10 h-10 flex items-center justify-center text-xl font-bree">U7</div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex flex-1 p-10 gap-10">
+            
+            <!-- LEFT: DOCTOR NUGGETS -->
+            <div class="w-7/12">
+                <div class="flex items-center space-x-2 mb-8">
+                    <h2 class="font-bree text-2xl text-olive uppercase tracking-tight text-left">Command Nuggets</h2>
+                    <span class="text-skyblue text-2xl">🚦</span>
+                </div>
+
+                <div class="space-y-6 text-left">
+                    <div class="golden-nugget-card p-5 accent-bar-sky">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">Go straight</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">The most common command. It means "keep walking forward, don't turn."</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"**Go straight** for two blocks."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Turn left / Turn right</h3>
+                        <p class="text-gray-600 text-sm mt-1">To change direction. Often used with "at the corner" or "at the traffic light".</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"**Turn left** at the intersection."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Walk past</h3>
+                        <p class="text-gray-600 text-sm mt-1">Keep walking until the building is behind you.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"**Walk past** the bank, and you'll see it."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">You can't miss it</h3>
+                        <p class="text-gray-600 text-sm mt-1">The classic way to end directions. It means "It's very obvious and easy to see."</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"It's the big red building, **you can't miss it**!"</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: PREPOSITIONS CHEAT SHEET -->
+            <div class="w-5/12">
+                <div class="cheat-sheet-box p-8 h-full shadow-xl text-left">
+                    <div class="flex items-center space-x-3 mb-8">
+                        <div class="bg-yellow rounded-full w-6 h-6 flex items-center justify-center text-charcoal font-black text-xs">!</div>
+                        <h2 class="font-bree text-xl text-yellow uppercase tracking-widest text-left">Pinpointing</h2>
+                    </div>
+                    <div class="space-y-10">
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-4">Prepositions of Place</div>
+                            <ul class="space-y-4 font-montserrat font-bold text-xs text-white">
+                                <li class="pb-2 border-b border-gray-700">
+                                    <span class="text-skyblue block text-[10px] uppercase">Next to</span>
+                                    Beside something.
+                                </li>
+                                <li class="pb-2 border-b border-gray-700">
+                                    <span class="text-skyblue block text-[10px] uppercase">Across from</span>
+                                    On the other side of the street.
+                                </li>
+                                <li class="pb-2 border-b border-gray-700">
+                                    <span class="text-yellow block text-[10px] uppercase">Between</span>
+                                    In the middle of two things.
+                                </li>
+                                <li class="pb-2 border-b border-gray-700">
+                                    <span class="text-yellow block text-[10px] uppercase">On the corner of</span>
+                                    Where two streets meet.
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="bg-gray-800 p-4 rounded-lg border-2 border-skyblue">
+                            <p class="text-[10px] font-black uppercase text-skyblue tracking-widest mb-2">Street Tip:</p>
+                            <p class="text-[11px] leading-tight font-medium">When giving directions, we don't say "You turn left". Just drop the 'You' and command them: **"Turn left!"** It's faster.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- THE MICRO-MISSION FOOTER -->
+        <div class="bg-skyblue p-8 flex items-center space-x-8 border-t border-gray-200">
+            <div class="bg-charcoal text-white rounded-full w-14 h-14 flex items-center justify-center flex-shrink-0 shadow-lg">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+            </div>
+            <div class="flex-1 text-left">
+                <h4 class="font-montserrat font-black text-charcoal text-xs uppercase tracking-widest mb-1">The Guide Mission</h4>
+                <p class="font-montserrat font-bold text-charcoal text-lg leading-tight">
+                    Record a voice note telling a friend how to get to your favorite restaurant from the nearest park. Say: <span class="underline italic">"Go straight, turn [Left/Right], and it's [Next to / Across from] the [Place]."</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- FOOTER BAR -->
+        <footer class="py-4 text-center border-t border-gray-100 bg-white">
+            <p class="text-[9px] font-montserrat font-bold text-gray-400 uppercase tracking-[0.4em]">Produced by FreaknEnglish 2026 | PAGE 2</p>
+        </footer>
+
+    </div>
+
+</body>
+</html>

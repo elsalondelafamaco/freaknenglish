@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unit 5 Module 24 | This vs. That</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        freakYellow: '#E4DF33',
+                        freakDark: '#30302F',
+                        freakBlue: '#93E5FF',
+                        freakBg: '#111111'
+                    },
+                    fontFamily: {
+                        bree: ['"Bree Serif"', 'serif'],
+                        mont: ['Montserrat', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #111111; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; overflow: hidden; }
+        #app-container { width: 1280px; height: 720px; position: relative; background-color: #30302F; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        
+        /* Typography System */
+        .title-freak { font-family: 'Bree Serif', serif; font-weight: 400; text-transform: uppercase; }
+        .text-freak { font-family: 'Montserrat', sans-serif; }
+        
+        /* Components */
+        .btn-freak {
+            background-color: #93E5FF; color: #30302F; font-family: 'Montserrat', sans-serif; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.05em; padding: 1rem 2rem; border: 4px solid #30302F;
+            box-shadow: 4px 4px 0px #30302F; transition: all 0.2s ease; cursor: pointer;
+        }
+        .btn-freak:hover { background-color: #E4DF33; transform: translate(-2px, -2px); box-shadow: 6px 6px 0px #30302F; }
+        .btn-freak:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; background-color: #ccc; }
+        
+        .slide-enter { animation: slideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #30302F; }
+        ::-webkit-scrollbar-thumb { background: #E4DF33; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div id="slide-mount" class="w-full h-full flex slide-enter"></div>
+    </div>
+
+    <script>
+        const lessonData = [
+            // SLIDE 0: OBJECTIVE
+            {
+                type: 'intro',
+                unitModule: "UNIT 5 • MODULE 24",
+                title: "THIS VS. THAT",
+                objective: "Learn to point things out, describe what materials things are made of, and command actions in a messy room. Stop saying 'the thing' and be specific.",
+                bottomTag: "THE OBSERVER • PART 4"
+            },
+            
+            // --- THE CHEAT CODE (GRAMMAR BASE) ---
+            {
+                type: 'cheatsheet',
+                title: "THE CHEAT CODE",
+                subtitle: "The street rules for pointing things out.",
+                rules: [
+                    { title: "THE DISTANCE", desc: "If you can touch it right now, it's THIS or THESE. If it's far away, it's THAT or THOSE.", example: "This phone (in my hand).<br>That car (across the street)." },
+                    { title: "THE AMOUNT", desc: "Singular (1 thing) = This / That. <br>Plural (2+ things) = These / Those.", example: "This key (1) ➔ These keys (3).<br>That shoe (1) ➔ Those shoes (2)." },
+                    { title: "THE ACTIONS", desc: "POINT = use your finger. PICK UP = lift it. DROP = let it fall. THROW = launch it. SHOW = let someone see it.", example: "Point at that TV.<br>Drop this box." }
+                ]
+            },
+
+            // --- LEVEL 1: THE VIBE ---
+            { type: 'transition', level: 1, title: "LEVEL 1: THE VIBE", desc: "The family is cleaning a messy house. Listen to their gossip. Pick the correct demonstrative word or action verb based on logic." },
+            
+            {
+                type: 'q_vibe', level: 1, qNum: 1,
+                context: "Gelmy: 'Mijo, I am holding a very soft cotton pillow in my hands right now. ___ pillow is very comfortable.'",
+                question: "Which word does Gelmy use?",
+                options: ["That", "This"],
+                correct: 1,
+                rationale: "Because the pillow is in her hands (close to her) and there is only one, she must use 'This'.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Point to something you are touching right now and use THIS.'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 2,
+                context: "Titó: 'Look across the room! Do you see the square box over there? ___ box is heavy.'",
+                question: "Which word does Titó use?",
+                options: ["That", "This"],
+                correct: 0,
+                rationale: "The box is far away ('across the room') and singular, so the only logical choice is 'That'.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Point to something far away in this room and use THAT.'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 3,
+                context: "El pa: 'Bro, I have three gold chains in my hand right now. ___ chains are super expensive.'",
+                question: "Which word does El pa use?",
+                options: ["Those", "These"],
+                correct: 1,
+                rationale: "He is holding them (close) and there are three of them (plural). Therefore, he must use 'These'.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Grab two objects next to you. Show them and use THESE.'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 4,
+                context: "Gelmy: 'El pa! Look at the dirty cotton shirts on the floor over there! Pick up ___ shirts right now!'",
+                question: "Which word does Gelmy use?",
+                options: ["Those", "These"],
+                correct: 0,
+                rationale: "The shirts are far away ('over there') and plural, so she must use 'Those'.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Look out a window or across the room. Point at multiple things and use THOSE.'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 5,
+                context: "Titó: 'This heavy metal tool is burning my hands! I can't hold it anymore! I need to ___ it!'",
+                question: "What action is Titó going to do?",
+                options: ["Point at", "Drop"],
+                correct: 1,
+                rationale: "If he can't hold it because it hurts, he will release his grip and let it fall. That action is 'Drop'.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Have you ever dropped your phone? Did it break?'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 6,
+                context: "El pa: 'Parce, look! I just got my new plastic ID card from the university. Let me ___ it to you.'",
+                question: "What action is El pa doing so you can see it?",
+                options: ["Show", "Throw"],
+                correct: 0,
+                rationale: "To present an object so someone else's eyes can see it is to 'Show' it. Throwing an ID card at someone is weird.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Show me something you have in your pocket or bag right now.'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 7,
+                context: "Gelmy: 'Mijo, your leather bag is on the floor. It looks very messy. Please ___ it up.'",
+                question: "What action does Gelmy want him to do?",
+                options: ["Throw", "Pick"],
+                correct: 1,
+                rationale: "To take an object off the floor using your hands is to 'Pick it up'. You don't throw things to clean up.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Drop a pen on the floor and tell them: Pick it up!'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 8,
+                context: "Titó: 'I found a smooth rock by the water. I'm going to ___ it far into the river!'",
+                question: "What action requires launching the rock into the air?",
+                options: ["Throw", "Pick"],
+                correct: 0,
+                rationale: "Using your arm to launch an object through the air is the verb 'Throw'.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Are you good at throwing a ball? Which sport do you like?'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 9,
+                context: "El pa: 'Bro, don't look at my shoes. Look at ___ round wooden table all the way over there in the corner.'",
+                question: "Which word does El pa use?",
+                options: ["This", "That"],
+                correct: 1,
+                rationale: "The table is singular and 'all the way over there' (far away), so 'That' is the only option.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Tell me about a piece of wooden furniture in your house.'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 10,
+                context: "Gelmy: 'I just bought a silk scarf! It feels amazing around my neck right now. I love ___ scarf!'",
+                question: "Which word does Gelmy use?",
+                options: ["This", "That"],
+                correct: 0,
+                rationale: "The scarf is physically touching her neck right now (close), so she uses 'This'.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'What is your favorite material to wear? Cotton, leather, or silk?'"
+            },
+
+            // --- LEVEL 2: THE GAME (Chat Interface) ---
+            { type: 'transition', level: 2, title: "LEVEL 2: THE GAME", desc: "Real-world texting. The family is moving things around and asking for help. Pick the most logical reply." },
+
+            {
+                type: 'q_chat', level: 2, qNum: 11, sender: "El pa 🧢",
+                incoming: "Bro, I can't reach the plastic cups on the top shelf over there. Can you get ___ for me?",
+                options: ["...these cups...", "...those cups..."],
+                correct: 1,
+                rationale: "Because the cups are on the 'top shelf over there' (far away) and plural, 'those' is correct.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Do you use plastic cups or glass cups at home?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 12, sender: "Gelmy 👵",
+                incoming: "Mijo, look at the metal keys in my hand. Are ___ yours?",
+                options: ["...these...", "...those..."],
+                correct: 0,
+                rationale: "The keys are in her hand, meaning they are close to the speaker (Gelmy). Plural + Close = 'These'.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Hold up your keys. How many do you have?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 13, sender: "Titó 🤠",
+                incoming: "I need you to grab that heavy wooden chair over there. What action should you do to move it?",
+                options: ["Drop it.", "Pick it up."],
+                correct: 1,
+                rationale: "To move something off the ground, you must first 'Pick it up' with your hands.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Is there anything heavy to pick up in your room?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 14, sender: "El pa 🧢",
+                incoming: "Parce, catch! I'm going to launch this rubber ball directly to you from across the yard!",
+                options: ["Don't throw it!", "Don't point it!"],
+                correct: 0,
+                rationale: "Launching an object through the air with your arm is throwing. You tell him not to 'throw' it.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'If someone throws a ball at your face, can you catch it?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 15, sender: "Gelmy 👵",
+                incoming: "I'm sitting far away from the TV. How do I show you the screen without standing up and walking over to it?",
+                options: ["Pick it up.", "Point at it."],
+                correct: 1,
+                rationale: "If you are far away and can't walk over, you use your finger to 'Point at it'.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Point at the closest screen to you right now.'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 16, sender: "Titó 🤠",
+                incoming: "I bought a new poncho. It's made of pure wool. Touch it right here! How does ___ feel?",
+                options: ["...this...", "...that..."],
+                correct: 0,
+                rationale: "He is asking you to touch it 'right here' (close proximity). Singular + Close = 'This'.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Do you own any clothes made of wool? Is it hot or cold?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 17, sender: "El pa 🧢",
+                incoming: "Bro, my hands are full of heavy books, I can't hold them anymore, and I'm totally exhausted! I'm going to...",
+                options: ["...show them to you.", "...drop them."],
+                correct: 1,
+                rationale: "If you are exhausted and can't hold heavy objects, gravity wins. You 'drop' them.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Have you ever dropped something very expensive? What was it?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 18, sender: "Gelmy 👵",
+                incoming: "Look at the dirty plastic plates on that table over there. Please walk over and clean...",
+                options: ["...those plates.", "...these plates."],
+                correct: 0,
+                rationale: "The plates are on a table 'over there' (far from the speaker) and plural. 'Those' is the only logical fit.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Who cleans the dirty plates in your house?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 19, sender: "Titó 🤠",
+                incoming: "Mijo, my carriel bag is real leather. Come here, look closely at my hand so my eyes can see it. Let me ___ it to you.",
+                options: ["Throw", "Show"],
+                correct: 1,
+                rationale: "He wants you to 'look closely', meaning he wants to present it to your eyes. That verb is 'Show'.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Show me the closest leather object near you.'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 20, sender: "El pa 🧢",
+                incoming: "Parce, the teacher is asking what a 'square' is. I have a square box in my hands right now. I'll say: 'Look at ___ box!'",
+                options: ["...this...", "...that..."],
+                correct: 0,
+                rationale: "The box is physically in his hands (close) and singular. He must use 'This'.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Look around. Tell me something that has a square shape.'"
+            },
+
+            // --- LEVEL 3: THE CHALLENGE (Free Writing) ---
+            { type: 'transition', level: 3, title: "LEVEL 3: THE CHALLENGE", desc: "No options. The family is asking you direct questions. Type your answers to prove you can point things out correctly." },
+
+            {
+                type: 'q_write', level: 3, qNum: 21,
+                character: "Titó", title: "THE SINGLE ITEM",
+                prompt: "Hey! If you are holding a single cotton shirt in your hands, do you say THIS shirt or THAT shirt?",
+                acceptable: "This / This shirt",
+                rationale: "Because the shirt is singular (1) and close to you (in your hands), you use THIS.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'What material is your shirt made of right now?'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 22,
+                character: "Gelmy", title: "THE FARAWAY MESS",
+                prompt: "Mijo, if there are five dirty plastic cups on a table far away from you, do you use THESE or THOSE?",
+                acceptable: "Those / Those cups",
+                rationale: "Because the cups are plural (5) and far away, you must use THOSE.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'Do you have those messy corners in your bedroom?'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 23,
+                character: "El pa", title: "THE FINGER",
+                prompt: "Bro, if you want me to look at something far away, what action verb do you do with your finger?",
+                acceptable: "Point / Point at it",
+                rationale: "Extending your finger to direct someone's attention is the verb POINT.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'Point at the ceiling right now!'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 24,
+                character: "Titó", title: "THE LIFT",
+                prompt: "What action verb do you use when an object is on the floor and you lift it with your hands?",
+                acceptable: "Pick up / Pick it up",
+                rationale: "Lifting an object off a surface using your hands is to PICK UP.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'Do you always pick up your clothes from the floor?'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 25,
+                character: "Gelmy", title: "THE ACCIDENT",
+                prompt: "Mijo, if you have a heavy rock in your hand and you suddenly open your hand so it falls to the ground, what verb is that?",
+                acceptable: "Drop / Drop it",
+                rationale: "Letting something fall from your grip due to gravity is the verb DROP.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'Have you ever dropped a glass in the kitchen?'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 26,
+                character: "El pa", title: "THE LAUNCH",
+                prompt: "Parce, what action verb do you use when you use your arm to send a ball flying through the air to me?",
+                acceptable: "Throw / Throw it",
+                rationale: "Launching an object through the air is the verb THROW.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'Are you good at throwing things into the trash can from far away?'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 27,
+                character: "Titó", title: "THE PLURAL CLOSE",
+                prompt: "You are holding two silver rings in your hands. Do you say THIS rings or THESE rings?",
+                acceptable: "These / These rings",
+                rationale: "Because there are multiple items (2) and they are close to you (in your hands), you use THESE.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'Do you prefer gold rings or silver rings?'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 28,
+                character: "Gelmy", title: "THE PRESENTATION",
+                prompt: "Mijo, what verb do you use when you bring a beautiful new leather jacket to me so my eyes can see it clearly?",
+                acceptable: "Show / Show it",
+                rationale: "Presenting an item for someone else to look at is the verb SHOW.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'Show me your phone case!'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 29,
+                character: "El pa", title: "THE SKY",
+                prompt: "Bro, look at the moon up in the sky. Do you say 'Look at THIS moon' or 'Look at THAT moon'?",
+                acceptable: "That / That moon",
+                rationale: "The moon is extremely far away, so you must use THAT.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'Do you like to look at that moon at night?'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 30,
+                character: "Titó", title: "THE EXHAUSTION",
+                prompt: "Final question. You are carrying a heavy wooden box and you are super tired. You yell: 'I'm going to _____ this box right now!'",
+                acceptable: "Drop / Drop it",
+                rationale: "If you are too tired to hold something heavy, you will release it, which is DROP.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'What is the heaviest wooden thing in your house?'"
+            }
+        ];
+
+        let currentSlide = 0;
+        let score = 0;
+        let answeredQuestions = new Set();
+        let selectedAnswers = {}; 
+        let isGradingState = false;
+
+        const appContainer = document.getElementById('slide-mount');
+
+        function renderSlide() {
+            const data = lessonData[currentSlide];
+            appContainer.innerHTML = '';
+            appContainer.className = 'w-full h-full flex slide-enter'; 
+
+            const buildNav = (isAnswered) => `
+                <div class="absolute bottom-6 w-full px-12 flex justify-between items-center z-50">
+                    <button onclick="nav(-1)" class="btn-freak bg-transparent text-white border-white hover:bg-white hover:text-freakDark shadow-none py-2 px-4 text-sm">PREVIOUS</button>
+                    ${isAnswered && data.type !== 'q_write' ? `<button onclick="nav(1)" class="btn-freak bg-freakYellow animate-bounce">NEXT STEP ➔</button>` : ``}
+                    ${isAnswered && data.type === 'q_write' && !isGradingState ? `<button onclick="nav(1)" class="btn-freak bg-freakYellow animate-bounce">NEXT STEP ➔</button>` : ``}
+                </div>
+            `;
+
+            if (data.type === 'intro') {
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col justify-center items-center text-center p-12 bg-freakDark text-white relative h-full">
+                        <div class="bg-freakYellow text-freakDark font-mont font-bold tracking-widest uppercase py-3 px-8 mb-8 transform -skew-x-12">
+                            <span class="block transform skew-x-12 text-xl">${data.unitModule}</span>
+                        </div>
+                        <h1 class="title-freak text-[110px] text-freakYellow mb-8 leading-none max-w-4xl">${data.title}</h1>
+                        <p class="text-freak text-3xl font-bold mb-16 max-w-4xl leading-relaxed">${data.objective}</p>
+                        <div class="border-4 border-white py-3 px-10 mb-12">
+                            <span class="font-mont font-black tracking-widest uppercase text-freakBlue text-2xl">${data.bottomTag}</span>
+                        </div>
+                        <div class="flex gap-6 absolute bottom-12">
+                            <button class="btn-freak opacity-50 cursor-not-allowed text-sm py-3 px-6" disabled>PREVIOUS</button>
+                            <button onclick="nav(1)" class="btn-freak bg-freakYellow hover:bg-freakBlue text-sm py-3 px-6">NEXT STEP ➔</button>
+                        </div>
+                    </div>
+                `;
+            } 
+            else if (data.type === 'cheatsheet') {
+                let rulesHtml = '';
+                data.rules.forEach((rule, idx) => {
+                    rulesHtml += `
+                        <div class="bg-white p-8 border-4 border-freakDark shadow-[8px_8px_0px_#E4DF33] transform ${idx % 2 === 0 ? '-skew-x-2' : 'skew-x-2'} flex flex-col h-full">
+                            <h3 class="font-bree text-2xl text-freakYellow mb-4 bg-freakDark inline-block px-4 py-2 self-start transform skew-x-2">${rule.title}</h3>
+                            <p class="font-mont font-bold text-freakDark text-xl mb-6 flex-grow">${rule.desc}</p>
+                            <div class="bg-gray-100 p-4 font-mont text-lg font-bold border-l-8 border-freakBlue text-freakDark">
+                                ${rule.example}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col justify-center items-center p-12 bg-[#1a1a1a] text-white relative h-full">
+                        <div class="absolute top-8 left-8 text-gray-500 font-bree text-2xl">BEFORE WE PLAY...</div>
+                        <h2 class="title-freak text-7xl text-freakYellow mb-4 mt-8">${data.title}</h2>
+                        <p class="font-mont text-2xl font-bold mb-12 border-b-4 border-freakBlue pb-4 text-gray-300">${data.subtitle}</p>
+                        
+                        <div class="grid grid-cols-3 gap-8 w-full max-w-6xl">
+                            ${rulesHtml}
+                        </div>
+                        
+                        <div class="absolute bottom-8 right-12">
+                            <button onclick="nav(1)" class="btn-freak bg-freakYellow hover:bg-freakBlue text-sm py-3 px-6 animate-bounce">GOT IT. LET'S PLAY ➔</button>
+                        </div>
+                        <div class="absolute bottom-8 left-12">
+                            <button onclick="nav(-1)" class="btn-freak bg-transparent text-white border-white hover:bg-white hover:text-freakDark shadow-none py-3 px-6 text-sm">PREVIOUS</button>
+                        </div>
+                    </div>
+                `;
+            }
+            else if (data.type === 'transition') {
+                appContainer.innerHTML = `
+                    <div class="w-1/2 h-full bg-freakYellow flex flex-col justify-center p-16">
+                        <h1 class="title-freak text-8xl text-freakDark leading-none mb-6">${data.title}</h1>
+                    </div>
+                    <div class="w-1/2 h-full bg-freakDark flex flex-col justify-center items-start p-16 text-white relative">
+                        <p class="text-freak text-3xl font-bold mb-12 border-l-8 border-freakBlue pl-6 leading-relaxed">${data.desc}</p>
+                        <div class="absolute bottom-12 flex gap-6">
+                            <button onclick="nav(-1)" class="btn-freak bg-transparent border-white text-white hover:bg-white hover:text-freakDark text-sm py-2 px-4">PREVIOUS</button>
+                            <button onclick="nav(1)" class="btn-freak bg-freakBlue hover:bg-freakYellow">START LEVEL ➔</button>
+                        </div>
+                    </div>
+                `;
+            }
+            // LEVEL 1: THE VIBE
+            else if (data.type === 'q_vibe') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                const selectedOpt = selectedAnswers[currentSlide];
+
+                let optionsHtml = '';
+                data.options.forEach((opt, idx) => {
+                    let btnClass = "bg-white text-freakDark hover:bg-gray-100 border-4 border-freakDark shadow-[4px_4px_0px_#30302F]";
+                    let disabled = isAnswered ? "disabled" : "";
+                    
+                    if (isAnswered) {
+                        if (idx === data.correct) btnClass = "bg-freakBlue text-freakDark border-4 border-freakDark shadow-[4px_4px_0px_#30302F]";
+                        else if (idx === selectedOpt && idx !== data.correct) btnClass = "bg-red-400 text-white border-4 border-red-900 shadow-[4px_4px_0px_#7f1d1d] opacity-50";
+                        else btnClass = "bg-gray-200 text-gray-500 border-4 border-gray-400 opacity-50";
+                    }
+
+                    optionsHtml += `<button ${disabled} onclick="handleAnswer(${idx})" class="text-left font-mont font-bold text-xl p-4 w-full transition-all ${btnClass}">${opt}</button>`;
+                });
+
+                let feedbackHtml = isAnswered ? `
+                    <div class="mt-8 p-5 bg-gray-50 border-4 border-freakDark shadow-[6px_6px_0px_#30302F] animate-[slideIn_0.3s_ease-out]">
+                        <h4 class="font-bree text-2xl mb-1">${selectedOpt === data.correct ? "<span class='text-green-600'>BOOM. CORRECT.</span>" : "<span class='text-red-600'>HOLD UP. INCORRECT.</span>"}</h4>
+                        <p class="font-mont text-md font-bold mb-3">${data.rationale}</p>
+                        <div class="bg-freakYellow text-freakDark p-3 font-bold font-mont text-sm transform -skew-x-2 border-2 border-freakDark">
+                            ${data.teacherPrompt}
+                        </div>
+                    </div>` : '';
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full flex pb-20">
+                        <div class="w-[45%] h-full bg-freakYellow p-12 flex flex-col justify-center relative">
+                            <div class="absolute top-6 left-6 text-freakDark font-bree text-xl opacity-50">Q${data.qNum}/30 | THE VIBE</div>
+                            <div class="bg-white text-freakDark p-8 border-4 border-freakDark shadow-[8px_8px_0px_#30302F] transform -rotate-1">
+                                <p class="text-2xl leading-relaxed font-bree">${data.context}</p>
+                            </div>
+                        </div>
+                        <div class="w-[55%] h-full bg-freakDark p-12 flex flex-col justify-center relative">
+                            <h2 class="text-freakBlue font-bree text-3xl mb-6">${data.question}</h2>
+                            <div class="flex flex-col gap-4">${optionsHtml}</div>
+                            ${feedbackHtml}
+                        </div>
+                    </div>
+                    ${buildNav(isAnswered)}
+                `;
+            }
+            // LEVEL 2: THE GAME (Chat Interface)
+            else if (data.type === 'q_chat') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                const selectedOpt = selectedAnswers[currentSlide];
+
+                let optionsHtml = '';
+                if (!isAnswered) {
+                    data.options.forEach((opt, idx) => {
+                        optionsHtml += `
+                            <button onclick="handleAnswer(${idx})" class="w-full text-right bg-freakBlue text-freakDark font-mont font-bold text-sm p-4 rounded-2xl rounded-br-none border-2 border-freakDark hover:bg-freakYellow transition-all mb-3 shadow-[4px_4px_0px_#30302F]">
+                                ${opt}
+                            </button>
+                        `;
+                    });
+                } else {
+                    const isCorrect = selectedOpt === data.correct;
+                    const bubbleColor = isCorrect ? 'bg-green-400' : 'bg-red-400';
+                    optionsHtml = `
+                        <div class="w-[85%] self-end text-right ${bubbleColor} text-freakDark font-mont font-bold text-sm p-4 rounded-2xl rounded-br-none border-2 border-freakDark shadow-[4px_4px_0px_#30302F] mb-3">
+                            ${data.options[selectedOpt]}
+                        </div>
+                        <div class="text-right text-xs text-gray-500 font-mont italic pr-2">Read</div>
+                    `;
+                }
+
+                let feedbackHtml = isAnswered ? `
+                    <div class="bg-freakDark border-4 border-freakYellow p-6 text-white shadow-[8px_8px_0px_#E4DF33] animate-[slideIn_0.3s_ease-out]">
+                        <h4 class="font-bree text-2xl mb-2 text-freakYellow">${selectedOpt === data.correct ? "STREET SMART." : "AWKWARD TEXT."}</h4>
+                        <p class="font-mont text-md font-bold mb-4">${data.rationale}</p>
+                        <div class="bg-freakYellow text-freakDark p-3 font-bold font-mont text-sm transform -skew-x-2">
+                            ${data.teacherPrompt}
+                        </div>
+                    </div>` : `
+                    <div class="h-full flex flex-col justify-center">
+                        <h2 class="font-bree text-5xl text-freakYellow mb-4">YOUR TURN</h2>
+                        <p class="font-mont text-xl text-white leading-relaxed">Read the incoming message. Choose the best reply to handle the situation.</p>
+                    </div>`;
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-[#1a1a1a] flex items-center justify-center gap-12 p-8 relative pb-20">
+                        <div class="absolute top-6 left-6 text-white font-bree text-xl opacity-50">Q${data.qNum}/30 | THE GAME</div>
+                        
+                        <!-- Phone UI -->
+                        <div class="w-[380px] h-[550px] bg-white rounded-[3rem] border-[12px] border-gray-800 p-4 flex flex-col relative shadow-2xl flex-shrink-0">
+                            <!-- Notch -->
+                            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-2xl"></div>
+                            
+                            <!-- Header -->
+                            <div class="text-center font-bold font-mont border-b-2 border-gray-200 pb-3 mt-4 mb-4 text-freakDark">
+                                ${data.sender}
+                            </div>
+                            
+                            <!-- Chat Area -->
+                            <div class="flex-1 overflow-y-auto flex flex-col pr-2">
+                                <!-- Incoming -->
+                                <div class="w-[85%] bg-gray-200 text-freakDark font-mont font-medium text-sm p-4 rounded-2xl rounded-bl-none mb-6">
+                                    ${data.incoming}
+                                </div>
+                                
+                                <!-- Options / Sent -->
+                                <div class="mt-auto flex flex-col items-end w-full">
+                                    ${optionsHtml}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="w-[500px]">
+                            ${feedbackHtml}
+                        </div>
+                    </div>
+                    ${buildNav(isAnswered)}
+                `;
+            }
+            // LEVEL 3: THE CHALLENGE (Unstructured Text Input)
+            else if (data.type === 'q_write') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                
+                let contentHtml = '';
+
+                if (!isGradingState && !isAnswered) {
+                    // State 1: Input
+                    contentHtml = `
+                        <div class="bg-white p-8 border-4 border-freakDark shadow-[8px_8px_0px_#E4DF33] relative mb-8">
+                            <div class="absolute -top-5 -left-5 bg-freakBlue text-freakDark font-bree text-xl px-4 py-1 border-4 border-freakDark transform -rotate-3">${data.character}</div>
+                            <p class="font-mont text-2xl font-bold text-freakDark mb-6">${data.prompt}</p>
+                            <input type="text" id="write-input" placeholder="Type your answer here..." autocomplete="off"
+                                class="w-full bg-gray-100 border-4 border-gray-300 text-freakDark p-4 font-mont text-2xl font-bold outline-none focus:border-freakBlue transition-all">
+                        </div>
+                        <div class="flex justify-end">
+                            <button onclick="submitWriting()" class="btn-freak bg-freakYellow hover:bg-freakBlue text-xl py-4 px-8">REVEAL ANSWER ➔</button>
+                        </div>
+                    `;
+                } else if (isGradingState) {
+                    // State 2: Self-Grading (Teacher Check)
+                    const userText = selectedAnswers[currentSlide];
+                    contentHtml = `
+                        <div class="flex gap-6 mb-6 animate-[slideIn_0.3s_ease-out]">
+                            <!-- Left: User Answer -->
+                            <div class="w-1/2 bg-gray-800 border-4 border-gray-600 p-6 shadow-[6px_6px_0px_#30302F]">
+                                <h4 class="font-bree text-freakYellow text-xl mb-4">YOU WROTE:</h4>
+                                <p class="font-mont text-white text-2xl font-bold italic">"${userText}"</p>
+                            </div>
+                            <!-- Right: Expected Answer -->
+                            <div class="w-1/2 bg-white border-4 border-freakDark p-6 shadow-[6px_6px_0px_#93E5FF]">
+                                <h4 class="font-bree text-freakBlue text-xl mb-4">FREAKN' ACCEPTABLE ANSWERS:</h4>
+                                <p class="font-mont text-freakDark text-2xl font-bold">${data.acceptable}</p>
+                                <p class="font-mont text-gray-500 text-sm mt-3 border-t-2 border-gray-200 pt-2">${data.rationale}</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Teacher Prompt inside grading -->
+                        <div class="w-full bg-freakBlue border-4 border-freakDark p-3 mb-6 transform -skew-x-2 shadow-[4px_4px_0px_#30302F]">
+                            <p class="font-mont font-bold text-freakDark text-center">${data.teacherPrompt}</p>
+                        </div>
+
+                        <!-- Self-Grade Decision -->
+                        <div class="bg-freakDark border-4 border-freakYellow p-4 text-center transform skew-x-2">
+                            <h3 class="font-bree text-freakYellow text-2xl mb-2">THE VIBE CHECK</h3>
+                            <p class="font-mont text-white text-md mb-4">Be honest. Did your answer capture the right demonstrative or verb?</p>
+                            <div class="flex justify-center gap-6">
+                                <button onclick="selfGrade(false)" class="btn-freak bg-red-400 text-white border-red-900 shadow-[4px_4px_0px_#7f1d1d] hover:bg-red-500 py-2 px-4 text-sm">I MESSED UP</button>
+                                <button onclick="selfGrade(true)" class="btn-freak bg-green-400 text-freakDark border-green-900 shadow-[4px_4px_0px_#14532d] hover:bg-green-500 py-2 px-4 text-sm">I GOT IT (+1 PT)</button>
+                            </div>
+                        </div>
+                    `;
+                } else if (isAnswered) {
+                    // State 3: Reviewed
+                    const userText = selectedAnswers[currentSlide];
+                    contentHtml = `
+                         <div class="bg-gray-800 border-4 border-gray-600 p-6 shadow-[6px_6px_0px_#30302F] opacity-50 mb-8">
+                            <h4 class="font-bree text-gray-400 text-xl mb-2">YOU WROTE:</h4>
+                            <p class="font-mont text-gray-300 text-2xl font-bold">"${userText}"</p>
+                        </div>
+                        <div class="text-center font-mont text-freakYellow font-bold text-xl">Answer recorded. Move to the next step.</div>
+                    `;
+                }
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-[#111] flex flex-col justify-center items-center relative p-8 pb-20">
+                        <div class="absolute top-6 left-6 text-gray-600 font-bree text-xl">Q${data.qNum}/30 | THE CHALLENGE</div>
+                        
+                        <div class="w-full max-w-4xl">
+                            <h2 class="text-freakBlue font-bree text-4xl mb-2 text-center uppercase">${data.title}</h2>
+                            <p class="text-gray-400 font-mont text-md mb-6 text-center">Read the prompt and type your answer. You are your own coach.</p>
+                            
+                            ${contentHtml}
+                        </div>
+                    </div>
+                    ${buildNav(isAnswered && !isGradingState)}
+                `;
+                
+                const inputEl = document.getElementById('write-input');
+                if(inputEl) inputEl.focus();
+            }
+            // OUTRO
+            else if (data.type === 'outro') {
+                const percentage = Math.round((score / 30) * 100);
+                let message = "";
+                if (percentage >= 90) message = "ABSOLUTE LEGEND. You own this vocabulary.";
+                else if (percentage >= 70) message = "SOLID WORK. You survived the streets.";
+                else message = "WE NEED TO TALK. Time to review the basics.";
+
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col justify-center items-center text-center p-12 bg-freakYellow text-freakDark relative h-full">
+                        <h1 class="title-freak text-8xl mb-4">LESSON COMPLETE</h1>
+                        <div class="bg-freakDark text-white p-12 mt-8 border-8 border-white shadow-[12px_12px_0px_#30302F] transform skew-y-2">
+                            <h2 class="font-bree text-4xl mb-4">YOUR SCORE</h2>
+                            <p class="font-mont text-7xl font-black text-freakBlue mb-4">${score} / 30</p>
+                            <p class="font-mont text-2xl font-bold">${message}</p>
+                        </div>
+                        <div class="mt-16 flex gap-6">
+                            <button onclick="location.reload()" class="btn-freak bg-white hover:bg-freakBlue">RESTART LESSON</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        window.handleAnswer = function(optIndex) {
+            const data = lessonData[currentSlide];
+            if (answeredQuestions.has(currentSlide)) return; 
+            
+            selectedAnswers[currentSlide] = optIndex;
+            answeredQuestions.add(currentSlide);
+            
+            if (optIndex === data.correct) score++;
+            
+            renderSlide(); 
+        }
+
+        window.submitWriting = function() {
+            const inputEl = document.getElementById('write-input');
+            const userText = inputEl ? inputEl.value.trim() : "";
+            if (!userText) {
+                inputEl.classList.add('border-red-500');
+                return; 
+            }
+            selectedAnswers[currentSlide] = userText;
+            isGradingState = true;
+            renderSlide();
+        }
+
+        window.selfGrade = function(isCorrect) {
+            isGradingState = false;
+            answeredQuestions.add(currentSlide);
+            if (isCorrect) score++;
+            nav(1); 
+        }
+
+        window.nav = function(dir) {
+            let nextSlide = currentSlide + dir;
+            if (nextSlide >= 0 && nextSlide < lessonData.length) {
+                currentSlide = nextSlide;
+                renderSlide();
+            } else if (nextSlide >= lessonData.length) {
+                lessonData.push({type: 'outro'});
+                currentSlide = lessonData.length -1;
+                renderSlide();
+            }
+        }
+
+        document.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter' && lessonData[currentSlide]?.type === 'q_write' && !isGradingState && !answeredQuestions.has(currentSlide)) {
+                submitWriting();
+            }
+        });
+
+        renderSlide();
+    </script>
+</body>
+</html>

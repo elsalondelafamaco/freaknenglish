@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freakn' Survival Guide: Module 5 (2-Page Edition)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        yellow: '#E4DF33',
+                        charcoal: '#30302F',
+                        skyblue: '#93E5FF',
+                        olive: '#7C7A39',
+                        lightbg: '#FDFCEB',
+                    },
+                    fontFamily: {
+                        bree: ['"Bree Serif"', 'serif'],
+                        montserrat: ['Montserrat', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @media print {
+            body { background-color: white !important; padding: 0 !important; }
+            .survival-guide-container { 
+                box-shadow: none !important; 
+                border: none !important; 
+                width: 100% !important; 
+                max-width: 100% !important; 
+                margin: 0 !important;
+                page-break-after: always;
+            }
+            .no-print { display: none !important; }
+            @page { size: A4; margin: 0; }
+        }
+
+        body {
+            background-color: #F2F2F2;
+            font-family: 'Montserrat', sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .survival-guide-container {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            margin: 20px auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        .golden-nugget-card {
+            border: 2px solid #E5E7EB;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .accent-bar-yellow { border-right: 8px solid #E4DF33; }
+        .accent-bar-sky { border-right: 8px solid #93E5FF; }
+
+        .cheat-sheet-box {
+            background-color: #30302F;
+            border-radius: 20px;
+            color: white;
+        }
+
+        .gossip-header-icon {
+            background: white;
+            border-radius: 50%;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        /* ============ RESPONSIVE (mobile 360-820px) ============ */
+        @media (max-width: 820px) {
+            .survival-guide-container {
+                width: 100%;
+                min-height: auto;
+                margin: 0 0 20px 0;
+            }
+
+            .survival-guide-container header { padding: 1.25rem 1rem; }
+            .survival-guide-container header h1 { font-size: 1.5rem; }
+
+            .survival-guide-container .bg-lightbg { padding: 1.25rem 1rem; }
+
+            .survival-guide-container .flex.flex-1 {
+                flex-direction: column;
+                padding: 1.25rem 1rem;
+                gap: 1.5rem;
+            }
+            .survival-guide-container [class*="w-7/12"],
+            .survival-guide-container [class*="w-5/12"] { width: 100%; }
+
+            .survival-guide-container .cheat-sheet-box { padding: 1.25rem; }
+            .survival-guide-container .golden-nugget-card { padding: 1rem; }
+
+            .survival-guide-container .bg-skyblue.p-8 {
+                flex-direction: column;
+                padding: 1.25rem;
+                text-align: center;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body class="p-0 sm:p-8 space-y-10 text-left">
+
+    <!-- PAGE 1: POSSESSIVE ADJECTIVES VS PRONOUNS -->
+    <div class="survival-guide-container">
+        
+        <!-- HEADER -->
+        <header class="bg-charcoal px-8 py-6 flex justify-between items-center border-b-8 border-yellow">
+            <div>
+                <h1 class="font-bree text-yellow text-3xl tracking-tight leading-none uppercase">Freakn' Survival Guide</h1>
+                <p class="text-gray-400 font-montserrat font-bold text-xs uppercase tracking-widest mt-1 text-left">MODULE 5: POSSESSIVES & NUMBERS (PAGE 1)</p>
+            </div>
+            <div class="flex items-center space-x-3 text-center">
+                <div class="bg-yellow text-charcoal font-black rounded-full w-10 h-10 flex items-center justify-center text-xl font-bree">U1</div>
+            </div>
+        </header>
+
+        <!-- THE GOSSIP RECAP BAR -->
+        <div class="bg-lightbg py-6 px-10 flex items-center space-x-6 border-b border-gray-100">
+            <div class="gossip-header-icon flex-shrink-0">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-charcoal"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><path d="M8 9h8"></path><path d="M8 13h6"></path></svg>
+            </div>
+            <p class="font-bree italic text-charcoal text-lg leading-snug">
+                "The Gossip Recap: Titó found a ringing phone on the table. He asked Gelmy, 'Is this phone your?' Gelmy sighed. 'No Titó, it's not MINE.' Let's master the rules of ownership so Titó stops claiming things that don't belong to him!"
+            </p>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex flex-1 p-10 gap-10">
+            
+            <!-- LEFT: THE NUGGETS -->
+            <div class="w-7/12">
+                <div class="flex items-center space-x-2 mb-8">
+                    <h2 class="font-bree text-2xl text-olive uppercase tracking-tight text-left">Ownership Nuggets</h2>
+                    <span class="text-yellow text-2xl">🏷️</span>
+                </div>
+
+                <div class="space-y-6 text-left">
+                    <div class="golden-nugget-card p-5 accent-bar-yellow">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">The Bodyguards (Adjectives)</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">Words like **My, Your, His, Her**. They MUST be next to the noun to protect it. They can never stand alone!</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"This is **my** phone." (Not: This is my ❌)</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">The Solo Stars (Pronouns)</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">Words like **Mine, Yours, Hers, Ours**. They already include the noun's meaning, so they stand ALONE, usually at the end.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"That phone is **mine**." / "Is it **yours**?"</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">His vs. Her (The Gender Trap)</h3>
+                        <p class="text-gray-600 text-sm mt-1">In Spanish, "su" is used for everyone. In English, look at the OWNER. If the owner is a guy = **His**. If a girl = **Her/Hers**.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"It's Titó's car. It is **his** car."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Whose...? (The Interrogation)</h3>
+                        <p class="text-gray-600 text-sm mt-1">The magic word to ask who owns something. Put the noun right after it!</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"**Whose** keys are these?" ➔ "They are **mine**."</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: CHEAT SHEET -->
+            <div class="w-5/12">
+                <div class="cheat-sheet-box p-6 h-full shadow-xl text-left">
+                    <div class="flex items-center space-x-3 mb-6">
+                        <div class="bg-yellow rounded-full w-6 h-6 flex items-center justify-center text-charcoal font-black text-xs">!</div>
+                        <h2 class="font-bree text-xl text-yellow uppercase tracking-widest text-left">The Claim Chart</h2>
+                    </div>
+                    <div class="space-y-8">
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-3">Adjectives (+ Noun)</div>
+                            <ul class="space-y-2 font-montserrat font-bold text-sm text-white">
+                                <li class="pb-1 border-b border-gray-700">This is <span class="text-skyblue ml-1">My</span> car.</li>
+                                <li class="pb-1 border-b border-gray-700">Is this <span class="text-skyblue ml-1">Your</span> car?</li>
+                                <li class="pb-1 border-b border-gray-700">It is <span class="text-skyblue ml-1">Her</span> car.</li>
+                                <li class="pb-1 border-b border-gray-700">That is <span class="text-skyblue ml-1">Our</span> car.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-3">Pronouns (Stand Alone)</div>
+                            <ul class="space-y-2 font-montserrat font-bold text-sm">
+                                <li class="pb-1 border-b border-gray-700">The car is <span class="text-yellow ml-1">Mine</span>.</li>
+                                <li class="pb-1 border-b border-gray-700">Is the car <span class="text-yellow ml-1">Yours</span>?</li>
+                                <li class="pb-1 border-b border-gray-700">The car is <span class="text-yellow ml-1">Hers</span>.</li>
+                                <li class="pb-1 border-b border-gray-700">That car is <span class="text-yellow ml-1">Ours</span>.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-yellow/10 p-3 rounded-lg border border-yellow/20 mt-auto">
+                            <p class="text-[9px] font-black text-yellow uppercase tracking-wider mb-1">Paisa Secret:</p>
+                            <p class="text-[10px] text-white/80 leading-tight italic">For guys, the word is the same in both columns! "It is **his** car" AND "The car is **his**". It never changes to "hises"!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER BAR -->
+        <footer class="py-4 text-center border-t border-gray-100 bg-white">
+            <p class="text-[9px] font-montserrat font-bold text-gray-400 uppercase tracking-[0.4em]">Produced by FreaknEnglish 2026 | PAGE 1</p>
+        </footer>
+    </div>
+
+    <!-- PAGE 2: NUMBERS & THE MATH OF LIFE -->
+    <div class="survival-guide-container">
+        
+        <!-- HEADER -->
+        <header class="bg-charcoal px-8 py-6 flex justify-between items-center border-b-8 border-yellow">
+            <div>
+                <h1 class="font-bree text-yellow text-3xl tracking-tight leading-none uppercase">Freakn' Survival Guide</h1>
+                <p class="text-gray-400 font-montserrat font-bold text-xs uppercase tracking-widest mt-1 text-left">MODULE 5: POSSESSIVES & NUMBERS (PAGE 2)</p>
+            </div>
+            <div class="flex items-center space-x-3 text-center">
+                <div class="bg-yellow text-charcoal font-black rounded-full w-10 h-10 flex items-center justify-center text-xl font-bree">U1</div>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <div class="flex flex-1 p-10 gap-10">
+            
+            <!-- LEFT: NUMBER NUGGETS -->
+            <div class="w-7/12">
+                <div class="flex items-center space-x-2 mb-8">
+                    <h2 class="font-bree text-2xl text-olive uppercase tracking-tight text-left">Number Nuggets</h2>
+                    <span class="text-skyblue text-2xl">📱</span>
+                </div>
+
+                <div class="space-y-6 text-left">
+                    <div class="golden-nugget-card p-5 accent-bar-sky">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase text-left">Phone Numbers (One by One)</h3>
+                        <p class="text-gray-600 text-sm mt-1 text-left">We don't group numbers like "treinta y uno" for phones. Say each digit. Also, Zero is usually pronounced as the letter **"Oh"**.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"**My** number is 3-1-0 (Three-One-Oh)."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">The "Teen" vs. "Ty" Trap</h3>
+                        <p class="text-gray-600 text-sm mt-1">13 vs 30? For "Teens" (13-19), stress the END of the word. For "Ty's" (20, 30, 40), hit the FIRST syllable hard.</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"thir-**TEEN**" (13) vs. "**THIR**-ty" (30)</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-sky text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Age: The "To Be" Rule</h3>
+                        <p class="text-gray-600 text-sm mt-1">Never say "I have 20 years". Age is a state of being, not something you own in a box. Use **am/is/are**!</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"**I am** 25 years old." / "**Her** brother **is** 18."</p>
+                    </div>
+
+                    <div class="golden-nugget-card p-5 accent-bar-yellow text-left">
+                        <h3 class="font-montserrat font-black text-xl text-charcoal uppercase">Prices & Money</h3>
+                        <p class="text-gray-600 text-sm mt-1">For money with cents, you can just read the two parts naturally without saying "dollars and cents".</p>
+                        <p class="text-olive font-bold italic mt-2 text-sm text-left">"$4.50 = Four fifty." / "$10.99 = Ten ninety-nine."</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: THE CONTACT CARD -->
+            <div class="w-5/12">
+                <div class="cheat-sheet-box p-8 h-full shadow-xl text-left">
+                    <div class="flex items-center space-x-3 mb-8">
+                        <div class="bg-yellow rounded-full w-6 h-6 flex items-center justify-center text-charcoal font-black text-xs">!</div>
+                        <h2 class="font-bree text-xl text-yellow uppercase tracking-widest text-left">The Contact Card</h2>
+                    </div>
+                    <div class="space-y-10">
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-4">Asking for Info</div>
+                            <ul class="space-y-3 font-montserrat font-bold text-xs text-white">
+                                <li class="pb-2 border-b border-gray-700">What is <span class="text-skyblue">your</span> phone number?</li>
+                                <li class="pb-2 border-b border-gray-700">How old is <span class="text-skyblue">her</span> brother?</li>
+                                <li class="pb-2 border-b border-gray-700">What is <span class="text-skyblue">his</span> email address?</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="flex items-center text-gray-400 text-[10px] uppercase font-black tracking-widest mb-4">Answering</div>
+                            <ul class="space-y-3 font-montserrat font-bold text-xs">
+                                <li class="pb-2 border-b border-gray-700 text-yellow"><span class="text-white">My number</span> is 555-0199.</li>
+                                <li class="pb-2 border-b border-gray-700 text-yellow"><span class="text-white">He</span> is twenty-two.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-gray-800 p-4 rounded-lg border-2 border-skyblue">
+                            <p class="text-[10px] font-black uppercase text-skyblue tracking-widest mb-2">Street Tip:</p>
+                            <p class="text-[11px] leading-tight font-medium">Be very careful! "**Your**" means ownership (Your car). "**You're**" means "You are" (You're crazy). They sound identical, but mean completely different things!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- THE MICRO-MISSION FOOTER -->
+        <div class="bg-skyblue p-8 flex items-center space-x-8 border-t border-gray-200">
+            <div class="bg-charcoal text-white rounded-full w-14 h-14 flex items-center justify-center flex-shrink-0 shadow-lg">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+            </div>
+            <div class="flex-1 text-left">
+                <h4 class="font-montserrat font-black text-charcoal text-xs uppercase tracking-widest mb-1">The Data Mission</h4>
+                <p class="font-montserrat font-bold text-charcoal text-lg leading-tight">
+                    Record a voice note about yourself and a friend! Say: <span class="underline italic">"**My** number is [Number] and I **am** [Age]. This is **my** friend. **Her/His** number is [Number]."</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- FOOTER BAR -->
+        <footer class="py-4 text-center border-t border-gray-100 bg-white">
+            <p class="text-[9px] font-montserrat font-bold text-gray-400 uppercase tracking-[0.4em]">Produced by FreaknEnglish 2026 | PAGE 2</p>
+        </footer>
+
+    </div>
+
+    <script>
+      /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+         Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+      window.FreaknActivity = (function () {
+        function post(type, payload) {
+          try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+          catch (e) {}
+        }
+        return {
+          /** Reporta el resultado de una actividad calificable. */
+          submit: function (r) {
+            post("freakn:activity:result", {
+              activityId: r.activityId,          // id estable dentro del archivo
+              title: r.title || document.title,  // nombre legible
+              score: r.score,                    // puntos obtenidos
+              maxScore: r.maxScore,              // puntaje máximo
+              answers: r.answers || []           // ver formato abajo
+            });
+          },
+          /** Marca la lección como vista/terminada (sin puntaje). */
+          complete: function () { post("freakn:lesson:complete", {}); }
+        };
+      })();
+
+      // guide.html no tiene ejercicios ni navegación: se marca como
+      // completada apenas el estudiante la abre.
+      window.addEventListener('load', function () { FreaknActivity.complete(); });
+    </script>
+</body>
+</html>

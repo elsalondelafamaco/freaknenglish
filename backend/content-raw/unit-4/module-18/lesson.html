@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson 18: This Time Tomorrow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #111; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: 'Montserrat', sans-serif; color: #FFFFFF; }
+        h1, h2, h3, .bree { font-family: 'Bree Serif', serif; text-transform: uppercase; font-weight: 900; }
+        .slide-container { width: 1280px; height: 720px; background-color: #30302F; position: relative; overflow: hidden; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .slide-container.active { display: flex; flex-direction: column; }
+        
+        .split-layout { display: flex; width: 100%; height: 100%; }
+        .split-left { width: 50%; background-color: #E4DF33; color: #30302F; padding: 4rem; display: flex; flex-direction: column; justify-content: center; }
+        .split-right { width: 50%; background-color: #30302F; color: #FFFFFF; padding: 4rem; display: flex; flex-direction: column; justify-content: center; border-left: 8px solid #93E5FF; }
+        
+        .skewed-block { background-color: #E4DF33; color: #30302F; transform: skew(-12deg); display: inline-block; padding: 0.5rem 1.5rem; margin-bottom: 1rem; width: fit-content; }
+        .skewed-text { transform: skew(12deg); display: inline-block; font-weight: 900; }
+        
+        .btn-freak { background-color: #93E5FF; color: #30302F; transform: skew(-12deg); font-weight: 900; padding: 1rem 2rem; border: none; cursor: pointer; transition: all 0.2s; font-size: 1.2rem; text-transform: uppercase; }
+        .btn-freak:hover { transform: skew(-12deg) scale(1.05); background-color: #E4DF33; }
+        .btn-freak:disabled { background-color: #555; color: #888; cursor: not-allowed; transform: skew(-12deg); }
+        .btn-text { transform: skew(12deg); display: inline-block; }
+        
+        .gossip-paper { background-color: #FFFFFF; color: #30302F; font-family: 'Bree Serif', serif; padding: 2rem; box-shadow: 10px 10px 0px #E4DF33; font-size: 1.4rem; line-height: 1.6; }
+        
+        /* THE BULLETPROOF FLEX LAYOUT */
+        .slide-grid { 
+            display: flex; 
+            flex-direction: column;
+            height: 100%; 
+            padding: 3rem; 
+            box-sizing: border-box;
+        }
+        .slide-header { width: 100%; flex-shrink: 0; }
+        .slide-body { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            width: 100%; 
+            flex-grow: 1;
+            gap: 1.5rem;
+            padding: 1rem 0;
+            min-height: 0; 
+        }
+        .slide-footer { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            width: 100%; 
+            height: 100px;
+            flex-shrink: 0;
+        }
+
+        /* Interactive Elements */
+        .option-btn { background-color: transparent; border: 3px solid #E4DF33; color: #FFFFFF; padding: 1.2rem; width: 100%; max-width: 600px; cursor: pointer; font-weight: 700; transition: 0.2s; font-size: 1.2rem; text-align: center; border-radius: 8px; }
+        .option-btn:hover:not(:disabled) { background-color: #E4DF33; color: #30302F; }
+        .option-btn:disabled { opacity: 0.5; cursor: not-allowed; border-color: #777; color: #777; }
+        
+        .answer-slot { background: transparent; border: none; border-bottom: 4px solid #E4DF33; color: #E4DF33; font-weight: 900; font-size: 1.5rem; width: 100%; max-width: 600px; text-align: center; outline: none; padding-bottom: 0.5rem; }
+        
+        .score-hud { position: absolute; top: 2rem; right: 3rem; font-size: 1.5rem; font-weight: 900; color: #93E5FF; z-index: 50; }
+    </style>
+</head>
+<body>
+
+    <!-- SLIDE 1: HOOK -->
+    <div class="slide-container active" id="slide-1">
+        <div class="split-layout">
+            <div class="split-left">
+                <div class="skewed-block"><span class="skewed-text bree">UNIT 4</span></div>
+                <h1 class="text-6xl mb-4">This Time Tomorrow</h1>
+                <p class="text-2xl font-bold">Visualizing the future.</p>
+            </div>
+            <div class="split-right">
+                <h2 class="text-4xl mb-6">What will you be doing?</h2>
+                <p class="text-xl mb-8">Imagine tomorrow at exactly 8:00 AM. What action is happening? Today we learn how to talk about actions in progress in the future!</p>
+                <div class="mt-auto flex justify-end">
+                    <button class="btn-freak" onclick="nav(2)"><span class="btn-text">Let's Go ➔</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: THE VIBE -->
+    <div class="slide-container" id="slide-2">
+        <div class="slide-grid relative">
+            <div class="slide-header">
+                <div class="skewed-block"><span class="skewed-text bree">The Vibe</span></div>
+                <h2 class="text-4xl mb-4">The "Will Be + ING" Rule</h2>
+                <p class="text-xl mb-4">When we imagine an action that continues in the future, we use <strong>WILL BE</strong> and add <strong>-ING</strong>.</p>
+            </div>
+            
+            <div class="slide-body !flex-row items-stretch gap-8 py-4">
+                <div class="bg-[#222] p-6 rounded-lg border-l-4 border-[#93E5FF] flex-1">
+                    <h3 class="text-2xl text-[#93E5FF] mb-2">Future Action</h3>
+                    <p class="text-lg"><strong>Will be + Action(-ING)</strong><br><br>👉 <em>"Tomorrow at 10 AM, I <strong>will be working</strong>."</em><br>👉 <em>"She <strong>will be inventing</strong> a new gadget."</em></p>
+                </div>
+                <div class="bg-[#222] p-6 rounded-lg border-l-4 border-[#E4DF33] flex-1">
+                    <h3 class="text-2xl text-[#E4DF33] mb-2">Negative & Questions</h3>
+                    <p class="text-lg">Use <strong>WON'T BE</strong> or start with <strong>WILL</strong>.<br><br>👉 <em>"I <strong>won't be sleeping</strong>."</em><br>👉 <em>"<strong>Will</strong> you <strong>be designing</strong> it?"</em></p>
+                </div>
+            </div>
+            
+            <div class="slide-footer">
+                <button class="btn-freak !bg-gray-500" onclick="nav(1)"><span class="btn-text">⬅ Previous</span></button>
+                <div class="flex items-center gap-4 bg-gray-800 p-4 rounded-lg">
+                    <p class="text-lg font-bold m-0">Quick Check: Tomorrow at 8 PM...</p>
+                    <button class="bg-[#FF4C4C] text-white font-bold px-4 py-2 rounded transition hover:scale-105" onclick="alert('OOPS! ❌ You forgot the -ING!')">I will be sleep.</button>
+                    <button class="bg-[#93E5FF] text-[#30302F] font-bold px-4 py-2 rounded transition hover:scale-105" onclick="alert('THAT’S FREAKN’ RIGHT! 🔥 Will be + ING.'); nav(3);">I will be sleeping.</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: THE STORY -->
+    <div class="slide-container" id="slide-3">
+        <div class="slide-grid relative">
+            <div class="slide-header">
+                <div class="skewed-block"><span class="skewed-text bree">The Story</span></div>
+            </div>
+            
+            <div class="slide-body">
+                <div class="gossip-paper w-3/4 mb-6">
+                    "El pa had a great idea. 'Mom, tomorrow I <strong>will be inventing</strong> a new app!'<br><br>
+                    Gelmy looked at him. 'Oh really? And who <strong>will be building</strong> it?'<br><br>
+                    'My friends!' said El pa. 'They <strong>will be creating</strong> the code, and I <strong>will be making</strong> the money!'"
+                </div>
+                
+                <div class="text-center w-full">
+                    <p class="text-2xl font-bold mb-4 text-[#93E5FF]">👉 Ask the student: Do you think El pa's plan will work?</p>
+                    <p class="text-xl mb-4">Find the action: What will El pa's friends be creating?</p>
+                    <div class="flex items-center justify-center gap-4">
+                        <input type="text" id="story-check" class="answer-slot !w-[300px]" placeholder="Type the object here...">
+                        <button class="btn-freak" onclick="checkStory()"><span class="btn-text">Check</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide-footer">
+                <button class="btn-freak !bg-gray-500" onclick="nav(2)"><span class="btn-text">⬅ Previous</span></button>
+                <div id="story-feedback" class="text-2xl font-black w-full text-center uppercase"></div>
+                <button class="btn-freak hidden" id="btn-next-story" onclick="nav(4)"><span class="btn-text">Play ➔</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME CONTAINER -->
+    <div class="slide-container" id="slide-4">
+        <div class="score-hud">Score: <span id="score-display">0</span> / 30</div>
+        
+        <div class="slide-grid relative">
+            <div class="slide-header text-center">
+                <div class="skewed-block mx-auto"><span id="level-title" class="skewed-text bree">Level X</span></div>
+                <h2 id="question-text" class="text-4xl mt-4 font-bold">Question goes here</h2>
+            </div>
+            
+            <div id="interactive-area" class="slide-body">
+                <!-- Content injected here -->
+            </div>
+
+            <div class="slide-footer border-t-2 border-gray-700/50">
+                <div id="game-feedback" class="w-2/3 text-left"></div>
+                <div class="w-1/3 flex justify-end">
+                    <button class="btn-freak hidden" id="btn-next-q" onclick="nextQuestion()"><span class="btn-text">Next ➔</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE: END -->
+    <div class="slide-container" id="slide-5">
+        <div class="split-layout">
+            <div class="split-left !bg-[#93E5FF]">
+                <h1 class="text-6xl mb-4 text-[#30302F]">LESSON COMPLETE</h1>
+                <p class="text-3xl font-bold text-[#30302F]">Great job!</p>
+            </div>
+            <div class="split-right text-center flex flex-col justify-center items-center relative">
+                <h2 class="text-4xl mb-6">Final Score: <span id="final-score" class="text-[#E4DF33]"></span> / 30</h2>
+                <p class="text-xl mb-8">You can now visualize your future.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentScore = 0;
+        let currentQIndex = 0;
+
+        const questions = [
+            // Level 1: Recognition (MCQ) 
+            { level: "Level 1: Choose the correct word", type: "mcq", q: "Tomorrow at 8 AM, I will be ________.", options: ["sleep", "sleeping"], answer: "sleeping", hint: "Will be + ING." },
+            { level: "Level 1: Choose the correct word", type: "mcq", q: "She will ________ building a computer.", options: ["be", "is"], answer: "be", hint: "We use 'will be'." },
+            { level: "Level 1: Choose the correct word", type: "mcq", q: "They won't be ________ the new app.", options: ["designing", "design"], answer: "designing", hint: "After 'won't be', add -ING." },
+            { level: "Level 1: Choose the correct word", type: "mcq", q: "He ________ be creating a robot.", options: ["will", "is"], answer: "will", hint: "Use 'will be'." },
+            { level: "Level 1: Choose the correct word", type: "mcq", q: "We will be ________ a new game.", options: ["making", "make"], answer: "making", hint: "Will be + ING." },
+            { level: "Level 1: Choose the correct word", type: "mcq", q: "Will you be ________ tomorrow?", options: ["working", "work"], answer: "working", hint: "Questions: Will + person + be + ING." },
+            { level: "Level 1: Choose the correct word", type: "mcq", q: "Gelmy won't ________ cooking tonight.", options: ["be", "is"], answer: "be", hint: "Negative is 'won't be'." },
+            { level: "Level 1: Choose the correct word", type: "mcq", q: "Titó will be ________ his sombrero.", options: ["wearing", "wear"], answer: "wearing", hint: "Will be + ING." },
+            { level: "Level 1: Choose the correct word", type: "mcq", q: "________ she be inventing a gadget?", options: ["Will", "Does"], answer: "will", hint: "Future questions start with Will." },
+            { level: "Level 1: Choose the correct word", type: "mcq", q: "I will be ________ English.", options: ["studying", "study"], answer: "studying", hint: "Will be + ING." },
+            
+            // Level 2: Scrambled Sentences
+            { level: "Level 2: Put the words in order", type: "scramble", q: "sleeping / I / will / be", answer: "i will be sleeping", hint: "Subject + Will be + Action(ing)." },
+            { level: "Level 2: Put the words in order", type: "scramble", q: "she / building / will / be / it", answer: "she will be building it", hint: "Subject + Will be + Action(ing)." },
+            { level: "Level 2: Put the words in order", type: "scramble", q: "won't / they / be / designing", answer: "they won't be designing", hint: "Subject + Won't be + Action(ing)." },
+            { level: "Level 2: Put the words in order", type: "scramble", q: "will / you / be / working ?", answer: "will you be working", hint: "Start with Will for questions." },
+            { level: "Level 2: Put the words in order", type: "scramble", q: "creating / he / will / be", answer: "he will be creating", hint: "Subject + Will be + Action(ing)." },
+            { level: "Level 2: Put the words in order", type: "scramble", q: "we / making / won't / be / dinner", answer: "we won't be making dinner", hint: "Subject + Won't be + Action(ing)." },
+            { level: "Level 2: Put the words in order", type: "scramble", q: "be / inventing / will / Gelmy / something", answer: "gelmy will be inventing something", hint: "Subject + Will be + Action(ing)." },
+            { level: "Level 2: Put the words in order", type: "scramble", q: "it / will / rain / be / raining ?", answer: "will it be raining", hint: "Will + subject + be + Action(ing)." },
+            { level: "Level 2: Put the words in order", type: "scramble", q: "Titó / wearing / will / be / a poncho", answer: "tito will be wearing a poncho", hint: "Subject + Will be + Action(ing)." },
+            { level: "Level 2: Put the words in order", type: "scramble", q: "won't / I / be / listening", answer: "i won't be listening", hint: "Subject + Won't be + Action(ing)." },
+
+            // Level 3: Free Questions
+            { level: "Level 3: Visualize the future", type: "free", q: "What will you be doing tomorrow at 10 AM?", answer: "", hint: "Example: I will be working." },
+            { level: "Level 3: Visualize the future", type: "free", q: "What will you be eating for dinner tonight?", answer: "", hint: "Example: I will be eating pasta." },
+            { level: "Level 3: Visualize the future", type: "free", q: "Where will you be sleeping tonight?", answer: "", hint: "Example: I will be sleeping in my bed." },
+            { level: "Level 3: Visualize the future", type: "free", q: "Will you be studying English on the weekend?", answer: "", hint: "Example: Yes, I will be studying." },
+            { level: "Level 3: Visualize the future", type: "free", q: "What will your family be doing tomorrow at 8 PM?", answer: "", hint: "Example: They will be watching TV." },
+            { level: "Level 3: Visualize the future", type: "free", q: "Will you be working on Monday morning?", answer: "", hint: "Example: Yes, I will be working." },
+            { level: "Level 3: Visualize the future", type: "free", q: "What gadget will you be using later today?", answer: "", hint: "Example: I will be using my phone." },
+            { level: "Level 3: Visualize the future", type: "free", q: "Will it be raining tonight?", answer: "", hint: "Example: No, it won't be raining." },
+            { level: "Level 3: Visualize the future", type: "free", q: "Who will you be talking to this evening?", answer: "", hint: "Example: I will be talking to my mom." },
+            { level: "Level 3: Visualize the future", type: "free", q: "What will you be doing this time next year?", answer: "", hint: "Example: I will be traveling." }
+        ];
+
+        function nav(slideNum) {
+            document.querySelectorAll('.slide-container').forEach(el => el.classList.remove('active'));
+            document.getElementById(`slide-${slideNum}`).classList.add('active');
+            if(slideNum === 4) loadQuestion();
+        }
+
+        function checkStory() {
+            const val = document.getElementById('story-check').value.toLowerCase().trim();
+            const feedback = document.getElementById('story-feedback');
+            const nextBtn = document.getElementById('btn-next-story');
+            
+            if (val === 'the code' || val === 'code') {
+                feedback.innerHTML = "<span class='text-[#93E5FF]'>THAT’S FREAKN’ RIGHT! 🔥</span>";
+                nextBtn.classList.remove('hidden');
+            } else {
+                feedback.innerHTML = "<span class='text-[#FF4C4C]'>NOT QUITE ❌ Read the last line again.</span>";
+                nextBtn.classList.add('hidden');
+            }
+        }
+
+        function loadQuestion() {
+            if (currentQIndex >= questions.length) {
+                document.getElementById('final-score').innerText = currentScore;
+                nav(5);
+                return;
+            }
+
+            const q = questions[currentQIndex];
+            document.getElementById('level-title').innerText = q.level;
+            document.getElementById('question-text').innerText = q.q;
+            document.getElementById('game-feedback').innerHTML = "";
+            document.getElementById('btn-next-q').classList.add('hidden');
+            
+            const area = document.getElementById('interactive-area');
+            area.innerHTML = "";
+
+            if (q.type === 'mcq') {
+                q.options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = "option-btn";
+                    btn.innerText = opt;
+                    btn.onclick = () => checkAnswer(opt, q);
+                    area.appendChild(btn);
+                });
+            } else {
+                const input = document.createElement('input');
+                input.type = "text";
+                input.className = "answer-slot";
+                input.placeholder = "Type your answer here...";
+                input.id = "free-answer";
+                
+                const btn = document.createElement('button');
+                btn.className = "btn-freak";
+                btn.innerHTML = "<span class='btn-text'>Submit</span>";
+                btn.onclick = () => {
+                    const val = document.getElementById('free-answer').value;
+                    checkAnswer(val, q);
+                };
+                
+                input.addEventListener("keypress", function(event) {
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        btn.click();
+                    }
+                });
+                
+                area.appendChild(input);
+                area.appendChild(btn);
+                setTimeout(() => input.focus(), 100);
+            }
+        }
+
+        function checkAnswer(selected, q) {
+            const cleanStr = (str) => {
+                if (!str) return "";
+                return str.toLowerCase()
+                          .replace(/[.,?!]/g, '')
+                          .replace(/ó/g, 'o')
+                          .replace(/í/g, 'i')
+                          .replace(/\s+/g, ' ')
+                          .trim();
+            };
+
+            const cleanSelected = cleanStr(selected);
+            let isCorrect = false;
+            let displayHint = q.hint;
+            
+            if (q.level.includes("Level 3")) {
+                if (cleanSelected.length > 2) {
+                    isCorrect = true;
+                    displayHint = "Great answer!";
+                } else {
+                    isCorrect = false;
+                    displayHint = "Please type a longer answer!";
+                }
+            } else {
+                const cleanAnswer = cleanStr(q.answer);
+                isCorrect = (cleanSelected === cleanAnswer);
+            }
+
+            const feedback = document.getElementById('game-feedback');
+            if (isCorrect) {
+                feedback.innerHTML = `
+                    <div class="text-[#93E5FF] font-black text-2xl mb-1">THAT’S FREAKN’ RIGHT! 🔥</div>
+                    <div class="text-xl text-white font-normal">${displayHint}</div>
+                `;
+                if(document.getElementById('btn-next-q').classList.contains('hidden')) {
+                    currentScore++;
+                    document.getElementById('score-display').innerText = currentScore;
+                }
+            } else {
+                feedback.innerHTML = `
+                    <div class="text-[#FF4C4C] font-black text-2xl mb-1">OOPS! NOT QUITE ❌</div>
+                    <div class="text-xl text-white font-normal">Hint: ${displayHint}</div>
+                `;
+            }
+            
+            document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+            const submitBtn = document.querySelector('#interactive-area .btn-freak');
+            if(submitBtn) submitBtn.disabled = true;
+            
+            document.getElementById('btn-next-q').classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            currentQIndex++;
+            loadQuestion();
+        }
+    </script>
+</body>
+</html>

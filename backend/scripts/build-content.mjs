@@ -1,18 +1,15 @@
 #!/usr/bin/env node
 /**
- * Construye content/ (versionado, seed automático) a partir de content-raw/
- * (descarga cruda del Drive):
+ * Genera content/index.json a partir de los HTML ya estandarizados que viven
+ * en content/beginner/. NO modifica los HTML: cada archivo cumple el estándar
+ * en su propio código (ver content/ESTANDAR-HTML.md). content-raw/ es el
+ * respaldo íntegro de la descarga del Drive, para poder diffear.
  *
- *   content-raw/unit-N/module-NN/{lesson,guide,extra}.html
- *   content-raw/unit-N/checkpoint.html
- *        │  process (viewport + freakn-standard: responsive + bridge + auto-wiring)
- *        ▼
- *   content/beginner/uN-mNN/{lesson,guide,extra}.html
- *   content/beginner/uN-checkpoint/checkpoint.html
- *   content/index.json  (módulos + lecciones para ContentSyncService)
+ * Estructura esperada:
+ *   content/beginner/u<N>-m<NN>/{lesson,guide,extra}.html
+ *   content/beginner/u<N>-checkpoint/checkpoint.html
  *
  * Uso: node scripts/build-content.mjs
- * Idempotente: regenera content/beginner e index.json completos.
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -20,128 +17,130 @@ import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.join(here, '..')
-const RAW = path.join(ROOT, 'content-raw')
-const OUT = path.join(ROOT, 'content')
-const SHARED = fs.readFileSync(path.join(OUT, '_shared', 'freakn-standard.html'), 'utf8')
+const BEGINNER = path.join(ROOT, 'content', 'beginner')
 
-function processHtml(raw) {
-  let html = raw
-  if (!/name=["']viewport["']/i.test(html)) {
-    const meta = '<meta name="viewport" content="width=device-width, initial-scale=1">'
-    html = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, (m) => `${m}\n${meta}`) : `${meta}\n${html}`
-  }
-  if (!html.includes('id="freakn-bridge"')) {
-    if (/<\/head>/i.test(html)) html = html.replace(/<\/head>/i, `${SHARED}\n</head>`)
-    else if (/<body[^>]*>/i.test(html)) html = html.replace(/<body[^>]*>/i, (m) => `${m}\n${SHARED}`)
-    else html = `${SHARED}\n${html}`
-  }
-  return html
+/** Primer encabezado con contenido real (fallback cuando el <title> es basura). */
+const headingOf = (html) => {
+  const heads = [...html.matchAll(/<h[12][^>]*>([^<]{3,70})</gi)].map((x) => x[1].trim())
+  const good = heads.find((h) => !/^(module|lesson|unit|basic|freakn)\b[\s\d.|-]*$/i.test(h))
+  if (!good) return null
+  return good === good.toUpperCase()
+    ? good.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
+    : good
 }
 
 const titleOf = (file) => {
-  const m = fs.readFileSync(file, 'utf8').match(/<title>([^<]*)/i)
-  if (!m) return null
-  // "Freakn' Lesson: Breaking the Ice (A1 Edition)" → "Breaking the Ice"
-  return m[1]
-    .replace(/Freakn'?s? (Lesson|Guide|Activity|Checkpoint)\s*:?\s*/i, '')
+  const html = fs.readFileSync(file, 'utf8')
+  const m = html.match(/<title>([^<]*)/i)
+  if (!m) return headingOf(html)
+
+  let t = m[1]
+    .replace(/Freakn'?s?\s*(Lesson|Guide|Activity|Checkpoint)?\s*:?\s*/i, '')
+    .replace(/FLG\s*[\d.]*\s*[-–—]?\s*/i, '')
     .replace(/\((A1|A2|B1|B2)[^)]*\)/i, '')
-    .replace(/\s+/g, ' ')
-    .trim() || null
+    .replace(/\((Layout|Fixed|Final|Draft|Updated|Revised)[^)]*\)/i, '')
+
+  // "Unit 5 Module 21 | The Suspect" → "The Suspect" (descarta numeración).
+  const isNumbering = (s) => /^(module|lesson|unit|basic)\b[\s\d.|-]*$/i.test(s.trim())
+  const segs = t.split('|').map((s) => s.trim()).filter(Boolean)
+  if (segs.length > 1) {
+    t = [...segs].reverse().find((s) => !isNumbering(s)) ?? segs[segs.length - 1]
+  }
+
+  t = t
+    .replace(/\b(Module|Lesson|Unit)\s*\d+\s*[:–—-]\s*/i, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^[\s:–—|-]+|[\s:–—|-]+$/g, '')
+    .trim()
+
+  if (!t || isNumbering(t)) return headingOf(html)
+  return t
 }
 
-if (!fs.existsSync(RAW)) {
-  console.error('No existe content-raw/ — nada que construir')
+if (!fs.existsSync(BEGINNER)) {
+  console.error('No existe content/beginner/ — nada que indexar')
   process.exit(1)
 }
 
-// Limpia el output anterior de beginner (regeneración completa).
-const outBeginner = path.join(OUT, 'beginner')
-fs.rmSync(outBeginner, { recursive: true, force: true })
+const PARTS = [
+  ['lesson.html', 'Lección interactiva', 45],
+  ['extra.html', 'Actividad extra', 20],
+  ['guide.html', 'Guía de estudio', 15],
+]
 
 const modules = []
-const units = fs.readdirSync(RAW).filter((d) => /^unit-\d+$/.test(d)).sort((a, b) => Number(a.split('-')[1]) - Number(b.split('-')[1]))
+const dirs = fs.readdirSync(BEGINNER).filter((d) => /^u\d+-(m\d+|checkpoint)$/.test(d))
 
-for (const unitDir of units) {
-  const unitN = Number(unitDir.split('-')[1])
-  const unitPath = path.join(RAW, unitDir)
-  const moduleDirs = fs.readdirSync(unitPath).filter((d) => /^module-\d+$/.test(d)).sort((a, b) => Number(a.split('-')[1]) - Number(b.split('-')[1]))
+for (const dir of dirs) {
+  const unit = Number(dir.match(/^u(\d+)/)[1])
+  const dirPath = path.join(BEGINNER, dir)
+  const isCheckpoint = dir.endsWith('checkpoint')
 
-  for (const modDir of moduleDirs) {
-    const modN = Number(modDir.split('-')[1])
-    const modPath = path.join(unitPath, modDir)
-    const slug = `u${unitN}-m${String(modN).padStart(2, '0')}`
-    const lessons = []
-
-    const parts = [
-      ['lesson.html', 'Lección interactiva', 45],
-      ['extra.html', 'Actividad extra', 20],
-      ['guide.html', 'Guía de estudio', 15],
-    ]
-    for (const [file, label, dur] of parts) {
-      const src = path.join(modPath, file)
-      if (!fs.existsSync(src)) continue
-      const rel = path.join('beginner', slug, file)
-      const dst = path.join(OUT, rel)
-      fs.mkdirSync(path.dirname(dst), { recursive: true })
-      fs.writeFileSync(dst, processHtml(fs.readFileSync(src, 'utf8')))
-      lessons.push({
-        id: `beg-${slug}-${file.replace('.html', '')}`,
-        title: label,
-        position: lessons.length + 1,
-        durationMin: dur,
+  if (isCheckpoint) {
+    const file = path.join(dirPath, 'checkpoint.html')
+    if (!fs.existsSync(file)) continue
+    modules.push({
+      id: `beg-${dir}`,
+      level: 'beginner',
+      unit,
+      // Los checkpoints cierran la unidad: van después de todos sus módulos.
+      order: unit * 100 + 99,
+      title: `Checkpoint · Unidad ${unit}`,
+      description: `Repaso evaluado de la unidad ${unit}. Tus respuestas quedan registradas para tu profe.`,
+      lessons: [{
+        id: `beg-${dir}-quiz`,
+        title: 'Checkpoint de la unidad',
+        position: 1,
+        durationMin: 30,
         kind: 'html',
-        file: rel.replaceAll(path.sep, '/'),
-      })
-    }
-    if (lessons.length === 0) continue
-
-    const lessonTitle = fs.existsSync(path.join(modPath, 'lesson.html')) ? titleOf(path.join(modPath, 'lesson.html')) : null
-    modules.push({
-      id: `beg-${slug}`,
-      level: 'beginner',
-      title: `Módulo ${modN} · ${lessonTitle ?? `Unidad ${unitN}`}`,
-      description: `Unidad ${unitN} del programa beginner.`,
-      position: modN,
-      lessons,
+        file: `beginner/${dir}/checkpoint.html`,
+      }],
     })
+    continue
   }
 
-  // Checkpoint de la unidad como módulo propio al final de la unidad.
-  const cp = path.join(unitPath, 'checkpoint.html')
-  if (fs.existsSync(cp)) {
-    const slug = `u${unitN}-checkpoint`
-    const rel = path.join('beginner', slug, 'checkpoint.html')
-    const dst = path.join(OUT, rel)
-    fs.mkdirSync(path.dirname(dst), { recursive: true })
-    fs.writeFileSync(dst, processHtml(fs.readFileSync(cp, 'utf8')))
-    modules.push({
-      id: `beg-${slug}`,
-      level: 'beginner',
-      title: `Unidad ${unitN} · Checkpoint`,
-      description: `Repaso evaluado de la unidad ${unitN}. Tus resultados quedan registrados para tu profe.`,
-      // Después del último módulo de la unidad (los módulos van 1..40 → checkpoints en .5)
-      position: unitN * 5 + 0.5,
-      lessons: [
-        {
-          id: `beg-${slug}-quiz`,
-          title: 'Checkpoint de la unidad',
-          position: 1,
-          durationMin: 30,
-          kind: 'html',
-          file: rel.replaceAll(path.sep, '/'),
-        },
-      ],
+  const modN = Number(dir.match(/-m(\d+)$/)[1])
+  const lessons = []
+  for (const [file, label, dur] of PARTS) {
+    if (!fs.existsSync(path.join(dirPath, file))) continue
+    lessons.push({
+      id: `beg-${dir}-${file.replace('.html', '')}`,
+      title: label,
+      position: lessons.length + 1,
+      durationMin: dur,
+      kind: 'html',
+      file: `beginner/${dir}/${file}`,
     })
   }
+  if (lessons.length === 0) continue
+
+  const lessonFile = path.join(dirPath, 'lesson.html')
+  const topic = fs.existsSync(lessonFile) ? titleOf(lessonFile) : null
+  modules.push({
+    id: `beg-${dir}`,
+    level: 'beginner',
+    unit,
+    order: unit * 100 + modN,
+    title: `Módulo ${modN} · ${topic ?? `Unidad ${unit}`}`,
+    description: `Unidad ${unit} del programa beginner.`,
+    lessons,
+  })
 }
 
-// Posiciones finales: orden estable, enteros.
-modules.sort((a, b) => a.position - b.position)
-modules.forEach((m, i) => { m.position = i + 1 })
+modules.sort((a, b) => a.order - b.order)
+modules.forEach((m, i) => {
+  m.position = i + 1
+  delete m.order
+})
 
 const manifest = {
-  $comment: 'GENERADO por scripts/build-content.mjs a partir de content-raw/ (Drive beginner). No editar a mano.',
+  $comment:
+    'GENERADO por scripts/build-content.mjs desde content/beginner/. Los HTML se editan a mano siguiendo content/ESTANDAR-HTML.md; este script solo indexa.',
   modules,
 }
-fs.writeFileSync(path.join(OUT, 'index.json'), JSON.stringify(manifest, null, 2))
-console.log(`OK: ${modules.length} módulos, ${modules.reduce((s, m) => s + m.lessons.length, 0)} lecciones → content/index.json`)
+fs.writeFileSync(path.join(ROOT, 'content', 'index.json'), JSON.stringify(manifest, null, 2))
+const units = [...new Set(modules.map((m) => m.unit))].sort((a, b) => a - b)
+console.log(
+  `OK: ${modules.length} módulos en ${units.length} unidades, ` +
+    `${modules.reduce((s, m) => s + m.lessons.length, 0)} lecciones → content/index.json`,
+)

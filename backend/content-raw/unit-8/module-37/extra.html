@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Practice: Matching Vibes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #E4DF33;
+            --charcoal: #30302F;
+            --accent: #93E5FF;
+            --bg: #111;
+            --danger: #FF4C4C;
+        }
+
+        body { 
+            background-color: var(--bg); 
+            display: flex; justify-content: center; align-items: center; 
+            height: 100vh; margin: 0; 
+            font-family: 'Montserrat', sans-serif; color: #FFFFFF; 
+            overflow: hidden;
+        }
+        
+        h1, h2, h3, .bree { font-family: 'Bree Serif', serif; text-transform: uppercase; font-weight: 900; }
+        
+        .slide-container { width: 1280px; height: 720px; background-color: var(--charcoal); position: relative; overflow: hidden; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .slide-container.active { display: flex; flex-direction: column; }
+        
+        .split-layout { display: flex; width: 100%; height: 100%; }
+        .split-left { width: 50%; background-color: var(--primary); color: var(--charcoal); padding: 4rem; display: flex; flex-direction: column; justify-content: center; }
+        .split-right { width: 50%; background-color: var(--charcoal); color: #FFFFFF; padding: 4rem; display: flex; flex-direction: column; justify-content: center; border-left: 8px solid var(--accent); }
+        
+        .skewed-block { background-color: var(--primary); color: var(--charcoal); transform: skew(-12deg); display: inline-block; padding: 0.5rem 1.5rem; margin-bottom: 1rem; width: fit-content; }
+        .skewed-text { transform: skew(12deg); display: inline-block; font-weight: 900; }
+        
+        .btn-freak { background-color: var(--accent); color: var(--charcoal); transform: skew(-12deg); font-weight: 900; padding: 1rem 2rem; border: none !important; cursor: pointer; transition: all 0.2s; font-size: 1.2rem; text-transform: uppercase; outline: none !important; box-shadow: none !important; -webkit-tap-highlight-color: transparent; -webkit-appearance: none; appearance: none; }
+        .btn-freak:focus, .btn-freak:active, .btn-freak:focus-visible { outline: none !important; box-shadow: none !important; border: none !important; }
+        .btn-freak::-moz-focus-inner { border: 0; }
+        .btn-freak:hover { transform: skew(-12deg) scale(1.05); background-color: var(--primary); }
+        .btn-freak:disabled { opacity: 0.5; cursor: not-allowed; transform: skew(-12deg); background-color: #777; color: #ccc; }
+        .btn-text { transform: skew(12deg); display: inline-block; }
+        
+        /* The Equalizer Mechanics (Level 1) */
+        .eq-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8rem; }
+        .eq-btn { background-color: transparent; border: 2px solid var(--accent); color: #FFF; padding: 0.6rem 1.5rem; font-size: 1.2rem; font-weight: 700; cursor: pointer; border-radius: 6px; transition: all 0.2s; text-transform: uppercase; outline: none !important; box-shadow: none !important; -webkit-tap-highlight-color: transparent; -webkit-appearance: none; appearance: none; }
+        .eq-btn:focus, .eq-btn:active, .eq-btn:focus-visible { outline: none !important; box-shadow: none !important; }
+        .eq-btn::-moz-focus-inner { border: 0; }
+        .eq-btn:hover:not(:disabled) { background-color: rgba(147, 229, 255, 0.2); }
+        .eq-btn.selected { background-color: var(--accent); color: var(--charcoal); border-color: var(--accent); box-shadow: 0 4px 10px rgba(147, 229, 255, 0.3) !important; }
+        .eq-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .eq-display { background: rgba(0,0,0,0.3); border: 2px dashed var(--primary); padding: 1rem 2rem; border-radius: 8px; font-size: 2.5rem; font-weight: 900; text-align: center; text-transform: uppercase; color: var(--primary); letter-spacing: 2px; min-height: 80px; min-width: 400px; display: flex; align-items: center; justify-content: center; gap: 1rem; transition: 0.2s; }
+        
+        /* Interactive Input Areas */
+        .written-input { background-color: transparent; border: 3px solid var(--accent); color: #FFF; padding: 1rem; width: 100%; max-width: 800px; font-size: 1.5rem; font-family: 'Montserrat', sans-serif; font-weight: 700; text-align: center; outline: none; transition: 0.2s; border-radius: 8px; }
+        .written-input:focus { border-color: var(--primary); background-color: rgba(228, 223, 51, 0.1); }
+        .written-input:disabled { opacity: 0.5; cursor: not-allowed; border-color: #777; }
+        
+        .feedback { font-size: 1.5rem; font-weight: 900; text-transform: uppercase; display: flex; flex-direction: column; justify-content: center; }
+        .score-hud { position: absolute; top: 2.5rem; right: 3rem; font-size: 1.5rem; font-weight: 900; color: var(--accent); z-index: 50; text-align: right; }
+        .absolute-nav-bar { position: absolute; bottom: 2rem; left: 3rem; right: 3rem; display: flex; justify-content: space-between; align-items: center; height: 100px; }
+    </style>
+</head>
+<body>
+
+    <!-- SLIDE 1: HOOK -->
+    <div class="slide-container active" id="slide-1">
+        <div class="split-layout">
+            <div class="split-left !bg-[#FF4C4C] !text-white">
+                <div class="skewed-block !bg-[#30302F] !text-[#FFFFFF]"><span class="skewed-text bree">BOOTCAMP</span></div>
+                <h1 class="text-6xl mb-4 text-[#30302F]">Matching Vibes</h1>
+                <p class="text-2xl font-bold text-[#30302F]">Find your tribe.</p>
+            </div>
+            <div class="split-right">
+                <h2 class="text-4xl mb-6">The Formula of Agreement</h2>
+                <p class="text-xl mb-4">Agreeing with someone isn't just saying "Me too." It's a three-part mathematical formula:</p>
+                <ul class="list-disc ml-6 text-lg mb-6 space-y-2">
+                    <li><strong>Polarity:</strong> Positive (So) or Negative (Neither).</li>
+                    <li><strong>Auxiliary:</strong> Mirror the tense (do/did/have/is).</li>
+                    <li><strong>Subject:</strong> Who are you talking about?</li>
+                </ul>
+                <p class="text-xl mb-8"><strong>Level 1:</strong> The Equalizer (Build the phrase).<br><strong>Level 2:</strong> The Echo (Total recall).</p>
+                <div class="absolute-nav-bar justify-end">
+                    <button class="btn-freak" onclick="nav(2)"><span class="btn-text">Tune the Frequency ➔</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: LEVEL 1 (THE EQUALIZER) -->
+    <div class="slide-container" id="slide-2">
+        <div class="score-hud">Score: <span id="score-display-1">0</span> / 20</div>
+        
+        <div class="p-8 h-full flex flex-col relative pt-20">
+            <div class="flex justify-between items-start w-full max-w-5xl mx-auto gap-4">
+                <div class="skewed-block self-start m-0"><span id="level-title-1" class="skewed-text bree">Level 1 - The Equalizer</span></div>
+                <div class="text-[var(--accent)] font-bold text-xl uppercase tracking-widest text-right mt-2">
+                    Match the vibe for: <span id="target-subject-1" class="text-white bg-[var(--charcoal)] px-3 py-1 rounded ml-2 border border-[var(--accent)] shadow-md">YOURSELF</span>
+                </div>
+            </div>
+            
+            <div class="flex-grow flex flex-col justify-center items-center pb-20 mt-2 w-full max-w-5xl mx-auto">
+                <h2 id="question-text-1" class="text-3xl mb-4 text-center font-bold italic w-full bg-white/5 p-4 rounded border-l-4 border-[var(--primary)] shadow-lg">"I love black metal."</h2>
+                
+                <div class="w-full flex flex-col items-center gap-4 mb-6">
+                    <!-- Polarity Row -->
+                    <div class="w-full flex flex-col items-center">
+                        <div class="eq-row" id="row-polarity"></div>
+                    </div>
+                    <!-- Auxiliary Row -->
+                    <div class="w-full flex flex-col items-center">
+                        <div class="eq-row" id="row-aux"></div>
+                    </div>
+                    <!-- Subject Row -->
+                    <div class="w-full flex flex-col items-center">
+                        <div class="eq-row" id="row-subject"></div>
+                    </div>
+                </div>
+
+                <div class="w-full max-w-2xl flex flex-col items-center">
+                    <div id="eq-output" class="eq-display mb-4">
+                        <span id="out-polarity" class="text-gray-600 transition-colors duration-200">___</span>
+                        <span id="out-aux" class="text-gray-600 transition-colors duration-200">___</span>
+                        <span id="out-subject" class="text-gray-600 transition-colors duration-200">___</span>
+                    </div>
+                    <button class="btn-freak w-full max-w-xs" id="btn-submit-l1" onclick="checkAnswerL1()"><span class="btn-text">Lock In ➔</span></button>
+                </div>
+            </div>
+
+            <div class="absolute-nav-bar border-t-2 border-gray-700/50 pt-4">
+                <div id="game-feedback-1" class="feedback w-2/3 text-left m-0"></div>
+                <div class="w-1/3 flex justify-end">
+                    <button class="btn-freak hidden" id="btn-next-q-1" onclick="nextQuestionL1()"><span class="btn-text">Next ➔</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: TRANSITION TO LEVEL 2 -->
+    <div class="slide-container" id="slide-3">
+        <div class="split-layout">
+            <div class="split-left !bg-[#30302F] !text-white border-r-8 border-[var(--primary)]">
+                <h1 class="text-6xl mb-4 text-[var(--primary)]">LEVEL 1 COMPLETE</h1>
+                <p class="text-2xl font-bold">You understand the formula.</p>
+            </div>
+            <div class="split-right !bg-[#111]">
+                <h2 class="text-4xl mb-6 text-[var(--accent)]">Level 2: The Echo</h2>
+                <p class="text-xl mb-4">The mixing board is gone. Real conversations don't give you buttons to press.</p>
+                <p class="text-xl mb-8">You will read a statement. You will be told exactly who to match the vibe for. Type the correct three-word response from memory.</p>
+                
+                <div class="bg-white/5 border-l-4 border-[var(--accent)] p-4 rounded mb-8">
+                    <p class="italic text-gray-300 text-lg mb-2">"I didn't sleep well." <span class="text-[var(--accent)] font-bold text-sm not-italic ml-2 uppercase">(Match for Titó)</span></p>
+                    <p class="font-bold text-xl text-[var(--primary)]">You type: Neither did he.</p>
+                </div>
+
+                <div class="absolute-nav-bar justify-end">
+                    <button class="btn-freak" onclick="nav(4)"><span class="btn-text">Enter the Abyss ➔</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: LEVEL 2 (THE ECHO) -->
+    <div class="slide-container" id="slide-4">
+        <div class="score-hud">Score: <span id="score-display-2">10</span> / 20</div>
+        
+        <div class="p-8 h-full flex flex-col relative pt-20">
+            <div class="flex justify-between items-start w-full max-w-5xl mx-auto gap-4">
+                <div class="skewed-block m-0"><span id="level-title-2" class="skewed-text bree">Level 2 - Question 11</span></div>
+                <div class="text-right">
+                    <div class="skewed-block !bg-[#FF4C4C] !text-white !py-2 !px-8 shadow-[6px_6px_0px_#93E5FF] border-2 border-[#111] m-0">
+                        <span id="instruction-text-2" class="skewed-text bree text-2xl tracking-widest uppercase">Match for: Someone</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="w-full max-w-4xl mx-auto my-6 p-8 text-center flex flex-col justify-center items-center bg-gray-800/50 rounded-xl border border-gray-600 shadow-lg">
+                <h2 id="question-text-2" class="text-4xl font-bold text-white italic">"Statement goes here"</h2>
+            </div>
+            
+            <div id="interactive-area-2" class="flex-grow flex flex-col items-center justify-start gap-6 pb-20">
+                <input type="text" id="written-answer" class="written-input" placeholder="Type your 3-word response..." autocomplete="off">
+                <button class="btn-freak" id="btn-submit-written" onclick="checkWrittenAnswer()"><span class="btn-text">Speak ➔</span></button>
+            </div>
+
+            <div class="absolute-nav-bar border-t-2 border-gray-700/50 pt-4">
+                <div id="game-feedback-2" class="feedback w-2/3 text-left m-0"></div>
+                <div class="w-1/3 flex justify-end">
+                    <button class="btn-freak hidden" id="btn-next-q-2" onclick="nextQuestionL2()"><span class="btn-text">Next ➔</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 5: END -->
+    <div class="slide-container" id="slide-5">
+        <div class="split-layout">
+            <div class="split-left">
+                <h1 class="text-6xl mb-4" id="final-title">RESULTS</h1>
+                <p class="text-3xl font-bold" id="final-subtitle">Are we on the same wavelength?</p>
+            </div>
+            <div class="split-right text-center flex flex-col justify-center items-center relative">
+                <h2 class="text-4xl mb-6">Final Score: <span id="final-score" class="text-[var(--primary)]"></span> / 20</h2>
+                <p id="final-message" class="text-xl mb-8"></p>
+                <button class="btn-freak" onclick="location.reload()"><span class="btn-text">Restart Bootcamp ↻</span></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentScore = 0;
+        let currentL1Index = 0;
+        let currentL2Index = 0;
+
+        let eqSelections = { polarity: null, aux: null, subject: null };
+
+        // Level 1: The Equalizer (Targeted Dynamic Options to reduce clutter)
+        const questionsL1 = [
+            { q: "I love jazz music.", matchFor: "YOURSELF", target: "So do I", auxOpts: ["do", "am", "have", "did"], subjOpts: ["I", "he", "they"], hint: "Positive statement (So). Action verb 'love' uses the auxiliary 'do' for 'I'." },
+            { q: "I am not afraid.", matchFor: "YOURSELF", target: "Neither am I", auxOpts: ["do", "am", "are", "did"], subjOpts: ["I", "she", "they"], hint: "Negative statement (Neither). Verb To Be uses 'am' for 'I'." },
+            { q: "I didn't understand the book.", matchFor: "TITÓ (HE)", target: "Neither did he", auxOpts: ["did", "does", "was", "had"], subjOpts: ["I", "he", "they"], hint: "Negative statement in the past (Neither). Auxiliary is 'did'. Subject is 'he'." },
+            { q: "I have visited Rome.", matchFor: "GELMY (SHE)", target: "So has she", auxOpts: ["have", "has", "is", "does"], subjOpts: ["I", "she", "we"], hint: "Positive statement with 'have' (So). Auxiliary for 'she' is 'has'." },
+            { q: "I can't play the guitar.", matchFor: "YOURSELF", target: "Neither can I", auxOpts: ["do", "can", "am", "could"], subjOpts: ["I", "he", "they"], hint: "Negative statement with 'can' (Neither). The auxiliary is 'can'." },
+            { q: "I won't give up.", matchFor: "WE", target: "Neither will we", auxOpts: ["do", "will", "are", "have"], subjOpts: ["I", "we", "they"], hint: "Negative future 'won't' (Neither). The auxiliary is 'will'. Subject is 'we'." },
+            { q: "I work every day.", matchFor: "EL PA (HE)", target: "So does he", auxOpts: ["do", "does", "is", "has"], subjOpts: ["I", "he", "we"], hint: "Positive action verb 'work' (So). Auxiliary for 'he' is 'does'." },
+            { q: "I am exhausted.", matchFor: "THEY", target: "So are they", auxOpts: ["do", "are", "have", "were"], subjOpts: ["I", "they", "he"], hint: "Positive Verb To Be (So). The To Be for 'they' is 'are'." },
+            { q: "I haven't eaten yet.", matchFor: "YOURSELF", target: "Neither have I", auxOpts: ["do", "have", "am", "did"], subjOpts: ["I", "he", "they"], hint: "Negative statement with 'haven't' (Neither). Auxiliary is 'have'." },
+            { q: "I went to the gym.", matchFor: "YOURSELF", target: "So did I", auxOpts: ["do", "did", "was", "have"], subjOpts: ["I", "he", "they"], hint: "Positive action verb in the PAST 'went' (So). The auxiliary is 'did'." }
+        ];
+
+        // Level 2: The Echo (Recall and Conjugation)
+        const questionsL2 = [
+            { q: "I hate waking up early.", matchFor: "EL PA (HE)", answers: ["so does he", "so does el pa"], displayAnswer: "So does he.", hint: "Positive action verb 'hate'. Map it to 'he'. Use 'does'." },
+            { q: "I have never seen snow.", matchFor: "YOURSELF", answers: ["neither have i"], displayAnswer: "Neither have I.", hint: "'Never' makes it negative. Use 'Neither' + 'have'." },
+            { q: "I didn't watch the game.", matchFor: "GELMY (SHE)", answers: ["neither did she", "neither did gelmy"], displayAnswer: "Neither did she.", hint: "Negative past. Auxiliary is 'did'." },
+            { q: "I will travel next month.", matchFor: "WE", answers: ["so will we"], displayAnswer: "So will we.", hint: "Positive future. Auxiliary is 'will'." },
+            { q: "I am not listening to you.", matchFor: "TITÓ (HE)", answers: ["neither is he", "neither is tito", "neither is titó"], displayAnswer: "Neither is he.", hint: "Negative Verb To Be. Conjugate 'am' for 'he'." },
+            { q: "I bought a new phone.", matchFor: "YOURSELF", answers: ["so did i"], displayAnswer: "So did I.", hint: "Positive past tense action verb 'bought'. Use 'did'." },
+            { q: "I can speak two languages.", matchFor: "GELMY (SHE)", answers: ["so can she", "so can gelmy"], displayAnswer: "So can she.", hint: "Positive modal 'can'." },
+            { q: "I don't eat sugar.", matchFor: "TITÓ (HE)", answers: ["neither does he", "neither does tito", "neither does titó"], displayAnswer: "Neither does he.", hint: "Negative present. Map 'don't' to 'he'." },
+            { q: "I haven't finished my coffee.", matchFor: "YOURSELF", answers: ["neither have i"], displayAnswer: "Neither have I.", hint: "Negative perfect tense. Use 'have'." },
+            { q: "I was very angry.", matchFor: "YOURSELF", answers: ["so was i"], displayAnswer: "So was I.", hint: "Positive past Verb To Be. Use 'was'." }
+        ];
+
+        // Advanced cleaner
+        function cleanStr(str) {
+            let s = str.toLowerCase().replace(/[.,?!]/g, '').replace(/\s+/g, ' ').trim();
+            return s;
+        }
+
+        function nav(slideNum) {
+            document.querySelectorAll('.slide-container').forEach(el => el.classList.remove('active'));
+            document.getElementById(`slide-${slideNum}`).classList.add('active');
+            
+            if(slideNum === 2) loadQuestionL1();
+            if(slideNum === 4) {
+                document.getElementById('written-answer').addEventListener("keypress", function(event) {
+                    if (event.key === "Enter" && !document.getElementById('btn-submit-written').disabled) {
+                        event.preventDefault();
+                        checkWrittenAnswer();
+                    }
+                });
+                loadQuestionL2();
+            }
+        }
+
+        function updateScoreDisplays() {
+            document.getElementById('score-display-1').innerText = currentScore;
+            document.getElementById('score-display-2').innerText = currentScore;
+        }
+
+        /* --- LEVEL 1 LOGIC (THE EQUALIZER) --- */
+        function loadQuestionL1() {
+            if (currentL1Index >= questionsL1.length) {
+                nav(3);
+                return;
+            }
+
+            const q = questionsL1[currentL1Index];
+            document.getElementById('level-title-1').innerText = `Level 1 - Question ${currentL1Index + 1}`;
+            document.getElementById('target-subject-1').innerText = q.matchFor;
+            document.getElementById('question-text-1').innerText = `"${q.q}"`;
+            
+            document.getElementById('game-feedback-1').innerHTML = "";
+            document.getElementById('btn-next-q-1').classList.add('hidden');
+            document.getElementById('btn-submit-l1').disabled = false;
+            
+            // Reset Selections & Colors
+            eqSelections = { polarity: null, aux: null, subject: null };
+            document.getElementById('eq-output').style.borderColor = "var(--primary)";
+            updateEqDisplay();
+            
+            // Generate Buttons Dynamically
+            const rowPol = document.getElementById('row-polarity');
+            const rowAux = document.getElementById('row-aux');
+            const rowSubj = document.getElementById('row-subject');
+            
+            rowPol.innerHTML = "";
+            rowAux.innerHTML = "";
+            rowSubj.innerHTML = "";
+
+            ["So", "Neither"].forEach(opt => {
+                rowPol.innerHTML += `<button class="eq-btn" onclick="selectEq('polarity', '${opt}')">${opt}</button>`;
+            });
+
+            // Shuffle the dynamic arrays so the correct answer isn't always in the same spot
+            const shuffledAux = [...q.auxOpts].sort(() => Math.random() - 0.5);
+            shuffledAux.forEach(opt => {
+                rowAux.innerHTML += `<button class="eq-btn" onclick="selectEq('aux', '${opt}')">${opt}</button>`;
+            });
+
+            const shuffledSubj = [...q.subjOpts].sort(() => Math.random() - 0.5);
+            shuffledSubj.forEach(opt => {
+                rowSubj.innerHTML += `<button class="eq-btn" onclick="selectEq('subject', '${opt}')">${opt}</button>`;
+            });
+        }
+
+        function selectEq(category, value) {
+            eqSelections[category] = value;
+            
+            // Highlight active button
+            const row = document.getElementById(`row-${category}`);
+            row.querySelectorAll('.eq-btn').forEach(btn => {
+                if (btn.innerText.toLowerCase() === value.toLowerCase()) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+            
+            updateEqDisplay();
+        }
+
+        function updateEqDisplay() {
+            const p = document.getElementById('out-polarity');
+            const a = document.getElementById('out-aux');
+            const s = document.getElementById('out-subject');
+            
+            p.innerText = eqSelections.polarity || "___";
+            p.className = `transition-colors duration-200 ${eqSelections.polarity ? "text-white" : "text-gray-600"}`;
+            
+            a.innerText = eqSelections.aux || "___";
+            a.className = `transition-colors duration-200 ${eqSelections.aux ? "text-white" : "text-gray-600"}`;
+            
+            s.innerText = eqSelections.subject || "___";
+            s.className = `transition-colors duration-200 ${eqSelections.subject ? "text-white" : "text-gray-600"}`;
+        }
+
+        function checkAnswerL1() {
+            const feedback = document.getElementById('game-feedback-1');
+            
+            // Check for incomplete submission
+            if (!eqSelections.polarity || !eqSelections.aux || !eqSelections.subject) {
+                feedback.innerHTML = `<span class="text-[var(--danger)] font-black text-2xl mb-1">COMPLETE THE FORMULA FIRST ❌</span>`;
+                return; 
+            }
+
+            const q = questionsL1[currentL1Index];
+            const builtString = `${eqSelections.polarity} ${eqSelections.aux} ${eqSelections.subject}`;
+            
+            let isCorrect = (cleanStr(builtString) === cleanStr(q.target));
+
+            const p = document.getElementById('out-polarity');
+            const a = document.getElementById('out-aux');
+            const s = document.getElementById('out-subject');
+
+            if (isCorrect) {
+                feedback.innerHTML = `
+                    <div class="text-[var(--accent)] font-black text-2xl mb-1">FREQUENCIES ALIGNED! 🔥</div>
+                    <div class="text-xl text-white font-normal">${q.hint}</div>
+                `;
+                currentScore++;
+                updateScoreDisplays();
+                document.getElementById('eq-output').style.borderColor = "var(--accent)";
+                p.className = "text-[var(--accent)]";
+                a.className = "text-[var(--accent)]";
+                s.className = "text-[var(--accent)]";
+            } else {
+                feedback.innerHTML = `
+                    <div class="text-[var(--danger)] font-black text-2xl mb-1">STATIC INTERFERENCE ❌</div>
+                    <div class="text-lg text-white font-normal mt-1">Expected: ${q.target}</div>
+                    <div class="text-sm text-gray-400 font-normal mt-1">Hint: ${q.hint}</div>
+                `;
+                document.getElementById('eq-output').style.borderColor = "var(--danger)";
+                p.className = "text-[var(--danger)]";
+                a.className = "text-[var(--danger)]";
+                s.className = "text-[var(--danger)]";
+            }
+            
+            document.querySelectorAll('.eq-btn').forEach(btn => btn.disabled = true);
+            document.getElementById('btn-submit-l1').disabled = true;
+            document.getElementById('btn-next-q-1').classList.remove('hidden');
+        }
+
+        function nextQuestionL1() {
+            currentL1Index++;
+            loadQuestionL1();
+        }
+
+        /* --- LEVEL 2 LOGIC (THE ECHO) --- */
+        function loadQuestionL2() {
+            if (currentL2Index >= questionsL2.length) {
+                endGame();
+                return;
+            }
+
+            const q = questionsL2[currentL2Index];
+            document.getElementById('level-title-2').innerText = `Level 2 - Question ${currentL2Index + 11}`;
+            document.getElementById('instruction-text-2').innerText = `Match for: ${q.matchFor}`;
+            document.getElementById('question-text-2').innerText = `"${q.q}"`;
+            
+            document.getElementById('game-feedback-2').innerHTML = "";
+            document.getElementById('btn-next-q-2').classList.add('hidden');
+            
+            const inputField = document.getElementById('written-answer');
+            inputField.value = "";
+            inputField.disabled = false;
+            inputField.focus();
+
+            document.getElementById('btn-submit-written').disabled = false;
+        }
+
+        function checkWrittenAnswer() {
+            const inputField = document.getElementById('written-answer');
+            const userInputRaw = inputField.value;
+            
+            if(userInputRaw.trim() === "") return;
+
+            const q = questionsL2[currentL2Index];
+            const cleanUser = cleanStr(userInputRaw);
+            
+            let isCorrect = q.answers.some(ans => cleanStr(ans) === cleanUser);
+            
+            const feedback = document.getElementById('game-feedback-2');
+            
+            if (isCorrect) {
+                feedback.innerHTML = `
+                    <div class="text-[var(--primary)] font-black text-2xl mb-1">PERFECT ECHO! 🔥</div>
+                    <div class="text-xl text-white font-normal">You matched the vibe.</div>
+                `;
+                currentScore++;
+                updateScoreDisplays();
+                inputField.style.borderColor = "var(--primary)";
+            } else {
+                feedback.innerHTML = `
+                    <div class="text-[var(--danger)] font-black text-2xl mb-1">VIBE MISMATCH ❌</div>
+                    <div class="text-lg text-white font-normal mt-1">Expected: ${q.displayAnswer}</div>
+                    <div class="text-sm text-gray-400 font-normal mt-1">Hint: ${q.hint}</div>
+                `;
+                inputField.style.borderColor = "var(--danger)";
+            }
+            
+            inputField.disabled = true;
+            document.getElementById('btn-submit-written').disabled = true;
+            document.getElementById('btn-next-q-2').classList.remove('hidden');
+        }
+
+        function nextQuestionL2() {
+            currentL2Index++;
+            loadQuestionL2();
+        }
+
+        /* --- END GAME --- */
+        function endGame() {
+            document.getElementById('final-score').innerText = currentScore;
+            const messageEl = document.getElementById('final-message');
+            const leftBg = document.querySelector('#slide-5 .split-left');
+            
+            if (currentScore >= 18) {
+                messageEl.innerText = "Flawless synchronization. You can analyze the structure and conjugate on the fly. True mastery of the language.";
+                leftBg.style.backgroundColor = "var(--accent)";
+            } else if (currentScore >= 14) {
+                messageEl.innerText = "Solid effort. You understand the concept, but the rapid conjugation tripped you up. Keep sparring with the auxiliaries.";
+                leftBg.style.backgroundColor = "var(--primary)";
+            } else {
+                messageEl.innerText = "Unacceptable. You dropped the mechanics and lost the frequency. Don't guess. Build the formula. Try again.";
+                leftBg.style.backgroundColor = "var(--danger)";
+                leftBg.style.color = "#FFFFFF";
+                document.getElementById('final-title').style.color = "#30302F";
+            }
+            nav(5);
+        }
+    </script>
+</body>
+</html>

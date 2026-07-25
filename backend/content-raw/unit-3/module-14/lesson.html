@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 14: Changes & Transitions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-yellow: #E4DF33;
+            --charcoal: #30302F;
+            --sky-blue: #93E5FF;
+            --bg-outer: #111111;
+        }
+        body {
+            background-color: var(--bg-outer);
+            font-family: 'Montserrat', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: white;
+            overflow: hidden;
+        }
+        #presentation-area {
+            width: 1280px;
+            height: 720px;
+            position: relative;
+            transform-origin: center center;
+        }
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: var(--charcoal);
+            position: absolute;
+            top: 0;
+            left: 0;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: none;
+        }
+        .slide-container.active {
+            display: flex;
+        }
+        h1, h2, h3, .bree-font {
+            font-family: 'Bree Serif', serif;
+            text-transform: uppercase;
+        }
+        .title-massive {
+            font-size: 100px;
+            line-height: 1;
+            color: var(--primary-yellow);
+            text-shadow: 4px 4px 0px black;
+        }
+        .split-left {
+            width: 45%;
+            height: 100%;
+            background-color: var(--primary-yellow);
+            color: var(--charcoal);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .split-right {
+            width: 55%;
+            height: 100%;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background-color: var(--charcoal);
+        }
+        .skewed-block {
+            background-color: var(--primary-yellow);
+            color: var(--charcoal);
+            transform: skew(-12deg);
+            padding: 10px 30px;
+            display: inline-block;
+            margin: 10px 0;
+        }
+        .skewed-block span {
+            display: inline-block;
+            transform: skew(12deg);
+            font-weight: 900;
+            font-size: 24px;
+        }
+        .btn-freak {
+            background-color: var(--sky-blue);
+            color: var(--charcoal);
+            font-weight: 900;
+            font-size: 20px;
+            padding: 15px 30px;
+            border: 4px solid var(--charcoal);
+            box-shadow: 6px 6px 0px var(--charcoal);
+            transition: all 0.2s;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+        .btn-freak:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 8px 8px 0px var(--charcoal);
+        }
+        .btn-freak:active {
+            transform: translate(4px, 4px);
+            box-shadow: 2px 2px 0px var(--charcoal);
+        }
+        .btn-yellow {
+            background-color: var(--primary-yellow);
+        }
+        .btn-dark {
+            background-color: var(--charcoal);
+            color: white;
+            border-color: var(--primary-yellow);
+            box-shadow: 6px 6px 0px var(--primary-yellow);
+        }
+        .gossip-paper {
+            background-color: white;
+            color: var(--charcoal);
+            font-family: 'Bree Serif', serif;
+            padding: 20px;
+            box-shadow: 8px 8px 0px var(--primary-yellow);
+            transform: rotate(-1deg);
+            font-size: 22px;
+            margin-bottom: 20px;
+        }
+        
+        /* Options & Grading */
+        .option-btn {
+            background: var(--charcoal);
+            border: 4px solid white;
+            color: white;
+            padding: 15px 30px;
+            font-weight: 900;
+            font-size: 24px;
+            cursor: pointer;
+            transition: 0.2s;
+            text-transform: uppercase;
+        }
+        .option-btn:hover { background: rgba(255,255,255,0.2); }
+        .option-btn.selected-correct { background: var(--sky-blue); color: var(--charcoal); border-color: var(--sky-blue); }
+        .option-btn.selected-wrong { background: #ff4757; color: white; border-color: #ff4757; }
+
+        /* Grade Buttons for Teachers */
+        .grade-btn {
+            padding: 10px 20px;
+            font-size: 18px;
+            border: 2px solid white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .grade-btn.pass { color: var(--sky-blue); border-color: var(--sky-blue); }
+        .grade-btn.pass:hover, .grade-btn.pass.selected-correct { background: var(--sky-blue); color: var(--charcoal); }
+        
+        .grade-btn.fail { color: #ff4757; border-color: #ff4757; }
+        .grade-btn.fail:hover, .grade-btn.fail.selected-wrong { background: #ff4757; color: white; }
+
+        /* Writing Space */
+        .freak-input {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: none;
+            border-bottom: 4px dashed var(--primary-yellow);
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            padding: 10px 15px;
+            font-family: 'Montserrat', sans-serif;
+            outline: none;
+            transition: 0.3s;
+            margin-bottom: 15px;
+        }
+        .freak-input:focus {
+            border-bottom: 4px solid var(--sky-blue);
+            background: rgba(0,0,0,0.5);
+        }
+        .freak-input::placeholder {
+            color: rgba(255,255,255,0.2);
+            font-weight: 400;
+            font-style: italic;
+        }
+
+        .hidden-vibe { display: none !important; }
+        .teacher-box {
+            background: rgba(147, 229, 255, 0.1);
+            border-left: 6px solid var(--sky-blue);
+            padding: 15px 20px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="presentation-area">
+
+    <!-- STATIC SLIDE 0: TITLE -->
+    <div id="slide-0" class="slide-container active flex-col items-center justify-center text-center">
+        <div class="skewed-block mb-6">
+            <span class="text-2xl tracking-widest">UNIT 3 • MODULE 14</span>
+        </div>
+        
+        <h1 class="title-massive mb-8">CHANGES &<br>TRANSITIONS</h1>
+        
+        <p class="text-3xl font-bold text-white mb-12 max-w-4xl leading-relaxed">
+            Learn how to use "GET" to sound like a native, and master tricky action verbs like Take, Bring, Catch, and Fetch!
+        </p>
+
+        <div class="border-4 border-white px-8 py-3 mb-12">
+            <span class="text-2xl font-black text-[var(--sky-blue)] tracking-widest uppercase">THE STORYTELLER • PART 4</span>
+        </div>
+
+        <button class="btn-freak" onclick="nav(1)">Start The Vibe ➔</button>
+    </div>
+
+    <!-- STATIC SLIDE 1: THE VIBE -->
+    <div id="slide-1" class="slide-container">
+        <div class="split-left">
+            <h2 class="bree-font text-5xl mb-4">PART 1:<br>THE VIBE</h2>
+            <p class="font-bold text-xl mb-6">El pa had a chaotic day. Titó doesn't understand his English.</p>
+            <div class="gossip-paper">
+                El pa: "Dad, I <strong>got</strong> lost, then I <strong>caught</strong> a cold, and finally I <strong>got</strong> home."<br><br>
+                Titó: "You got lost? You got home? Mijo, what does GET mean?! You use it for everything!"
+            </div>
+            <div class="teacher-box border-l-[var(--charcoal)] bg-black/10">
+                <p class="text-lg">👉 <strong>Teacher:</strong> Ask the student: <br><span class="text-red-600 font-bold">"When was the last time you had a chaotic day where everything went wrong?"</span></p>
+            </div>
+        </div>
+        <div class="split-right relative">
+            <h3 class="text-3xl font-black text-white mb-4">THE MAGIC VERBS</h3>
+            <p class="text-xl mb-6 text-gray-300"><span class="text-[var(--primary-yellow)] font-bold">GET</span> is a chameleon! It means: to become (get tired), to arrive (get home), or to obtain (get a job).</p>
+            <p class="text-xl mb-6 text-gray-300">But don't mix it up with <span class="text-[var(--sky-blue)] font-bold">TAKE</span> (move away), <span class="text-[var(--sky-blue)] font-bold">BRING</span> (move here), <span class="text-[var(--sky-blue)] font-bold">CATCH</span> (grab transport/sickness), or <span class="text-[var(--sky-blue)] font-bold">FETCH</span> (go get and return).</p>
+            
+            <div id="vibe-interactive" class="bg-black/40 p-6 rounded-lg border-2 border-[var(--primary-yellow)]">
+                <p class="text-xl font-bold mb-4">Help El pa explain his condition. Click to reveal the truth:</p>
+                <button id="vibe-btn" class="btn-freak w-full mb-4" onclick="revealVibe()">"I walked 10 kilometers. I (get) ________ so tired!"</button>
+                <p id="vibe-result" class="hidden-vibe text-2xl font-black text-[var(--sky-blue)] mt-4">"I GOT so tired!" (Become tired)</p>
+            </div>
+            
+            <div class="w-full flex justify-between mt-auto pt-4">
+                <button class="btn-freak btn-dark" onclick="nav(0)">Previous</button>
+                <button class="btn-freak" onclick="nav(2)">Next Step ➔</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DYNAMIC SLIDES CONTAINER -->
+    <div id="dynamic-slides-wrapper" style="display: contents;"></div>
+
+    <!-- STATIC SLIDE 32: FINAL SCORE -->
+    <div id="slide-32" class="slide-container flex-col items-center justify-center text-center p-10">
+        <h1 class="title-massive mb-4">RESPECT.</h1>
+        <div class="gossip-paper max-w-2xl mb-8">
+            <p class="text-2xl">You got it! You mastered the tricky verbs.</p>
+            <p class="text-xl mt-4 font-bold">Total Score: <span id="final-score" class="text-red-600 text-4xl">0</span> / 30</p>
+        </div>
+        <div class="teacher-box w-1/2 mx-auto mb-8">
+            <p class="text-xl font-bold text-white">👉 <strong>Teacher Wrap-up:</strong> Ask the student: <br><span class="text-[var(--primary-yellow)]">"If I asked you to FETCH me something right now to make you happy, what would it be?"</span></p>
+        </div>
+        <div class="w-full flex justify-center gap-8 mt-auto">
+            <button class="btn-freak btn-dark" onclick="nav(31)">Previous</button>
+            <button class="btn-freak btn-yellow" onclick="location.reload()">Replay Lesson</button>
+        </div>
+    </div>
+
+    </div> <!-- End of presentation-area -->
+
+    <script>
+        // --- SCALING LOGIC ---
+        function resizePresentation() {
+            const area = document.getElementById('presentation-area');
+            const scale = Math.min(window.innerWidth / 1280, window.innerHeight / 720) * 0.98;
+            area.style.transform = `scale(${scale})`;
+        }
+        window.addEventListener('resize', resizePresentation);
+        resizePresentation();
+
+        // --- STATE ---
+        let currentSlide = 0;
+        let scores = { level1: 0, level2: 0, level3: 0 };
+        let answeredQuestions = new Array(30).fill(false); 
+
+        // --- NAVIGATION ---
+        function nav(slideIndex) {
+            document.querySelectorAll('.slide-container').forEach(s => s.classList.remove('active'));
+            document.getElementById(`slide-${slideIndex}`).classList.add('active');
+            currentSlide = slideIndex;
+        }
+
+        function revealVibe() {
+            document.getElementById('vibe-result').classList.remove('hidden-vibe');
+            document.getElementById('vibe-btn').innerText = "Nailed it!";
+            document.getElementById('vibe-btn').classList.replace('btn-freak', 'btn-dark');
+        }
+
+        // --- DATA ---
+
+        // LEVEL 1: Structured (Form Recognition)
+        const l1_data = [
+            { text: "It was raining, so I _____ a taxi to the party.", opt1: "took", opt2: "brought", ans: 1, prompt: "Do you prefer taking an Uber or a traditional taxi?", explanation: 'Use "TAKE" when you use transport to travel away to another place.' },
+            { text: "Gelmy _____ very angry when El pa broke the vase.", opt1: "got", opt2: "fetched", ans: 1, prompt: "What is the easiest way to make your mom angry?", explanation: 'GET + emotion = "to become". Gelmy became angry.' },
+            { text: "Did you _____ the snacks I asked for?", opt1: "take", opt2: "bring", ans: 2, prompt: "Are you the person who brings food to the party, or the one who eats it?", explanation: 'Use "BRING" when you are carrying things toward the speaker or their current location.' },
+            { text: "I ran fast but I couldn't _____ the bus.", opt1: "catch", opt2: "get", ans: 1, prompt: "Have you ever run after a bus and missed it anyway?", explanation: 'You "CATCH" moving transport like a bus, train, or flight. You don\'t "get" it.' },
+            { text: "Go to the kitchen and _____ me a cold beer.", opt1: "fetch", opt2: "catch", ans: 1, prompt: "Who is the person in your house that always asks others to fetch things?", explanation: '"FETCH" means to go to another place, grab the item, and return to where you started. Like a dog fetching a stick!' },
+            { text: "El pa didn't _____ home until 3:00 AM.", opt1: "get", opt2: "take", ans: 1, prompt: "What is the latest you have ever gotten home?", explanation: 'GET + a place = "to arrive". He didn\'t arrive home.' },
+            { text: "Please _____ your umbrella. It's going to rain.", opt1: "bring", opt2: "take", ans: 2, prompt: "Do you check the weather before you leave the house?", explanation: 'Use "TAKE" when you carry something away with you to a new place.' },
+            { text: "He was standing in the rain and _____ a terrible cold.", opt1: "got", opt2: "caught", ans: 2, prompt: "What is your secret remedy when you catch a cold?", explanation: 'You "CATCH" an illness or a cold. It is a special combination!' },
+            { text: "I _____ a new job offer yesterday!", opt1: "got", opt2: "fetched", ans: 1, prompt: "How do you celebrate when you get good news?", explanation: 'GET + a thing = "to receive" or "obtain". He received a job offer.' },
+            { text: "Don't forget to _____ your passport to the airport.", opt1: "take", opt2: "bring", ans: 1, prompt: "Have you ever forgotten an important document?", explanation: 'Use "TAKE" when moving an object away from your current location to a new destination.' }
+        ];
+
+        // LEVEL 2: Semi-Structured (Guided Creation)
+        const l2_data = [
+            { sit: "You worked outside in the hot sun all day.", verb: "GET (tired/sunburned)", exp: "I got tired. / I got sunburned.", prompt: "Do you get tired easily in the heat?" },
+            { sit: "You need to move your laptop from your house to the office.", verb: "TAKE", exp: "I took my laptop to the office.", prompt: "Do you take your work home with you?" },
+            { sit: "You are hosting a dinner. You tell your guests to...", verb: "BRING (wine/dessert)", exp: "Bring some wine! / Bring dessert!", prompt: "What is the best dessert to bring to a dinner?" },
+            { sit: "You woke up late and had to run to the train station.", verb: "CATCH", exp: "I caught the train.", prompt: "Are you good at waking up early?" },
+            { sit: "You throw a stick for your dog in the park.", verb: "FETCH", exp: "Fetch the stick!", prompt: "Are dogs the best pets, or do you prefer cats?" },
+            { sit: "You arrived at your house after a very long trip.", verb: "GET (home)", exp: "I got home.", prompt: "What is the first thing you do when you get home from a trip?" },
+            { sit: "Someone sneezed right in your face yesterday.", verb: "CATCH (a cold)", exp: "I caught a cold.", prompt: "Do you get mad when sick people don't wear masks?" },
+            { sit: "You ordered a pizza and it finally arrived.", verb: "GET", exp: "I got a pizza. / I got dinner.", prompt: "What is your favorite pizza topping?" },
+            { sit: "Your boss tells you to go to the printer and return with the report.", verb: "FETCH", exp: "I fetched the report.", prompt: "Do you mind doing small tasks like fetching things at work?" },
+            { sit: "You didn't want to walk, so you used an Uber.", verb: "TAKE", exp: "I took an Uber.", prompt: "What is your Uber rating?" }
+        ];
+
+        // LEVEL 3: Non-Structured (Free Personalization)
+        const l3_data = [
+            { verb: "GET (Emotion)", prompt: "When was the last time you got really angry?", followUp: "Did you shout, or did you stay quiet?" },
+            { verb: "TAKE", prompt: "What is something you always take with you when you leave the house?", followUp: "Could you survive a day without taking your phone?" },
+            { verb: "BRING", prompt: "What do you usually bring to a friend's birthday party?", followUp: "Are you a good gift giver?" },
+            { verb: "CATCH", prompt: "Have you ever caught a cold at the worst possible time?", followUp: "Did you still go to work/school, or did you stay in bed?" },
+            { verb: "FETCH", prompt: "If you had a robot, what is the first thing you would ask it to fetch?", followUp: "Would you make it cook for you too?" },
+            { verb: "GET (Arrive)", prompt: "What time did you get home yesterday?", followUp: "Were you exhausted when you got back?" },
+            { verb: "TAKE (Time)", prompt: "How long does it take you to get ready in the morning?", followUp: "Are you faster or slower than your friends?" },
+            { verb: "BRING (People)", prompt: "Who did you bring to your last family event or party?", followUp: "Did they get along with everyone?" },
+            { verb: "CATCH (Transport)", prompt: "Do you usually catch the bus, or do you take an Uber/Drive?", followUp: "Which one is less stressful for you?" },
+            { verb: "GET (Receive)", prompt: "What is the best message or news you got recently?", followUp: "Who told you the news?" }
+        ];
+        
+        // --- RENDER FUNCTIONS ---
+        function generateAllSlides() {
+            let html = '';
+            let globalSlideIndex = 2;
+
+            // Generate LEVEL 1 (Slides 2-11)
+            l1_data.forEach((q, i) => {
+                html += `
+                <div id="slide-${globalSlideIndex}" class="slide-container flex-col p-8">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="bree-font text-3xl text-[var(--primary-yellow)]">LEVEL 1: THE GAME</h2>
+                        <span class="text-lg font-bold bg-[var(--charcoal)] border-2 border-[var(--primary-yellow)] px-3 py-1 text-[var(--primary-yellow)]">${i + 1} / 10</span>
+                    </div>
+                    <p class="text-xl font-bold text-gray-300 mb-4">Choose the correct transition verb.</p>
+                    
+                    <div class="flex-grow flex flex-col justify-center items-center px-10">
+                        <h1 class="text-4xl font-black text-center mb-8 leading-tight">"${q.text}"</h1>
+                        
+                        <div class="w-full flex flex-col items-center">
+                            <div class="flex gap-8 w-full justify-center" id="l1-opts-${i}">
+                                <button class="option-btn w-64 py-3 text-xl" onclick="handleL1(${i}, 1, ${q.ans}, ${globalSlideIndex})">${q.opt1}</button>
+                                <button class="option-btn w-64 py-3 text-xl" onclick="handleL1(${i}, 2, ${q.ans}, ${globalSlideIndex})">${q.opt2}</button>
+                            </div>
+                            
+                            <!-- Notice it is NO LONGER absolute. The margins are smaller so it fits perfectly! -->
+                            <div id="l1-explanation-${i}" class="hidden-vibe mt-6 bg-[#111111] border-2 border-[#ff4757] border-l-8 p-4 w-full max-w-3xl mx-auto text-left shadow-lg">
+                                <p class="text-[#ff4757] font-black text-lg mb-1 tracking-widest uppercase">❌ Not Quite!</p>
+                                <p class="text-white text-md font-bold leading-relaxed">Here is why: <span class="text-gray-300 font-normal">${q.explanation}</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="w-full border-t-2 border-gray-700 pt-4 mb-4 text-center z-10">
+                        <p class="text-lg text-[var(--sky-blue)]">👉 <strong>Teacher:</strong> After they answer, ask: <span class="text-white font-bold">"${q.prompt}"</span></p>
+                    </div>
+
+                    <div class="w-full flex justify-between mt-auto">
+                        <button class="btn-freak btn-dark py-2 px-6 text-lg" onclick="nav(${globalSlideIndex - 1})">Previous</button>
+                        <button id="btn-next-${globalSlideIndex}" class="btn-freak py-2 px-6 text-lg opacity-50 cursor-not-allowed" onclick="nextSlide(${globalSlideIndex})">Next Step ➔</button>
+                    </div>
+                </div>`;
+                globalSlideIndex++;
+            });
+
+            // Generate LEVEL 2 (Slides 12-21)
+            l2_data.forEach((q, i) => {
+                html += `
+                <div id="slide-${globalSlideIndex}" class="slide-container flex-col p-8">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="bree-font text-3xl text-[var(--sky-blue)]">LEVEL 2: THE CHALLENGE</h2>
+                        <span class="text-lg font-bold bg-[var(--charcoal)] border-2 border-[var(--sky-blue)] px-3 py-1 text-[var(--sky-blue)]">${i + 1} / 10</span>
+                    </div>
+                    <p class="text-xl font-bold text-gray-300 mb-4">Read the clue. Use the verb to <span class="text-[var(--primary-yellow)] underline">write</span> and <span class="text-[var(--primary-yellow)] underline">speak</span> the transition.</p>
+                    
+                    <div class="flex-grow flex flex-col justify-center px-10">
+                        <div class="bg-black/40 p-5 rounded border-l-8 border-[var(--sky-blue)] mb-4">
+                            <p class="text-lg text-gray-400 font-bold mb-1">SITUATION:</p>
+                            <p class="text-2xl font-black text-white">"${q.sit}"</p>
+                            <div class="mt-3 inline-block bg-[var(--primary-yellow)] text-[var(--charcoal)] font-black text-lg px-3 py-1 transform -skew-x-12">TARGET VERB: ${q.verb}</div>
+                        </div>
+
+                        <input type="text" id="input-l2-${i}" class="freak-input text-xl py-2 mb-2" placeholder="Type the full sentence here...">
+                        
+                        <div class="flex justify-between items-center w-full mt-2" id="l2-grade-${i}">
+                            <div class="flex gap-4">
+                                <button class="grade-btn pass py-1 px-3 text-sm" onclick="handleWritten(2, ${i}, 1, ${globalSlideIndex})">✔️ Correct / Great Effort (1pt)</button>
+                                <button class="grade-btn fail py-1 px-3 text-sm" onclick="handleWritten(2, ${i}, 0, ${globalSlideIndex})">❌ Needs Work (0pt)</button>
+                            </div>
+                            <div class="text-right">
+                                <button class="text-sm text-gray-500 hover:text-white underline mb-1" onclick="document.getElementById('l2-exp-${i}').classList.toggle('hidden-vibe')">Show Expected Answer</button>
+                                <br><span id="l2-exp-${i}" class="hidden-vibe text-lg text-white font-bold italic">"${q.exp}"</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="w-full border-t-2 border-gray-700 pt-4 mb-4 text-center z-10">
+                        <p class="text-lg text-[var(--primary-yellow)]">👉 <strong>Teacher:</strong> <span class="text-white font-bold">"${q.prompt}"</span></p>
+                    </div>
+
+                    <div class="w-full flex justify-between mt-auto">
+                        <button class="btn-freak btn-dark py-2 px-6 text-lg" onclick="nav(${globalSlideIndex - 1})">Previous</button>
+                        <button id="btn-next-${globalSlideIndex}" class="btn-freak btn-yellow py-2 px-6 text-lg opacity-50 cursor-not-allowed" onclick="nextSlide(${globalSlideIndex})">Next Step ➔</button>
+                    </div>
+                </div>`;
+                globalSlideIndex++;
+            });
+
+            // Generate LEVEL 3 (Slides 22-31)
+            l3_data.forEach((q, i) => {
+                let isLastSlide = (globalSlideIndex === 31);
+                let nextAction = isLastSlide ? `finishLesson()` : `nextSlide(${globalSlideIndex})`;
+                let nextText = isLastSlide ? `Finish Lesson ➔` : `Next Step ➔`;
+
+                html += `
+                <div id="slide-${globalSlideIndex}" class="slide-container flex-col p-8">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="bree-font text-3xl text-white">LEVEL 3: YOUR TURN</h2>
+                        <span class="text-lg font-bold bg-[var(--charcoal)] border-2 border-white px-3 py-1 text-white">${i + 1} / 10</span>
+                    </div>
+                    <p class="text-xl font-bold text-gray-300 mb-6">Gelmy is looking at YOU. Tell her the absolute truth.</p>
+                    
+                    <div class="flex-grow flex flex-col justify-center px-10">
+                        <div class="flex items-center gap-4 mb-4">
+                            <h1 class="text-5xl font-black text-[var(--primary-yellow)]">${q.verb}</h1>
+                            <p class="text-xl font-bold">"${q.prompt}"</p>
+                        </div>
+
+                        <input type="text" id="input-l3-${i}" class="freak-input text-xl py-2 mb-2" placeholder="Write your truth here...">
+                        
+                        <div class="flex gap-4 w-full mt-2" id="l3-grade-${i}">
+                            <button class="grade-btn pass py-1 px-3 text-sm" onclick="handleWritten(3, ${i}, 1, ${globalSlideIndex})">✔️ Honest & Clear (1pt)</button>
+                            <button class="grade-btn fail py-1 px-3 text-sm" onclick="handleWritten(3, ${i}, 0, ${globalSlideIndex})">❌ Try Again (0pt)</button>
+                        </div>
+                    </div>
+
+                    <div class="w-full border-t-2 border-gray-700 pt-4 mb-4 text-center z-10">
+                        <p class="text-lg text-[var(--sky-blue)]">👉 <strong>Teacher Follow-up:</strong> <span class="text-white font-bold">"${q.followUp}"</span></p>
+                    </div>
+
+                    <div class="w-full flex justify-between mt-auto">
+                        <button class="btn-freak btn-dark py-2 px-6 text-lg" onclick="nav(${globalSlideIndex - 1})">Previous</button>
+                        <button id="btn-next-${globalSlideIndex}" class="btn-freak py-2 px-6 text-lg opacity-50 cursor-not-allowed" onclick="${nextAction}">${nextText}</button>
+                    </div>
+                </div>`;
+                globalSlideIndex++;
+            });
+
+            document.getElementById('dynamic-slides-wrapper').innerHTML = html;
+        }
+
+        // --- INTERACTION LOGIC ---
+
+        function handleL1(qIndex, selected, correct, slideIndex) {
+            const container = document.getElementById(`l1-opts-${qIndex}`);
+            const btns = container.querySelectorAll('.option-btn');
+            const expBox = document.getElementById(`l1-explanation-${qIndex}`);
+            
+            // Visual feedback
+            btns.forEach(b => b.classList.remove('selected-correct', 'selected-wrong'));
+            if(selected === correct) {
+                btns[selected-1].classList.add('selected-correct');
+                if(expBox) expBox.classList.add('hidden-vibe'); // Hide explanation if they correct themselves
+            } else {
+                btns[selected-1].classList.add('selected-wrong');
+                btns[correct-1].classList.add('selected-correct'); 
+                if(expBox) expBox.classList.remove('hidden-vibe'); // Show explanation when wrong
+            }
+            
+            // Score tracking (only on the very first attempt)
+            if(!answeredQuestions[qIndex]) {
+                if(selected === correct) scores.level1++;
+                answeredQuestions[qIndex] = true;
+            }
+
+            unlockNext(slideIndex);
+        }
+
+        function handleWritten(levelNum, qIndex, points, slideIndex) {
+            const globalQIndex = levelNum === 2 ? 10 + qIndex : 20 + qIndex;
+            const inputField = document.getElementById(`input-l${levelNum}-${qIndex}`);
+            const gradeContainer = document.getElementById(`l${levelNum}-grade-${qIndex}`);
+            const btns = gradeContainer.querySelectorAll('.grade-btn');
+            
+            if(inputField.value.trim() === '') {
+                alert("The student must write their sentence first!");
+                inputField.focus();
+                return;
+            }
+
+            btns.forEach(b => b.classList.remove('selected-correct', 'selected-wrong'));
+            if (points === 1) {
+                btns[0].classList.add('selected-correct');
+            } else {
+                btns[1].classList.add('selected-wrong');
+            }
+
+            if (!answeredQuestions[globalQIndex]) {
+                answeredQuestions[globalQIndex] = true;
+            }
+
+            const previousPoints = parseInt(gradeContainer.dataset.points || 0);
+            scores[`level${levelNum}`] = scores[`level${levelNum}`] - previousPoints + points;
+            gradeContainer.dataset.points = points;
+
+            unlockNext(slideIndex);
+        }
+
+        function unlockNext(slideIndex) {
+            const btn = document.getElementById(`btn-next-${slideIndex}`);
+            if(btn) {
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function nextSlide(currentSlideIdx) {
+            const qIndex = currentSlideIdx - 2; 
+            if(answeredQuestions[qIndex]) {
+                nav(currentSlideIdx + 1);
+            } else {
+                alert("Don't skip the vibe! Answer or grade this question before moving on.");
+            }
+        }
+
+        function finishLesson() {
+            if(answeredQuestions[29]) {
+                const total = scores.level1 + scores.level2 + scores.level3;
+                document.getElementById('final-score').innerText = total;
+                nav(32);
+            } else {
+                alert("Grade the final item to see the total score!");
+            }
+        }
+
+        // Initialize App
+        generateAllSlides();
+
+    </script>
+</body>
+</html>

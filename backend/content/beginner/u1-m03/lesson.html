@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freakn' Lesson: Naming My World (A1 Edition)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #111111;
+            color: white;
+            font-family: 'Montserrat', sans-serif;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .title-bree {
+            font-family: 'Bree Serif', serif;
+            text-transform: uppercase;
+        }
+        
+        /* App Structure */
+        #app-wrapper {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .slide {
+            display: none;
+            height: 100%;
+            width: 100%;
+            overflow-y: auto;
+            animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .slide.active {
+            display: flex;
+        }
+
+        /* Aesthetic Components */
+        .split-left { background-color: #E4DF33; color: #30302F; }
+        .split-right { background-color: #30302F; color: white; }
+        .layout-split { display: flex; width: 100%; min-height: 100%; }
+        .layout-split > .half { width: 50%; padding: 4rem; display: flex; flex-direction: column; justify-content: center; }
+
+        .skewed-block {
+            transform: skew(-12deg);
+            background-color: #E4DF33;
+            color: #30302F;
+            padding: 1rem 2rem;
+            display: inline-block;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.3);
+        }
+        .skewed-block > div { transform: skew(12deg); }
+
+        .gossip-paper {
+            background-color: white;
+            color: black;
+            font-family: 'Bree Serif', serif;
+            padding: 2.5rem;
+            transform: rotate(-2deg);
+            box-shadow: 10px 10px 0px #E4DF33;
+            border: 3px solid #30302F;
+            font-size: 1.5rem;
+            line-height: 1.4;
+        }
+
+        /* Buttons */
+        .btn-freak {
+            background-color: #93E5FF;
+            color: #30302F;
+            font-weight: 900;
+            text-transform: uppercase;
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            border: 4px solid transparent;
+            transition: all 0.2s;
+            cursor: pointer;
+            text-align: center;
+            font-size: 1.25rem;
+        }
+        .btn-freak:hover { transform: translateY(-4px); border-color: white; box-shadow: 0 8px 20px rgba(147, 229, 255, 0.4); }
+        
+        .option-btn {
+            background-color: #444;
+            color: white;
+            border: 4px solid #555;
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            display: block;
+            width: 100%;
+            margin-bottom: 0.75rem;
+        }
+        .option-btn:hover { border-color: #E4DF33; background-color: #555; transform: translateX(10px); }
+        .option-btn.correct { background-color: #93E5FF; color: #30302F; border-color: white; transform: translateX(10px); }
+        .option-btn.wrong { background-color: #FF4444; color: white; border-color: white; }
+
+        /* Navigation Footer */
+        #nav-bar {
+            height: 80px;
+            background-color: #000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 3rem;
+            border-top: 3px solid #333;
+            flex-shrink: 0;
+        }
+        .btn-nav {
+            background-color: transparent;
+            border: 3px solid #E4DF33;
+            color: #E4DF33;
+            font-weight: 900;
+            padding: 0.75rem 2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            font-size: 1.1rem;
+        }
+        .btn-nav:hover { background-color: #E4DF33; color: #30302F; }
+
+        /* Progress Bar */
+        .progress-bar { height: 8px; background-color: #222; width: 100%; flex-shrink: 0; }
+        .progress-fill { height: 100%; background-color: #E4DF33; width: 0%; transition: width 0.4s ease-out; }
+
+        .teacher-note {
+            background-color: rgba(255,255,255,0.1);
+            border-left: 5px solid #93E5FF;
+            padding: 1rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 1.5rem;
+        }
+        
+        .teacher-note-light {
+            background-color: white;
+            color: #30302F;
+            border-left: 5px solid #30302F;
+            padding: 1rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        @media (max-width: 820px) {
+            .layout-split { flex-direction: column; }
+            .layout-split > .half { width: 100%; padding: 1.25rem 1rem; }
+
+            /* Diagonal / big-number template (w-1/3 + w-2/3 rows) */
+            .slide > .flex.w-full.h-full { flex-direction: column; height: auto; min-height: 100%; }
+            .slide > .flex.w-full.h-full > [class*="w-1/3"] {
+                width: 100%;
+                border-right: none;
+                border-bottom: 8px solid #30302F;
+                padding: 1rem;
+                font-size: 4rem;
+            }
+            .slide > .flex.w-full.h-full > [class*="w-2/3"] { width: 100%; padding: 1.25rem 1rem; }
+
+            /* Giant deck typography down to legible sizes */
+            .slide h1[class*="text-["] { font-size: clamp(2.25rem, 12vw, 3.25rem); line-height: 1.1; }
+            .slide .text-\[400px\] { font-size: 8rem; }
+
+            /* Slide-level big paddings down to 1rem */
+            .slide[class*="p-12"] { padding: 1rem; }
+            .slide [class*="p-16"], .slide [class*="p-12"], .slide [class*="p-10"] { padding: 1rem; }
+
+            .gossip-paper { padding: 1.25rem; font-size: 1.1rem; }
+            .skewed-block { padding: 0.5rem 1rem; }
+            .skewed-block h2, .skewed-block p { font-size: 1.1rem; }
+
+            .btn-freak { padding: 0.85rem 1.5rem; font-size: 1rem; min-height: 44px; }
+            .option-btn { padding: 0.9rem 1rem; font-size: 1rem; min-height: 44px; }
+
+            #nav-bar { padding: 0.5rem 1rem; height: auto; min-height: 64px; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+            .btn-nav { padding: 0.6rem 1.25rem; font-size: 0.9rem; min-height: 44px; }
+            #slide-counter { order: 3; width: 100%; text-align: center; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+    <div id="app-wrapper">
+        
+        <!-- SLIDE 1: Title -->
+        <div class="slide active flex-col items-center justify-center bg-[#30302F] relative">
+            <div class="absolute inset-0 opacity-10 flex items-center justify-center pointer-events-none text-[400px]">💻</div>
+            <div class="z-10 flex flex-col items-center">
+                <div class="skewed-block mb-8"><div><h2 class="text-3xl font-bold tracking-widest">UNIT 1 • MODULE 3</h2></div></div>
+                <h1 class="text-[110px] title-bree leading-none text-[#E4DF33] text-center mb-6 drop-shadow-lg">NAMING<br>MY WORLD</h1>
+                <p class="text-3xl font-bold text-white max-w-3xl text-center mb-10 leading-relaxed">Name the objects around you. Learn to use "A", "An", and "The". Tell people what you have, need, and want!</p>
+                <div class="text-[#93E5FF] font-black text-2xl tracking-widest uppercase border-4 border-[#93E5FF] px-6 py-3">The Foundations • Part 3</div>
+            </div>
+        </div>
+
+        <!-- SLIDE 2: Context / Story -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-left">
+                    <h1 class="text-[80px] title-bree leading-none mb-8">THE MESSY<br>HOUSE</h1>
+                    <p class="text-2xl font-bold mb-8">The big party is over. Gelmy is cleaning the house. It is a disaster!</p>
+                    <div class="space-y-6 text-xl font-medium">
+                        <p><strong>El Pa:</strong> "Mom, I need a pen! I want to write a number!"</p>
+                        <p><strong>Titó:</strong> "Gelmy, how do I use this computer? It belongs to you."</p>
+                        <p><strong>Gelmy:</strong> "Please! Look at this mess. Whose apple is this?"</p>
+                    </div>
+                </div>
+                <div class="half split-right items-center text-center">
+                    <div class="gossip-paper max-w-lg mb-8">
+                        "They need to learn the names of their things. And they need to know 'Have', 'Need', and 'Want'!"
+                        <div class="text-right text-gray-500 text-lg mt-4">- The Cleaning Lady</div>
+                    </div>
+                    <p class="text-[#93E5FF] font-bold text-2xl uppercase mt-8">Are you ready to clean up?</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 3: Reading Section -->
+        <div class="slide flex-col items-center justify-center bg-gray-200 p-12 overflow-y-auto text-[#30302F]">
+            <h1 class="title-bree text-6xl mb-8 text-[#30302F]">Reading Time</h1>
+            <div class="bg-white p-10 rounded-xl border-4 border-[#30302F] shadow-2xl max-w-4xl text-xl leading-relaxed text-[#30302F]">
+                <p class="mb-4"><strong>The Living Room Mess:</strong></p>
+                <p class="mb-4">Gelmy has a big yellow bag. In the bag, she has an apple, a pen, and her ID card. She needs her bag for work.</p>
+                <p class="mb-4">Titó has an old radio on the table. He uses it every morning. The radio belongs to him.</p>
+                <p>El Pa wants a new computer. He has a small phone, but he wants a big screen to play video games.</p>
+            </div>
+            <div class="teacher-note-light mt-8">👉 Talk: Look at the text. Do you listen to the radio in the morning?</div>
+        </div>
+
+        <!-- LEVEL 1 INTRO -->
+        <div class="slide flex-col items-center justify-center bg-[#E4DF33] text-[#30302F]">
+            <h1 class="text-[120px] title-bree leading-none text-center mb-4">LEVEL 1:<br>THE VIBE</h1>
+            <div class="skewed-block bg-[#30302F] text-white mb-8"><div><p class="text-3xl font-black tracking-widest">OBJECTS & ACTIONS</p></div></div>
+            <p class="text-2xl font-bold mt-2">Find the correct object or action word.</p>
+        </div>
+
+        <!-- LEVEL 1 - 10 QUESTIONS -->
+        <!-- Q1 -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-left">
+                    <h3 class="title-bree text-4xl mb-8">Question 1/10</h3>
+                    <div class="gossip-paper">Gelmy finds fruit on the table. She says: "I have _____ apple."</div>
+                    <div class="teacher-note-light">👉 Talk: Do you eat fruit every day?</div>
+                </div>
+                <div class="half split-right items-center">
+                    <div class="w-full max-w-lg">
+                        <button class="option-btn" onclick="checkAnswer(this, false, 'an', 'No! Apple starts with a vowel (A, E, I, O, U).')">a</button>
+                        <button class="option-btn" onclick="checkAnswer(this, true, 'an', 'Correct! AN apple (because it starts with A).')">an</button>
+                        <button class="option-btn" onclick="checkAnswer(this, false, 'an', 'No. She is just naming one random apple.')">the</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q2 -->
+        <div class="slide flex-col items-center justify-center bg-[#30302F] p-12">
+            <h3 class="text-[#93E5FF] text-3xl font-black mb-8 uppercase">Question 2/10</h3>
+            <h2 class="text-4xl text-center mb-12 max-w-4xl font-bold">El Pa wants to write on paper. He says: "I need a _______."</h2>
+            <div class="flex flex-col space-y-4 w-full max-w-2xl">
+                <button class="option-btn text-center" onclick="checkAnswer(this, true, 'Pen', 'Perfect! You use a pen to write.')">Pen</button>
+                <button class="option-btn text-center" onclick="checkAnswer(this, false, 'Pen', 'No. You sit at a desk.')">Desk</button>
+                <button class="option-btn text-center" onclick="checkAnswer(this, false, 'Pen', 'No. You sit on a chair.')">Chair</button>
+            </div>
+            <div class="teacher-note text-[#E4DF33] border-[#E4DF33] mt-8">👉 Talk: What color is your bag or backpack?</div>
+            <div class="feedback-box hidden w-full max-w-2xl mt-6 p-6 rounded text-xl font-bold text-center"></div>
+        </div>
+
+        <!-- Q3 -->
+        <div class="slide">
+            <div class="flex w-full h-full bg-[#E4DF33] text-[#30302F]">
+                <div class="w-1/3 flex items-center justify-center border-r-8 border-[#30302F] bg-[#30302F] text-[#E4DF33] text-[200px] title-bree">03</div>
+                <div class="w-2/3 flex flex-col justify-center p-16 relative">
+                    <div class="text-4xl font-bold mb-10 leading-tight">Titó is looking at a computer. He asks: <br><br><span class="bg-white px-4 py-2 italic rotate-1 inline-block text-[#30302F]">"How do I _______ this?"</span></div>
+                    <div class="space-y-4 max-w-2xl">
+                        <button class="option-btn bg-[#30302F] text-white" onclick="checkAnswer(this, false, 'use', 'No. He wants to know how to operate it, not want it.')">want</button>
+                        <button class="option-btn bg-[#30302F] text-white" onclick="checkAnswer(this, true, 'use', 'Yes! Use = operate or work with something.')">use</button>
+                        <button class="option-btn bg-[#30302F] text-white" onclick="checkAnswer(this, false, 'use', 'No. Belong means it is his property.')">belong</button>
+                    </div>
+                    <div class="teacher-note-light mt-8">👉 Talk: Do you work with technology in your life?</div>
+                    <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q4 -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-right">
+                    <h3 class="text-[#93E5FF] font-black text-4xl mb-8 uppercase">Question 4/10</h3>
+                    <p class="text-3xl font-bold mb-8">El Pa says:</p>
+                    <div class="bg-gray-800 p-6 border-l-8 border-[#E4DF33] text-2xl italic">"I don't have water, but I _______ it. I am very thirsty!"</div>
+                    <div class="teacher-note text-[#E4DF33] border-[#E4DF33] mt-8">👉 Talk: What cold drink do you like on a hot day?</div>
+                </div>
+                <div class="half split-left items-center bg-gray-200 text-[#30302F]">
+                    <div class="w-full max-w-lg">
+                        <button class="option-btn bg-white text-[#30302F] border-[#30302F]" onclick="checkAnswer(this, true, 'need', 'Yes! Need = it is necessary for your body.')">need</button>
+                        <button class="option-btn bg-white text-[#30302F] border-[#30302F]" onclick="checkAnswer(this, false, 'need', 'No. He wants to drink it, not just use it.')">use</button>
+                        <button class="option-btn bg-white text-[#30302F] border-[#30302F]" onclick="checkAnswer(this, false, 'need', 'No. Belong is for property.')">belong</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q5 -->
+        <div class="slide flex-col items-center justify-center bg-[#93E5FF] text-[#30302F] p-12">
+            <h3 class="text-[#30302F] text-3xl font-black mb-8 uppercase bg-white px-4 py-1">Question 5/10</h3>
+            <div class="bg-white p-8 rounded-xl shadow-2xl transform -rotate-1 mb-10 max-w-4xl border-4 border-[#30302F]">
+                <h2 class="text-4xl font-bold mb-4 text-center">Gelmy holds a phone. "This is not my phone. Who does it _______ to?"</h2>
+            </div>
+            <div class="flex flex-col space-y-4 w-full max-w-2xl">
+                <button class="option-btn bg-[#30302F] text-white" onclick="checkAnswer(this, false, 'belong', 'No. Have does not go with the word TO.')">have</button>
+                <button class="option-btn bg-[#30302F] text-white" onclick="checkAnswer(this, true, 'belong', 'Exactly! Belong to = whose property is it?')">belong</button>
+                <button class="option-btn bg-[#30302F] text-white" onclick="checkAnswer(this, false, 'belong', 'No. She is asking who the owner is.')">want</button>
+            </div>
+            <div class="teacher-note-light mt-8 text-center">👉 Talk: Look at your shoes. Who bought them for you?</div>
+            <div class="feedback-box hidden w-full max-w-2xl mt-6 p-6 rounded text-xl font-bold text-center"></div>
+        </div>
+
+        <!-- Q6 -->
+        <div class="slide">
+            <div class="flex w-full h-full bg-[#30302F] text-white">
+                <div class="w-1/3 flex items-center justify-center border-r-8 border-[#93E5FF] bg-[#93E5FF] text-[#30302F] text-[200px] title-bree">06</div>
+                <div class="w-2/3 flex flex-col justify-center p-16 relative">
+                    <div class="text-4xl font-bold mb-10 leading-tight">Titó is tired. He says: <br><br><span class="text-[#93E5FF]">"I want to sit down. I need _____ chair."</span></div>
+                    <div class="space-y-4 max-w-2xl">
+                        <button class="option-btn" onclick="checkAnswer(this, true, 'a', 'Correct! A chair (starts with a consonant C).')">a</button>
+                        <button class="option-btn" onclick="checkAnswer(this, false, 'a', 'No. Chair starts with a consonant, not a vowel.')">an</button>
+                    </div>
+                    <div class="teacher-note text-[#E4DF33] border-[#E4DF33] mt-8">👉 Talk: Are you comfortable right now?</div>
+                    <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q7 -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-left">
+                    <h3 class="title-bree text-4xl mb-8">Question 7/10</h3>
+                    <div class="gossip-paper">Gelmy points to ONE specific book on the table. She says: "Give me _____ book."</div>
+                    <div class="teacher-note-light mt-8">👉 Talk: Do you read at night or in the morning?</div>
+                </div>
+                <div class="half split-right items-center">
+                    <div class="w-full max-w-lg">
+                        <button class="option-btn" onclick="checkAnswer(this, false, 'the', 'No. She wants that specific one on the table.')">a</button>
+                        <button class="option-btn" onclick="checkAnswer(this, true, 'the', 'Yes! THE book = the specific one she is pointing at.')">the</button>
+                        <button class="option-btn" onclick="checkAnswer(this, false, 'the', 'No. Book starts with a consonant.')">an</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q8 -->
+        <div class="slide flex-col items-center justify-center bg-gray-900 p-12 text-white">
+            <h3 class="text-[#E4DF33] text-3xl font-black mb-8 uppercase">Question 8/10</h3>
+            <h2 class="text-4xl text-center mb-12 font-bold">El Pa sees a Ferrari on TV. He says: "I don't need a car, but I _______ one!"</h2>
+            <div class="flex flex-col space-y-4 w-full max-w-3xl">
+                <button class="option-btn text-center text-xl py-5" onclick="checkAnswer(this, false, 'want', 'No. He doesn\'t have it yet.')">have</button>
+                <button class="option-btn text-center text-xl py-5" onclick="checkAnswer(this, false, 'want', 'No. He cannot use it from the TV.')">use</button>
+                <button class="option-btn text-center text-xl py-5" onclick="checkAnswer(this, true, 'want', 'Yes! Want = you desire it, but it is not necessary.')">want</button>
+            </div>
+            <div class="teacher-note text-[#E4DF33] border-[#E4DF33] mt-8">👉 Talk: What is your dream car?</div>
+            <div class="feedback-box hidden w-full max-w-3xl mt-6 p-6 rounded text-xl font-bold text-center"></div>
+        </div>
+
+        <!-- Q9 -->
+        <div class="slide">
+            <div class="flex w-full h-full bg-[#E4DF33] text-[#30302F]">
+                <div class="w-1/3 flex items-center justify-center border-r-8 border-[#30302F] bg-[#30302F] text-[#E4DF33] text-[200px] title-bree">09</div>
+                <div class="w-2/3 flex flex-col justify-center p-16 relative">
+                    <div class="text-4xl font-bold mb-10 leading-tight">You work in an office. What do you sit at to put your computer and papers?</div>
+                    <div class="space-y-4 max-w-2xl">
+                        <button class="option-btn bg-[#30302F] text-white" onclick="checkAnswer(this, true, 'A desk', 'Yes! A desk is a work table.')">A desk</button>
+                        <button class="option-btn bg-[#30302F] text-white" onclick="checkAnswer(this, false, 'A desk', 'No. You write with a pen, you do not put a computer on it.')">A pen</button>
+                    </div>
+                    <div class="teacher-note-light mt-8">👉 Talk: Where do you study or work in your house?</div>
+                    <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q10 -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-right">
+                    <h3 class="text-[#93E5FF] font-black text-4xl mb-8 uppercase">Question 10/10</h3>
+                    <p class="text-3xl font-bold mb-8">Titó shows his computer. He says:</p>
+                    <div class="bg-gray-800 p-6 border-l-8 border-[#E4DF33] text-2xl italic">"I have _____ old computer."</div>
+                    <div class="teacher-note text-[#E4DF33] border-[#E4DF33] mt-8">👉 Talk: Is your cell phone fast or slow?</div>
+                </div>
+                <div class="half split-left items-center bg-gray-200 text-[#30302F]">
+                    <div class="w-full max-w-lg">
+                        <button class="option-btn bg-white text-[#30302F] border-[#30302F]" onclick="checkAnswer(this, false, 'an', 'No. Old starts with an O (vowel).')">a</button>
+                        <button class="option-btn bg-white text-[#30302F] border-[#30302F]" onclick="checkAnswer(this, true, 'an', 'Perfect. AN old computer.')">an</button>
+                        <button class="option-btn bg-white text-[#30302F] border-[#30302F]" onclick="checkAnswer(this, false, 'an', 'No. He is introducing the object for the first time in general.')">the</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LEVEL 2 INTRO -->
+        <div class="slide flex-col items-center justify-center bg-[#93E5FF] text-[#30302F]">
+            <h1 class="text-[120px] title-bree leading-none text-center mb-4">LEVEL 2:<br>THE GAME</h1>
+            <div class="skewed-block bg-[#30302F] text-white mb-8"><div><p class="text-3xl font-black tracking-widest">FIX THE MISTAKES</p></div></div>
+            <p class="text-2xl font-bold mt-2">Correct the family's errors with objects!</p>
+        </div>
+
+        <!-- LEVEL 2 - 10 QUESTIONS -->
+        <!-- Q11 -->
+        <div class="slide flex-col items-center justify-center bg-[#30302F] p-12 text-white">
+            <h3 class="text-[#93E5FF] text-3xl font-black mb-8 uppercase">Challenge 1/10</h3>
+            <h2 class="text-4xl text-center mb-12 max-w-4xl font-bold">Gelmy writes a list: "I have a umbrella." Correct it!</h2>
+            <div class="flex flex-col space-y-4 w-full max-w-2xl">
+                <button class="option-btn text-center" onclick="checkAnswer(this, true, 'I have an umbrella.', 'Yes! Umbrella starts with U (vowel), so we use AN.')">"I have an umbrella."</button>
+                <button class="option-btn text-center" onclick="checkAnswer(this, false, 'I have an umbrella.', 'No. We don\'t normally say one umbrella like this in a simple sentence.')">"I have one umbrella."</button>
+            </div>
+            <div class="teacher-note text-[#E4DF33] border-[#E4DF33] mt-8">👉 Talk: Is it raining in your city today?</div>
+            <div class="feedback-box hidden w-full max-w-2xl mt-6 p-6 rounded text-xl font-bold text-center"></div>
+        </div>
+
+        <!-- Q12 -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-left">
+                    <h3 class="title-bree text-4xl mb-8">Challenge 2/10</h3>
+                    <div class="gossip-paper">Titó says: "She need a pen."</div>
+                    <div class="teacher-note-light mt-8">👉 Talk: What does the teacher have in their hand right now?</div>
+                </div>
+                <div class="half split-right items-center">
+                    <div class="w-full max-w-lg space-y-4">
+                        <button class="option-btn" onclick="checkAnswer(this, true, 'She needs a pen.', 'Exactly. He/She/It gets an S on the action (needs).')">"She needs a pen."</button>
+                        <button class="option-btn" onclick="checkAnswer(this, false, 'She needs a pen.', 'No. Have a pen is good, but we are fixing the verb NEED.')">"She have a pen."</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q13 -->
+        <div class="slide">
+            <div class="flex w-full h-full bg-[#30302F] text-white">
+                <div class="w-1/3 flex items-center justify-center border-r-8 border-[#E4DF33] bg-[#E4DF33] text-[#30302F] text-[200px] title-bree">03</div>
+                <div class="w-2/3 flex flex-col justify-center p-16 relative">
+                    <div class="text-4xl font-bold mb-10 leading-tight">Gelmy says: "He use the computer every day."</div>
+                    <div class="space-y-4 max-w-2xl">
+                        <button class="option-btn" onclick="checkAnswer(this, true, 'He uses the computer...', 'Right! He/She/It needs an S (uses).')">"He uses the computer..."</button>
+                        <button class="option-btn" onclick="checkAnswer(this, false, 'He uses the computer...', 'No. We need the S for He.')">"He use a computer..."</button>
+                    </div>
+                    <div class="teacher-note text-[#E4DF33] border-[#E4DF33] mt-8">👉 Talk: Who is very good with computers in your house?</div>
+                    <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q14 -->
+        <div class="slide flex-col items-center justify-center bg-gray-200 p-12 text-[#30302F]">
+            <h3 class="text-[#93E5FF] text-3xl font-black mb-8 uppercase">Challenge 4/10</h3>
+            <h2 class="text-4xl font-bold mb-10 text-center">Titó says: "I wants a apple."</h2>
+            <div class="flex flex-col space-y-4 w-full max-w-2xl">
+                <button class="option-btn bg-white text-[#30302F] border-[#30302F]" onclick="checkAnswer(this, false, 'I want an apple.', 'No. Apple starts with A (vowel).')">"I want a apple."</button>
+                <button class="option-btn bg-white text-[#30302F] border-[#30302F]" onclick="checkAnswer(this, true, 'I want an apple.', 'Yep! AN apple. And I does NOT take an S.')">"I want an apple."</button>
+            </div>
+            <div class="teacher-note-light mt-8">👉 Talk: Are you hungry? Do you want food right now?</div>
+            <div class="feedback-box hidden w-full max-w-2xl mt-6 p-6 rounded text-xl font-bold text-center"></div>
+        </div>
+
+        <!-- Q15 -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-right">
+                    <h3 class="text-[#93E5FF] font-black text-4xl mb-8 uppercase">Challenge 5/10</h3>
+                    <p class="text-3xl font-bold mb-8">El Pa holds his phone: "This belong me!"</p>
+                    <div class="teacher-note text-[#E4DF33] border-[#E4DF33]">👉 Talk: Whose classroom or office is this?</div>
+                </div>
+                <div class="half split-left items-center bg-gray-200 text-[#30302F]">
+                    <div class="w-full max-w-lg space-y-4">
+                        <button class="option-btn bg-white text-[#30302F] border-[#30302F]" onclick="checkAnswer(this, true, 'This belongs to me.', 'Correct! THIS = IT. So we need an S: belongs. And we need TO.')">"This belongs to me."</button>
+                        <button class="option-btn bg-white text-[#30302F] border-[#30302F]" onclick="checkAnswer(this, false, 'This belongs to me.', 'No. To is necessary.')">"This belongs me."</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q16 -->
+        <div class="slide">
+            <div class="flex w-full h-full bg-[#93E5FF] text-[#30302F]">
+                <div class="w-1/3 flex items-center justify-center border-r-8 border-[#30302F] bg-[#30302F] text-[#93E5FF] text-[200px] title-bree">06</div>
+                <div class="w-2/3 flex flex-col justify-center p-16 relative">
+                    <div class="text-4xl font-bold mb-10 leading-tight">Titó says: "I have a old phone."</div>
+                    <div class="space-y-4 max-w-2xl">
+                        <button class="option-btn bg-[#30302F] text-white" onclick="checkAnswer(this, true, 'I have an old phone.', 'Yes! Old starts with O (vowel) = AN.')">"I have an old phone."</button>
+                        <button class="option-btn bg-[#30302F] text-white" onclick="checkAnswer(this, false, 'I have an old phone.', 'No. We need the article (an).')">"I have old phone."</button>
+                    </div>
+                    <div class="teacher-note-light mt-8">👉 Talk: What objects do you have in your pocket or bag right now?</div>
+                    <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q17 -->
+        <div class="slide flex-col items-center justify-center bg-[#30302F] p-12 text-white">
+            <h3 class="text-[#E4DF33] text-3xl font-black mb-8 uppercase">Challenge 7/10</h3>
+            <h2 class="text-4xl text-center mb-12 font-bold">Gelmy looks for her favorite book: "Where is an book?"</h2>
+            <div class="flex flex-col space-y-4 w-full max-w-2xl">
+                <button class="option-btn text-center" onclick="checkAnswer(this, false, 'Where is the book?', 'No. She is looking for ONE specific book, not just any book.')">"Where is a book?"</button>
+                <button class="option-btn text-center" onclick="checkAnswer(this, true, 'Where is the book?', 'Yes! She wants HER specific book, so we use THE.')">"Where is the book?"</button>
+            </div>
+            <div class="teacher-note text-[#E4DF33] border-[#E4DF33] mt-8">👉 Talk: Do you like reading stories or watching TV?</div>
+            <div class="feedback-box hidden w-full max-w-2xl mt-6 p-6 rounded text-xl font-bold text-center"></div>
+        </div>
+
+        <!-- Q18 -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-left">
+                    <h3 class="title-bree text-4xl mb-8">Challenge 8/10</h3>
+                    <div class="gossip-paper">El Pa says: "I need an desk."</div>
+                    <div class="teacher-note-light mt-8">👉 Talk: Do you need to buy something this week?</div>
+                </div>
+                <div class="half split-right items-center">
+                    <div class="w-full max-w-lg space-y-4">
+                        <button class="option-btn" onclick="checkAnswer(this, true, 'I need a desk.', 'Perfect. Desk starts with D (consonant), so we use A.')">"I need a desk."</button>
+                        <button class="option-btn" onclick="checkAnswer(this, false, 'I need a desk.', 'No. I goes with NEED, not needs.')">"I needs an desk."</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q19 -->
+        <div class="slide">
+            <div class="flex w-full h-full bg-[#30302F] text-white">
+                <div class="w-1/3 flex items-center justify-center border-r-8 border-[#93E5FF] bg-[#93E5FF] text-[#30302F] text-[200px] title-bree">09</div>
+                <div class="w-2/3 flex flex-col justify-center p-16 relative">
+                    <div class="text-4xl font-bold mb-10 leading-tight">Titó says: "She want the pen."</div>
+                    <div class="space-y-4 max-w-2xl">
+                        <button class="option-btn" onclick="checkAnswer(this, true, 'She wants the pen.', 'Yes! She needs an S on the verb: wants.')">"She wants the pen."</button>
+                        <button class="option-btn" onclick="checkAnswer(this, false, 'She wants the pen.', 'No. We need the S on the action.')">"She want a pen."</button>
+                    </div>
+                    <div class="teacher-note text-[#E4DF33] border-[#E4DF33] mt-8">👉 Talk: What do your friends want? Say "He/She wants..."</div>
+                    <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q20 -->
+        <div class="slide flex-col items-center justify-center bg-[#E4DF33] p-12 text-[#30302F]">
+            <h3 class="text-[#30302F] text-3xl font-black mb-8 uppercase bg-white px-4 py-1 border-2 border-[#30302F]">Challenge 10/10</h3>
+            <h2 class="text-4xl font-bold mb-10">Gelmy says: "They has a big car."</h2>
+            <div class="flex flex-col space-y-4 w-full max-w-2xl">
+                <button class="option-btn bg-[#30302F] text-white" onclick="checkAnswer(this, true, 'They have a big car.', 'Simple and correct. They HAVE.')">"They have a big car."</button>
+                <button class="option-btn bg-[#30302F] text-white" onclick="checkAnswer(this, false, 'They have a big car.', 'No. They is plural, so we use HAVE.')">"They has an big car."</button>
+            </div>
+            <div class="teacher-note-light mt-8">👉 Talk: Do you travel in a car or a bus?</div>
+            <div class="feedback-box hidden w-full max-w-2xl mt-6 p-6 rounded text-xl font-bold text-center"></div>
+        </div>
+
+        <!-- LEVEL 3 INTRO -->
+        <div class="slide flex-col items-center justify-center bg-[#30302F]">
+            <div class="skewed-block mb-6"><div><h2 class="text-3xl text-[#30302F] font-black tracking-widest">LEVEL 3</h2></div></div>
+            <h1 class="text-[130px] title-bree text-center text-[#E4DF33] mb-4 leading-none">YOUR TURN</h1>
+            <p class="text-3xl font-bold mt-4 text-white">Look at the teacher and speak!</p>
+        </div>
+
+        <!-- LEVEL 3 - 10 QUESTIONS -->
+        <!-- Q21 -->
+        <div class="slide flex-col items-center justify-center bg-[#93E5FF] text-[#30302F] p-12">
+            <h3 class="text-xl font-black uppercase">Your Turn 1/10</h3>
+            <div class="gossip-paper text-4xl text-center max-w-4xl mb-12">"Look in your bag or on your desk. What do you have?"</div>
+            <p class="text-3xl font-bold mb-12 bg-white px-8 py-4 border-2 border-[#30302F]">"I have a/an..."</p>
+            <div class="teacher-note-light mb-8">👉 Talk: How many things are in your bag?</div>
+            <button class="btn-freak bg-[#30302F] text-white" onclick="this.innerHTML='✔ Approved'; setTimeout(()=>nav(1), 1000)">I DID IT!</button>
+        </div>
+
+        <!-- Q22 -->
+        <div class="slide flex-col items-center justify-center bg-[#30302F] text-white p-12">
+            <h3 class="text-xl font-black uppercase">Your Turn 2/10</h3>
+            <h2 class="text-4xl text-center mb-12 font-bold italic border-l-8 border-[#E4DF33] p-10 bg-gray-800">"What do you NEED right now? Water? Rest? A pen?"</h2>
+            <p class="text-3xl font-bold mb-12 text-[#E4DF33]">"I need a/an..."</p>
+            <div class="teacher-note text-[#E4DF33] border-[#E4DF33] mb-8">👉 Talk: Are you thirsty or tired?</div>
+            <button class="btn-freak bg-[#E4DF33] text-[#30302F]" onclick="this.innerHTML='✔ Approved'; setTimeout(()=>nav(1), 1000)">I DID IT!</button>
+        </div>
+
+        <!-- Q23 -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-left items-center text-center">
+                    <h3 class="title-bree text-5xl mb-8">Your Turn 3/10</h3>
+                    <p class="text-4xl font-bold">What do you WANT for your birthday?</p>
+                </div>
+                <div class="half split-right items-center text-center">
+                    <p class="text-3xl font-bold mb-12 text-[#93E5FF]">"I want a/an..."</p>
+                    <div class="teacher-note text-[#E4DF33] border-[#E4DF33] mb-8">👉 Talk: When is your birthday?</div>
+                    <button class="btn-freak bg-[#93E5FF] text-[#30302F] w-full max-w-md" onclick="this.innerHTML='✔ Approved'; setTimeout(()=>nav(1), 1000)">I DID IT!</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q24 -->
+        <div class="slide flex-col items-center justify-center bg-[#E4DF33] text-[#30302F] p-12">
+            <h3 class="text-xl font-black uppercase">Your Turn 4/10</h3>
+            <div class="gossip-paper text-4xl text-center max-w-4xl mb-12">"Point to an object in the room. What is it?"</div>
+            <p class="text-3xl font-bold mb-12 bg-white px-8 py-4 border-4 border-[#30302F]">"This is a/an..."</p>
+            <div class="teacher-note-light mb-8">👉 Talk: Is the classroom big or small?</div>
+            <button class="btn-freak bg-[#30302F] text-white" onclick="this.innerHTML='✔ Approved'; setTimeout(()=>nav(1), 1000)">I DID IT!</button>
+        </div>
+
+        <!-- Q25 -->
+        <div class="slide flex-col items-center justify-center bg-[#30302F] text-white p-12">
+            <h3 class="text-[#93E5FF] text-4xl font-black mb-12 uppercase">Your Turn 5/10</h3>
+            <h2 class="text-5xl text-center mb-12 font-bold">"What do you USE every day for your job or school?"</h2>
+            <p class="text-3xl font-bold mb-12 text-[#93E5FF] border-2 border-[#93E5FF] p-4 rounded-lg">"I use a/an..."</p>
+            <div class="teacher-note text-[#E4DF33] border-[#E4DF33] mb-8">👉 Talk: Do you work in an office or outside?</div>
+            <button class="btn-freak bg-[#93E5FF] text-[#30302F]" onclick="this.innerHTML='✔ Approved'; setTimeout(()=>nav(1), 1000)">I DID IT!</button>
+        </div>
+
+        <!-- Q26 -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-right items-center text-center">
+                    <h3 class="text-[#E4DF33] text-5xl font-black mb-8 uppercase">Your Turn 6/10</h3>
+                    <p class="text-4xl font-bold mb-8">"Look at the teacher's desk. Name ONE thing on it!"</p>
+                </div>
+                <div class="half split-left items-center text-center">
+                    <p class="text-3xl font-bold mb-12 border-b-4 border-[#30302F] pb-4 text-[#30302F]">"A/An [object]"</p>
+                    <div class="teacher-note-light mb-8">👉 Talk: Does the teacher have a coffee?</div>
+                    <button class="btn-freak bg-[#30302F] text-white w-full max-w-md" onclick="this.innerHTML='✔ Approved'; setTimeout(()=>nav(1), 1000)">I DID IT!</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q27 -->
+        <div class="slide flex-col items-center justify-center bg-[#93E5FF] text-[#30302F] p-12">
+            <h3 class="text-xl font-black uppercase">Your Turn 7/10</h3>
+            <div class="gossip-paper text-4xl text-center max-w-4xl mb-12 transform rotate-1">"Hold your phone. Who is the owner?"</div>
+            <p class="text-3xl font-bold mb-12 bg-white px-8 py-4 border-4 border-[#30302F] shadow-xl text-[#30302F]">"This belongs to me."</p>
+            <div class="teacher-note-light mb-8">👉 Talk: Is it an expensive item?</div>
+            <button class="btn-freak bg-[#30302F] text-white" onclick="this.innerHTML='✔ Approved'; setTimeout(()=>nav(1), 1000)">I DID IT!</button>
+        </div>
+
+        <!-- Q28 -->
+        <div class="slide flex-col items-center justify-center bg-[#30302F] text-white p-12">
+            <h3 class="text-[#E4DF33] text-4xl font-black mb-12 uppercase">Your Turn 8/10</h3>
+            <h2 class="text-5xl text-center mb-12 font-bold">"Tell me something you WANT, but you don't NEED."</h2>
+            <p class="text-3xl font-bold mb-12 text-[#E4DF33]">"I want a... but I don't need it."</p>
+            <div class="teacher-note text-[#E4DF33] border-[#E4DF33] mb-8">👉 Talk: Do you like shopping?</div>
+            <button class="btn-freak bg-[#E4DF33] text-[#30302F]" onclick="this.innerHTML='✔ Approved'; setTimeout(()=>nav(1), 1000)">I DID IT!</button>
+        </div>
+
+        <!-- Q29 -->
+        <div class="slide flex-col items-center justify-center bg-[#E4DF33] text-[#30302F] p-12">
+            <h3 class="text-xl font-black uppercase">Your Turn 9/10</h3>
+            <div class="gossip-paper text-4xl text-center max-w-4xl mb-12 transform -rotate-2">"Think about your room at home. What is in it?"</div>
+            <p class="text-3xl font-bold mb-12 bg-white px-8 py-4 border-4 border-[#30302F] shadow-xl">"In my room, I have a/an..."</p>
+            <div class="teacher-note-light mb-8">👉 Talk: Is your room messy or clean today?</div>
+            <button class="btn-freak bg-[#30302F] text-white" onclick="this.innerHTML='✔ Approved'; setTimeout(()=>nav(1), 1000)">I DID IT!</button>
+        </div>
+
+        <!-- Q30 -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-left items-center text-center">
+                    <h3 class="title-bree text-6xl mb-8">Your Turn 10/10</h3>
+                    <p class="text-4xl font-bold mb-8 uppercase">WRAP UP!</p>
+                    <p class="text-3xl font-bold">"Raise your hand and tell the teacher you have something to ask!"</p>
+                </div>
+                <div class="half split-right items-center text-center">
+                    <p class="text-3xl font-bold mb-12 text-[#E4DF33] border-b-2 border-[#E4DF33] pb-4">"I have a question!"</p>
+                    <div class="teacher-note text-[#E4DF33] border-[#E4DF33] mb-8">👉 Talk: Ask the teacher a question in English.</div>
+                    <button class="btn-freak bg-[#E4DF33] text-[#30302F] w-full max-w-md" onclick="this.innerHTML='✔ Approved'; setTimeout(()=>nav(1), 1000)">I DID IT!</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- OUTRO -->
+        <div class="slide flex-col items-center justify-center bg-[#30302F] text-white" id="outro-slide">
+            <h1 class="text-[140px] title-bree text-center leading-none mb-8 text-[#93E5FF] drop-shadow-lg">HOUSE<br>CLEANED</h1>
+            <p class="text-4xl font-bold mb-6 text-[#E4DF33]">The mess is gone!</p>
+            <p class="text-2xl mb-12 max-w-3xl text-center text-gray-300">You know your objects, you used A, An, and The perfectly, and you know how to use Have, Want, and Need. Awesome!</p>
+            <button class="btn-freak bg-[#E4DF33] text-[#30302F] text-3xl py-6 px-12" onclick="alert('Module 3 Complete!'); reportarResultado();">FINISH MODULE</button>
+        </div>
+
+    </div> <!-- End App Wrapper -->
+
+    <div id="nav-bar">
+        <button class="btn-nav" onclick="nav(-1)" id="btn-prev">Previous</button>
+        <div class="text-gray-400 font-black tracking-widest text-lg" id="slide-counter">SLIDE 1 / 37</div>
+        <button class="btn-nav bg-[#E4DF33] text-[#30302F] border-[#E4DF33]" onclick="nav(1)" id="btn-next">Next Step ➔</button>
+    </div>
+
+    <script>
+        // Freakn Activity tracking (lesson-quiz)
+        var freaknAnswers = [];
+        function extractQuestionText(slide) {
+            var selectors = ['.gossip-paper', '.bg-gray-800', 'h2', '[class*="text-4xl"]', '[class*="text-5xl"]', '[class*="text-3xl"]'];
+            for (var i = 0; i < selectors.length; i++) {
+                var el = slide.querySelector(selectors[i]);
+                if (el && el.innerText && el.innerText.trim().length > 3) return el.innerText.trim();
+            }
+            return document.title;
+        }
+        function registrarRespuesta(id, pregunta, respuesta, acerto, esperada) {
+            if (freaknAnswers.some(function (a) { return a.id === id; })) return; // 1er intento
+            freaknAnswers.push({ id: id, question: pregunta, answer: respuesta, correct: acerto, expected: esperada });
+        }
+        function reportarResultado() {
+            FreaknActivity.submit({
+                activityId: "lesson-quiz",
+                title: document.title,
+                score: freaknAnswers.filter(function (a) { return a.correct; }).length,
+                maxScore: freaknAnswers.length,
+                answers: freaknAnswers
+            });
+        }
+
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const counter = document.getElementById('slide-counter');
+        const progress = document.getElementById('progress');
+
+        function updateUI() {
+            slides.forEach((s, i) => {
+                s.classList.toggle('active', i === currentSlide);
+            });
+            counter.innerText = `SLIDE ${currentSlide + 1} / ${slides.length}`;
+            const percent = (currentSlide / (slides.length - 1)) * 100;
+            progress.style.width = `${percent}%`;
+            document.getElementById('btn-prev').style.visibility = currentSlide === 0 ? 'hidden' : 'visible';
+            document.getElementById('btn-next').style.visibility = currentSlide === slides.length - 1 ? 'hidden' : 'visible';
+            slides[currentSlide].scrollTop = 0;
+        }
+
+        function nav(direction) {
+            currentSlide = Math.max(0, Math.min(currentSlide + direction, slides.length - 1));
+            updateUI();
+        }
+
+        function checkAnswer(btn, isCorrect, correctText, feedbackText) {
+            const slide = btn.closest('.slide');
+            const buttons = slide.querySelectorAll('.option-btn');
+            const feedbackBox = slide.querySelector('.feedback-box');
+            
+            buttons.forEach(b => b.style.pointerEvents = 'none');
+
+            if (isCorrect) {
+                btn.classList.add('correct');
+                feedbackBox.innerText = `THAT'S FREAKN' RIGHT! 🔥\n${feedbackText}`;
+                feedbackBox.className = 'feedback-box mt-8 p-6 rounded-lg text-2xl font-black bg-[#93E5FF] text-[#30302F] border-4 border-[#30302F]';
+            } else {
+                btn.classList.add('wrong');
+                feedbackBox.innerText = `WAKE UP! ❌\nThe correct answer was: "${correctText}".\n${feedbackText}`;
+                feedbackBox.className = 'feedback-box mt-8 p-6 rounded-lg text-2xl font-black bg-red-600 text-white border-4 border-white';
+            }
+            feedbackBox.classList.remove('hidden');
+
+            registrarRespuesta(
+                'q' + (freaknAnswers.length + 1),
+                extractQuestionText(slide),
+                btn.innerText.trim(),
+                isCorrect,
+                correctText
+            );
+        }
+
+        window.onload = updateUI;
+    </script>
+
+    <script>
+      /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+         Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+      window.FreaknActivity = (function () {
+        function post(type, payload) {
+          try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+          catch (e) {}
+        }
+        return {
+          /** Reporta el resultado de una actividad calificable. */
+          submit: function (r) {
+            post("freakn:activity:result", {
+              activityId: r.activityId,          // id estable dentro del archivo
+              title: r.title || document.title,  // nombre legible
+              score: r.score,                    // puntos obtenidos
+              maxScore: r.maxScore,              // puntaje máximo
+              answers: r.answers || []           // ver formato abajo
+            });
+          },
+          /** Marca la lección como vista/terminada (sin puntaje). */
+          complete: function () { post("freakn:lesson:complete", {}); }
+        };
+      })();
+    </script>
+</body>
+</html>

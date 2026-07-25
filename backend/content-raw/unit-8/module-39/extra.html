@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Practice: The Big Story</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #E4DF33;
+            --charcoal: #30302F;
+            --accent: #93E5FF;
+            --bg: #111;
+            --danger: #FF4C4C;
+        }
+
+        body { 
+            background-color: var(--bg); 
+            display: flex; justify-content: center; align-items: center; 
+            height: 100vh; margin: 0; 
+            font-family: 'Montserrat', sans-serif; color: #FFFFFF; 
+            overflow: hidden;
+        }
+        
+        h1, h2, h3, .bree { font-family: 'Bree Serif', serif; text-transform: uppercase; font-weight: 900; }
+        
+        .slide-container { width: 1280px; height: 720px; background-color: var(--charcoal); position: relative; overflow: hidden; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .slide-container.active { display: flex; flex-direction: column; }
+        
+        .split-layout { display: flex; width: 100%; height: 100%; }
+        .split-left { width: 50%; background-color: var(--primary); color: var(--charcoal); padding: 4rem; display: flex; flex-direction: column; justify-content: center; }
+        .split-right { width: 50%; background-color: var(--charcoal); color: #FFFFFF; padding: 4rem; display: flex; flex-direction: column; justify-content: center; border-left: 8px solid var(--accent); }
+        
+        .skewed-block { background-color: var(--primary); color: var(--charcoal); transform: skew(-12deg); display: inline-block; padding: 0.5rem 1.5rem; margin-bottom: 1rem; width: fit-content; }
+        .skewed-text { transform: skew(12deg); display: inline-block; font-weight: 900; }
+        
+        .btn-freak { background-color: var(--accent); color: var(--charcoal); transform: skew(-12deg); font-weight: 900; padding: 1rem 2rem; border: none !important; cursor: pointer; transition: all 0.2s; font-size: 1.2rem; text-transform: uppercase; outline: none !important; box-shadow: none !important; -webkit-tap-highlight-color: transparent; -webkit-appearance: none; appearance: none; }
+        .btn-freak:focus, .btn-freak:active, .btn-freak:focus-visible { outline: none !important; box-shadow: none !important; border: none !important; }
+        .btn-freak::-moz-focus-inner { border: 0; }
+        .btn-freak:hover { transform: skew(-12deg) scale(1.05); background-color: var(--primary); }
+        .btn-freak:disabled { opacity: 0.5; cursor: not-allowed; transform: skew(-12deg); background-color: #777; color: #ccc; }
+        .btn-text { transform: skew(12deg); display: inline-block; }
+        
+        /* The Director's Cut Mechanics (Level 1) */
+        .eq-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8rem; }
+        .eq-btn { background-color: transparent; border: 2px solid var(--accent); color: #FFF; padding: 0.5rem 1rem; font-size: 1rem; font-weight: 700; cursor: pointer; border-radius: 6px; transition: all 0.2s; outline: none !important; box-shadow: none !important; -webkit-tap-highlight-color: transparent; -webkit-appearance: none; appearance: none; }
+        .eq-btn:focus, .eq-btn:active, .eq-btn:focus-visible { outline: none !important; box-shadow: none !important; }
+        .eq-btn::-moz-focus-inner { border: 0; }
+        .eq-btn:hover:not(:disabled) { background-color: rgba(147, 229, 255, 0.2); }
+        .eq-btn.selected { background-color: var(--accent); color: var(--charcoal); border-color: var(--accent); box-shadow: 0 4px 10px rgba(147, 229, 255, 0.3) !important; }
+        .eq-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .eq-display { background: rgba(0,0,0,0.3); border: 2px dashed var(--primary); padding: 1.5rem; border-radius: 8px; font-size: 1.8rem; font-weight: 700; text-align: center; color: #FFFFFF; min-height: 80px; width: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; transition: 0.2s; line-height: 1.5; }
+        .slot-span { display: inline-block; min-width: 120px; border-bottom: 4px dashed var(--accent); text-align: center; padding: 0 0.5rem; margin: 0 0.5rem; color: var(--accent); font-weight: 900; transition: all 0.2s; }
+        
+        /* The Sequence Mechanics (Level 2) */
+        .sequence-slot { min-height: 80px; width: 100%; max-width: 900px; background-color: rgba(0, 0, 0, 0.4); border: 2px dashed var(--accent); border-radius: 12px; display: flex; justify-content: center; align-items: center; align-content: center; gap: 0.6rem; padding: 1rem; flex-wrap: wrap; transition: 0.3s; box-shadow: inset 0 4px 10px rgba(0,0,0,0.5); }
+        .sequence-slot.success-glow { border-color: var(--primary); box-shadow: 0 0 15px rgba(228, 223, 51, 0.3), inset 0 4px 10px rgba(0,0,0,0.5); }
+        .sequence-slot.error-glow { border-color: var(--danger); box-shadow: 0 0 15px rgba(255, 76, 76, 0.3), inset 0 4px 10px rgba(0,0,0,0.5); }
+        
+        .word-pool { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8rem; min-height: 60px; width: 100%; max-width: 900px; margin-top: 2rem; }
+        
+        .seq-word { background-color: var(--charcoal); border: 2px solid var(--primary); color: #FFF; padding: 0.6rem 1.2rem; font-size: 1.2rem; font-weight: 700; cursor: pointer; border-radius: 8px; transition: transform 0.1s, box-shadow 0.1s, background-color 0.2s; user-select: none; box-shadow: 0 4px 0 var(--primary), 0 5px 10px rgba(0,0,0,0.3); }
+        .seq-word:active { transform: translateY(4px); box-shadow: 0 0 0 var(--primary), 0 0 0 rgba(0,0,0,0); }
+        .seq-word:hover:not(.locked) { background-color: #3f3f3e; transform: translateY(-2px); box-shadow: 0 6px 0 var(--primary), 0 8px 15px rgba(0,0,0,0.4); }
+        .seq-word.locked { opacity: 0.25; cursor: not-allowed; border-color: #555; box-shadow: none; transform: translateY(4px); background-color: #222; }
+        
+        .seq-word.in-slot { background-color: var(--primary); color: var(--charcoal); border-color: var(--primary); box-shadow: 0 4px 0 #b3af1e; }
+        .seq-word.in-slot:hover { background-color: #f5f04c; box-shadow: 0 6px 0 #b3af1e; }
+        .seq-word.in-slot:active { box-shadow: 0 0 0 #b3af1e; }
+
+        .feedback { font-size: 1.5rem; font-weight: 900; text-transform: uppercase; display: flex; flex-direction: column; justify-content: center; }
+        .score-hud { position: absolute; top: 2.5rem; right: 3rem; font-size: 1.5rem; font-weight: 900; color: var(--accent); z-index: 50; text-align: right; }
+        .absolute-nav-bar { position: absolute; bottom: 2rem; left: 3rem; right: 3rem; display: flex; justify-content: space-between; align-items: center; min-height: 100px; }
+    </style>
+</head>
+<body>
+
+    <div class="slide-container active" id="slide-1">
+        <div class="split-layout">
+            <div class="split-left !bg-[#FF4C4C] !text-white">
+                <div class="skewed-block !bg-[#30302F] !text-[#FFFFFF]"><span class="skewed-text bree">BOOTCAMP</span></div>
+                <h1 class="text-6xl mb-4 text-[#30302F]">The Big Story</h1>
+                <p class="text-2xl font-bold text-[#30302F]">Flow, not facts.</p>
+            </div>
+            <div class="split-right">
+                <h2 class="text-4xl mb-6">Weaving the Timeline</h2>
+                <p class="text-xl mb-6">A good story doesn't just list events. It connects them using the background (Past Continuous), the interruption (Past Simple), and the flashback (Past Perfect).</p>
+                <p class="text-xl mb-8"><strong>Level 1:</strong> The Director's Cut (Dual Slots)<br><strong>Level 2:</strong> The Time Weaver (Sequence Mechanics)</p>
+                <div class="absolute-nav-bar justify-end">
+                    <button class="btn-freak" onclick="nav(2)"><span class="btn-text">Accept the Challenge ➔</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide-container" id="slide-2">
+        <div class="score-hud">Score: <span id="score-display-1">0</span> / 20</div>
+        
+        <div class="p-8 h-full flex flex-col relative pt-16">
+            <div class="flex justify-between items-start w-full max-w-5xl mx-auto gap-4">
+                <div class="skewed-block self-start m-0"><span id="level-title-1" class="skewed-text bree">Level 1 - Director's Cut</span></div>
+                <div class="text-[var(--accent)] font-bold text-xl uppercase tracking-widest text-right mt-2">
+                    Focus: <span id="target-action-1" class="text-white bg-[var(--charcoal)] px-3 py-1 rounded ml-2 border border-[var(--accent)] shadow-md">TENSE LOGIC</span>
+                </div>
+            </div>
+            
+            <div class="flex-grow flex flex-col justify-center items-center pb-20 w-full max-w-5xl mx-auto">
+                
+                <div class="w-full max-w-4xl mb-8">
+                    <div id="eq-output" class="eq-display shadow-lg">
+                        <span id="q-before"></span>
+                        <span id="out-slot1" class="slot-span">___</span>
+                        <span id="q-mid"></span>
+                        <span id="out-slot2" class="slot-span">___</span>
+                        <span id="q-after"></span>
+                    </div>
+                </div>
+
+                <div class="w-full flex flex-col items-center gap-6 mb-8">
+                    <div class="w-full flex flex-col items-center">
+                        <span class="text-[var(--primary)] text-xs uppercase tracking-widest mb-2 font-bold">Slot 1 Options</span>
+                        <div class="eq-row" id="row-slot1"></div>
+                    </div>
+                    <div class="w-full flex flex-col items-center">
+                        <span class="text-[var(--primary)] text-xs uppercase tracking-widest mb-2 font-bold">Slot 2 Options</span>
+                        <div class="eq-row" id="row-slot2"></div>
+                    </div>
+                </div>
+
+                <div class="w-full flex justify-center">
+                    <button class="btn-freak w-full max-w-xs" id="btn-submit-l1" onclick="checkAnswerL1()"><span class="btn-text">Print Scene ➔</span></button>
+                </div>
+            </div>
+
+            <div class="absolute-nav-bar border-t-2 border-gray-700/50 pt-4">
+                <div id="game-feedback-1" class="feedback w-2/3 text-left m-0"></div>
+                <div class="w-1/3 flex justify-end">
+                    <button class="btn-freak hidden" id="btn-next-q-1" onclick="nextQuestionL1()"><span class="btn-text">Next ➔</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide-container" id="slide-3">
+        <div class="split-layout">
+            <div class="split-left !bg-[#30302F] !text-white border-r-8 border-[var(--primary)]">
+                <h1 class="text-6xl mb-4 text-[var(--primary)]">LEVEL 1 COMPLETE</h1>
+                <p class="text-2xl font-bold">You can analyze the timeline.</p>
+            </div>
+            <div class="split-right !bg-[#111]">
+                <h2 class="text-4xl mb-6 text-[var(--accent)]">Level 2: The Time Weaver</h2>
+                <p class="text-xl mb-4">A story needs flow, not just isolated facts. Time to link them together.</p>
+                <p class="text-xl mb-8"><strong>The Challenge:</strong> I will give you a context. You build the sentence from scratch. Pay attention to the timeline: use the Past Perfect for what happened <em>first</em>, and the Past Continuous for the <em>background scene</em>.</p>
+                
+                <div class="bg-white/5 border-l-4 border-[var(--accent)] p-4 rounded mb-8 text-center">
+                    <p class="text-gray-400 text-sm tracking-widest uppercase mb-2">Context: She arrived at 8:00. The train left at 7:55.</p>
+                    <p class="font-bold text-2xl text-[var(--primary)]">When she arrived, the train had left.</p>
+                </div>
+
+                <div class="absolute-nav-bar justify-end">
+                    <button class="btn-freak" onclick="nav(4)"><span class="btn-text">Weave Time ➔</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide-container" id="slide-4">
+        <div class="score-hud">Score: <span id="score-display-2">10</span> / 20</div>
+        
+        <div class="p-8 h-full flex flex-col relative pt-16">
+            <div class="flex flex-col md:flex-row justify-between items-center w-full max-w-5xl mx-auto gap-6 mb-4">
+                <div class="skewed-block m-0"><span id="level-title-2" class="skewed-text bree">Level 2 - Question 11</span></div>
+                <div class="text-right">
+                    <div class="skewed-block !bg-[#FF4C4C] !text-white !py-3 !px-10 shadow-[6px_6px_0px_#93E5FF] border-2 border-[#111] m-0">
+                        <span id="instruction-text-2" class="skewed-text bree text-xl tracking-wider uppercase">Context</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="w-full max-w-3xl mx-auto mb-8 mt-2 p-5 text-center bg-[#222] border-l-4 border-r-4 border-[var(--accent)] rounded shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+                <h2 id="question-text-2" class="text-2xl md:text-3xl font-bold text-white tracking-wide leading-relaxed">"Context goes here"</h2>
+            </div>
+            
+            <div id="interactive-area-2" class="flex-grow flex flex-col items-center justify-start gap-4 pb-32 w-full mt-2">
+                <div id="sequence-slot" class="sequence-slot mt-2">
+                    </div>
+                
+                <div id="word-pool" class="word-pool">
+                    </div>
+
+                <button class="btn-freak mt-8" id="btn-submit-seq" onclick="checkAnswerL2()"><span class="btn-text">Check Timeline ➔</span></button>
+            </div>
+
+            <div class="absolute-nav-bar border-t-2 border-gray-700/50 pt-4">
+                <div id="game-feedback-2" class="feedback w-2/3 text-left m-0"></div>
+                <div class="w-1/3 flex justify-end">
+                    <button class="btn-freak hidden" id="btn-next-q-2" onclick="nextQuestionL2()"><span class="btn-text">Next ➔</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide-container" id="slide-5">
+        <div class="split-layout">
+            <div class="split-left">
+                <h1 class="text-6xl mb-4" id="final-title">RESULTS</h1>
+                <p class="text-3xl font-bold" id="final-subtitle">The story is complete.</p>
+            </div>
+            <div class="split-right text-center flex flex-col justify-center items-center relative">
+                <h2 class="text-4xl mb-6">Final Score: <span id="final-score" class="text-[var(--primary)]"></span> / 20</h2>
+                <p id="final-message" class="text-xl mb-8"></p>
+                <button class="btn-freak" onclick="location.reload()"><span class="btn-text">Restart Bootcamp ↻</span></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentScore = 0;
+        let currentL1Index = 0;
+        let currentL2Index = 0;
+
+        // Level 1: The Director's Cut (Dual Slots)
+        let eqSelections = { slot1: null, slot2: null };
+        const questionsL1 = [
+            { 
+                qBefore: "While I", qMid: "for the bus, it", qAfter: "to rain.", 
+                target1: "was waiting", target2: "started", 
+                opts1: ["was waiting", "waited", "had waited"], 
+                opts2: ["started", "was starting", "had started"], 
+                hint: "Background scene (Continuous) interrupted by a sudden action (Simple)." 
+            },
+            { 
+                qBefore: "When Titó", qMid: ", Gelmy", qAfter: "lunch.", 
+                target1: "arrived", target2: "was cooking", 
+                opts1: ["arrived", "was arriving", "had arrived"], 
+                opts2: ["was cooking", "cooked", "had cooked"], 
+                hint: "Sudden action (Simple) happens during an ongoing background action (Continuous)." 
+            },
+            { 
+                qBefore: "I", qMid: "the plot because I", qAfter: "the book.", 
+                target1: "understood", target2: "had read", 
+                opts1: ["understood", "was understanding", "had understood"], 
+                opts2: ["had read", "read", "was reading"], 
+                hint: "The reading happened *before* the understanding. Use the Flashback tense (Past Perfect)." 
+            },
+            { 
+                qBefore: "I", qMid: "in La Estrella when I", qAfter: "a loud crash.", 
+                target1: "was walking", target2: "heard", 
+                opts1: ["was walking", "walked", "had walked"], 
+                opts2: ["heard", "was hearing", "had heard"], 
+                hint: "Ongoing background (Continuous) interrupted by a sudden sound (Simple)." 
+            },
+            { 
+                qBefore: "El pa", qMid: "the door because he", qAfter: "his keys.", 
+                target1: "couldn't open", target2: "had lost", 
+                opts1: ["couldn't open", "wasn't opening", "hadn't opened"], 
+                opts2: ["had lost", "lost", "was losing"], 
+                hint: "He couldn't open it (Simple) because the losing happened *before* (Past Perfect)." 
+            },
+            { 
+                qBefore: "The sun", qMid: "and the birds", qAfter: ".", 
+                target1: "was shining", target2: "were singing", 
+                opts1: ["was shining", "shone", "had shone"], 
+                opts2: ["were singing", "sang", "had sung"], 
+                hint: "Two parallel background scenes happening at the same time (Continuous)." 
+            },
+            { 
+                qBefore: "By the time we", qMid: "at the theater, the movie", qAfter: ".", 
+                target1: "arrived", target2: "had started", 
+                opts1: ["arrived", "were arriving", "had arrived"], 
+                opts2: ["had started", "started", "was starting"], 
+                hint: "The starting happened *before* the arrival. Flashback tense required." 
+            },
+            { 
+                qBefore: "I", qMid: "a shower when the water", qAfter: "cold.", 
+                target1: "was taking", target2: "went", 
+                opts1: ["was taking", "took", "had taken"], 
+                opts2: ["went", "was going", "had gone"], 
+                hint: "The shower was ongoing (Continuous) until the temperature suddenly changed (Simple)." 
+            },
+            { 
+                qBefore: "She", qMid: "exhausted because she", qAfter: "a 12-hour shift.", 
+                target1: "was", target2: "had worked", 
+                opts1: ["was", "was being", "had been"], 
+                opts2: ["had worked", "worked", "was working"], 
+                hint: "Her state (Simple) was the result of an action that finished *before* (Past Perfect)." 
+            },
+            { 
+                qBefore: "While I", qMid: ", the cats", qAfter: "my cables!", 
+                target1: "was working", target2: "destroyed", 
+                opts1: ["were working", "was working", "worked"], 
+                opts2: ["destroyed", "were destroying", "had destroyed"], 
+                hint: "Your work was the background (Continuous). The destruction was the interruption (Simple)." 
+            }
+        ];
+
+        // Level 2: The Time Weaver (Sequence & Clauses)
+        let selectedWords = [];
+        let poolWords = [];
+        const questionsL2 = [
+            { context: "Event A: Lost wallet. Event B: Couldn't pay.", target: "I couldn't pay because I had lost it", words: ["I", "couldn't", "pay", "because", "I", "had", "lost", "it"], hint: "Action A happened before Action B. Use Past Perfect for the loss." },
+            { context: "Event: A sudden cut during work.", target: "The power died while I was working", words: ["The", "power", "died", "while", "I", "was", "working"], hint: "Sudden Action (Simple) + while + Background (Continuous)." },
+            { context: "Event A: Overslept. Event B: Was late.", target: "He was late because he had overslept", words: ["He", "was", "late", "because", "he", "had", "overslept"], hint: "The oversleeping happened before being late." },
+            { context: "A coincidence on the street.", target: "I was walking when I saw him", words: ["I", "was", "walking", "when", "I", "saw", "him"], hint: "Background (Continuous) + when + Interruption (Simple)." },
+            { context: "Event A: Ate dinner. Event B: Arrived.", target: "When I arrived I had already eaten", words: ["When", "I", "arrived", "I", "had", "already", "eaten"], hint: "Eating happened before arriving. Put 'already' between 'had' and 'eaten'." },
+            { context: "A ringing phone during a task.", target: "The phone rang while I was cooking", words: ["The", "phone", "rang", "while", "I", "was", "cooking"], hint: "Action (Simple) + while + Background (Continuous)." },
+            { context: "Event A: Cleaned. Event B: Guests arrived.", target: "She had cleaned before they arrived", words: ["She", "had", "cleaned", "before", "they", "arrived"], hint: "Action A (Past Perfect) + before + Action B (Past Simple)." },
+            { context: "Parallel actions at home.", target: "I was reading and she was working", words: ["I", "was", "reading", "and", "she", "was", "working"], hint: "Two simultaneous backgrounds. Connect them with 'and'." },
+            { context: "A sudden storm and a drink.", target: "I was drinking when the storm started", words: ["I", "was", "drinking", "when", "the", "storm", "started"], hint: "Background (Continuous) + when + Interruption (Simple)." },
+            { context: "Event A: Never saw snow. Event B: The trip.", target: "He had never seen snow before", words: ["He", "had", "never", "seen", "snow", "before"], hint: "Use Past Perfect with 'never' for the experience before the trip." }
+        ];
+
+        function cleanStr(str) {
+            return str.toLowerCase().replace(/[.,?!]/g, '').replace(/\s+/g, ' ').trim();
+        }
+
+        function nav(slideNum) {
+            document.querySelectorAll('.slide-container').forEach(el => el.classList.remove('active'));
+            document.getElementById(`slide-${slideNum}`).classList.add('active');
+            
+            if(slideNum === 2) loadQuestionL1();
+            if(slideNum === 4) loadQuestionL2();
+        }
+
+        function updateScoreDisplays() {
+            document.getElementById('score-display-1').innerText = currentScore;
+            document.getElementById('score-display-2').innerText = currentScore;
+        }
+
+        /* --- LEVEL 1 LOGIC (THE DIRECTOR'S CUT) --- */
+        function loadQuestionL1() {
+            if (currentL1Index >= questionsL1.length) {
+                nav(3);
+                return;
+            }
+
+            const q = questionsL1[currentL1Index];
+            document.getElementById('level-title-1').innerText = `Level 1 - Question ${currentL1Index + 1}`;
+            
+            document.getElementById('q-before').innerText = q.qBefore;
+            document.getElementById('q-mid').innerText = ` ${q.qMid} `;
+            document.getElementById('q-after').innerText = ` ${q.qAfter}`;
+            
+            document.getElementById('game-feedback-1').innerHTML = "";
+            document.getElementById('btn-next-q-1').classList.add('hidden');
+            document.getElementById('btn-submit-l1').disabled = false;
+            
+            // Reset Selections & Colors
+            eqSelections = { slot1: null, slot2: null };
+            document.getElementById('eq-output').style.borderColor = "var(--primary)";
+            updateEqDisplay();
+            
+            const row1 = document.getElementById('row-slot1');
+            const row2 = document.getElementById('row-slot2');
+            
+            row1.innerHTML = "";
+            row2.innerHTML = "";
+
+            // Shuffle options
+            const shuffledOpts1 = [...q.opts1].sort(() => Math.random() - 0.5);
+            const shuffledOpts2 = [...q.opts2].sort(() => Math.random() - 0.5);
+
+            // Fix for "missing ) after argument list" when word contains apostrophe (e.g. couldn't open)
+            // Replaced innerHTML concatenation with safer DOM creation methods
+            shuffledOpts1.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "eq-btn";
+                btn.innerText = opt;
+                btn.onclick = () => selectEq('slot1', opt);
+                row1.appendChild(btn);
+            });
+
+            shuffledOpts2.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "eq-btn";
+                btn.innerText = opt;
+                btn.onclick = () => selectEq('slot2', opt);
+                row2.appendChild(btn);
+            });
+        }
+
+        function selectEq(category, value) {
+            eqSelections[category] = value;
+            
+            const row = document.getElementById(`row-${category}`);
+            row.querySelectorAll('.eq-btn').forEach(btn => {
+                if (btn.innerText.toLowerCase() === value.toLowerCase()) {
+                    btn.classList.add('selected');
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+            
+            updateEqDisplay();
+        }
+
+        function updateEqDisplay() {
+            const s1 = document.getElementById('out-slot1');
+            const s2 = document.getElementById('out-slot2');
+            
+            s1.innerText = eqSelections.slot1 || "___";
+            s1.className = `slot-span ${eqSelections.slot1 ? "text-white border-white" : "text-gray-500 border-gray-600"}`;
+            
+            s2.innerText = eqSelections.slot2 || "___";
+            s2.className = `slot-span ${eqSelections.slot2 ? "text-white border-white" : "text-gray-500 border-gray-600"}`;
+        }
+
+        function checkAnswerL1() {
+            const feedback = document.getElementById('game-feedback-1');
+            
+            if (!eqSelections.slot1 || !eqSelections.slot2) {
+                feedback.innerHTML = `<span class="text-[var(--danger)] font-black text-2xl mb-1">FILL BOTH SLOTS FIRST ❌</span>`;
+                return; 
+            }
+
+            const q = questionsL1[currentL1Index];
+            
+            let isS1Correct = cleanStr(eqSelections.slot1) === cleanStr(q.target1);
+            let isS2Correct = cleanStr(eqSelections.slot2) === cleanStr(q.target2);
+            let isCorrect = isS1Correct && isS2Correct;
+
+            const s1 = document.getElementById('out-slot1');
+            const s2 = document.getElementById('out-slot2');
+
+            if (isCorrect) {
+                feedback.innerHTML = `
+                    <div class="text-[var(--accent)] font-black text-2xl mb-1">SCENE DIRECTED! 🔥</div>
+                    <div class="text-xl text-white font-normal">${q.hint}</div>
+                `;
+                currentScore++;
+                updateScoreDisplays();
+                document.getElementById('eq-output').style.borderColor = "var(--accent)";
+                s1.className = "slot-span text-[var(--accent)] border-[var(--accent)]";
+                s2.className = "slot-span text-[var(--accent)] border-[var(--accent)]";
+            } else {
+                feedback.innerHTML = `
+                    <div class="text-[var(--danger)] font-black text-2xl mb-1">PLOT HOLE ❌</div>
+                    <div class="text-lg text-white font-normal mt-1">Expected: ... ${q.target1} ... ${q.target2} ...</div>
+                    <div class="text-sm text-gray-400 font-normal mt-1">Hint: ${q.hint}</div>
+                `;
+                document.getElementById('eq-output').style.borderColor = "var(--danger)";
+                s1.className = "slot-span text-[var(--danger)] border-[var(--danger)]";
+                s2.className = "slot-span text-[var(--danger)] border-[var(--danger)]";
+            }
+            
+            document.querySelectorAll('.eq-btn').forEach(btn => btn.disabled = true);
+            document.getElementById('btn-submit-l1').disabled = true;
+            document.getElementById('btn-next-q-1').classList.remove('hidden');
+        }
+
+        function nextQuestionL1() {
+            document.getElementById('eq-output').style.borderColor = "var(--primary)"; 
+            currentL1Index++;
+            loadQuestionL1();
+        }
+
+        /* --- LEVEL 2 LOGIC (THE SEQUENCE) --- */
+        function loadQuestionL2() {
+            if (currentL2Index >= questionsL2.length) {
+                endGame();
+                return;
+            }
+
+            const q = questionsL2[currentL2Index];
+            document.getElementById('level-title-2').innerText = `Level 2 - Question ${currentL2Index + 11}`;
+            document.getElementById('question-text-2').innerText = `"${q.context}"`;
+            
+            document.getElementById('game-feedback-2').innerHTML = "";
+            document.getElementById('btn-next-q-2').classList.add('hidden');
+            document.getElementById('btn-submit-seq').classList.remove('hidden');
+            document.getElementById('btn-submit-seq').disabled = false;
+            
+            // Reset arrays
+            selectedWords = [];
+            poolWords = [...q.words].sort(() => Math.random() - 0.5); // Shuffle
+            
+            const slot = document.getElementById('sequence-slot');
+            slot.classList.remove('success-glow', 'error-glow');
+            
+            renderSequenceUI();
+        }
+
+        function renderSequenceUI() {
+            const slot = document.getElementById('sequence-slot');
+            const pool = document.getElementById('word-pool');
+            
+            slot.innerHTML = "";
+            pool.innerHTML = "";
+            
+            // Render selected words
+            selectedWords.forEach((wordObj, index) => {
+                const btn = document.createElement('button');
+                btn.className = "seq-word in-slot";
+                btn.innerText = wordObj.text;
+                btn.onclick = () => moveWord(wordObj.id, 'slot_to_pool');
+                slot.appendChild(btn);
+            });
+            
+            // Render pool words
+            poolWords.forEach((wordText, index) => {
+                const btn = document.createElement('button');
+                btn.className = "seq-word";
+                btn.innerText = wordText;
+                
+                // Check if this word is currently in the selected array
+                const isSelected = selectedWords.some(w => w.text === wordText && w.id === `pool_${index}`);
+                
+                if (isSelected) {
+                    btn.classList.add('locked');
+                } else {
+                    btn.onclick = () => moveWord(`pool_${index}`, 'pool_to_slot', wordText);
+                }
+                pool.appendChild(btn);
+            });
+        }
+
+        function moveWord(id, direction, text = "") {
+            if (direction === 'pool_to_slot') {
+                selectedWords.push({ id: id, text: text });
+            } else if (direction === 'slot_to_pool') {
+                selectedWords = selectedWords.filter(w => w.id !== id);
+            }
+            renderSequenceUI();
+        }
+
+        function checkAnswerL2() {
+            const feedback = document.getElementById('game-feedback-2');
+            const q = questionsL2[currentL2Index];
+            
+            if (selectedWords.length < q.words.length) {
+                feedback.innerHTML = `<span class="text-[var(--danger)] font-black text-2xl mb-1">USE ALL THE WORDS ❌</span>`;
+                return;
+            }
+
+            const userSentence = selectedWords.map(w => w.text).join(' ');
+            
+            // Check against target
+            let isCorrect = cleanStr(userSentence) === cleanStr(q.target);
+            
+            // Alternative logical sequence checks
+            if (!isCorrect && cleanStr(q.target) === cleanStr("The power died while I was working")) {
+                isCorrect = cleanStr(userSentence) === cleanStr("While I was working the power died");
+            }
+            if (!isCorrect && cleanStr(q.target) === cleanStr("The phone rang while I was cooking")) {
+                isCorrect = cleanStr(userSentence) === cleanStr("While I was cooking the phone rang");
+            }
+            if (!isCorrect && cleanStr(q.target) === cleanStr("I was drinking when the storm started")) {
+                 isCorrect = cleanStr(userSentence) === cleanStr("When the storm started I was drinking");
+            }
+            if (!isCorrect && cleanStr(q.target) === cleanStr("I was walking when I saw him")) {
+                 isCorrect = cleanStr(userSentence) === cleanStr("When I saw him I was walking");
+            }
+            
+            const slot = document.getElementById('sequence-slot');
+
+            if (isCorrect) {
+                feedback.innerHTML = `
+                    <div class="text-[var(--primary)] font-black text-2xl mb-1">PERFECT TIMELINE! 🔥</div>
+                    <div class="text-xl text-white font-normal">${q.hint}</div>
+                `;
+                currentScore++;
+                updateScoreDisplays();
+                slot.classList.add('success-glow');
+            } else {
+                feedback.innerHTML = `
+                    <div class="text-[var(--danger)] font-black text-2xl mb-1">TIMELINE BROKEN ❌</div>
+                    <div class="text-lg text-white font-normal mt-1">Expected: ${q.target}</div>
+                    <div class="text-sm text-gray-400 font-normal mt-1">Hint: ${q.hint}</div>
+                `;
+                slot.classList.add('error-glow');
+            }
+            
+            // Disable buttons
+            document.querySelectorAll('.seq-word').forEach(btn => btn.onclick = null);
+            document.getElementById('btn-submit-seq').classList.add('hidden');
+            document.getElementById('btn-next-q-2').classList.remove('hidden');
+        }
+
+        function nextQuestionL2() {
+            currentL2Index++;
+            loadQuestionL2();
+        }
+
+        /* --- END GAME --- */
+        function endGame() {
+            document.getElementById('final-score').innerText = currentScore;
+            const messageEl = document.getElementById('final-message');
+            const leftBg = document.querySelector('#slide-5 .split-left');
+            
+            if (currentScore >= 18) {
+                messageEl.innerText = "Flawless chronology. You know exactly when to flash back, when to interrupt, and when to set the scene.";
+                leftBg.style.backgroundColor = "var(--accent)";
+            } else if (currentScore >= 14) {
+                messageEl.innerText = "Solid effort. The story makes sense, but you caused a few minor paradoxes. Watch out for the Past Perfect.";
+                leftBg.style.backgroundColor = "var(--primary)";
+            } else {
+                messageEl.innerText = "Unacceptable. Your timeline is a mess of paradoxes and broken sequences. Re-study the formulas and try again.";
+                leftBg.style.backgroundColor = "var(--danger)";
+                leftBg.style.color = "#FFFFFF";
+                document.getElementById('final-title').style.color = "#30302F";
+            }
+            nav(5);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FLG 4.0 - Freakn' Checkpoint 6</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root{--flg-yellow:#E4DF33;--flg-charcoal:#30302F;--flg-blue:#93E5FF;--flg-red:#FF4D4D;--flg-white:#FFFFFF;--flg-outer:#111111}
+        body{background-color:var(--flg-outer);margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:'Montserrat',sans-serif;overflow:hidden}
+        .slide-wrapper{position:relative;width:100vw;height:100vh;max-width:1280px;max-height:720px;background-color:var(--flg-charcoal);overflow:hidden;box-shadow:0 0 50px rgba(0,0,0,0.5)}
+        @media (min-aspect-ratio: 16/9) { .slide-wrapper { width: 177.78vh; height: 100vh; } }
+        @media (max-aspect-ratio: 16/9) { .slide-wrapper { width: 100vw; height: 56.25vw; } }
+        .slide{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;color:var(--flg-white)}
+        .slide.active{display:flex;animation:slideIn 0.4s cubic-bezier(0.25,0.8,0.25,1)}
+        @keyframes slideIn{from{transform:translateX(50px);opacity:0}to{transform:translateX(0);opacity:1}}
+        h1,h2,h3,.bree-font{font-family:'Bree Serif',serif;text-transform:uppercase}
+        .title-massive{font-size:5rem;line-height:1} .title-large{font-size:3.5rem;line-height:1.1} .title-med{font-size:2.5rem;line-height:1.2}
+        .split-layout{display:flex;width:100%;height:100%}
+        .split-left{flex:1;background-color:var(--flg-yellow);color:var(--flg-charcoal);display:flex;flex-direction:column;justify-content:center;padding:4rem}
+        .split-right{flex:1;background-color:var(--flg-charcoal);color:var(--flg-white);display:flex;flex-direction:column;justify-content:center;padding:4rem;position:relative}
+        .skewed-block{transform:skew(-12deg);background-color:var(--flg-yellow);color:var(--flg-charcoal);display:inline-block;padding:0.5rem 1.5rem;font-weight:900;text-transform:uppercase}
+        .skewed-block span{display:inline-block;transform:skew(12deg)}
+        .btn-freak{transform:skew(-12deg);background-color:var(--flg-blue);color:var(--flg-charcoal);font-family:'Montserrat',sans-serif;font-weight:900;text-transform:uppercase;padding:1rem 2.5rem;border:none;cursor:pointer;transition:all 0.2s;font-size:1.2rem;display:inline-block}
+        .btn-freak span{display:inline-block;transform:skew(12deg)}
+        .btn-freak:hover{transform:skew(-12deg) scale(1.05);background-color:var(--flg-white)}
+        .btn-freak:disabled{opacity:0.5;cursor:not-allowed;transform:skew(-12deg)}
+        .btn-secondary{background-color:var(--flg-charcoal);color:var(--flg-white);border:2px solid var(--flg-white)}
+        .btn-secondary:hover{background-color:var(--flg-white);color:var(--flg-charcoal)}
+        .gossip-paper{background-color:var(--flg-white);color:var(--flg-charcoal);font-family:'Bree Serif',serif;padding:2rem;box-shadow:10px 10px 0px var(--flg-yellow);border:3px solid var(--flg-charcoal);font-size:1.5rem;line-height:1.4;max-width:800px;margin:0 auto}
+        .flg-input{background:transparent;border:none;border-bottom:4px solid var(--flg-yellow);color:var(--flg-white);font-family:'Montserrat',sans-serif;font-weight:700;font-size:1.5rem;padding:0.2rem 0.5rem;outline:none;text-align:center;width:100%;max-width:400px}
+        .flg-input:focus{border-bottom-color:var(--flg-blue)}
+        .option-btn{background-color:transparent;border:3px solid var(--flg-yellow);color:var(--flg-white);font-weight:700;padding:1rem;font-size:1.2rem;cursor:pointer;transition:all 0.2s;text-align:left;border-radius:0.5rem}
+        .option-btn:hover{background-color:rgba(228,223,51,0.1);transform:translateX(10px)}
+        .option-btn.selected{background-color:var(--flg-yellow);color:var(--flg-charcoal)}
+        .bottom-nav{position:absolute;bottom:0;left:0;width:100%;padding:1.5rem 2rem;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(to top,rgba(17,17,17,0.9),transparent);z-index:10}
+        .progress-bar{height:8px;background-color:rgba(255,255,255,0.2);width:300px;border-radius:4px;overflow:hidden}
+        .progress-fill{height:100%;background-color:var(--flg-yellow);width:0%;transition:width 0.3s ease}
+        .feedback-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;justify-content:center;align-items:center;z-index:50;background-color:rgba(48,48,47,0.95)}
+        .feedback-overlay.correct{border:8px solid var(--flg-blue)}
+        .feedback-overlay.incorrect{border:8px solid var(--flg-red)}
+        .feedback-msg{font-family:'Bree Serif',serif;font-size:4rem;text-transform:uppercase;text-align:center}
+        .feedback-overlay.correct .feedback-msg{color:var(--flg-blue)}
+        .feedback-overlay.incorrect .feedback-msg{color:var(--flg-red)}
+        .feedback-exp{font-size:1.5rem;max-width:600px;text-align:center;margin:2rem 0;font-weight:700}
+        .pill-tag{background-color:var(--flg-white);color:var(--flg-charcoal);padding:0.2rem 0.8rem;border-radius:99px;font-weight:900;font-size:0.9rem;text-transform:uppercase;display:inline-block}
+        .micro-convo{background-color:rgba(255,255,255,0.1);border-left:4px solid var(--flg-yellow);padding:1rem;margin-top:2rem;font-style:italic}
+        
+        /* Chat Styling for Reading Section */
+        .chat-bubble { padding: 10px 15px; border-radius: 20px; margin-bottom: 10px; max-width: 80%; font-family: 'Montserrat', sans-serif; font-size: 1.1rem;}
+        .chat-gelmy { background-color: #E4DF33; color: #30302F; align-self: flex-start; border-bottom-left-radius: 0;}
+        .chat-elpa { background-color: #93E5FF; color: #30302F; align-self: flex-end; border-bottom-right-radius: 0;}
+        .chat-tito { background-color: #e5e7eb; color: #30302F; align-self: flex-start; border-bottom-left-radius: 0;}
+    </style>
+</head>
+<body>
+
+<div class="slide-wrapper" id="app">
+
+    <!-- HOOK -->
+    <div class="slide active" id="slide-hook">
+        <div class="split-layout">
+            <div class="split-left">
+                <div class="skewed-block mb-6"><span>The Final Test</span></div>
+                <h1 class="title-massive bree-font mb-4">Freakn'<br>Checkpoint 6</h1>
+                <p class="font-bold text-xl mb-8">4 Skills. 40 Questions. Everything you learned in Unit 6.</p>
+                <div class="pill-tag mb-4">Missions</div>
+                <ul class="font-bold list-disc pl-5">
+                    <li>Reading: The Group Chat</li>
+                    <li>Listening: Audio Drops</li>
+                    <li>Writing: Fix the Mess</li>
+                    <li>Speaking: Face to Face</li>
+                </ul>
+            </div>
+            <div class="split-right justify-center items-center text-center">
+                <h2 class="title-med bree-font mb-6 text-yellow-400">NO EXPLANATIONS. JUST ACTION.</h2>
+                <p class="text-xl mb-8">Gelmy, Titó, and El pa are waiting to see if you actually learned anything about cooking, cities, chores, and quantities.</p>
+                <button class="btn-freak" onclick="nav('slide-l1-intro')"><span>START CHECKPOINT ➔</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEVEL 1: READING -->
+    <div class="slide" id="slide-l1-intro">
+        <div class="split-layout">
+            <div class="split-left justify-center items-center text-center">
+                <h2 class="title-massive bree-font">Skill 1</h2>
+                <div class="skewed-block mt-4 text-xl"><span>READING</span></div>
+            </div>
+            <div class="split-right">
+                <h3 class="title-med bree-font mb-4 text-yellow-400">The Group Chat</h3>
+                <p class="text-2xl font-bold mb-8">Read the family WhatsApp group carefully. You have 10 comprehension questions based on their chaotic conversation.</p>
+                <button class="btn-freak" onclick="startGame(1)"><span>Read it ➔</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEVEL 2: LISTENING -->
+    <div class="slide" id="slide-l2-intro">
+        <div class="split-layout">
+            <div class="split-left justify-center items-center text-center">
+                <h2 class="title-massive bree-font">Skill 2</h2>
+                <div class="skewed-block mt-4 text-xl"><span>LISTENING</span></div>
+            </div>
+            <div class="split-right">
+                <h3 class="title-med bree-font mb-4 text-yellow-400">Audio Drops</h3>
+                <p class="text-2xl font-bold mb-8">Click 'Play Audio' to hear the sentence. Identify missing words, actions, or grammar rules based on what you hear.</p>
+                <button class="btn-freak" onclick="startGame(2)"><span>Listen closely ➔</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEVEL 3: WRITING -->
+    <div class="slide" id="slide-l3-intro">
+        <div class="split-layout">
+            <div class="split-left justify-center items-center text-center">
+                <h2 class="title-massive bree-font">Skill 3</h2>
+                <div class="skewed-block mt-4 text-xl"><span>WRITING</span></div>
+            </div>
+            <div class="split-right">
+                <h3 class="title-med bree-font mb-4 text-yellow-400">Fix the Mess</h3>
+                <p class="text-2xl font-bold mb-8">No more clicking options. You must type the correct sentences to fix El pa's terrible English and survive the kitchen.</p>
+                <button class="btn-freak" onclick="startGame(3)"><span>Start typing ➔</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEVEL 4: SPEAKING -->
+    <div class="slide" id="slide-l4-intro">
+        <div class="split-layout">
+            <div class="split-left justify-center items-center text-center">
+                <h2 class="title-massive bree-font">Skill 4</h2>
+                <div class="skewed-block mt-4 text-xl"><span>SPEAKING & INTERACTION</span></div>
+            </div>
+            <div class="split-right">
+                <h3 class="title-med bree-font mb-4 text-yellow-400">Face to Face</h3>
+                <p class="text-2xl font-bold mb-8">Look at your teacher. Speak the answers out loud based on the prompts. Type your key phrase to log your answer.</p>
+                <button class="btn-freak" onclick="startGame(4)"><span>Let's talk ➔</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAMEPLAY SLIDE -->
+    <div class="slide" id="slide-gameplay">
+        <div class="px-10 py-6 h-full flex flex-col relative w-full max-w-6xl mx-auto">
+            
+            <div class="flex justify-between items-center mb-4 shrink-0">
+                <div class="skewed-block"><span id="ui-level-indicator">Reading</span></div>
+                <div class="text-2xl font-bold text-yellow-400" id="ui-score">Score: 0 / 40</div>
+            </div>
+
+            <div class="flex-grow flex gap-8 min-h-0">
+                
+                <!-- Dynamic Left Panel: Used for Reading Chat or Audio Button -->
+                <div id="ui-media-panel" class="w-1/2 flex flex-col bg-white rounded shadow-[5px_5px_0px_#93E5FF] p-6 text-gray-900 hidden overflow-y-auto">
+                    <!-- Chat Content Injected Here -->
+                </div>
+
+                <!-- Right Panel: Questions & Inputs -->
+                <div id="ui-question-panel" class="flex-1 flex flex-col justify-start overflow-y-auto pr-4 pb-4">
+                    <div class="pill-tag mb-4 self-start shrink-0" id="ui-q-num">Q 1/10</div>
+                    
+                    <!-- Audio Button (Injected specifically for Listening Level) -->
+                    <button id="ui-audio-btn" class="btn-freak btn-secondary self-start mb-4 hidden shrink-0" onclick="playCurrentAudio()"><span>🔊 Play Audio</span></button>
+
+                    <h2 class="title-med bree-font mb-6 text-yellow-400 shrink-0" id="ui-question">Question text?</h2>
+                    
+                    <div id="ui-input-area" class="w-full flex flex-col gap-3 shrink-0"></div>
+                    
+                    <div id="ui-micro-convo" class="micro-convo hidden shrink-0 mt-4">
+                        👉 <span class="font-bold text-yellow-400">Teacher Prompt:</span> <span id="ui-micro-text"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-2 flex items-center justify-between shrink-0">
+                <div class="progress-bar"><div class="progress-fill" id="ui-progress"></div></div>
+                <button class="btn-freak hidden" id="btn-submit" onclick="submitAns()"><span>Check Answer ➔</span></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- OUTRO -->
+    <div class="slide" id="slide-outro">
+        <div class="p-12 h-full flex flex-col justify-center items-center text-center">
+            <h1 class="title-massive bree-font text-yellow-400 mb-6">CHECKPOINT COMPLETE</h1>
+            <p class="text-3xl font-bold mb-4">Final Score: <span id="final-score" class="text-blue-400">0</span> / 40</p>
+            <div class="gossip-paper my-8 max-w-2xl"><p id="final-feedback">Calculating results...</p></div>
+            <button class="btn-freak mt-8" onclick="location.reload()"><span>Restart Checkpoint ↺</span></button>
+        </div>
+    </div>
+
+    <!-- FEEDBACK OVERLAY -->
+    <div class="feedback-overlay" id="feedback-screen">
+        <h1 class="feedback-msg" id="feedback-title"></h1>
+        <p class="feedback-exp" id="feedback-desc"></p>
+        <button class="btn-freak mt-8" onclick="nextQuestion()"><span>Next ➔</span></button>
+    </div>
+
+</div>
+
+<script>
+    // --- NAVIGATION ---
+    function nav(id) {
+        document.querySelectorAll('.slide').forEach(s=>s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    // --- GAME DATA (4 Skills x 10 Qs = 40 Total) ---
+    // Covering Modules 26-30
+    const gameData = {
+        1: [ // READING: The Group Chat
+            { type: 'mcq', q: "Where does Gelmy tell El pa to park?", options: ["Across from the bakery", "Next to the pharmacy", "Between the bank and hospital"], correct: 1, exp: "She says: 'park the car next to the pharmacy'." },
+            { type: 'mcq', q: "Whose car is already taking the parking spot?", options: ["Titó's car", "El pa's car", "Gelmy's car"], correct: 0, exp: "El pa replies: 'But Titó's car is already parked there!'" },
+            { type: 'mcq', q: "What do they need to buy at the pharmacy?", options: ["Some tomatoes", "Any medicine", "Some medicine"], correct: 2, exp: "Positive sentence -> SOME medicine." },
+            { type: 'mcq', q: "Is the word 'tomatoes' countable or uncountable?", options: ["Countable", "Uncountable"], correct: 0, exp: "You can count them: 1 tomato, 2 tomatoes." },
+            { type: 'mcq', q: "Why did Gelmy say 'Are there ANY eggs' instead of 'some'?", options: ["Because she is angry", "Because it's a question", "Because eggs are uncountable"], correct: 1, exp: "Questions usually take ANY." },
+            { type: 'mcq', q: "Titó complains about chores. What floor action did El pa forget?", options: ["Sweep the floor", "Wash the floor", "Iron the floor"], correct: 0, exp: "Titó says: 'You didn't sweep the floor either.'" },
+            { type: 'mcq', q: "What does Titó want El pa to do with the dirty plates?", options: ["Dry them", "Wash them", "Chop them"], correct: 1, exp: "'Don't forget to wash the dishes'." },
+            { type: 'mcq', q: "How is El pa going to cook the chicken?", options: ["Boil it", "Fry it", "Peel it"], correct: 1, exp: "He says: 'I'm going to fry some chicken.'" },
+            { type: 'mcq', q: "Gelmy asks about oil. Which rule applies to 'oil'?", options: ["Add an 's' for plural", "It is uncountable (no 's')", "It is a chore"], correct: 1, exp: "Liquids are uncountable. Never say 'oils'." },
+            { type: 'mcq', q: "If they don't have ANY eggs or oil, the fridge is...", options: ["Empty", "Full", "Between the bank"], correct: 0, exp: "They have nothing!" }
+        ],
+        2: [ // LISTENING: Browser TTS
+            { type: 'mcq', q: "Listen to the audio. What kitchen action did you hear?", audio: "I need to chop the onions quickly.", options: ["Boil", "Fry", "Chop"], correct: 2, exp: "You heard CHOP (cutting into small pieces)." },
+            { type: 'fill', q: "Listen and fill in the missing word: 'There isn't ______ milk in the fridge.'", audio: "There isn't any milk in the fridge.", correct: ["any"], exp: "Negative sentence requires ANY." },
+            { type: 'mcq', q: "Listen. Where should you park?", audio: "Please park between the bank and the hospital.", options: ["Next to the bank", "Across from the hospital", "Between the bank and hospital"], correct: 2, exp: "You heard BETWEEN." },
+            { type: 'mcq', q: "Listen. Whose knife is it?", audio: "Is this Gelmy's knife?", options: ["Gelmy's", "Titó's", "El pa's"], correct: 0, exp: "It's Gelmy's knife. (Saxon Genitive)" },
+            { type: 'mcq', q: "Listen. Which word is plural in this sentence?", audio: "I want to eat some potatoes with my meat.", options: ["Meat", "Potatoes", "Some"], correct: 1, exp: "Potatoes is plural and countable." },
+            { type: 'fill', q: "Listen and fill in the missing verb: '______ the water before you cook the pasta.'", audio: "Boil the water before you cook the pasta.", correct: ["boil"], exp: "Water must BOIL before pasta goes in." },
+            { type: 'mcq', q: "Listen. What is the direction?", audio: "Drive straight, then turn right at the bakery.", options: ["Turn left", "Cross the street", "Turn right"], correct: 2, exp: "You heard TURN RIGHT." },
+            { type: 'fill', q: "Listen. What chore does she need to do? 'She needs to ______ her clothes.'", audio: "She needs to iron her clothes for the party.", correct: ["iron"], exp: "She needs to IRON her clothes." },
+            { type: 'mcq', q: "Listen. Why did the speaker use 'any'?", audio: "Do we have any rice in the kitchen?", options: ["It's a negative statement", "It's a question", "Rice is countable"], correct: 1, exp: "It's a question: 'Do we have...?'" },
+            { type: 'mcq', q: "Listen. Where is the spoon?", audio: "The spoon is next to the plate.", options: ["Across from it", "Between it", "Next to it"], correct: 2, exp: "It is NEXT TO the plate." }
+        ],
+        3: [ // WRITING: Open input
+            { type: 'open', q: "Fix El pa's English: 'I want to drink three waters.'", keywords: ["some water", "drink water"], exp: "Water is uncountable. 'I want to drink some water.'" },
+            { type: 'open', q: "Change this to use the apostrophe 'S': 'The house of my parents.'", keywords: ["my parents' house", "parents' house"], exp: "My parents' house (apostrophe at the end)." },
+            { type: 'open', q: "Tell Titó to take the skin off the bananas. Use the correct kitchen verb.", keywords: ["peel", "peel them"], exp: "You must PEEL them." },
+            { type: 'open', q: "Answer this question NEGATIVELY: 'Are there any tomatoes?'", keywords: ["no", "aren't", "any", "there aren't"], exp: "'No, there aren't any (tomatoes).'" },
+            { type: 'open', q: "Give directions: Tell the driver to go from one side of the street to the other.", keywords: ["cross", "the street", "road"], exp: "You must CROSS the street." },
+            { type: 'open', q: "What utensil do you use to eat soup?", keywords: ["spoon", "a spoon"], exp: "A spoon!" },
+            { type: 'open', q: "Complete the sentence: 'I need to ______ my clothes because they are wet.'", keywords: ["dry"], exp: "You DRY wet clothes." },
+            { type: 'open', q: "Write a question asking for the price of the meat. Start with 'How much...'", keywords: ["how much", "is", "the meat", "does", "cost"], exp: "'How much is the meat?'" },
+            { type: 'open', q: "Complete with a preposition: 'I parked my car ______ the pharmacy and the bank.'", keywords: ["between"], exp: "If there are two things, it's BETWEEN." },
+            { type: 'open', q: "Complete: 'We have ______ pizza left in the fridge!' (Use the positive quantifier)", keywords: ["some"], exp: "Positive statement = SOME." }
+        ],
+        4: [ // SPEAKING & INTERACTION: Micro-convos
+            { type: 'open', q: "Roleplay: You are at a restaurant. Ask the waiter if they have ANY vegetarian food. (Speak it, then type your sentence)", keywords: ["do you have", "are there", "any", "vegetarian"], exp: "Perfect use of ANY for a question.", convo: "Teacher: Pay attention to their intonation. Does it sound like a question?" },
+            { type: 'open', q: "Roleplay: Point at the messy bedroom. Tell your teacher: 'That is El pa's room.'", keywords: ["el pa's", "el pas"], exp: "Saxon Genitive out loud!", convo: "Teacher: Ask them whose room is the cleanest in their actual house." },
+            { type: 'open', q: "Roleplay: Give your teacher 2 quick directions to the nearest supermarket from your house.", keywords: ["go", "straight", "turn", "left", "right", "next to", "across", "cross", "drive"], exp: "Great navigation skills.", convo: "Teacher: Make sure they used at least one verb (turn/go) and one preposition (next to/across)." },
+            { type: 'open', q: "Roleplay: Tell your teacher to cut the potatoes into tiny pieces.", keywords: ["chop", "cut"], exp: "Chop the potatoes!", convo: "Teacher: Ask them if they actually know how to cook." },
+            { type: 'open', q: "Roleplay: The teacher offers you '3 milks'. Correct them out loud!", keywords: ["some milk", "glasses of", "milk"], exp: "Milk is uncountable!", convo: "Teacher: Try making another plural mistake (e.g., '2 rices') and see if they catch it." },
+            { type: 'open', q: "Roleplay: Pick up a phone. Ask your teacher who it belongs to. Start with 'Whose...'", keywords: ["whose", "phone", "is this", "is it"], exp: "'Whose phone is this?'", convo: "Teacher: Answer them using the Saxon genitive (e.g., 'It's Gelmy's phone')." },
+            { type: 'open', q: "Personal: Look at the teacher and tell them which chore you hate the most, and which you don't mind doing.", keywords: ["sweep", "wash", "iron", "clean", "dry", "hate", "like", "dishes"], exp: "Honest communication is the goal.", convo: "Teacher: Follow up by asking who does that chore instead of them." },
+            { type: 'open', q: "Roleplay: You are in a car and going the wrong way. Yell at the teacher to change direction to the left!", keywords: ["turn left", "turn"], exp: "'Turn left!'", convo: "Teacher: Act panicked and pretend you didn't hear them." },
+            { type: 'open', q: "Roleplay: Ask the teacher if there are ANY good restaurants in their neighborhood.", keywords: ["are there", "any", "good", "restaurants"], exp: "Great question structure.", convo: "Teacher: Answer realistically about your own neighborhood." },
+            { type: 'open', q: "Roleplay: The water in the pot is bubbling. Tell the teacher what the water is doing right now.", keywords: ["boiling", "is boiling"], exp: "The water is boiling!", convo: "Teacher: Ask them what they are going to cook in that water." }
+        ]
+    };
+
+    const chatHTML = `
+        <h3 class="bree-font text-xl mb-4 text-center border-b-2 border-gray-300 pb-2">📱 WhatsApp Group: Familia</h3>
+        <div class="chat-bubble chat-gelmy"><strong>Gelmy:</strong> Pa, park the car next to the pharmacy. We need to buy SOME medicine.</div>
+        <div class="chat-bubble chat-elpa"><strong>El pa:</strong> But Titó's car is already parked there!</div>
+        <div class="chat-bubble chat-gelmy"><strong>Gelmy:</strong> Then park across from the bank. And please buy tomatoes. Are there ANY eggs at home?</div>
+        <div class="chat-bubble chat-tito"><strong>Titó:</strong> No. And don't forget to wash the dishes, Pa. You didn't sweep the floor either.</div>
+        <div class="chat-bubble chat-elpa"><strong>El pa:</strong> I will do it later. I'm going to fry some chicken.</div>
+        <div class="chat-bubble chat-gelmy"><strong>Gelmy:</strong> Don't burn the house down. Do you have any oil?</div>
+    `;
+
+    let curLvl=1, curQ=0, score=0, selOpt=null;
+
+    function startGame(l){ 
+        curLvl=l; 
+        curQ=0; 
+        
+        // Setup UI Panels based on Level
+        const mediaPanel = document.getElementById('ui-media-panel');
+        const audioBtn = document.getElementById('ui-audio-btn');
+        const qPanel = document.getElementById('ui-question-panel');
+
+        if(l === 1) { // Reading
+            mediaPanel.classList.remove('hidden');
+            mediaPanel.innerHTML = chatHTML;
+            qPanel.classList.remove('w-full');
+            qPanel.classList.add('w-1/2');
+            audioBtn.classList.add('hidden');
+        } else if (l === 2) { // Listening
+            mediaPanel.classList.add('hidden');
+            qPanel.classList.remove('w-1/2');
+            qPanel.classList.add('w-full');
+            audioBtn.classList.remove('hidden');
+        } else { // Writing & Speaking
+            mediaPanel.classList.add('hidden');
+            qPanel.classList.remove('w-1/2');
+            qPanel.classList.add('w-full');
+            audioBtn.classList.add('hidden');
+        }
+
+        nav('slide-gameplay'); 
+        loadQ(); 
+    }
+
+    function playCurrentAudio() {
+        const d = gameData[curLvl][curQ];
+        if(d.audio && 'speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(d.audio);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.9;
+            speechSynthesis.speak(utterance);
+        } else {
+            alert("Audio playback not supported in this browser, or no audio provided.");
+        }
+    }
+
+    function loadQ(){
+        const d=gameData[curLvl][curQ];
+        
+        const sectionNames = {1:"READING", 2:"LISTENING", 3:"WRITING", 4:"SPEAKING"};
+        document.getElementById('ui-level-indicator').innerText = `Skill ${curLvl}: ${sectionNames[curLvl]}`;
+        document.getElementById('ui-score').innerText=`Score: ${score} / 40`;
+        document.getElementById('ui-q-num').innerText=`Q ${curQ+1}/10`;
+        document.getElementById('ui-question').innerText=d.q;
+        document.getElementById('ui-progress').style.width=`${(((curLvl-1)*10+curQ)/40)*100}%`;
+
+        const cv=document.getElementById('ui-micro-convo');
+        if(d.convo){ 
+            document.getElementById('ui-micro-text').innerText=d.convo; 
+            cv.classList.remove('hidden'); 
+        } else {
+            cv.classList.add('hidden');
+        }
+
+        const ia=document.getElementById('ui-input-area'); 
+        ia.innerHTML=''; 
+        selOpt=null;
+        document.getElementById('btn-submit').classList.add('hidden');
+
+        if(d.type==='mcq'){
+            d.options.forEach((o,i)=>{
+                const b=document.createElement('button'); 
+                b.className='option-btn'; 
+                b.innerText=o;
+                b.onclick=()=>selMcq(i,b); 
+                ia.appendChild(b);
+            });
+        }else{
+            const i=document.createElement('input'); 
+            i.type='text'; 
+            i.className='flg-input self-start ml-2 mt-4 text-xl';
+            i.placeholder='Write your answer...'; 
+            i.id='flg-text'; 
+            i.autocomplete='off';
+            ia.appendChild(i); 
+            document.getElementById('btn-submit').classList.remove('hidden');
+            i.addEventListener('keypress',e=>{if(e.key==='Enter'){e.preventDefault();submitAns();}});
+            setTimeout(()=>i.focus(),100);
+        }
+    }
+
+    function selMcq(i,b){
+        selOpt=i; 
+        document.querySelectorAll('.option-btn').forEach(x=>x.classList.remove('selected'));
+        b.classList.add('selected'); 
+        document.getElementById('btn-submit').classList.remove('hidden');
+    }
+
+    function submitAns(){
+        const d=gameData[curLvl][curQ]; 
+        let ok=false;
+        if(d.type==='mcq'){ 
+            if(selOpt===null)return; 
+            ok=(selOpt===d.correct); 
+        }
+        else{
+            const v=document.getElementById('flg-text').value.toLowerCase().trim(); 
+            if(!v)return;
+            
+            if(d.type==='fill') {
+                ok=d.correct.some(x=>v.includes(x));
+            }
+            else { 
+                ok=d.keywords.some(k=>v.includes(k)); 
+                // Generous grading for long communicative attempts in open input
+                if(!ok && v.length>12){ 
+                    ok=true; 
+                    d.exp="I get what you mean! Focus on this vocabulary though: "+d.keywords.join(', '); 
+                } 
+            }
+        }
+        showFb(ok,d.exp);
+    }
+
+    function showFb(ok,exp){
+        const o=document.getElementById('feedback-screen'), t=document.getElementById('feedback-title');
+        o.classList.remove('correct','incorrect'); 
+        o.style.display='flex';
+        
+        if(ok){ 
+            score++; 
+            o.classList.add('correct'); 
+            t.innerText="THAT'S FREAKN' RIGHT! 🔥"; 
+        }
+        else { 
+            o.classList.add('incorrect'); 
+            t.innerText="WAKE UP! ❌"; 
+        }
+        document.getElementById('feedback-desc').innerText=exp;
+    }
+
+    function nextQuestion(){
+        document.getElementById('feedback-screen').style.display='none'; 
+        curQ++;
+        if(curQ>=10){
+            if(curLvl===1) nav('slide-l2-intro');
+            else if(curLvl===2) nav('slide-l3-intro');
+            else if(curLvl===3) nav('slide-l4-intro');
+            else showOutro();
+        } else {
+            loadQ();
+        }
+    }
+
+    function showOutro(){
+        nav('slide-outro'); 
+        document.getElementById('final-score').innerText=score;
+        const fb = document.getElementById('final-feedback');
+        
+        if(score >= 35) {
+            fb.innerText = "Gelmy: '¡Qué belleza!' You completely mastered Unit 6. You can survive the kitchen and the city.";
+        } else if (score >= 25) {
+            fb.innerText = "Titó: 'Ahí vamos, mijo.' You passed, but you still make some mistakes with plurals and prepositions. Keep practicing!";
+        } else {
+            fb.innerText = "El pa: 'Bro... you did worse than me.' Gelmy is preparing the broom. You need to review Unit 6 immediately.";
+        }
+    }
+</script>
+</body>
+</html>

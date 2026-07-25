@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unit 5 Module 22 | Shopping Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        freakYellow: '#E4DF33',
+                        freakDark: '#30302F',
+                        freakBlue: '#93E5FF',
+                        freakBg: '#111111'
+                    },
+                    fontFamily: {
+                        bree: ['"Bree Serif"', 'serif'],
+                        mont: ['Montserrat', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #111111; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; overflow: hidden; }
+        #app-container { width: 1280px; height: 720px; position: relative; background-color: #30302F; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        
+        /* Typography System */
+        .title-freak { font-family: 'Bree Serif', serif; font-weight: 400; text-transform: uppercase; }
+        .text-freak { font-family: 'Montserrat', sans-serif; }
+        
+        /* Components */
+        .btn-freak {
+            background-color: #93E5FF; color: #30302F; font-family: 'Montserrat', sans-serif; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.05em; padding: 1rem 2rem; border: 4px solid #30302F;
+            box-shadow: 4px 4px 0px #30302F; transition: all 0.2s ease; cursor: pointer;
+        }
+        .btn-freak:hover { background-color: #E4DF33; transform: translate(-2px, -2px); box-shadow: 6px 6px 0px #30302F; }
+        .btn-freak:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; background-color: #ccc; }
+        
+        .slide-enter { animation: slideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #30302F; }
+        ::-webkit-scrollbar-thumb { background: #E4DF33; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div id="slide-mount" class="w-full h-full flex slide-enter"></div>
+    </div>
+
+    <script>
+        const lessonData = [
+            // SLIDE 0: OBJECTIVE
+            {
+                type: 'intro',
+                unitModule: "UNIT 5 • MODULE 22",
+                title: "SHOPPING GUIDE",
+                objective: "Learn how to compare items, choose the best options, and talk about clothes. Get the best deal like a real pro!",
+                bottomTag: "THE OBSERVER • PART 2"
+            },
+            
+            // --- THE CHEAT CODE (GRAMMAR BASE) ---
+            {
+                type: 'cheatsheet',
+                title: "THE CHEAT CODE",
+                subtitle: "The street rules for comparing things.",
+                rules: [
+                    { title: "SHORT WORDS", desc: "Just add -ER (for 2 things) or -EST (for 3+ things).", example: "Cheap ➔ Cheaper ➔ Cheapest" },
+                    { title: "LONG WORDS", desc: "Use MORE or MOST. Don't change the actual word.", example: "Expensive ➔ More expensive ➔ Most expensive" },
+                    { title: "THE REBELS", desc: "They break the rules. You just have to memorize them.", example: "Good ➔ Better ➔ Best<br>Bad ➔ Worse ➔ Worst" }
+                ]
+            },
+
+            // --- LEVEL 1: THE VIBE ---
+            { type: 'transition', level: 1, title: "LEVEL 1: THE VIBE", desc: "The family is at the mall. Listen to how they compare clothes and prices. Pick the most logical ending to their sentence." },
+            
+            {
+                type: 'q_vibe', level: 1, qNum: 1,
+                context: "Gelmy: 'Mijo, this dress is squeezing my ribs. It is way too tight. I need something...'",
+                question: "What kind of clothing does Gelmy need?",
+                options: ["...looser.", "...tighter."],
+                correct: 0,
+                rationale: "If something is 'too tight', you need the opposite. 'Looser' means it has more space.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Do you prefer tight clothes or loose, baggy clothes?'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 2,
+                context: "Titó: 'This hat is $10, that one is $50, and the other is $100! No way. I will buy the...'",
+                question: "Which hat is Titó going to buy?",
+                options: ["...most expensive one.", "...cheapest one."],
+                correct: 1,
+                rationale: "Titó is shocked by the high prices ($50, $100), meaning he wants to save money. The $10 hat is the 'cheapest'.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Are you a cheap shopper or do you like expensive brands?'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 3,
+                context: "El pa: 'Bro, I wear a size 10 in sneakers, but these are size 9. They are...'",
+                question: "How do the size 9 sneakers compare to his feet?",
+                options: ["...smaller than my feet.", "...bigger than my feet."],
+                correct: 0,
+                rationale: "Size 9 is a lower number than 10, meaning the shoes are 'smaller than' his feet.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'What is your shoe size? Is it hard to find shoes that fit?'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 4,
+                context: "Gelmy: 'I love this boutique! The fabrics they sell here are incredible. They are much...'",
+                question: "How does Gelmy describe the clothes in the boutique?",
+                options: ["...worse than the market ones.", "...better than the market ones."],
+                correct: 1,
+                rationale: "If she says the fabrics are 'incredible', the comparison must be positive ('better than').",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'What is the absolute best clothing store in your city?'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 5,
+                context: "Titó: 'I am not going to pay $200 for a simple white t-shirt! That is the...'",
+                question: "What does Titó think about the shirt?",
+                options: ["...most expensive shirt in the store!'", "...cheapest shirt in the store!'"],
+                correct: 0,
+                rationale: "$200 is a huge amount for a t-shirt. He thinks it's the 'most expensive' one.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'What is the most expensive piece of clothing you own right now?'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 6,
+                context: "El pa: 'I want everyone to look at me at the club. The silver chain is cool, but the gold one is...'",
+                question: "Why does El pa want the gold chain?",
+                options: ["...flashier than the silver one.", "...more boring than the silver one."],
+                correct: 0,
+                rationale: "He wants people to look at him. 'Flashier' means it catches more attention.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Do you like flashy accessories (watches, chains) or simple ones?'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 7,
+                context: "Gelmy: 'Titó, try on the blue jeans, the black ones, and the grey ones. Tell me which one is the...'",
+                question: "What does Gelmy want Titó to find out?",
+                options: ["...most comfortable.'", "...more comfortable.'"],
+                correct: 0,
+                rationale: "He is comparing three items (blue, black, grey), so you must use the superlative 'most comfortable', not 'more' (used for two).",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'What are the most comfortable clothes you wear at home?'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 8,
+                context: "Titó: 'This poncho is too thin. I am going to the farm where the nights are freezing. I need a...'",
+                question: "What kind of poncho does Titó need?",
+                options: ["...thicker one.", "...lighter one."],
+                correct: 0,
+                rationale: "If the nights are freezing and his current one is 'thin', he needs the opposite: 'thicker' to stay warm.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Do you prefer thin summer clothes or thick winter clothes?'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 9,
+                context: "El pa: 'The red cap is fire, but the black cap matches with all my outfits. The black one is...'",
+                question: "How does El pa evaluate the black cap?",
+                options: ["...more useful.", "...less useful."],
+                correct: 0,
+                rationale: "If it matches with everything, it has more utility. It is 'more useful'.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'What color of clothes do you wear the most because it is useful?'"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 10,
+                context: "Gelmy: 'I tried on five dresses for the wedding. This red one makes me look like a queen! It is the...'",
+                question: "How does Gelmy feel about the red dress?",
+                options: ["...most beautiful dress.'", "...ugliest dress.'"],
+                correct: 0,
+                rationale: "Looking 'like a queen' is a major compliment, meaning it's the 'most beautiful' of the five.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'When was the last time you dressed up really elegantly?'"
+            },
+
+            // --- LEVEL 2: THE GAME (Chat Interface) ---
+            { type: 'transition', level: 2, title: "LEVEL 2: THE GAME", desc: "Real-world texting. Help the family shop by comparing options and picking the best response." },
+
+            {
+                type: 'q_chat', level: 2, qNum: 11, sender: "El pa 🧢",
+                incoming: "Bro, I need sneakers for the party. Should I wear my brand new white ones or the dirty black ones?",
+                options: ["The dirty ones are the best for a party.", "Wear the white ones, they are cleaner and look much better."],
+                correct: 1,
+                rationale: "Option 2 is logical; new white sneakers are 'cleaner and better' than dirty ones for a party outfit.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'How many pairs of sneakers do you have? Which are the newest?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 12, sender: "Gelmy 👵",
+                incoming: "Mijo, the wool scarf is $15 and the silk one is $40. Which one is better for winter?",
+                options: ["Buy the wool one, it is warmer and cheaper.", "Buy the silk one, it is colder and more expensive."],
+                correct: 0,
+                rationale: "Wool is naturally 'warmer' than silk, and $15 is 'cheaper' than $40. Option 1 is the perfect advice.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Do you always look at the price tag before you try clothes on?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 13, sender: "Titó 🤠",
+                incoming: "I'm trying on these leather boots. They are so hard, they feel like rocks on my feet. Should I buy them?",
+                options: ["No! Don't pay for them. Find a more comfortable pair.", "Yes! They are the most painful shoes, buy them!"],
+                correct: 0,
+                rationale: "You shouldn't buy shoes that hurt. Option 1 advises him to find something 'more comfortable'.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Have you ever bought shoes that looked great but hurt your feet?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 14, sender: "El pa 🧢",
+                incoming: "Parce, I only have $20. The plain t-shirt is $15 and the Gucci one is $500. What do I do?",
+                options: ["Pay for the plain one. It's the cheapest and you only have $20.", "Get the Gucci one, it's the cheapest option."],
+                correct: 0,
+                rationale: "$15 is cheaper than $500. He can only afford the 'cheapest' option.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Would you ever pay $500 for a designer t-shirt?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 15, sender: "Gelmy 👵",
+                incoming: "Look at this jacket I tried on! It's so big that my hands completely disappear inside the sleeves.",
+                options: ["It fits perfectly! Buy it.", "It doesn't fit you! It's too big. You need a smaller size."],
+                correct: 1,
+                rationale: "If hands disappear, it doesn't 'fit'. She logically needs a 'smaller' size.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Do you prefer wearing oversized clothes or clothes that fit perfectly?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 16, sender: "Titó 🤠",
+                incoming: "The man at the market wants to sell me this carriel for $100! The guy across the street sells it for $30!",
+                options: ["Don't pay $100! Go to the other guy, his price is much better.", "Pay $100. It is the worst deal, so you should take it."],
+                correct: 0,
+                rationale: "$30 is a 'better' price than $100. Option 1 is the street-smart answer.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Are you good at negotiating prices when you shop?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 17, sender: "El pa 🧢",
+                incoming: "Bro, my jacket is super thin and the wind is hitting me hard. I'm freezing right now.",
+                options: ["You need to buy a thicker coat immediately!", "You should take off your jacket and wear a thinner shirt."],
+                correct: 0,
+                rationale: "If he is freezing, a 'thinner' shirt will make it worse. He needs a 'thicker' coat.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'What is the coldest weather you have ever experienced?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 18, sender: "Gelmy 👵",
+                incoming: "Mijo, I'm organizing the closet. What is the smartest way to arrange my 20 pairs of shoes?",
+                options: ["Put the most useful ones in the front, and the least useful in the back.", "Hide the best ones and throw the rest on the floor."],
+                correct: 0,
+                rationale: "Putting the 'most useful' items at the front is logical organization.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Be honest, is your closet organized or a total disaster right now?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 19, sender: "Titó 🤠",
+                incoming: "I want a new hat for church. The brown one is okay, but the black one looks very formal and serious.",
+                options: ["Get the black one, it's definitely the most elegant choice.", "Get the brown one, it's the least elegant."],
+                correct: 0,
+                rationale: "Church requires formality. The 'most elegant' option is the black one based on his description.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Do you ever wear hats or caps? What kind?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 20, sender: "El pa 🧢",
+                incoming: "Packing my bag for the flight. I can't pay extra fees. Should I bring the heavy boots or the light sneakers?",
+                options: ["Bring the heavy boots, they are the heaviest.", "Bring the sneakers, they are lighter and easier to carry."],
+                correct: 1,
+                rationale: "If he wants to avoid baggage weight fees, he must pack 'lighter' items.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'What is the most important piece of clothing you pack for a trip?'"
+            },
+
+            // --- LEVEL 3: THE CHALLENGE (Free Writing) ---
+            { type: 'transition', level: 3, title: "LEVEL 3: THE CHALLENGE", desc: "No options. The family asks you direct comparison questions. Type your answer to prove you can think in English." },
+
+            {
+                type: 'q_write', level: 3, qNum: 21,
+                character: "Titó", title: "THE SIZE CHECK",
+                prompt: "Hey! If a shirt is size XL and you are normally size M, how do you describe that XL shirt compared to your body?",
+                acceptable: "It is bigger / larger / looser / too big.",
+                rationale: "XL is a larger size than M, so comparative words like bigger or looser are correct.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'What shirt size do you usually wear?'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 22,
+                character: "Gelmy", title: "THE LUXURY BRAND",
+                prompt: "Mijo, out of all the stores in the entire mall, the Gucci store has the highest prices. How do you describe the Gucci store?",
+                acceptable: "It is the most expensive.",
+                rationale: "Comparing one thing (Gucci) to ALL others in the mall requires the superlative 'most expensive'.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'What is the most expensive clothing brand you know?'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 23,
+                character: "El pa", title: "THE SNEAKERHEAD",
+                prompt: "Bro, my old sneakers look terrible, but these new ones look fresh out the box. Compare the new ones to the old ones.",
+                acceptable: "They are better / newer / cleaner.",
+                rationale: "Comparing two items requires the -er ending or 'better'. New vs Old.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'How often do you buy new shoes?'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 24,
+                character: "Titó", title: "THE WALLET",
+                prompt: "I only have $5. A coffee is $2 and a jacket is $80. Why can I only buy the coffee?",
+                acceptable: "Because it is cheaper / less expensive.",
+                rationale: "The comparison between $2 and $80 makes the coffee the 'cheaper' option.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'What is the cheapest thing you bought today?'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 25,
+                character: "Gelmy", title: "THE DRESSING ROOM",
+                prompt: "When you go to the little room in the store to put clothes on your body before paying, what is the action verb?",
+                acceptable: "Try on / trying on.",
+                rationale: "The phrasal verb for testing clothes on your body is 'try on'.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'Do you always try on clothes before buying them?'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 26,
+                character: "El pa", title: "THE CHAIN",
+                prompt: "Parce, gold chains feel super heavy on your neck, but silver chains do not feel heavy. Compare the silver chain to the gold one.",
+                acceptable: "It is lighter.",
+                rationale: "The opposite of heavy is light, so the comparative form is 'lighter'.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'Do you wear any rings, necklaces, or bracelets?'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 27,
+                character: "Titó", title: "THE PANTS",
+                prompt: "If your pants are so long that they are touching the floor, you need pants that are... what?",
+                acceptable: "Shorter.",
+                rationale: "If something is too long, the comparative opposite you need is 'shorter'.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'Have you ever bought pants that were too long for you?'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 28,
+                character: "Gelmy", title: "THE WEDDING",
+                prompt: "I have 3 dresses. The blue is okay, the red is nice, but the black one makes me feel like a superstar. The black one is the...",
+                acceptable: "Most beautiful / best / prettiest.",
+                rationale: "Out of three items, the top one requires a superlative (best, most beautiful).",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'What is the best, most elegant outfit you own?'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 29,
+                character: "El pa", title: "THE HUSTLE",
+                prompt: "I want to get rid of my old jackets and get some cash from my friends. What verb describes exchanging clothes for money?",
+                acceptable: "Sell / selling.",
+                rationale: "Giving an item and receiving money is the verb 'to sell'.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'Have you ever sold your old clothes online or to a friend?'"
+            },
+            {
+                type: 'q_write', level: 3, qNum: 30,
+                character: "Titó", title: "THE PERFECT MATCH",
+                prompt: "If a hat sits perfectly on your head, not too big and not too small, what verb do you use to describe this?",
+                acceptable: "Fit / it fits.",
+                rationale: "When clothing is the exact right size for your body, the verb is 'fit'.",
+                teacherPrompt: "👉 TEACHER: Follow up! Ask: 'Is it hard to find clothes that fit you perfectly?'"
+            }
+        ];
+
+        let currentSlide = 0;
+        let score = 0;
+        let answeredQuestions = new Set();
+        let selectedAnswers = {}; 
+        let isGradingState = false;
+
+        const appContainer = document.getElementById('slide-mount');
+
+        function renderSlide() {
+            const data = lessonData[currentSlide];
+            appContainer.innerHTML = '';
+            appContainer.className = 'w-full h-full flex slide-enter'; 
+
+            const buildNav = (isAnswered) => `
+                <div class="absolute bottom-6 w-full px-12 flex justify-between items-center z-50">
+                    <button onclick="nav(-1)" class="btn-freak bg-transparent text-white border-white hover:bg-white hover:text-freakDark shadow-none py-2 px-4 text-sm">PREVIOUS</button>
+                    ${isAnswered && data.type !== 'q_write' ? `<button onclick="nav(1)" class="btn-freak bg-freakYellow animate-bounce">NEXT STEP ➔</button>` : ``}
+                    ${isAnswered && data.type === 'q_write' && !isGradingState ? `<button onclick="nav(1)" class="btn-freak bg-freakYellow animate-bounce">NEXT STEP ➔</button>` : ``}
+                </div>
+            `;
+
+            if (data.type === 'intro') {
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col justify-center items-center text-center p-12 bg-freakDark text-white relative h-full">
+                        <div class="bg-freakYellow text-freakDark font-mont font-bold tracking-widest uppercase py-3 px-8 mb-8 transform -skew-x-12">
+                            <span class="block transform skew-x-12 text-xl">${data.unitModule}</span>
+                        </div>
+                        <h1 class="title-freak text-[110px] text-freakYellow mb-8 leading-none max-w-4xl">${data.title}</h1>
+                        <p class="text-freak text-3xl font-bold mb-16 max-w-4xl leading-relaxed">${data.objective}</p>
+                        <div class="border-4 border-white py-3 px-10 mb-12">
+                            <span class="font-mont font-black tracking-widest uppercase text-freakBlue text-2xl">${data.bottomTag}</span>
+                        </div>
+                        <div class="flex gap-6 absolute bottom-12">
+                            <button class="btn-freak opacity-50 cursor-not-allowed text-sm py-3 px-6" disabled>PREVIOUS</button>
+                            <button onclick="nav(1)" class="btn-freak bg-freakYellow hover:bg-freakBlue text-sm py-3 px-6">NEXT STEP ➔</button>
+                        </div>
+                    </div>
+                `;
+            } 
+            else if (data.type === 'cheatsheet') {
+                let rulesHtml = '';
+                data.rules.forEach((rule, idx) => {
+                    rulesHtml += `
+                        <div class="bg-white p-8 border-4 border-freakDark shadow-[8px_8px_0px_#E4DF33] transform ${idx % 2 === 0 ? '-skew-x-2' : 'skew-x-2'} flex flex-col h-full">
+                            <h3 class="font-bree text-2xl text-freakYellow mb-4 bg-freakDark inline-block px-4 py-2 self-start transform skew-x-2">${rule.title}</h3>
+                            <p class="font-mont font-bold text-freakDark text-xl mb-6 flex-grow">${rule.desc}</p>
+                            <div class="bg-gray-100 p-4 font-mont text-lg font-bold border-l-8 border-freakBlue text-freakDark">
+                                ${rule.example}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col justify-center items-center p-12 bg-[#1a1a1a] text-white relative h-full">
+                        <div class="absolute top-8 left-8 text-gray-500 font-bree text-2xl">BEFORE WE PLAY...</div>
+                        <h2 class="title-freak text-7xl text-freakYellow mb-4 mt-8">${data.title}</h2>
+                        <p class="font-mont text-2xl font-bold mb-12 border-b-4 border-freakBlue pb-4 text-gray-300">${data.subtitle}</p>
+                        
+                        <div class="grid grid-cols-3 gap-8 w-full max-w-6xl">
+                            ${rulesHtml}
+                        </div>
+                        
+                        <div class="absolute bottom-8 right-12">
+                            <button onclick="nav(1)" class="btn-freak bg-freakYellow hover:bg-freakBlue text-sm py-3 px-6 animate-bounce">GOT IT. LET'S PLAY ➔</button>
+                        </div>
+                        <div class="absolute bottom-8 left-12">
+                            <button onclick="nav(-1)" class="btn-freak bg-transparent text-white border-white hover:bg-white hover:text-freakDark shadow-none py-3 px-6 text-sm">PREVIOUS</button>
+                        </div>
+                    </div>
+                `;
+            }
+            else if (data.type === 'transition') {
+                appContainer.innerHTML = `
+                    <div class="w-1/2 h-full bg-freakYellow flex flex-col justify-center p-16">
+                        <h1 class="title-freak text-8xl text-freakDark leading-none mb-6">${data.title}</h1>
+                    </div>
+                    <div class="w-1/2 h-full bg-freakDark flex flex-col justify-center items-start p-16 text-white relative">
+                        <p class="text-freak text-3xl font-bold mb-12 border-l-8 border-freakBlue pl-6 leading-relaxed">${data.desc}</p>
+                        <div class="absolute bottom-12 flex gap-6">
+                            <button onclick="nav(-1)" class="btn-freak bg-transparent border-white text-white hover:bg-white hover:text-freakDark text-sm py-2 px-4">PREVIOUS</button>
+                            <button onclick="nav(1)" class="btn-freak bg-freakBlue hover:bg-freakYellow">START LEVEL ➔</button>
+                        </div>
+                    </div>
+                `;
+            }
+            // LEVEL 1: THE VIBE
+            else if (data.type === 'q_vibe') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                const selectedOpt = selectedAnswers[currentSlide];
+
+                let optionsHtml = '';
+                data.options.forEach((opt, idx) => {
+                    let btnClass = "bg-white text-freakDark hover:bg-gray-100 border-4 border-freakDark shadow-[4px_4px_0px_#30302F]";
+                    let disabled = isAnswered ? "disabled" : "";
+                    
+                    if (isAnswered) {
+                        if (idx === data.correct) btnClass = "bg-freakBlue text-freakDark border-4 border-freakDark shadow-[4px_4px_0px_#30302F]";
+                        else if (idx === selectedOpt && idx !== data.correct) btnClass = "bg-red-400 text-white border-4 border-red-900 shadow-[4px_4px_0px_#7f1d1d] opacity-50";
+                        else btnClass = "bg-gray-200 text-gray-500 border-4 border-gray-400 opacity-50";
+                    }
+
+                    optionsHtml += `<button ${disabled} onclick="handleAnswer(${idx})" class="text-left font-mont font-bold text-xl p-4 w-full transition-all ${btnClass}">${opt}</button>`;
+                });
+
+                let feedbackHtml = isAnswered ? `
+                    <div class="mt-8 p-5 bg-gray-50 border-4 border-freakDark shadow-[6px_6px_0px_#30302F] animate-[slideIn_0.3s_ease-out]">
+                        <h4 class="font-bree text-2xl mb-1">${selectedOpt === data.correct ? "<span class='text-green-600'>BOOM. CORRECT.</span>" : "<span class='text-red-600'>HOLD UP. INCORRECT.</span>"}</h4>
+                        <p class="font-mont text-md font-bold mb-3">${data.rationale}</p>
+                        <div class="bg-freakYellow text-freakDark p-3 font-bold font-mont text-sm transform -skew-x-2 border-2 border-freakDark">
+                            ${data.teacherPrompt}
+                        </div>
+                    </div>` : '';
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full flex pb-20">
+                        <div class="w-[45%] h-full bg-freakYellow p-12 flex flex-col justify-center relative">
+                            <div class="absolute top-6 left-6 text-freakDark font-bree text-xl opacity-50">Q${data.qNum}/30 | THE VIBE</div>
+                            <div class="bg-white text-freakDark p-8 border-4 border-freakDark shadow-[8px_8px_0px_#30302F] transform -rotate-1">
+                                <p class="text-2xl leading-relaxed font-bree">${data.context}</p>
+                            </div>
+                        </div>
+                        <div class="w-[55%] h-full bg-freakDark p-12 flex flex-col justify-center relative">
+                            <h2 class="text-freakBlue font-bree text-3xl mb-6">${data.question}</h2>
+                            <div class="flex flex-col gap-4">${optionsHtml}</div>
+                            ${feedbackHtml}
+                        </div>
+                    </div>
+                    ${buildNav(isAnswered)}
+                `;
+            }
+            // LEVEL 2: THE GAME (Chat Interface)
+            else if (data.type === 'q_chat') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                const selectedOpt = selectedAnswers[currentSlide];
+
+                let optionsHtml = '';
+                if (!isAnswered) {
+                    data.options.forEach((opt, idx) => {
+                        optionsHtml += `
+                            <button onclick="handleAnswer(${idx})" class="w-full text-right bg-freakBlue text-freakDark font-mont font-bold text-sm p-4 rounded-2xl rounded-br-none border-2 border-freakDark hover:bg-freakYellow transition-all mb-3 shadow-[4px_4px_0px_#30302F]">
+                                ${opt}
+                            </button>
+                        `;
+                    });
+                } else {
+                    const isCorrect = selectedOpt === data.correct;
+                    const bubbleColor = isCorrect ? 'bg-green-400' : 'bg-red-400';
+                    optionsHtml = `
+                        <div class="w-[85%] self-end text-right ${bubbleColor} text-freakDark font-mont font-bold text-sm p-4 rounded-2xl rounded-br-none border-2 border-freakDark shadow-[4px_4px_0px_#30302F] mb-3">
+                            ${data.options[selectedOpt]}
+                        </div>
+                        <div class="text-right text-xs text-gray-500 font-mont italic pr-2">Read</div>
+                    `;
+                }
+
+                let feedbackHtml = isAnswered ? `
+                    <div class="bg-freakDark border-4 border-freakYellow p-6 text-white shadow-[8px_8px_0px_#E4DF33] animate-[slideIn_0.3s_ease-out]">
+                        <h4 class="font-bree text-2xl mb-2 text-freakYellow">${selectedOpt === data.correct ? "STREET SMART." : "AWKWARD TEXT."}</h4>
+                        <p class="font-mont text-md font-bold mb-4">${data.rationale}</p>
+                        <div class="bg-freakYellow text-freakDark p-3 font-bold font-mont text-sm transform -skew-x-2">
+                            ${data.teacherPrompt}
+                        </div>
+                    </div>` : `
+                    <div class="h-full flex flex-col justify-center">
+                        <h2 class="font-bree text-5xl text-freakYellow mb-4">YOUR TURN</h2>
+                        <p class="font-mont text-xl text-white leading-relaxed">Read the incoming message. Choose the best reply to give good shopping advice.</p>
+                    </div>`;
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-[#1a1a1a] flex items-center justify-center gap-12 p-8 relative pb-20">
+                        <div class="absolute top-6 left-6 text-white font-bree text-xl opacity-50">Q${data.qNum}/30 | THE GAME</div>
+                        
+                        <!-- Phone UI -->
+                        <div class="w-[380px] h-[550px] bg-white rounded-[3rem] border-[12px] border-gray-800 p-4 flex flex-col relative shadow-2xl flex-shrink-0">
+                            <!-- Notch -->
+                            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-2xl"></div>
+                            
+                            <!-- Header -->
+                            <div class="text-center font-bold font-mont border-b-2 border-gray-200 pb-3 mt-4 mb-4 text-freakDark">
+                                ${data.sender}
+                            </div>
+                            
+                            <!-- Chat Area -->
+                            <div class="flex-1 overflow-y-auto flex flex-col pr-2">
+                                <!-- Incoming -->
+                                <div class="w-[85%] bg-gray-200 text-freakDark font-mont font-medium text-sm p-4 rounded-2xl rounded-bl-none mb-6">
+                                    ${data.incoming}
+                                </div>
+                                
+                                <!-- Options / Sent -->
+                                <div class="mt-auto flex flex-col items-end w-full">
+                                    ${optionsHtml}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="w-[500px]">
+                            ${feedbackHtml}
+                        </div>
+                    </div>
+                    ${buildNav(isAnswered)}
+                `;
+            }
+            // LEVEL 3: THE CHALLENGE (Unstructured Text Input)
+            else if (data.type === 'q_write') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                
+                let contentHtml = '';
+
+                if (!isGradingState && !isAnswered) {
+                    // State 1: Input
+                    contentHtml = `
+                        <div class="bg-white p-8 border-4 border-freakDark shadow-[8px_8px_0px_#E4DF33] relative mb-8">
+                            <div class="absolute -top-5 -left-5 bg-freakBlue text-freakDark font-bree text-xl px-4 py-1 border-4 border-freakDark transform -rotate-3">${data.character}</div>
+                            <p class="font-mont text-2xl font-bold text-freakDark mb-6">${data.prompt}</p>
+                            <input type="text" id="write-input" placeholder="Type your answer here..." autocomplete="off"
+                                class="w-full bg-gray-100 border-4 border-gray-300 text-freakDark p-4 font-mont text-2xl font-bold outline-none focus:border-freakBlue transition-all">
+                        </div>
+                        <div class="flex justify-end">
+                            <button onclick="submitWriting()" class="btn-freak bg-freakYellow hover:bg-freakBlue text-xl py-4 px-8">REVEAL ANSWER ➔</button>
+                        </div>
+                    `;
+                } else if (isGradingState) {
+                    // State 2: Self-Grading (Teacher Check)
+                    const userText = selectedAnswers[currentSlide];
+                    contentHtml = `
+                        <div class="flex gap-6 mb-6 animate-[slideIn_0.3s_ease-out]">
+                            <!-- Left: User Answer -->
+                            <div class="w-1/2 bg-gray-800 border-4 border-gray-600 p-6 shadow-[6px_6px_0px_#30302F]">
+                                <h4 class="font-bree text-freakYellow text-xl mb-4">YOU WROTE:</h4>
+                                <p class="font-mont text-white text-2xl font-bold italic">"${userText}"</p>
+                            </div>
+                            <!-- Right: Expected Answer -->
+                            <div class="w-1/2 bg-white border-4 border-freakDark p-6 shadow-[6px_6px_0px_#93E5FF]">
+                                <h4 class="font-bree text-freakBlue text-xl mb-4">FREAKN' ACCEPTABLE ANSWERS:</h4>
+                                <p class="font-mont text-freakDark text-2xl font-bold">${data.acceptable}</p>
+                                <p class="font-mont text-gray-500 text-sm mt-3 border-t-2 border-gray-200 pt-2">${data.rationale}</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Teacher Prompt inside grading -->
+                        <div class="w-full bg-freakBlue border-4 border-freakDark p-3 mb-6 transform -skew-x-2 shadow-[4px_4px_0px_#30302F]">
+                            <p class="font-mont font-bold text-freakDark text-center">${data.teacherPrompt}</p>
+                        </div>
+
+                        <!-- Self-Grade Decision -->
+                        <div class="bg-freakDark border-4 border-freakYellow p-4 text-center transform skew-x-2">
+                            <h3 class="font-bree text-freakYellow text-2xl mb-2">THE VIBE CHECK</h3>
+                            <p class="font-mont text-white text-md mb-4">Be honest. Did your answer capture the right meaning and comparative/superlative form?</p>
+                            <div class="flex justify-center gap-6">
+                                <button onclick="selfGrade(false)" class="btn-freak bg-red-400 text-white border-red-900 shadow-[4px_4px_0px_#7f1d1d] hover:bg-red-500 py-2 px-4 text-sm">I MESSED UP</button>
+                                <button onclick="selfGrade(true)" class="btn-freak bg-green-400 text-freakDark border-green-900 shadow-[4px_4px_0px_#14532d] hover:bg-green-500 py-2 px-4 text-sm">I GOT IT (+1 PT)</button>
+                            </div>
+                        </div>
+                    `;
+                } else if (isAnswered) {
+                    // State 3: Reviewed
+                    const userText = selectedAnswers[currentSlide];
+                    contentHtml = `
+                         <div class="bg-gray-800 border-4 border-gray-600 p-6 shadow-[6px_6px_0px_#30302F] opacity-50 mb-8">
+                            <h4 class="font-bree text-gray-400 text-xl mb-2">YOU WROTE:</h4>
+                            <p class="font-mont text-gray-300 text-2xl font-bold">"${userText}"</p>
+                        </div>
+                        <div class="text-center font-mont text-freakYellow font-bold text-xl">Answer recorded. Move to the next step.</div>
+                    `;
+                }
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-[#111] flex flex-col justify-center items-center relative p-8 pb-20">
+                        <div class="absolute top-6 left-6 text-gray-600 font-bree text-xl">Q${data.qNum}/30 | THE CHALLENGE</div>
+                        
+                        <div class="w-full max-w-4xl">
+                            <h2 class="text-freakBlue font-bree text-4xl mb-2 text-center uppercase">${data.title}</h2>
+                            <p class="text-gray-400 font-mont text-md mb-6 text-center">Read the prompt and type your answer. You are your own coach.</p>
+                            
+                            ${contentHtml}
+                        </div>
+                    </div>
+                    ${buildNav(isAnswered && !isGradingState)}
+                `;
+                
+                const inputEl = document.getElementById('write-input');
+                if(inputEl) inputEl.focus();
+            }
+            // OUTRO
+            else if (data.type === 'outro') {
+                const percentage = Math.round((score / 30) * 100);
+                let message = "";
+                if (percentage >= 90) message = "ABSOLUTE LEGEND. You own this vocabulary.";
+                else if (percentage >= 70) message = "SOLID WORK. You survived the streets.";
+                else message = "WE NEED TO TALK. Time to review the basics.";
+
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col justify-center items-center text-center p-12 bg-freakYellow text-freakDark relative h-full">
+                        <h1 class="title-freak text-8xl mb-4">LESSON COMPLETE</h1>
+                        <div class="bg-freakDark text-white p-12 mt-8 border-8 border-white shadow-[12px_12px_0px_#30302F] transform skew-y-2">
+                            <h2 class="font-bree text-4xl mb-4">YOUR SCORE</h2>
+                            <p class="font-mont text-7xl font-black text-freakBlue mb-4">${score} / 30</p>
+                            <p class="font-mont text-2xl font-bold">${message}</p>
+                        </div>
+                        <div class="mt-16 flex gap-6">
+                            <button onclick="location.reload()" class="btn-freak bg-white hover:bg-freakBlue">RESTART LESSON</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        window.handleAnswer = function(optIndex) {
+            const data = lessonData[currentSlide];
+            if (answeredQuestions.has(currentSlide)) return; 
+            
+            selectedAnswers[currentSlide] = optIndex;
+            answeredQuestions.add(currentSlide);
+            
+            if (optIndex === data.correct) score++;
+            
+            renderSlide(); 
+        }
+
+        window.submitWriting = function() {
+            const inputEl = document.getElementById('write-input');
+            const userText = inputEl ? inputEl.value.trim() : "";
+            if (!userText) {
+                inputEl.classList.add('border-red-500');
+                return; 
+            }
+            selectedAnswers[currentSlide] = userText;
+            isGradingState = true;
+            renderSlide();
+        }
+
+        window.selfGrade = function(isCorrect) {
+            isGradingState = false;
+            answeredQuestions.add(currentSlide);
+            if (isCorrect) score++;
+            nav(1); 
+        }
+
+        window.nav = function(dir) {
+            let nextSlide = currentSlide + dir;
+            if (nextSlide >= 0 && nextSlide < lessonData.length) {
+                currentSlide = nextSlide;
+                renderSlide();
+            } else if (nextSlide >= lessonData.length) {
+                lessonData.push({type: 'outro'});
+                currentSlide = lessonData.length -1;
+                renderSlide();
+            }
+        }
+
+        document.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter' && lessonData[currentSlide]?.type === 'q_write' && !isGradingState && !answeredQuestions.has(currentSlide)) {
+                submitWriting();
+            }
+        });
+
+        renderSlide();
+    </script>
+</body>
+</html>

@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Practice: Plans & Intentions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #E4DF33;
+            --charcoal: #30302F;
+            --accent: #93E5FF;
+            --bg: #111;
+            --danger: #FF4C4C;
+        }
+
+        body { 
+            background-color: var(--bg); 
+            display: flex; justify-content: center; align-items: center; 
+            height: 100vh; margin: 0; 
+            font-family: 'Montserrat', sans-serif; color: #FFFFFF; 
+        }
+        
+        h1, h2, h3, .bree { font-family: 'Bree Serif', serif; text-transform: uppercase; font-weight: 900; }
+        
+        .slide-container { width: 1280px; height: 720px; background-color: var(--charcoal); position: relative; overflow: hidden; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .slide-container.active { display: flex; flex-direction: column; }
+        
+        .split-layout { display: flex; width: 100%; height: 100%; }
+        .split-left { width: 50%; background-color: var(--primary); color: var(--charcoal); padding: 4rem; display: flex; flex-direction: column; justify-content: center; }
+        .split-right { width: 50%; background-color: var(--charcoal); color: #FFFFFF; padding: 4rem; display: flex; flex-direction: column; justify-content: center; border-left: 8px solid var(--accent); }
+        
+        .skewed-block { background-color: var(--primary); color: var(--charcoal); transform: skew(-12deg); display: inline-block; padding: 0.5rem 1.5rem; margin-bottom: 1rem; width: fit-content; }
+        .skewed-text { transform: skew(12deg); display: inline-block; font-weight: 900; }
+        
+        .btn-freak { background-color: var(--accent); color: var(--charcoal); transform: skew(-12deg); font-weight: 900; padding: 1rem 2rem; border: none; cursor: pointer; transition: all 0.2s; font-size: 1.2rem; text-transform: uppercase; }
+        .btn-freak:hover { transform: skew(-12deg) scale(1.05); background-color: var(--primary); }
+        .btn-freak:disabled { opacity: 0.5; cursor: not-allowed; transform: skew(-12deg); background-color: #777; color: #ccc; }
+        .btn-text { transform: skew(12deg); display: inline-block; }
+        
+        /* Drag & Drop Sentence Builder Elements */
+        .drop-slot { border-bottom: 4px solid var(--primary); min-width: 120px; height: 50px; display: inline-flex; justify-content: center; align-items: center; margin: 0 10px; vertical-align: middle; transition: all 0.2s; }
+        .drop-slot.filled { border-bottom-color: transparent; min-width: auto; }
+        .drag-word { background-color: var(--primary); color: var(--charcoal); font-weight: 900; padding: 0.5rem 1.2rem; border-radius: 4px; cursor: pointer; user-select: none; transform: skew(-12deg); display: inline-block; transition: transform 0.1s; font-size: 1.4rem; box-shadow: 4px 4px 0 rgba(0,0,0,0.3); }
+        .drag-word:active { transform: skew(-12deg) scale(0.95); box-shadow: 2px 2px 0 rgba(0,0,0,0.3); }
+        .drag-word > span { transform: skew(12deg); display: inline-block; }
+        .word-bank { display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; min-height: 80px; padding: 1.5rem; background-color: rgba(255,255,255,0.05); border-radius: 8px; margin-top: 2rem; border: 2px dashed rgba(255,255,255,0.2); }
+        .sentence-container { font-size: 2.2rem; font-weight: 700; text-align: center; line-height: 2.5; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.5rem; }
+
+        .written-input { background-color: transparent; border: 3px solid var(--accent); color: #FFF; padding: 1rem; width: 100%; max-width: 800px; font-size: 1.5rem; font-family: 'Montserrat', sans-serif; font-weight: 700; text-align: center; outline: none; transition: 0.2s; border-radius: 8px; }
+        .written-input:focus { border-color: var(--primary); background-color: rgba(228, 223, 51, 0.1); }
+        .written-input:disabled { opacity: 0.5; cursor: not-allowed; border-color: #777; }
+
+        .feedback { font-size: 1.5rem; font-weight: 900; text-transform: uppercase; display: flex; flex-direction: column; justify-content: center; }
+        .score-hud { position: absolute; top: 2rem; right: 3rem; font-size: 1.5rem; font-weight: 900; color: var(--accent); z-index: 50; }
+        
+        .absolute-nav-bar { position: absolute; bottom: 3rem; left: 3rem; right: 3rem; display: flex; justify-content: space-between; align-items: center; height: 100px; }
+
+        @media (max-width: 820px) {
+            body { height: auto; min-height: 100vh; padding: 1rem 0.5rem; }
+            .slide-container { width: 100%; max-width: 100%; height: auto; min-height: 100vh; }
+            .slide-container.active { overflow-y: auto; }
+            .split-layout { flex-direction: column; }
+            .split-left, .split-right { width: 100%; padding: 1.5rem; }
+            .split-right { border-left: none; border-top: 8px solid var(--accent); }
+            .text-6xl { font-size: 2.25rem; }
+            .text-4xl { font-size: 1.6rem; }
+            .text-2xl { font-size: 1.15rem; }
+            .p-12 { padding: 1rem !important; }
+            .sentence-container { font-size: 1.4rem; line-height: 1.8; }
+            .word-bank { gap: 0.75rem; padding: 1rem; margin-top: 1rem; }
+            .drag-word { font-size: 1.1rem; padding: 0.5rem 0.9rem; }
+            .drop-slot { min-width: 90px; height: 44px; margin: 0 5px; }
+            .absolute-nav-bar { position: static; margin-top: 1rem; flex-wrap: wrap; gap: 0.75rem; height: auto; }
+            .btn-freak { min-height: 44px; font-size: 16px; padding: 0.85rem 1.25rem; }
+            .written-input { max-width: 100%; font-size: 1.1rem; padding: 0.85rem; min-height: 44px; }
+            .score-hud { position: static; text-align: right; margin-bottom: 0.5rem; font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SLIDE 1: HOOK -->
+    <div class="slide-container active" id="slide-1">
+        <div class="split-layout">
+            <div class="split-left !bg-[#FF4C4C] !text-white">
+                <div class="skewed-block !bg-[#30302F] !text-[#FFFFFF]"><span class="skewed-text bree">BOOTCAMP</span></div>
+                <h1 class="text-6xl mb-4 text-[#30302F]">Bucket List</h1>
+                <p class="text-2xl font-bold text-[#30302F]">A wish without a plan is just a dream.</p>
+            </div>
+            <div class="split-right">
+                <h2 class="text-4xl mb-6">Intentions & Plans</h2>
+                <p class="text-xl mb-6">To turn a wish into reality, you need structure. You must use the <strong>Verb To Be + Going To + Base Verb</strong>. If you drop the Verb To Be, the plan falls apart.</p>
+                <p class="text-xl mb-8"><strong>Level 1:</strong> Block Builder (The Forge)<br><strong>Level 2:</strong> Written Production (The Abyss)</p>
+                <div class="absolute-nav-bar justify-end">
+                    <button class="btn-freak" onclick="nav(2)"><span class="btn-text">Accept the Challenge ➔</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: LEVEL 1 (BLOCK BUILDER) -->
+    <div class="slide-container" id="slide-2">
+        <div class="score-hud">Score: <span id="score-display-1">0</span> / 20</div>
+        
+        <div class="p-12 h-full flex flex-col relative">
+            <div class="skewed-block self-start"><span id="level-title-1" class="skewed-text bree">Level 1 - Question 1</span></div>
+            
+            <div id="sentence-area-1" class="sentence-container mt-12 mb-8 w-full max-w-5xl mx-auto">
+                <!-- Sentence with drop slots injected here -->
+            </div>
+            
+            <div id="word-bank-1" class="word-bank w-full max-w-3xl mx-auto mb-8">
+                <!-- Draggable words injected here -->
+            </div>
+
+            <div id="action-area-1" class="flex justify-center mb-8">
+                 <button class="btn-freak hidden" id="btn-check-l1" onclick="checkAnswerL1()"><span class="btn-text">Lock Structure ➔</span></button>
+            </div>
+
+            <div class="absolute-nav-bar border-t-2 border-gray-700/50 pt-4">
+                <div id="game-feedback-1" class="feedback w-2/3 text-left m-0"></div>
+                <div class="w-1/3 flex justify-end">
+                    <button class="btn-freak hidden" id="btn-next-q-1" onclick="nextQuestionL1()"><span class="btn-text">Next ➔</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: TRANSITION TO LEVEL 2 -->
+    <div class="slide-container" id="slide-3">
+        <div class="split-layout">
+            <div class="split-left !bg-[#30302F] !text-white border-r-8 border-[var(--primary)]">
+                <h1 class="text-6xl mb-4 text-[var(--primary)]">LEVEL 1 COMPLETE</h1>
+                <p class="text-2xl font-bold">The safety net is gone.</p>
+            </div>
+            <div class="split-right !bg-[#111]">
+                <h2 class="text-4xl mb-6 text-[var(--accent)]">Level 2: Written Production</h2>
+                <p class="text-xl mb-8">It's time to test your real intentions. I will ask you <strong>direct questions about your plans</strong>. You must type the complete answer using the "Going To" structure based on the instruction. Start with Yes or No.</p>
+                <div class="absolute-nav-bar justify-end">
+                    <button class="btn-freak" onclick="nav(4)"><span class="btn-text">Enter the Abyss ➔</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: LEVEL 2 (WRITTEN) -->
+    <div class="slide-container" id="slide-4">
+        <div class="score-hud">Score: <span id="score-display-2">10</span> / 20</div>
+        
+        <div class="p-12 h-full flex flex-col relative">
+            <div>
+                <div class="skewed-block"><span id="level-title-2" class="skewed-text bree">Level 2 - Question 11</span></div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <div class="skewed-block !bg-[#FF4C4C] !text-white !py-2 !px-8 shadow-[6px_6px_0px_#93E5FF] border-2 border-[#111]">
+                    <span id="instruction-text-2" class="skewed-text bree text-3xl tracking-widest">Instruction</span>
+                </div>
+            </div>
+            
+            <h2 id="question-text-2" class="text-4xl mt-8 mb-8 text-center font-bold text-[var(--primary)]">Question goes here</h2>
+            
+            <div id="interactive-area-2" class="flex-grow flex flex-col items-center justify-start gap-6 pb-32">
+                <input type="text" id="written-answer" class="written-input" placeholder="Type your full answer here (Yes/No)..." autocomplete="off">
+                <button class="btn-freak" id="btn-submit-written" onclick="checkWrittenAnswer()"><span class="btn-text">Submit Answer ➔</span></button>
+            </div>
+
+            <div class="absolute-nav-bar border-t-2 border-gray-700/50 pt-4">
+                <div id="game-feedback-2" class="feedback w-2/3 text-left m-0"></div>
+                <div class="w-1/3 flex justify-end">
+                    <button class="btn-freak hidden" id="btn-next-q-2" onclick="nextQuestionL2()"><span class="btn-text">Next ➔</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 5: END -->
+    <div class="slide-container" id="slide-5">
+        <div class="split-layout">
+            <div class="split-left">
+                <h1 class="text-6xl mb-4" id="final-title">RESULTS</h1>
+                <p class="text-3xl font-bold" id="final-subtitle">Plans require action.</p>
+            </div>
+            <div class="split-right text-center flex flex-col justify-center items-center relative">
+                <h2 class="text-4xl mb-6">Final Score: <span id="final-score" class="text-[var(--primary)]"></span> / 20</h2>
+                <p id="final-message" class="text-xl mb-8"></p>
+                <button class="btn-freak" onclick="location.reload()"><span class="btn-text">Restart Bootcamp ↻</span></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var freaknAnswers = [];
+        function registrarRespuesta(id, pregunta, respuesta, acerto, esperada) {
+            if (freaknAnswers.some(function (a) { return a.id === id; })) return;
+            freaknAnswers.push({ id: id, question: pregunta, answer: respuesta, correct: acerto, expected: esperada });
+        }
+
+        let currentScore = 0;
+        let currentL1Index = 0;
+        let currentL2Index = 0;
+
+        // Level 1: Block Builder
+        const questionsL1 = [
+            { 
+                template: "Gelmy {slot} {slot} travel to Japan.", 
+                answers: ["is", "going to"], 
+                bank: ["is", "are", "going to", "go to"],
+                hint: "Gelmy is 'She', so the Verb To Be is 'is'. Then add 'going to'." 
+            },
+            { 
+                template: "I {slot} {slot} start a new business.", 
+                answers: ["am", "going to"], 
+                bank: ["am", "is", "going to", "going"],
+                hint: "The Boss for 'I' is 'am'." 
+            },
+            { 
+                template: "Titó {slot} {slot} learn French.", 
+                answers: ["isn't", "going to"], 
+                bank: ["isn't", "aren't", "going to", "goes to"],
+                hint: "Negative for Titó (He) is 'isn't'." 
+            },
+            { 
+                template: "We {slot} {slot} build a legacy.", 
+                answers: ["are", "going to"], 
+                bank: ["are", "is", "going to", "going"],
+                hint: "We is plural, so the Verb To Be is 'are'." 
+            },
+            { 
+                template: "{slot} El pa {slot} clean the house?", 
+                answers: ["Is", "going to"], 
+                bank: ["Is", "Does", "going to", "go to"],
+                hint: "Questions start with the To Be verb (Is), not 'Does'!" 
+            },
+            { 
+                template: "What {slot} you {slot} do tomorrow?", 
+                answers: ["are", "going to"], 
+                bank: ["are", "do", "going to", "going"],
+                hint: "WH-word + Boss (are) + Subject (you) + going to." 
+            },
+            { 
+                template: "They {slot} {slot} buy a new house.", 
+                answers: ["aren't", "going to"], 
+                bank: ["aren't", "don't", "going to", "going"],
+                hint: "Negative for They is 'aren't'." 
+            },
+            { 
+                template: "I {slot} {slot} give up on my goals.", 
+                answers: ["am not", "going to"], 
+                bank: ["am not", "don't", "going to", "going"],
+                hint: "The negative for I am is 'I am not'." 
+            },
+            { 
+                template: "She {slot} {slot} run a marathon.", 
+                answers: ["is", "going to"], 
+                bank: ["is", "does", "going to", "going"],
+                hint: "She + is + going to." 
+            },
+            { 
+                template: "Where {slot} we {slot} stay?", 
+                answers: ["are", "going to"], 
+                bank: ["are", "do", "going to", "going"],
+                hint: "Where + are + we + going to." 
+            }
+        ];
+
+        // Level 2: Written Production
+        const questionsL2 = [
+            { instruction: "Answer Positively (Yes, I...)", q: "Are you going to travel this year?", answers: ["yes i am going to travel this year", "yes im going to travel this year", "yes i am going to travel"], displayAnswer: "Yes, I am going to travel this year.", hint: "Start with Yes, then I + am + going to + base verb." },
+            { instruction: "Answer Negatively (No, I...)", q: "Are you going to quit your job?", answers: ["no i am not going to quit my job", "no im not going to quit my job", "no i am not going to quit"], displayAnswer: "No, I am not going to quit my job.", hint: "Change 'your' to 'my'. No, I am not going to..." },
+            { instruction: "Answer Positively (Yes, my...)", q: "Is your English going to improve?", answers: ["yes my english is going to improve", "yes it is going to improve"], displayAnswer: "Yes, my English is going to improve.", hint: "Change 'your' to 'my'. Yes, my English is going to..." },
+            { instruction: "Answer Negatively (No, I...)", q: "Are you going to make excuses today?", answers: ["no i am not going to make excuses today", "no im not going to make excuses today", "no i am not going to make excuses"], displayAnswer: "No, I am not going to make excuses today.", hint: "Start with No, I am not going to..." },
+            { instruction: "Answer Positively (Yes, I...)", q: "Are you going to start a new hobby?", answers: ["yes i am going to start a new hobby", "yes im going to start a new hobby", "yes i am going to start one"], displayAnswer: "Yes, I am going to start a new hobby.", hint: "Start with Yes, I am going to..." },
+            { instruction: "Answer Negatively (No, I...)", q: "Are you going to watch TV all weekend?", answers: ["no i am not going to watch tv all weekend", "no im not going to watch tv all weekend", "no i am not going to watch tv"], displayAnswer: "No, I am not going to watch TV all weekend.", hint: "Start with No, I am not going to..." },
+            { instruction: "Answer Positively (Yes, my...)", q: "Are your friends going to visit you?", answers: ["yes my friends are going to visit me", "yes they are going to visit me"], displayAnswer: "Yes, my friends are going to visit me.", hint: "Change 'your' to 'my' and 'you' to 'me'. My friends ARE going to..." },
+            { instruction: "Answer Negatively (No, I...)", q: "Are you going to eat junk food tonight?", answers: ["no i am not going to eat junk food tonight", "no im not going to eat junk food tonight", "no i am not going to eat junk food"], displayAnswer: "No, I am not going to eat junk food tonight.", hint: "Start with No, I am not going to..." },
+            { instruction: "Answer Positively (Yes, I...)", q: "Are you going to practice English later?", answers: ["yes i am going to practice english later", "yes im going to practice english later", "yes i am going to practice english"], displayAnswer: "Yes, I am going to practice English later.", hint: "Start with Yes, I am going to..." },
+            { instruction: "Answer Negatively (No, I...)", q: "Are you going to give up on your goals?", answers: ["no i am not going to give up on my goals", "no im not going to give up on my goals", "no i am not going to give up"], displayAnswer: "No, I am not going to give up on my goals.", hint: "Change 'your' to 'my'. No, I am not going to give up..." }
+        ];
+
+        function cleanStr(str) {
+            return str.toLowerCase().replace(/[.,?!'´`]/g, '').replace(/\s+/g, ' ').trim();
+        }
+
+        function nav(slideNum) {
+            document.querySelectorAll('.slide-container').forEach(el => el.classList.remove('active'));
+            document.getElementById(`slide-${slideNum}`).classList.add('active');
+            
+            if(slideNum === 2) loadQuestionL1();
+            if(slideNum === 4) {
+                document.getElementById('written-answer').addEventListener("keypress", function(event) {
+                    if (event.key === "Enter" && !document.getElementById('btn-submit-written').disabled) {
+                        event.preventDefault();
+                        checkWrittenAnswer();
+                    }
+                });
+                loadQuestionL2();
+            }
+        }
+
+        function updateScoreDisplays() {
+            document.getElementById('score-display-1').innerText = currentScore;
+            document.getElementById('score-display-2').innerText = currentScore;
+        }
+
+        /* --- LEVEL 1 LOGIC (BLOCK BUILDER) --- */
+        function loadQuestionL1() {
+            if (currentL1Index >= questionsL1.length) {
+                nav(3); // Transition to Level 2
+                return;
+            }
+
+            const q = questionsL1[currentL1Index];
+            document.getElementById('level-title-1').innerText = `Level 1 - Question ${currentL1Index + 1}`;
+            
+            document.getElementById('game-feedback-1').innerHTML = "";
+            document.getElementById('btn-next-q-1').classList.add('hidden');
+            document.getElementById('btn-check-l1').classList.add('hidden');
+            
+            const sentenceArea = document.getElementById('sentence-area-1');
+            const wordBank = document.getElementById('word-bank-1');
+            
+            sentenceArea.innerHTML = "";
+            wordBank.innerHTML = "";
+
+            const splitParts = q.template.split('{slot}');
+            splitParts.forEach((part, index) => {
+                if (part) {
+                    const span = document.createElement('span');
+                    span.innerText = part;
+                    span.className = part.trim() === "" ? "" : "px-2";
+                    sentenceArea.appendChild(span);
+                }
+                if (index < q.answers.length) {
+                    const slot = document.createElement('div');
+                    slot.className = "drop-slot";
+                    sentenceArea.appendChild(slot);
+                }
+            });
+
+            const shuffledBank = [...q.bank].sort(() => Math.random() - 0.5);
+
+            shuffledBank.forEach(word => {
+                const btn = document.createElement('div');
+                btn.className = "drag-word";
+                btn.innerHTML = `<span>${word}</span>`;
+                btn.onclick = handleWordClick;
+                wordBank.appendChild(btn);
+            });
+        }
+
+        function handleWordClick(e) {
+            const wordEl = e.currentTarget;
+            const wordBank = document.getElementById('word-bank-1');
+            
+            if (wordEl.parentElement === wordBank) {
+                const emptySlot = document.querySelector('.drop-slot:not(.filled)');
+                if (emptySlot) {
+                    emptySlot.appendChild(wordEl);
+                    emptySlot.classList.add('filled');
+                }
+            } else {
+                const slot = wordEl.parentElement;
+                wordBank.appendChild(wordEl);
+                slot.classList.remove('filled');
+            }
+            
+            checkSlotsFull();
+        }
+
+        function checkSlotsFull() {
+            const emptySlot = document.querySelector('.drop-slot:not(.filled)');
+            const checkBtn = document.getElementById('btn-check-l1');
+            if (!emptySlot) {
+                checkBtn.classList.remove('hidden');
+            } else {
+                checkBtn.classList.add('hidden');
+            }
+        }
+
+        function checkAnswerL1() {
+            const q = questionsL1[currentL1Index];
+            const slots = document.querySelectorAll('.drop-slot');
+            let isCorrect = true;
+            
+            slots.forEach((slot, index) => {
+                const wordInSlot = slot.innerText.trim();
+                if (wordInSlot !== q.answers[index]) {
+                    isCorrect = false;
+                    slot.style.borderBottomColor = "var(--danger)";
+                    slot.children[0].classList.add('!bg-[var(--danger)]', '!text-white');
+                } else {
+                    slot.style.borderBottomColor = "var(--primary)";
+                    slot.children[0].classList.add('!bg-[var(--primary)]', '!text-var(--charcoal)');
+                }
+            });
+
+            const feedback = document.getElementById('game-feedback-1');
+            
+            if (isCorrect) {
+                feedback.innerHTML = `<span class="text-[var(--accent)]">STRUCTURE FORGED. 🔥</span>`;
+                currentScore++;
+                updateScoreDisplays();
+            } else {
+                feedback.innerHTML = `<span class="text-[var(--danger)]">STRUCTURE COLLAPSED ❌</span><span class="text-xl text-white font-normal mt-1">Rule: ${q.hint}</span>`;
+                slots.forEach((slot, index) => {
+                    slot.innerHTML = `<div class="drag-word !bg-[var(--danger)] !text-white cursor-default"><span>${q.answers[index]}</span></div>`;
+                    slot.classList.add('filled');
+                });
+            }
+            
+            document.querySelectorAll('.drag-word').forEach(el => el.onclick = null);
+            document.getElementById('btn-check-l1').classList.add('hidden');
+            document.getElementById('btn-next-q-1').classList.remove('hidden');
+
+            const userAnswer = Array.from(slots).map(s => s.innerText.trim()).join(' | ');
+            registrarRespuesta('l1-' + (currentL1Index + 1), q.template, userAnswer, isCorrect, q.answers.join(' | '));
+        }
+
+        function nextQuestionL1() {
+            currentL1Index++;
+            loadQuestionL1();
+        }
+
+        /* --- LEVEL 2 LOGIC --- */
+        function loadQuestionL2() {
+            if (currentL2Index >= questionsL2.length) {
+                endGame();
+                return;
+            }
+
+            const q = questionsL2[currentL2Index];
+            document.getElementById('level-title-2').innerText = `Level 2 - Question ${currentL2Index + 11}`;
+            document.getElementById('instruction-text-2').innerText = `${q.instruction}`;
+            document.getElementById('question-text-2').innerText = `"${q.q}"`;
+            
+            document.getElementById('game-feedback-2').innerHTML = "";
+            document.getElementById('btn-next-q-2').classList.add('hidden');
+            
+            const inputField = document.getElementById('written-answer');
+            inputField.value = "";
+            inputField.disabled = false;
+            inputField.focus();
+
+            document.getElementById('btn-submit-written').disabled = false;
+        }
+
+        function checkWrittenAnswer() {
+            const inputField = document.getElementById('written-answer');
+            const userInputRaw = inputField.value;
+            
+            if(userInputRaw.trim() === "") return;
+
+            const q = questionsL2[currentL2Index];
+            const cleanUser = cleanStr(userInputRaw);
+            
+            let isCorrect = q.answers.some(ans => cleanStr(ans) === cleanUser);
+            
+            const feedback = document.getElementById('game-feedback-2');
+            
+            if (isCorrect) {
+                feedback.innerHTML = `<span class="text-[var(--primary)]">FLAWLESS EXECUTION. 🔥</span>`;
+                currentScore++;
+                updateScoreDisplays();
+                inputField.style.borderColor = "var(--primary)";
+            } else {
+                feedback.innerHTML = `<span class="text-[var(--danger)]">ERROR IN THE SYSTEM ❌</span>
+                                      <span class="text-lg text-white font-normal mt-1">Correct: ${q.displayAnswer}</span>
+                                      <span class="text-sm text-gray-400 font-normal mt-1">Hint: ${q.hint}</span>`;
+                inputField.style.borderColor = "var(--danger)";
+            }
+            
+            inputField.disabled = true;
+            document.getElementById('btn-submit-written').disabled = true;
+            document.getElementById('btn-next-q-2').classList.remove('hidden');
+
+            registrarRespuesta('l2-' + (currentL2Index + 1), q.q, userInputRaw, isCorrect, q.displayAnswer);
+        }
+
+        function nextQuestionL2() {
+            currentL2Index++;
+            loadQuestionL2();
+        }
+
+        /* --- END GAME --- */
+        function endGame() {
+            document.getElementById('final-score').innerText = currentScore;
+            const messageEl = document.getElementById('final-message');
+            const leftBg = document.querySelector('#slide-5 .split-left');
+            
+            if (currentScore === 20) {
+                messageEl.innerText = "Flawless logic. You truly understand the mechanics. Now go execute those plans.";
+                leftBg.style.backgroundColor = "var(--accent)";
+            } else if (currentScore >= 16) {
+                messageEl.innerText = "Solid effort. You're building the structures correctly, but missed a few details. Stay sharp.";
+                leftBg.style.backgroundColor = "var(--primary)";
+            } else {
+                messageEl.innerText = "Unacceptable. You dropped the Verb To Be and the structure collapsed. Go back, learn the rules, and do this again.";
+                leftBg.style.backgroundColor = "var(--danger)";
+                leftBg.style.color = "#FFFFFF";
+                document.getElementById('final-title').style.color = "#30302F";
+            }
+
+            FreaknActivity.submit({
+                activityId: "extra-activity",
+                title: document.title,
+                score: currentScore,
+                maxScore: 20,
+                answers: freaknAnswers
+            });
+
+            nav(5);
+        }
+    </script>
+
+    <script>
+      /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+         Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+      window.FreaknActivity = (function () {
+        function post(type, payload) {
+          try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+          catch (e) {}
+        }
+        return {
+          /** Reporta el resultado de una actividad calificable. */
+          submit: function (r) {
+            post("freakn:activity:result", {
+              activityId: r.activityId,          // id estable dentro del archivo
+              title: r.title || document.title,  // nombre legible
+              score: r.score,                    // puntos obtenidos
+              maxScore: r.maxScore,              // puntaje máximo
+              answers: r.answers || []           // ver formato abajo
+            });
+          },
+          /** Marca la lección como vista/terminada (sin puntaje). */
+          complete: function () { post("freakn:lesson:complete", {}); }
+        };
+      })();
+    </script>
+</body>
+</html>

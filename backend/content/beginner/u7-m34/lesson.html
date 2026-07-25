@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 34: If I Won the Lottery</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:ital,wght@0,400;0,700;0,900;1,400;1,900&family=VT323&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        freakYellow: '#E4DF33',
+                        freakDark: '#30302F',
+                        freakBlue: '#93E5FF',
+                        freakBg: '#111111',
+                        freakGreen: '#4ade80',
+                        freakRed: '#f87171',
+                        atmBg: '#051f0e',
+                        atmGreen: '#16a34a'
+                    },
+                    fontFamily: {
+                        bree: ['"Bree Serif"', 'serif'],
+                        mont: ['Montserrat', 'sans-serif'],
+                        mono: ['"VT323"', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #111111; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; overflow: hidden; }
+        #app-container { width: 1280px; height: 720px; position: relative; background-color: #30302F; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        
+        .title-freak { font-family: 'Bree Serif', serif; font-weight: 400; text-transform: uppercase; }
+        .text-freak { font-family: 'Montserrat', sans-serif; }
+        
+        .btn-freak {
+            background-color: #93E5FF; color: #30302F; font-family: 'Montserrat', sans-serif; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.05em; padding: 1rem 2rem; border: none;
+            transition: all 0.2s ease; cursor: pointer; display: inline-block;
+        }
+        .btn-freak:hover { background-color: #E4DF33; transform: scale(1.05); }
+        .btn-freak:disabled { opacity: 0.5; cursor: not-allowed; transform: none; background-color: #ccc; color: #666; }
+        
+        .slide-enter { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Module 34 Specific: ATM Scanlines */
+        .scanlines {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,0,0,0.2) 50%,
+                rgba(0,0,0,0.2)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+        
+        .atm-btn {
+            background: transparent;
+            border: 2px solid #16a34a;
+            color: #4ade80;
+            font-family: 'VT323', monospace;
+            text-transform: uppercase;
+            transition: all 0.1s;
+        }
+        .atm-btn:hover:not(:disabled) {
+            background: #16a34a;
+            color: #051f0e;
+            box-shadow: 0 0 15px rgba(74, 222, 128, 0.5);
+        }
+        .atm-btn.correct { background: #4ade80; color: #051f0e; border-color: #4ade80; box-shadow: 0 0 20px rgba(74, 222, 128, 0.8); }
+        .atm-btn.wrong { background: #f87171; color: #fff; border-color: #f87171; opacity: 0.6; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #30302F; }
+        ::-webkit-scrollbar-thumb { background: #E4DF33; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div id="global-score" class="absolute top-8 right-8 text-freakYellow font-mont font-black text-4xl z-50 hidden">SCORE: 0/30</div>
+        <div id="slide-mount" class="w-full h-full flex slide-enter"></div>
+    </div>
+
+    <script>
+        const lessonData = [
+            // SLIDE 0: INTRO
+            {
+                type: 'intro',
+                unitModule: "UNIT 7 • MODULE 34",
+                title: "IF I WON THE LOTTERY",
+                objective: "Learn to dream big in English. Talk about hypothetical situations, imagine having millions, and make imaginary financial decisions.",
+                bottomTag: "THE LOGIC OF LIFE • PART 4"
+            },
+            
+            // --- THE CHEAT CODE ---
+            {
+                type: 'cheatsheet',
+                title: "THE DREAM ENGINE",
+                subtitle: "How to talk about things that aren't real (yet).",
+                rules: [
+                    { title: "THE FORMULA", desc: "IF + PAST TENSE, WOULD + VERB", example: "• If I won the lottery, I would buy a mansion." },
+                    { title: "THE REALITY", desc: "Even though we use the past tense, we are dreaming about NOW or the FUTURE.", example: "• If I had money (Reality: I am broke right now)." },
+                    { title: "THE MONEY MOVES", desc: "Essential financial verbs.", example: "• Earn (Make money)<br>• Bet (Risk money)<br>• Lend (Give to a friend)<br>• Borrow (Take from a friend)" }
+                ]
+            },
+
+            // --- LEVEL 1: THE REALITY CHECK (Recognition) ---
+            { type: 'transition', level: 1, title: "LEVEL 1", subtitle: "REALITY CHECK", desc: "Read the dream sentence. What is the actual reality of the situation? Don't let the grammar fool you." },
+            
+            { qType: 'recognize', level: 1, qNum: 1, q: "If I won the lottery, I would buy a boat.", options: ["A) He has a lot of money right now.", "B) He is broke and just dreaming."], correct: 1, rationale: "The sentence uses 'If I won...', which means in reality, he hasn't won anything yet.", teacherPrompt: "👉 TEACHER: Ask: What is the very first thing you would buy if you won?" },
+            { qType: 'recognize', level: 1, qNum: 2, q: "If Gelmy earned more money, she'd travel to Paris.", options: ["A) She doesn't earn enough money to travel.", "B) She is packing her bags for Paris."], correct: 0, rationale: "Because it's a dream ('If she earned...'), the reality is the opposite: she doesn't earn enough.", teacherPrompt: "👉 TEACHER: Ask: Does traveling to Europe cost a lot in your country?" },
+            { qType: 'recognize', level: 1, qNum: 3, q: "If Titó didn't bet on horses, he would be rich.", options: ["A) Titó bets on horses in real life.", "B) Titó hates betting and gambling."], correct: 0, rationale: "The condition is 'If he didn't bet'. This means in real life, unfortunately, he DOES bet.", teacherPrompt: "👉 TEACHER: Ask: Have you ever bet money on a game or sport?" },
+            { qType: 'recognize', level: 1, qNum: 4, q: "I would lend you money if I had some.", options: ["A) The person is going to give you money.", "B) The person has zero money to give you."], correct: 1, rationale: "They say 'if I had some', which is a polite way of saying 'I have nothing, sorry'.", teacherPrompt: "👉 TEACHER: Ask: Do you think lending money to friends is a bad idea?" },
+            { qType: 'recognize', level: 1, qNum: 5, q: "If El pa won the lottery, he wouldn't work a single day.", options: ["A) El pa currently works.", "B) El pa is already retired."], correct: 0, rationale: "He 'wouldn't work' IF he won. So right now, he has to work.", teacherPrompt: "👉 TEACHER: Ask: If you were a millionaire, would you still work for fun?" },
+            { qType: 'recognize', level: 1, qNum: 6, q: "If I were you, I wouldn't borrow money from the bank.", options: ["A) This is a dream about becoming a bank.", "B) This is a strong piece of advice."], correct: 1, rationale: "'If I were you' is the classic way to give advice by putting yourself in someone else's shoes.", teacherPrompt: "👉 TEACHER: Ask: Have you ever asked a bank for a loan?" },
+            { qType: 'recognize', level: 1, qNum: 7, q: "Would you bet all your money on red if you went to Vegas?", options: ["A) The person is in Las Vegas right now.", "B) They are imagining a trip to Vegas."], correct: 1, rationale: "The question asks what you 'would' do in an imaginary scenario.", teacherPrompt: "👉 TEACHER: Ask: Red or Black? What is your lucky color?" },
+            { qType: 'recognize', level: 1, qNum: 8, q: "If we had a million dollars, we'd buy a mansion.", options: ["A) They live in a normal house right now.", "B) They already live in a massive mansion."], correct: 0, rationale: "They are dreaming about having a million dollars. Reality = normal life.", teacherPrompt: "👉 TEACHER: Ask: Would you rather have a mansion in the city or a big farm?" },
+            { qType: 'recognize', level: 1, qNum: 9, q: "If Gelmy were the president, taxes would be zero.", options: ["A) Gelmy is the president of the country.", "B) Gelmy is just complaining about taxes."], correct: 1, rationale: "Gelmy is not the president. She is just dreaming about making rules.", teacherPrompt: "👉 TEACHER: Ask: If YOU were president, what is the first law you would make?" },
+            { qType: 'recognize', level: 1, qNum: 10, q: "If you found a wallet on the street, what would you do?", options: ["A) You actually found a wallet just now.", "B) This is a hypothetical moral question."], correct: 1, rationale: "It's asking about an imaginary situation to test your character.", teacherPrompt: "👉 TEACHER: Ask: Honestly, would you keep the cash or try to find the owner?" },
+
+            // --- LEVEL 2: THE ATM (Grammar Fill-in) ---
+            { type: 'transition', level: 2, title: "LEVEL 2", subtitle: "THE ATM", desc: "Step up to the cash machine. Select the correct grammar combination to authorize the transaction and complete the dream." },
+
+            { qType: 'atm', level: 2, qNum: 11, context: "If El pa ___ (win) the lottery, he would buy a sports car.", options: ["won", "win"], correct: 0, rationale: "The 'IF' part of the dream formula requires the past tense verb.", teacherPrompt: "👉 TEACHER: Ask: What kind of sports car would El pa buy?" },
+            { qType: 'atm', level: 2, qNum: 12, context: "If I had extra cash, I ___ (lend) it to you today.", options: ["would lend", "will lend"], correct: 0, rationale: "We use 'would' for the result of an imaginary situation.", teacherPrompt: "👉 TEACHER: Ask: Have you ever lent money to someone who disappeared?" },
+            { qType: 'atm', level: 2, qNum: 13, context: "Gelmy ___ (buy) a new house if she won the lottery.", options: ["will buy", "would buy"], correct: 1, rationale: "The sentence is reversed, but the result part always takes 'would'.", teacherPrompt: "👉 TEACHER: Ask: Where in the city would Gelmy buy her new house?" },
+            { qType: 'atm', level: 2, qNum: 14, context: "If Titó didn't borrow money, he ___ (be) out of debt.", options: ["would be", "will be"], correct: 0, rationale: "Imaginary past condition -> 'would' result.", teacherPrompt: "👉 TEACHER: Ask: Is it normal for people in your country to have debt?" },
+            { qType: 'atm', level: 2, qNum: 15, context: "What ___ (you/do) if you found a briefcase full of money?", options: ["will you do", "would you do"], correct: 1, rationale: "For hypothetical questions, use 'would + subject + verb'.", teacherPrompt: "👉 TEACHER: Ask: Seriously, what would you do? Call the police or hide it?" },
+            { qType: 'atm', level: 2, qNum: 16, context: "If I ___ (be) a millionaire, I wouldn't wake up at 6 AM.", options: ["was / were", "am"], correct: 0, rationale: "In dreams (Conditionals), we use past tense. 'Were' is preferred for all subjects.", teacherPrompt: "👉 TEACHER: Ask: What time would you wake up if you didn't have to work?" },
+            { qType: 'atm', level: 2, qNum: 17, context: "If she earned more, she ___ (not/borrow) from her parents.", options: ["wouldn't borrow", "didn't borrow"], correct: 0, rationale: "The result takes 'wouldn't' for negatives in imaginary situations.", teacherPrompt: "👉 TEACHER: Ask: At what age should people stop asking their parents for money?" },
+            { qType: 'atm', level: 2, qNum: 18, context: "I would travel the world if I ___ (not/have) to work.", options: ["wouldn't have", "didn't have"], correct: 1, rationale: "The 'IF' part takes the past negative 'didn't'. Never put 'would' directly after 'If'.", teacherPrompt: "👉 TEACHER: Ask: Name three countries you would visit on your world tour." },
+            { qType: 'atm', level: 2, qNum: 19, context: "If you won the big prize, ___ (you/share) it with me?", options: ["do you share", "would you share"], correct: 1, rationale: "Hypothetical result questions use 'would'.", teacherPrompt: "👉 TEACHER: Ask: Who is the first person you would share your money with?" },
+            { qType: 'atm', level: 2, qNum: 20, context: "Titó would buy a horse if he ___ (earn) a better salary.", options: ["earned", "earns"], correct: 0, rationale: "The 'IF' part needs the past tense 'earned' to make it a dream.", teacherPrompt: "👉 TEACHER: Ask: Why do you think Titó wants a horse?" },
+
+            // --- LEVEL 3: THE MASTER PLAN (VIP Planner UI) ---
+            { type: 'transition', level: 3, title: "LEVEL 3", subtitle: "MASTER PLAN", desc: "No more multiple choice. You are creating your financial future. Read the hypothetical scenario and write your exact actions." },
+
+            { qType: 'plan', level: 3, qNum: 21, scenario: "You find $1,000 cash on the street with no ID.", prompt: "What would you do?", acceptable: "I would keep it / I would buy clothes / I'd give it to charity.", teacherPrompt: "👉 TEACHER: Ask: Would you feel guilty keeping it?" },
+            { qType: 'plan', level: 3, qNum: 22, scenario: "You can buy ANY car in the world for free today.", prompt: "Which car would you choose?", acceptable: "I would buy a Ferrari / I'd choose a Porsche.", teacherPrompt: "👉 TEACHER: Ask: What color would your dream car be?" },
+            { qType: 'plan', level: 3, qNum: 23, scenario: "A friend asks to borrow $500, but they never pay back.", prompt: "What would you say to them?", acceptable: "I wouldn't lend it / I would say no / I'd tell them I'm broke.", teacherPrompt: "👉 TEACHER: Ask: Is it hard for you to say NO to friends?" },
+            { qType: 'plan', level: 3, qNum: 24, scenario: "You just checked your ticket. You won $50 Million.", prompt: "What is the VERY FIRST thing you would do?", acceptable: "I would scream / I would call my mom / I'd quit my job.", teacherPrompt: "👉 TEACHER: Ask: Would you tell anyone on social media?" },
+            { qType: 'plan', level: 3, qNum: 25, scenario: "You are magically the CEO of your company.", prompt: "What would you change?", acceptable: "I would increase salaries / I would fire my boss.", teacherPrompt: "👉 TEACHER: Ask: Do you think you would be a good boss?" },
+            { qType: 'plan', level: 3, qNum: 26, scenario: "Gelmy asks you for financial advice on where to put her money.", prompt: "Answer using: 'If I were you, I would...'", acceptable: "If I were you, I would buy a house / I would save it.", teacherPrompt: "👉 TEACHER: Ask: Do you prefer to save money in the bank or invest in property?" },
+            { qType: 'plan', level: 3, qNum: 27, scenario: "You don't have to work for money ever again.", prompt: "How would you spend your time every day?", acceptable: "I would sleep all day / I would travel / I'd learn to paint.", teacherPrompt: "👉 TEACHER: Ask: Do you think you would get bored without a job?" },
+            { qType: 'plan', level: 3, qNum: 28, scenario: "El pa wants to borrow your credit card for a party.", prompt: "Would you lend it to him?", acceptable: "No, I wouldn't / Yes, I would lend it but with a limit.", teacherPrompt: "👉 TEACHER: Ask: Have you ever regretted lending something to someone?" },
+            { qType: 'plan', level: 3, qNum: 29, scenario: "You have unlimited money to buy a house.", prompt: "Where in the world would you move?", acceptable: "I would move to New York / I'd live in a beach house in Bali.", teacherPrompt: "👉 TEACHER: Ask: Would you take your whole family with you?" },
+            { qType: 'plan', level: 3, qNum: 30, scenario: "Titó bet all his money and lost everything.", prompt: "If you were him, what would you do now?", acceptable: "I would cry / I would find a job / I'd ask for help.", teacherPrompt: "👉 TEACHER: Ask: What is the most expensive mistake you've ever made?" }
+        ];
+
+        let currentSlide = 0;
+        let score = 0;
+        let answeredQuestions = new Set();
+        let selectedAnswers = {}; 
+        let isGradingState = false;
+
+        const appContainer = document.getElementById('slide-mount');
+        const scoreDisplay = document.getElementById('global-score');
+
+        function renderSlide() {
+            const data = lessonData[currentSlide];
+            appContainer.innerHTML = '';
+            appContainer.className = 'w-full h-full flex slide-enter'; 
+
+            if (['intro', 'cheatsheet', 'outro', 'transition'].includes(data.type)) {
+                scoreDisplay.classList.add('hidden');
+            } else {
+                scoreDisplay.classList.remove('hidden');
+                scoreDisplay.innerText = `SCORE: ${score}/30`;
+            }
+
+            const buildNav = (isAnswered) => `
+                <div class="absolute bottom-6 w-full px-12 flex justify-between items-center z-40">
+                    <button onclick="nav(-1)" class="btn-freak bg-transparent text-white border-2 border-white hover:bg-white hover:text-freakDark text-sm py-2 px-6 shadow-none">PREVIOUS</button>
+                    ${isAnswered && data.qType !== 'plan' ? `<button onclick="nav(1)" class="btn-freak bg-freakYellow text-freakDark py-2 px-6 shadow-[4px_4px_0px_#111] animate-bounce">NEXT STEP ➔</button>` : ``}
+                    ${isAnswered && data.qType === 'plan' && !isGradingState ? `<button onclick="nav(1)" class="btn-freak bg-freakYellow text-freakDark py-2 px-6 shadow-[4px_4px_0px_#111] animate-bounce">NEXT STEP ➔</button>` : ``}
+                </div>
+            `;
+
+            // SLIDE: INTRO
+            if (data.type === 'intro') {
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col items-center justify-center text-center p-12 relative h-full bg-[#111]">
+                        <div class="inline-block bg-freakYellow text-freakDark font-mont font-black uppercase text-xl px-10 py-2 transform -skew-x-12 mb-6 mt-10">
+                            <span class="block transform skew-x-12">${data.unitModule}</span>
+                        </div>
+                        <h1 class="title-freak text-[100px] text-freakYellow mb-8 leading-none">${data.title}</h1>
+                        <p class="text-white font-mont font-bold text-3xl max-w-5xl leading-relaxed mb-12">${data.objective}</p>
+                        <div class="border-4 border-white px-12 py-4 mb-16 inline-block">
+                            <span class="text-freakBlue font-mont font-black text-3xl uppercase tracking-widest">${data.bottomTag}</span>
+                        </div>
+                        <div class="flex gap-6 mt-8">
+                            <button class="bg-[#888] text-freakDark font-mont font-black uppercase px-10 py-3 opacity-70 cursor-not-allowed">PREVIOUS</button>
+                            <button class="bg-freakYellow text-freakDark font-mont font-black uppercase px-10 py-3 hover:scale-105 transition-transform cursor-pointer shadow-[6px_6px_0px_#111]" onclick="nav(1)">NEXT STEP ➔</button>
+                        </div>
+                    </div>
+                `;
+            } 
+            // SLIDE: CHEATSHEET
+            else if (data.type === 'cheatsheet') {
+                let rulesHtml = '';
+                data.rules.forEach((rule, idx) => {
+                    rulesHtml += `
+                        <div class="bg-[#222] p-8 border-l-8 border-freakBlue flex flex-col h-full shadow-lg">
+                            <h3 class="font-bree text-3xl text-freakYellow mb-4">${rule.title}</h3>
+                            <p class="font-mont font-bold text-white text-xl mb-6 flex-grow">${rule.desc}</p>
+                            <div class="bg-black p-4 font-mont text-lg font-medium text-gray-300 italic border-l-4 border-freakYellow">
+                                ${rule.example}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col justify-center items-center p-12 bg-freakDark text-white relative h-full">
+                        <h2 class="title-freak text-7xl text-white mb-2">${data.title}</h2>
+                        <p class="font-mont text-2xl font-bold mb-12 text-freakBlue">${data.subtitle}</p>
+                        <div class="grid grid-cols-3 gap-8 w-full max-w-6xl">${rulesHtml}</div>
+                        <div class="absolute bottom-8 right-12">
+                            <button onclick="nav(1)" class="btn-freak bg-freakYellow hover:bg-white text-sm py-3 px-6 animate-bounce shadow-[4px_4px_0px_#111]">START LEVEL 1 ➔</button>
+                        </div>
+                        <div class="absolute bottom-8 left-12">
+                            <button onclick="nav(-1)" class="btn-freak bg-transparent text-white border-2 border-white hover:bg-white hover:text-freakDark shadow-none py-3 px-6 text-sm">PREVIOUS</button>
+                        </div>
+                    </div>
+                `;
+            }
+            // SLIDE: TRANSITION
+            else if (data.type === 'transition') {
+                appContainer.innerHTML = `
+                    <div class="w-1/2 h-full bg-freakYellow flex flex-col justify-center p-16 relative overflow-hidden">
+                        <div class="text-freakDark font-mont font-black italic text-[40px] mb-4 tracking-tight">${data.title}</div>
+                        <h1 class="font-mont font-black text-[60px] leading-[1] text-white uppercase tracking-tight">${data.subtitle.replace(' ', '<br>')}</h1>
+                    </div>
+                    <div class="w-1/2 h-full bg-freakDark flex flex-col justify-center items-start p-20 text-white relative">
+                        <div class="border-l-[8px] border-freakBlue pl-8 mb-12">
+                            <p class="font-mont text-[38px] font-bold leading-[1.3] tracking-tight">${data.desc}</p>
+                        </div>
+                        <div class="absolute bottom-20 flex items-center gap-10 pl-8">
+                            <button onclick="nav(-1)" class="font-mont font-black text-white text-xl uppercase tracking-wider hover:text-gray-300 transition-colors">PREVIOUS</button>
+                            <button onclick="nav(1)" class="bg-freakBlue text-freakDark font-mont font-black text-xl uppercase tracking-wider py-4 px-8 hover:bg-white transition-colors">BEGIN ➔</button>
+                        </div>
+                    </div>
+                `;
+            }
+            // LEVEL 1: REALITY CHECK (Floating Card Design)
+            else if (data.qType === 'recognize') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                const selectedOpt = selectedAnswers[currentSlide];
+
+                let optionsHtml = '';
+                data.options.forEach((opt, idx) => {
+                    let btnClass = "bg-[#222] text-white border-4 border-[#444] hover:border-freakYellow hover:text-freakYellow transition-all transform hover:-translate-y-2 hover:shadow-[8px_8px_0px_#E4DF33] cursor-pointer";
+                    let disabled = isAnswered ? "disabled" : "";
+                    
+                    if (isAnswered) {
+                        if (idx === data.correct) btnClass = "bg-green-400 text-freakDark border-4 border-green-600 font-black shadow-[8px_8px_0px_#14532d] z-10 scale-105";
+                        else if (idx === selectedOpt && idx !== data.correct) btnClass = "bg-red-500 text-white border-4 border-red-700 opacity-80 shadow-[4px_4px_0px_#7f1d1d]";
+                        else btnClass = "bg-[#111] text-gray-600 border-4 border-[#222] opacity-40";
+                    }
+
+                    optionsHtml += `<button ${disabled} onclick="handleAnswer(${idx})" class="w-full text-center font-mont font-black text-3xl p-8 flex flex-col items-center justify-center ${btnClass}">${opt}</button>`;
+                });
+
+                let feedbackHtml = isAnswered ? `
+                    <div class="mt-8 w-full max-w-5xl bg-freakYellow border-4 border-freakDark p-5 shadow-[8px_8px_0px_#30302F] animate-[fadeIn_0.3s_ease-out] flex items-center justify-between z-30">
+                        <div class="pr-6 border-r-4 border-freakDark flex-1">
+                            <h4 class="font-bree text-freakDark text-3xl uppercase mb-1">${selectedOpt === data.correct ? '💸 NAIL ON THE HEAD.' : '📉 BAD INVESTMENT.'}</h4>
+                            <p class="font-mont text-freakDark text-lg font-bold leading-snug">${data.rationale}</p>
+                        </div>
+                        <div class="pl-6 w-1/3 flex-shrink-0">
+                            <div class="bg-white text-freakDark p-3 font-bold font-mont text-sm border-2 border-freakDark transform rotate-1 text-center shadow-md">
+                                ${data.teacherPrompt}
+                            </div>
+                        </div>
+                    </div>` : '';
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-[#111] flex flex-col justify-center items-center relative p-12 pb-24">
+                        
+                        <div class="absolute top-8 left-12 flex items-center gap-4">
+                            <div class="bg-freakYellow text-freakDark font-mont font-black px-4 py-1 transform -skew-x-12 text-xl">LEVEL ${data.level}</div>
+                            <div class="text-gray-500 font-mont font-bold uppercase tracking-widest text-xl">${data.subtitle}</div>
+                        </div>
+                        <div class="absolute top-8 right-12 text-freakYellow font-mont font-black text-2xl">
+                            ${data.qNum} / 10
+                        </div>
+
+                        <!-- Quote Card -->
+                        <div class="bg-freakDark border-4 border-freakBlue p-10 mb-8 mt-6 relative w-full max-w-5xl shadow-[12px_12px_0px_#93E5FF] transform -rotate-1">
+                            <div class="absolute -top-10 -left-6 text-freakBlue text-[100px] font-bree leading-none">"</div>
+                            <h3 class="text-white font-mont font-black text-[45px] text-center leading-tight relative z-10 px-8">
+                                ${data.q}
+                            </h3>
+                            <div class="absolute -bottom-16 -right-4 text-freakBlue text-[100px] font-bree leading-none">"</div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-8 w-full max-w-5xl">
+                            ${optionsHtml}
+                        </div>
+
+                        ${feedbackHtml}
+                    </div>
+                    ${buildNav(isAnswered)}
+                `;
+            }
+            // LEVEL 2: THE ATM (Retro Terminal UI)
+            else if (data.qType === 'atm') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                const selectedOpt = selectedAnswers[currentSlide];
+
+                let optionsHtml = '';
+                data.options.forEach((opt, idx) => {
+                    let btnClass = "atm-btn";
+                    let disabled = isAnswered ? "disabled" : "";
+                    
+                    if (isAnswered) {
+                        if (idx === data.correct) btnClass += " correct";
+                        else if (idx === selectedOpt && idx !== data.correct) btnClass += " wrong";
+                        else btnClass += " opacity-30 border-[#0f4a22]";
+                    }
+
+                    optionsHtml += `<button ${disabled} onclick="handleAnswer(${idx})" class="w-full text-3xl py-6 rounded-md ${btnClass}">[ ${opt} ]</button>`;
+                });
+
+                let displayContext = data.context;
+                if (isAnswered && selectedOpt === data.correct) {
+                    displayContext = displayContext.replace('___', `<span class="bg-atmGreen text-atmBg px-2 py-0 uppercase">${data.options[data.correct]}</span>`);
+                } else if (isAnswered) {
+                    displayContext = displayContext.replace('___', `<span class="text-freakRed line-through uppercase">${data.options[selectedOpt]}</span> <span class="bg-atmGreen text-atmBg px-2 py-0 uppercase">${data.options[data.correct]}</span>`);
+                } else {
+                    displayContext = displayContext.replace('___', `<span class="text-atmGreen border-b-4 border-atmGreen animate-pulse">______</span>`);
+                }
+
+                let feedbackHtml = isAnswered ? `
+                    <div class="w-full max-w-4xl mt-6 bg-[#000] border-2 border-atmGreen p-4 z-20 flex gap-4 items-center">
+                        <div class="flex-1 font-mono text-atmGreen text-xl">
+                            > SYSTEM_LOG: ${data.rationale}
+                        </div>
+                        <div class="w-[40%] bg-freakYellow text-freakDark p-2 font-bold font-mont text-sm border-2 border-freakDark text-center transform skew-x-2">
+                            ${data.teacherPrompt}
+                        </div>
+                    </div>` : '';
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-[#020a04] flex flex-col items-center justify-center relative p-8 pb-20 overflow-hidden">
+                        <div class="absolute inset-0 scanlines z-50"></div>
+                        
+                        <div class="absolute top-8 left-8 text-atmGreen font-mono text-2xl opacity-70">CASH_TERMINAL_Q${data.qNum}</div>
+                        
+                        <!-- ATM Screen -->
+                        <div class="bg-atmBg rounded-xl w-full max-w-4xl min-h-[450px] p-10 relative flex flex-col border-[8px] border-[#111] z-10 shadow-[0_0_50px_rgba(22,163,74,0.15)]">
+                            
+                            <!-- Header -->
+                            <div class="flex justify-between items-center border-b-2 border-atmGreen pb-4 mb-10">
+                                <div class="font-mono text-4xl text-atmGreen tracking-widest uppercase">Select Transaction</div>
+                                <div class="font-mono text-2xl text-atmGreen opacity-50">BAL: $0.00</div>
+                            </div>
+                            
+                            <!-- Content -->
+                            <div class="flex-grow flex flex-col justify-center px-4">
+                                <p class="font-mono text-[38px] leading-[1.4] text-atmGreen mb-12 drop-shadow-[0_0_5px_rgba(74,222,128,0.5)]">${displayContext}</p>
+                            </div>
+                            
+                            <!-- Options -->
+                            <div class="w-full grid grid-cols-2 gap-8 mt-auto">
+                                ${optionsHtml}
+                            </div>
+                        </div>
+                        
+                        <div class="z-10 w-full max-w-4xl flex justify-center">${feedbackHtml}</div>
+                    </div>
+                    ${buildNav(isAnswered)}
+                `;
+            }
+            // LEVEL 3: MASTER PLAN (VIP Planner UI)
+            else if (data.qType === 'plan') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                
+                let contentHtml = '';
+
+                if (!isGradingState && !isAnswered) {
+                    contentHtml = `
+                        <div class="bg-white rounded-lg p-10 shadow-2xl relative mb-8 border-t-[16px] border-freakDark w-full max-w-4xl">
+                            <div class="absolute -top-4 right-8 bg-freakYellow text-freakDark font-mont font-black px-6 py-2 uppercase tracking-widest text-sm shadow-md">CONFIDENTIAL</div>
+                            
+                            <h3 class="text-gray-400 font-mont font-bold text-sm tracking-widest uppercase mb-2">SCENARIO FILE ${data.qNum}</h3>
+                            <p class="font-bree text-freakDark text-4xl mb-8 leading-tight">"${data.scenario}"</p>
+                            
+                            <div class="bg-gray-100 p-6 rounded-md border border-gray-300">
+                                <p class="text-freakBlue font-mont font-black text-sm uppercase tracking-widest mb-3 bg-freakDark inline-block px-3 py-1">${data.prompt}</p>
+                                <textarea id="diagnose-input" placeholder="I would..." autocomplete="off"
+                                    class="w-full bg-transparent text-freakDark font-mont font-bold text-2xl outline-none resize-none border-b-2 border-gray-400 focus:border-freakDark transition-colors h-24"></textarea>
+                            </div>
+                        </div>
+                        <div class="flex justify-end w-full max-w-4xl">
+                            <button onclick="submitWriting()" class="btn-freak bg-freakDark text-freakYellow border-2 border-freakYellow hover:bg-freakYellow hover:text-freakDark text-xl py-4 px-10 shadow-[6px_6px_0px_#E4DF33]">LOCK IN DECISION ➔</button>
+                        </div>
+                    `;
+                } else if (isGradingState) {
+                    const userText = selectedAnswers[currentSlide];
+                    contentHtml = `
+                        <div class="flex gap-6 w-full max-w-5xl mb-6">
+                            <!-- Left: User Answer -->
+                            <div class="w-1/2 bg-white rounded-lg border-t-[12px] border-freakYellow p-8 shadow-xl">
+                                <h4 class="font-mont font-bold text-gray-400 text-sm tracking-widest mb-4 uppercase">YOUR MASTER PLAN:</h4>
+                                <p class="font-bree text-freakDark text-3xl">"${userText}"</p>
+                            </div>
+                            <!-- Right: Expected Answer -->
+                            <div class="w-1/2 bg-freakDark rounded-lg border-t-[12px] border-freakBlue p-8 shadow-xl">
+                                <h4 class="font-mont font-bold text-gray-400 text-sm tracking-widest mb-4 uppercase">FINANCIAL EXAMPLES:</h4>
+                                <p class="font-mont text-white text-2xl font-bold">${data.acceptable}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="w-full max-w-5xl bg-white p-4 mb-6 border-4 border-freakDark text-center transform -rotate-1 shadow-md">
+                            <p class="font-mont font-black text-freakDark text-lg">${data.teacherPrompt}</p>
+                        </div>
+
+                        <!-- Grading Decision -->
+                        <div class="w-full max-w-5xl bg-black border-2 border-gray-700 p-6 text-center shadow-2xl">
+                            <h3 class="font-bree text-freakYellow text-2xl mb-2">VIBE CHECK</h3>
+                            <p class="font-mont text-gray-400 text-sm mb-6">Did you successfully express a hypothetical dream using 'Would' or past tense?</p>
+                            <div class="flex justify-center gap-6">
+                                <button onclick="selfGrade(false)" class="btn-freak bg-red-500 text-white hover:bg-red-600 shadow-none py-3 px-6">BROKE (0 PT)</button>
+                                <button onclick="selfGrade(true)" class="btn-freak bg-green-500 text-freakDark hover:bg-green-600 shadow-none py-3 px-6">INVESTOR (+1 PT)</button>
+                            </div>
+                        </div>
+                    `;
+                } else if (isAnswered) {
+                    const userText = selectedAnswers[currentSlide];
+                    contentHtml = `
+                         <div class="w-full max-w-4xl bg-gray-800 border-t-[12px] border-gray-600 p-10 shadow-xl opacity-60 flex flex-col items-center justify-center rounded-lg">
+                            <h4 class="font-mont font-bold text-gray-400 text-sm tracking-widest mb-4 uppercase">DECISION LOGGED:</h4>
+                            <p class="font-bree text-white text-3xl">"${userText}"</p>
+                        </div>
+                        <div class="mt-6 text-center font-mont text-freakYellow font-bold text-xl uppercase tracking-widest">Move to the next scenario.</div>
+                    `;
+                }
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-[#111] flex flex-col justify-center items-center relative p-12 pb-20">
+                        <div class="absolute top-8 left-8 text-gray-600 font-mont font-black italic text-2xl">Q${data.qNum}/30 | MASTER PLAN</div>
+                        
+                        <div class="w-full max-w-6xl flex flex-col items-center justify-center h-full mt-4">
+                            ${contentHtml}
+                        </div>
+                    </div>
+                    ${buildNav(isAnswered && !isGradingState)}
+                `;
+                
+                const inputEl = document.getElementById('diagnose-input');
+                if(inputEl) inputEl.focus();
+            }
+            // OUTRO
+            else if (data.type === 'outro') {
+                const percentage = Math.round((score / 30) * 100);
+                let message = "";
+                if (percentage >= 90) message = "BILLIONAIRE MINDSET. You are ready for wealth.";
+                else if (percentage >= 70) message = "GOOD INVESTOR. Keep dreaming big.";
+                else message = "BANKRUPT. We need to review your finances.";
+
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col justify-center items-center text-center p-12 bg-freakYellow text-freakDark relative h-full">
+                        <h1 class="font-bree text-[110px] mb-2 leading-none uppercase">TRANSACTION<br>COMPLETE</h1>
+                        <div class="bg-freakDark text-white p-12 mt-8 w-[600px] shadow-[16px_16px_0px_#93E5FF]">
+                            <h2 class="font-mont font-black italic text-3xl mb-4 text-gray-400">NET WORTH (SCORE)</h2>
+                            <p class="font-mont text-[100px] font-black text-freakGreen leading-none mb-4">${score} / 30</p>
+                            <p class="font-mont text-2xl font-bold bg-white text-freakDark inline-block px-6 py-2 transform -skew-x-6 mt-4">${message}</p>
+                        </div>
+                        <div class="mt-16">
+                            <button onclick="location.reload()" class="btn-freak bg-white text-freakDark hover:bg-freakBlue shadow-[6px_6px_0px_#111]">DREAM AGAIN ➔</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        window.handleAnswer = function(optIndex) {
+            const data = lessonData[currentSlide];
+            if (answeredQuestions.has(currentSlide)) return; 
+            
+            selectedAnswers[currentSlide] = optIndex;
+            answeredQuestions.add(currentSlide);
+            
+            if (optIndex === data.correct) score++;
+            
+            renderSlide(); 
+        }
+
+        window.submitWriting = function() {
+            const inputEl = document.getElementById('diagnose-input');
+            const userText = inputEl ? inputEl.value.trim() : "";
+            if (!userText) {
+                inputEl.classList.add('border-red-500', 'bg-red-50');
+                return; 
+            }
+            selectedAnswers[currentSlide] = userText;
+            isGradingState = true;
+            renderSlide();
+        }
+
+        window.selfGrade = function(isCorrect) {
+            isGradingState = false;
+            answeredQuestions.add(currentSlide);
+            if (isCorrect) score++;
+            nav(1); 
+        }
+
+        window.nav = function(dir) {
+            let nextSlide = currentSlide + dir;
+            if (nextSlide >= 0 && nextSlide < lessonData.length) {
+                currentSlide = nextSlide;
+                renderSlide();
+            } else if (nextSlide >= lessonData.length) {
+                lessonData.push({type: 'outro'});
+                currentSlide = lessonData.length -1;
+                renderSlide();
+            }
+        }
+
+        document.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter' && lessonData[currentSlide]?.qType === 'plan' && !isGradingState && !answeredQuestions.has(currentSlide)) {
+                if (!e.shiftKey) {
+                    e.preventDefault();
+                    submitWriting();
+                }
+            }
+        });
+
+        // Init
+        renderSlide();
+    </script>
+</body>
+</html>

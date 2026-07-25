@@ -321,12 +321,15 @@ model Module {
   title       String
   description String?
   position    Int
+  /// Unidad a la que pertenece dentro del nivel (agrupa los módulos en la UI).
+  unit        Int?
   createdAt   DateTime     @default(now()) @map("created_at")
 
   lessons     Lesson[]
   checkpoints Checkpoint[]
 
   @@index([level, position])
+  @@index([level, unit, position])
   @@map("modules")
 }
 

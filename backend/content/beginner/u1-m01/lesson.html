@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freakn' Lesson: Breaking the Ice (A1 Edition)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-yellow: #E4DF33;
+            --charcoal: #30302F;
+            --sky-blue: #93E5FF;
+            --bg-dark: #111111;
+        }
+        body {
+            background-color: var(--bg-dark);
+            color: white;
+            font-family: 'Montserrat', sans-serif;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .title-bree {
+            font-family: 'Bree Serif', serif;
+            text-transform: uppercase;
+        }
+        
+        /* App Structure */
+        #app-wrapper {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .slide {
+            display: none;
+            height: 100%;
+            width: 100%;
+            overflow-y: auto;
+            animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .slide.active {
+            display: flex;
+        }
+
+        /* Color Utilities */
+        .text-yellow { color: var(--primary-yellow); }
+        .bg-yellow { background-color: var(--primary-yellow); }
+        .text-charcoal { color: var(--charcoal); }
+        .bg-charcoal { background-color: var(--charcoal); }
+        .text-sky { color: var(--sky-blue); }
+        .bg-sky { background-color: var(--sky-blue); }
+
+        /* Aesthetic Components */
+        .split-left {
+            background-color: var(--primary-yellow);
+            color: var(--charcoal);
+        }
+        .split-right {
+            background-color: var(--charcoal);
+            color: white;
+        }
+        .layout-split {
+            display: flex;
+            width: 100%;
+            min-height: 100%;
+        }
+        .layout-split > .half {
+            width: 50%;
+            padding: 4rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .skewed-block {
+            transform: skew(-12deg);
+            background-color: var(--primary-yellow);
+            color: var(--charcoal);
+            padding: 1rem 2rem;
+            display: inline-block;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.3);
+        }
+        .skewed-block > div {
+            transform: skew(12deg);
+        }
+        .skewed-charcoal {
+            background-color: var(--charcoal);
+            color: white;
+        }
+
+        .gossip-paper {
+            background-color: white;
+            color: black;
+            font-family: 'Bree Serif', serif;
+            padding: 2.5rem;
+            transform: rotate(-2deg);
+            box-shadow: 10px 10px 0px var(--primary-yellow);
+            border: 3px solid var(--charcoal);
+            font-size: 1.5rem;
+            line-height: 1.4;
+        }
+
+        /* Buttons */
+        .btn-freak {
+            background-color: var(--sky-blue);
+            color: var(--charcoal);
+            font-weight: 900;
+            text-transform: uppercase;
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            border: 4px solid transparent;
+            transition: all 0.2s;
+            cursor: pointer;
+            text-align: center;
+            font-size: 1.25rem;
+        }
+        .btn-freak:hover {
+            transform: translateY(-4px);
+            border-color: white;
+            box-shadow: 0 8px 20px rgba(147, 229, 255, 0.4);
+        }
+        
+        .option-btn {
+            background-color: #444;
+            color: white;
+            border: 4px solid #555;
+            padding: 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            display: block;
+            width: 100%;
+            margin-bottom: 0.75rem;
+        }
+        .option-btn:hover {
+            border-color: var(--primary-yellow);
+            background-color: #555;
+            transform: translateX(10px);
+        }
+        .option-btn.correct {
+            background-color: var(--sky-blue);
+            color: var(--charcoal);
+            border-color: white;
+            transform: translateX(10px);
+        }
+        .option-btn.wrong {
+            background-color: #FF4444;
+            color: white;
+            border-color: white;
+        }
+
+        /* Navigation Footer */
+        #nav-bar {
+            height: 80px;
+            background-color: #000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 3rem;
+            border-top: 3px solid #333;
+            flex-shrink: 0;
+        }
+        .btn-nav {
+            background-color: transparent;
+            border: 3px solid var(--primary-yellow);
+            color: var(--primary-yellow);
+            font-weight: 900;
+            padding: 0.75rem 2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            font-size: 1.1rem;
+        }
+        .btn-nav:hover {
+            background-color: var(--primary-yellow);
+            color: var(--charcoal);
+            box-shadow: 0 0 15px rgba(228, 223, 51, 0.5);
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            height: 8px;
+            background-color: #222;
+            width: 100%;
+            flex-shrink: 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: var(--primary-yellow);
+            width: 0%;
+            transition: width 0.4s ease-out;
+            box-shadow: 0 0 10px var(--primary-yellow);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        /* Micro-interactions */
+        .teacher-note {
+            background-color: rgba(255,255,255,0.1);
+            border-left: 5px solid var(--sky-blue);
+            padding: 1rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 1.5rem;
+        }
+
+        /* ============ RESPONSIVE (mobile 360-820px) ============ */
+        @media (max-width: 820px) {
+            .layout-split { flex-direction: column; }
+            .layout-split > .half { width: 100%; padding: 1.25rem 1rem; }
+
+            /* Diagonal / big-number template (w-1/3 + w-2/3 rows) */
+            .slide > .flex.w-full.h-full { flex-direction: column; height: auto; min-height: 100%; }
+            .slide > .flex.w-full.h-full > [class*="w-1/3"] {
+                width: 100%;
+                border-right: none;
+                border-bottom: 8px solid var(--charcoal);
+                padding: 1rem;
+            }
+            .slide > .flex.w-full.h-full > [class*="w-2/3"] { width: 100%; padding: 1.25rem 1rem; }
+
+            /* Giant deck typography down to legible sizes */
+            .slide h1[class*="text-["] { font-size: clamp(2.25rem, 12vw, 3.25rem); line-height: 1.1; }
+            .slide .text-\[400px\] { font-size: 8rem; }
+
+            /* Slide-level big paddings down to 1rem */
+            .slide[class*="p-12"], .slide[class*="p-16"] { padding: 1rem; }
+            .slide [class*="p-16"], .slide [class*="p-12"], .slide [class*="p-10"] { padding: 1rem; }
+
+            .gossip-paper { padding: 1.25rem; font-size: 1.1rem; }
+            .skewed-block { padding: 0.5rem 1rem; }
+            .skewed-block h2, .skewed-block p { font-size: 1.1rem; }
+
+            .btn-freak { padding: 0.85rem 1.5rem; font-size: 1rem; min-height: 44px; }
+            .option-btn { padding: 0.9rem 1rem; font-size: 1rem; min-height: 44px; }
+
+            #nav-bar { padding: 0.5rem 1rem; height: auto; min-height: 64px; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+            .btn-nav { padding: 0.6rem 1.25rem; font-size: 0.9rem; min-height: 44px; }
+            #slide-counter { order: 3; width: 100%; text-align: center; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+    <div id="app-wrapper">
+        
+        <!-- ==========================================
+             INTRO SLIDES
+             ========================================== -->
+             
+        <!-- SLIDE 1: Title -->
+        <div class="slide active flex-col items-center justify-center bg-charcoal relative">
+            <div class="absolute inset-0 opacity-10 flex items-center justify-center pointer-events-none">
+                <span class="text-[400px]">🇨🇴</span>
+            </div>
+            <div class="z-10 flex flex-col items-center">
+                <div class="skewed-block mb-8">
+                    <div><h2 class="text-3xl font-bold tracking-widest">UNIT 1 • MODULE 1</h2></div>
+                </div>
+                <h1 class="text-[110px] title-bree leading-none text-yellow text-center mb-6 drop-shadow-lg">BREAKING<br>THE ICE</h1>
+                <p class="text-3xl font-bold text-white max-w-3xl text-center mb-10 leading-relaxed">Learn how to say hello, talk about your country, and say your name easily. Speak like a real person!</p>
+                <div class="text-sky font-black text-2xl tracking-widest uppercase border-4 border-sky px-6 py-3">The Foundations • Part 1</div>
+            </div>
+        </div>
+
+        <!-- SLIDE 2: Context / Meet the Crew -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-left">
+                    <h1 class="text-[80px] title-bree leading-none mb-8">MEET THE<br>FAMILY</h1>
+                    <p class="text-2xl font-bold mb-8">You are going to a big party in Medellín. Who is there?</p>
+                    <div class="space-y-6 text-xl font-medium">
+                        <div class="flex items-start"><span class="text-3xl mr-4">👑</span><p><strong>Gelmy (47):</strong> The mom. She likes elegance and wants everything to be perfect.</p></div>
+                        <div class="flex items-start"><span class="text-3xl mr-4">🤠</span><p><strong>Titó (50):</strong> The dad. He thinks his English is perfect (it is not). He speaks very loud.</p></div>
+                        <div class="flex items-start"><span class="text-3xl mr-4">🧢</span><p><strong>El Pa (20):</strong> The son. He wants to have fun and meet girls. Very relaxed.</p></div>
+                    </div>
+                </div>
+                <div class="half split-right items-center text-center">
+                    <div class="gossip-paper max-w-lg mb-8">
+                        "Listen! We have a big party tonight. Please speak good English!"
+                        <div class="text-right text-gray-500 text-lg mt-4">- Gelmy</div>
+                    </div>
+                    <p class="text-sky font-bold text-2xl uppercase mt-8">Are you ready?</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             LEVEL 1: THE VIBE (10 Questions)
+             ========================================== -->
+        
+        <!-- L1 Intro -->
+        <div class="slide flex-col items-center justify-center bg-yellow text-charcoal">
+            <h1 class="text-[120px] title-bree leading-none text-center mb-4">LEVEL 1:<br>THE VIBE</h1>
+            <div class="skewed-block skewed-charcoal mb-8">
+                <div><p class="text-3xl font-black tracking-widest">UNDERSTAND THE BASICS</p></div>
+            </div>
+            <p class="text-2xl font-bold mt-2">Do you know the basic words for the party?</p>
+        </div>
+
+        <!-- L1 Q1 (Template A: Split Layout) -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-left">
+                    <h3 class="title-bree text-4xl mb-8">Question 1/10</h3>
+                    <div class="gossip-paper">
+                        Gelmy points to a man. "He is from Tokyo. Go _______ him!"
+                    </div>
+                    <div class="teacher-note border-charcoal text-charcoal">👉 Teacher: Explain why the other options are incorrect!</div>
+                </div>
+                <div class="half split-right items-center">
+                    <div class="w-full max-w-lg">
+                        <button class="option-btn" onclick="checkAnswer(this, false, 'No! You SPEAK a language, not a person.')">Speak</button>
+                        <button class="option-btn" onclick="checkAnswer(this, true, 'Correct! Meet = conocer / encontrarse por primera vez.')">Meet</button>
+                        <button class="option-btn" onclick="checkAnswer(this, false, 'No! Spell is for letters (A-B-C).')">Spell</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- L1 Q2 (Template B: Centered Focus) -->
+        <div class="slide flex-col items-center justify-center bg-charcoal p-12">
+            <h3 class="text-sky text-3xl font-black mb-8 tracking-widest uppercase">Question 2/10</h3>
+            <h2 class="text-4xl text-center mb-12 max-w-4xl font-bold leading-relaxed">You walk to the man from Tokyo. How do you start the conversation?</h2>
+            <div class="flex flex-col space-y-4 w-full max-w-3xl">
+                <button class="option-btn text-center text-xl py-5" onclick="checkAnswer(this, false, 'Too aggressive! Too strong.')">"Tell me your name right now."</button>
+                <button class="option-btn text-center text-xl py-5" onclick="checkAnswer(this, false, 'Grammar error! You don\'t speak a person.')">"Hello, I speak you."</button>
+                <button class="option-btn text-center text-xl py-5" onclick="checkAnswer(this, true, 'Perfect! Simple and friendly.')">"Hey, I'm [Your Name]. Nice to meet you."</button>
+            </div>
+            <div class="teacher-note text-yellow border-yellow mt-8 w-full max-w-3xl text-center">👉 Follow-up: Ask the student how they usually say hello.</div>
+            <div class="feedback-box hidden w-full max-w-3xl mt-6 p-6 rounded text-xl font-bold text-center"></div>
+        </div>
+
+        <!-- L1 Q3 (Template C: Diagonal/Big Number) -->
+        <div class="slide">
+            <div class="flex w-full h-full bg-yellow text-charcoal">
+                <div class="w-1/3 flex items-center justify-center border-r-8 border-charcoal bg-charcoal text-yellow">
+                    <h1 class="text-[200px] title-bree leading-none">03</h1>
+                </div>
+                <div class="w-2/3 flex flex-col justify-center p-16 relative">
+                    <div class="absolute top-10 right-10 text-xl font-black tracking-widest">QUESTION 3/10</div>
+                    <div class="text-4xl font-bold mb-10 leading-tight">He smiles and asks where you are from. You reply: <br><br><span class="bg-white px-4 py-2 italic rotate-1 inline-block">"I am from Colombia. I am _______."</span></div>
+                    <div class="space-y-4 max-w-2xl">
+                        <button class="option-btn bg-charcoal text-white hover:border-white py-4" onclick="checkAnswer(this, false, 'No. You are a person, not the country.')">Colombia</button>
+                        <button class="option-btn bg-charcoal text-white hover:border-white py-4" onclick="checkAnswer(this, true, 'Yes! Country = Colombia. Nationality = Colombian.')">Colombian</button>
+                        <button class="option-btn bg-charcoal text-white hover:border-white py-4" onclick="checkAnswer(this, false, 'No. We don\'t say of Colombia like that.')">of Colombia</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- L1 Q4 (Template A: Split Layout) -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-right">
+                    <h3 class="text-sky font-black text-4xl mb-8 uppercase tracking-widest">Question 4/10</h3>
+                    <p class="text-3xl font-bold mb-8 leading-relaxed">The music is very loud. He asks:</p>
+                    <div class="bg-gray-800 p-6 border-l-8 border-yellow text-2xl italic">"Sorry, how do you _______ that?"</div>
+                    <div class="teacher-note text-yellow border-yellow mt-10">👉 Teacher: Have the student spell their name!</div>
+                </div>
+                <div class="half split-left items-center bg-gray-200 text-charcoal">
+                    <div class="w-full max-w-lg">
+                        <button class="option-btn bg-white text-charcoal border-charcoal hover:bg-yellow py-4" onclick="checkAnswer(this, false, 'No. Tell is for information or stories.')">Tell</button>
+                        <button class="option-btn bg-white text-charcoal border-charcoal hover:bg-yellow py-4" onclick="checkAnswer(this, false, 'No. Say is for pronouncing a word.')">Say</button>
+                        <button class="option-btn bg-white text-charcoal border-charcoal hover:bg-yellow py-4" onclick="checkAnswer(this, true, 'Yes! Spell = deletrear (A-B-C).')">Spell</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- L1 Q5 (Template B: Centered Focus) -->
+        <div class="slide flex-col items-center justify-center bg-sky text-charcoal p-12">
+            <h3 class="text-charcoal text-3xl font-black mb-8 tracking-widest uppercase bg-white px-4 py-1">Question 5/10</h3>
+            <div class="bg-white p-8 rounded-xl shadow-2xl transform -rotate-1 mb-10 max-w-4xl border-4 border-charcoal">
+                <p class="text-2xl font-bold mb-4 text-gray-500">El Pa walks over.</p>
+                <h2 class="text-4xl font-bold leading-relaxed">"This guy is cool. Does he _______ Spanish? I want to drink a beer with him."</h2>
+            </div>
+            <div class="flex flex-col space-y-4 w-full max-w-2xl">
+                <button class="option-btn bg-charcoal text-white hover:border-white text-center text-xl py-5" onclick="checkAnswer(this, true, 'Exactly! You SPEAK a language.')">speak</button>
+                <button class="option-btn bg-charcoal text-white hover:border-white text-center text-xl py-5" onclick="checkAnswer(this, false, 'No. You say words, not a language.')">say</button>
+                <button class="option-btn bg-charcoal text-white hover:border-white text-center text-xl py-5" onclick="checkAnswer(this, false, 'No. You tell a story, not a language.')">tell</button>
+            </div>
+            <div class="feedback-box hidden w-full max-w-2xl mt-6 p-6 rounded text-xl font-bold text-center"></div>
+        </div>
+
+        <!-- L1 Q6 (Template C: Diagonal/Big Number) -->
+        <div class="slide">
+            <div class="flex w-full h-full bg-charcoal text-white">
+                <div class="w-1/3 flex items-center justify-center border-r-8 border-sky bg-sky text-charcoal">
+                    <h1 class="text-[200px] title-bree leading-none">06</h1>
+                </div>
+                <div class="w-2/3 flex flex-col justify-center p-16 relative">
+                    <div class="absolute top-10 right-10 text-xl font-black tracking-widest text-sky">QUESTION 6/10</div>
+                    <div class="text-4xl font-bold mb-10 leading-tight">The man replies to El Pa: <br><br><span class="text-sky">"Only a little. I am from Tokyo, so I am _______."</span></div>
+                    <div class="space-y-4 max-w-2xl">
+                        <button class="option-btn py-4" onclick="checkAnswer(this, false, 'No. Japan is the country.')">Japan</button>
+                        <button class="option-btn py-4" onclick="checkAnswer(this, true, 'Correct! Country: Japan -> Nationality: Japanese.')">Japanese</button>
+                        <button class="option-btn py-4" onclick="checkAnswer(this, false, 'No. Japonese is not correct.')">Japonese</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- L1 Q7 (Template A: Split Layout) -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-left">
+                    <h3 class="title-bree text-4xl mb-8">Question 7/10</h3>
+                    <div class="gossip-paper">
+                        Titó says very loud: "Let me _______ you my name! I am Titó!"
+                    </div>
+                    <div class="teacher-note border-charcoal text-charcoal">👉 Teacher: Explain the difference between Tell (someone) and Say (something).</div>
+                </div>
+                <div class="half split-right items-center">
+                    <div class="w-full max-w-lg">
+                        <button class="option-btn py-4" onclick="checkAnswer(this, true, 'Yes! Tell + Person (tell you).')">tell</button>
+                        <button class="option-btn py-4" onclick="checkAnswer(this, false, 'No. You say a word, you don\'t say a person.')">say</button>
+                        <button class="option-btn py-4" onclick="checkAnswer(this, false, 'No. You speak a language.')">speak</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- L1 Q8 (Template B: Centered Focus) -->
+        <div class="slide flex-col items-center justify-center bg-gray-900 p-12 text-white">
+            <h3 class="text-yellow text-3xl font-black mb-8 tracking-widest uppercase">Question 8/10</h3>
+            <h2 class="text-4xl text-center mb-12 max-w-4xl font-bold leading-relaxed border-b-4 border-yellow pb-8">A woman joins. She is from Brazil. She is _______.</h2>
+            <div class="flex flex-col space-y-4 w-full max-w-3xl">
+                <button class="option-btn text-center text-xl py-5" onclick="checkAnswer(this, false, 'Almost... but Brazil is the country.')">Brazil</button>
+                <button class="option-btn text-center text-xl py-5" onclick="checkAnswer(this, false, 'No. Brazilese is not correct.')">Brazilese</button>
+                <button class="option-btn text-center text-xl py-5" onclick="checkAnswer(this, true, 'Yes! Country: Brazil -> Nationality: Brazilian.')">Brazilian</button>
+            </div>
+            <div class="feedback-box hidden w-full max-w-3xl mt-6 p-6 rounded text-xl font-bold text-center"></div>
+        </div>
+
+        <!-- L1 Q9 (Template C: Diagonal/Big Number) -->
+        <div class="slide">
+            <div class="flex w-full h-full bg-yellow text-charcoal">
+                <div class="w-1/3 flex items-center justify-center border-r-8 border-charcoal bg-charcoal text-yellow">
+                    <h1 class="text-[200px] title-bree leading-none">09</h1>
+                </div>
+                <div class="w-2/3 flex flex-col justify-center p-16 relative">
+                    <div class="absolute top-10 right-10 text-xl font-black tracking-widest">QUESTION 9/10</div>
+                    <div class="text-4xl font-bold mb-10 leading-tight">She says hello:<br><br><span class="bg-white px-4 py-2 italic rotate-1 inline-block">"Cheers! Nice to _______ you all."</span></div>
+                    <div class="space-y-4 max-w-2xl">
+                        <button class="option-btn bg-charcoal text-white hover:border-white py-4" onclick="checkAnswer(this, true, 'Yes! Nice to meet you = Mucho gusto.')">meet</button>
+                        <button class="option-btn bg-charcoal text-white hover:border-white py-4" onclick="checkAnswer(this, false, 'No. We don\'t say nice to speak you.')">speak</button>
+                        <button class="option-btn bg-charcoal text-white hover:border-white py-4" onclick="checkAnswer(this, false, 'No. Say is incorrect here.')">say</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- L1 Q10 (Template A: Split Layout) -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-right">
+                    <h3 class="text-sky font-black text-4xl mb-8 uppercase tracking-widest">Question 10/10</h3>
+                    <p class="text-3xl font-bold mb-8 leading-relaxed">You want to leave the conversation. What is the correct way to say goodbye?</p>
+                    <div class="teacher-note text-yellow border-yellow mt-10">👉 Real Life: Ask the student how they say goodbye at a party.</div>
+                </div>
+                <div class="half split-left items-center bg-gray-200 text-charcoal">
+                    <div class="w-full max-w-lg space-y-4">
+                        <button class="option-btn bg-white text-charcoal border-charcoal hover:bg-yellow py-4" onclick="checkAnswer(this, false, 'No. This sounds very weird.')">"I tell you bye now."</button>
+                        <button class="option-btn bg-white text-charcoal border-charcoal hover:bg-yellow py-4" onclick="checkAnswer(this, true, 'Perfect. Polite and natural.')">"It was nice meeting you! I have to go."</button>
+                        <button class="option-btn bg-white text-charcoal border-charcoal hover:bg-yellow py-4" onclick="checkAnswer(this, false, 'No. Spell is for A-B-C.')">"Spell me later!"</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ==========================================
+             LEVEL 2: THE GAME (10 Questions)
+             ========================================== -->
+             
+        <!-- L2 Intro -->
+        <div class="slide flex-col items-center justify-center bg-sky text-charcoal">
+            <h1 class="text-[120px] title-bree leading-none text-center mb-4">LEVEL 2:<br>THE GAME</h1>
+            <div class="skewed-block skewed-charcoal mb-8">
+                <div><p class="text-3xl font-black tracking-widest">PRACTICE AND FIX MISTAKES</p></div>
+            </div>
+            <p class="text-2xl font-bold mt-2">El Pa and Titó are making mistakes. Help them!</p>
+        </div>
+
+        <!-- L2 Q1 (Template B: Centered Focus) -->
+        <div class="slide flex-col items-center justify-center bg-charcoal p-12 text-white">
+            <h3 class="text-sky text-3xl font-black mb-8 tracking-widest uppercase">Challenge 1/10</h3>
+            <div class="bg-black p-8 border-l-8 border-yellow font-mono text-xl max-w-4xl mb-12 shadow-2xl">
+                📱 text from El Pa:<br><br>
+                "How do I say 'hola' to a friend? Give me something normal and cool."
+            </div>
+            <div class="flex flex-col space-y-4 w-full max-w-3xl">
+                <button class="option-btn text-center text-xl py-5" onclick="checkAnswer(this, false, 'No. This is too formal.')">"Good evening, Madam."</button>
+                <button class="option-btn text-center text-xl py-5" onclick="checkAnswer(this, true, 'Yes! Very normal and friendly.')">"Hey, what's up!"</button>
+                <button class="option-btn text-center text-xl py-5" onclick="checkAnswer(this, false, 'No. This is incorrect English.')">"I meet you."</button>
+            </div>
+            <div class="feedback-box hidden w-full max-w-3xl mt-6 p-6 rounded text-xl font-bold text-center"></div>
+        </div>
+
+        <!-- L2 Q2 (Template A: Split Layout) -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-left">
+                    <h3 class="title-bree text-4xl mb-8">Challenge 2/10</h3>
+                    <div class="gossip-paper">
+                        Titó yells to a tourist:<br><br> "HEY MISTER! I AM SPEAK COLOMBIA!"
+                    </div>
+                    <p class="text-2xl font-bold mt-8">Fix this mistake:</p>
+                </div>
+                <div class="half split-right items-center">
+                    <div class="w-full max-w-lg space-y-4">
+                        <button class="option-btn py-4" onclick="checkAnswer(this, true, 'Exactly. You speak Spanish, not Colombia.')">No. It's "I speak Spanish".</button>
+                        <button class="option-btn py-4" onclick="checkAnswer(this, false, 'No. It is completely wrong.')">He is correct.</button>
+                        <button class="option-btn py-4" onclick="checkAnswer(this, false, 'No. Spelling Colombia is not the problem.')">He needs to spell Colombia.</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- L2 Q3 (Template C: Diagonal/Big Number) -->
+        <div class="slide">
+            <div class="flex w-full h-full bg-charcoal text-white">
+                <div class="w-1/3 flex items-center justify-center border-r-8 border-yellow bg-yellow text-charcoal">
+                    <h1 class="text-[200px] title-bree leading-none">03</h1>
+                </div>
+                <div class="w-2/3 flex flex-col justify-center p-16 relative">
+                    <div class="absolute top-10 right-10 text-xl font-black tracking-widest text-yellow">CHALLENGE 3/10</div>
+                    <div class="text-4xl font-bold mb-10 leading-tight">Gelmy says:<br><br><span class="text-yellow">"He is from France, but he doesn't ______ French well."</span></div>
+                    <div class="space-y-4 max-w-2xl">
+                        <button class="option-btn py-4" onclick="checkAnswer(this, false, 'No. You say a word, not a language.')">say</button>
+                        <button class="option-btn py-4" onclick="checkAnswer(this, false, 'No. Tell is for stories or information.')">tell</button>
+                        <button class="option-btn py-4" onclick="checkAnswer(this, true, 'Right! Speak + Language.')">speak</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- L2 Q4 (Template B: Centered Focus) -->
+        <div class="slide flex-col items-center justify-center bg-gray-200 p-12 text-charcoal">
+            <h3 class="text-sky text-3xl font-black mb-8 tracking-widest uppercase bg-charcoal text-white px-4 py-1">Challenge 4/10</h3>
+            <div class="bg-yellow p-8 shadow-2xl transform rotate-1 mb-10 max-w-4xl border-4 border-charcoal">
+                <h2 class="text-4xl font-bold leading-relaxed">El Pa says: "Mom, this is Hans. He is from Germany."</h2>
+            </div>
+            <p class="text-3xl font-bold mb-8">If Hans is from Germany, he is _______.</p>
+            <div class="flex flex-col space-y-4 w-full max-w-3xl">
+                <button class="option-btn bg-white text-charcoal border-charcoal hover:bg-sky text-center text-xl py-5" onclick="checkAnswer(this, false, 'No. This word does not exist.')">Germish</button>
+                <button class="option-btn bg-white text-charcoal border-charcoal hover:bg-sky text-center text-xl py-5" onclick="checkAnswer(this, true, 'Yep! Country: Germany -> Nationality: German.')">German</button>
+                <button class="option-btn bg-white text-charcoal border-charcoal hover:bg-sky text-center text-xl py-5" onclick="checkAnswer(this, false, 'No. That is the country.')">Germany</button>
+            </div>
+            <div class="feedback-box hidden w-full max-w-3xl mt-6 p-6 rounded text-xl font-bold text-center"></div>
+        </div>
+
+        <!-- L2 Q5 (Template A: Split Layout - INFO GAP) -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-right">
+                    <div class="skewed-block mb-6"><div><h3 class="text-2xl font-black tracking-widest uppercase">Challenge 5/10 (Info Gap)</h3></div></div>
+                    <p class="text-3xl font-bold mb-8 leading-relaxed">You find an ID card on the floor.</p>
+                    <div class="bg-white text-black p-6 rounded-lg border-4 border-gray-400 transform -rotate-2 w-80 shadow-2xl">
+                        <div class="text-xl font-black border-b-2 border-black mb-4 pb-2">ID CARD</div>
+                        <div class="text-lg"><strong>Name:</strong> Liam<br><strong>Country:</strong> Australia</div>
+                    </div>
+                </div>
+                <div class="half split-left items-center">
+                    <p class="text-3xl font-bold mb-8 text-center w-full">What is Liam's nationality?</p>
+                    <div class="w-full max-w-lg space-y-4">
+                        <button class="option-btn bg-white text-charcoal border-charcoal hover:bg-charcoal hover:text-white py-4" onclick="checkAnswer(this, false, 'No. He is a person, not the country.')">He is Australia.</button>
+                        <button class="option-btn bg-white text-charcoal border-charcoal hover:bg-charcoal hover:text-white py-4" onclick="checkAnswer(this, false, 'No. Australian is a nationality, not a language.')">He speaks Australian.</button>
+                        <button class="option-btn bg-white text-charcoal border-charcoal hover:bg-charcoal hover:text-white py-4" onclick="checkAnswer(this, true, 'Correct! Country: Australia -> Nationality: Australian.')">He is Australian.</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- L2 Q6 (Template C: Diagonal/Big Number) -->
+        <div class="slide">
+            <div class="flex w-full h-full bg-sky text-charcoal">
+                <div class="w-1/3 flex items-center justify-center border-r-8 border-charcoal bg-charcoal text-sky">
+                    <h1 class="text-[200px] title-bree leading-none">06</h1>
+                </div>
+                <div class="w-2/3 flex flex-col justify-center p-16 relative">
+                    <div class="absolute top-10 right-10 text-xl font-black tracking-widest">CHALLENGE 6/10</div>
+                    <div class="text-4xl font-bold mb-10 leading-tight">Liam says:<br><br><span class="bg-white px-4 py-2 italic rotate-1 inline-block">"Thanks! What is your name? And how do you ______ it?"</span></div>
+                    <div class="teacher-note border-charcoal text-charcoal bg-white bg-opacity-50 mb-8">👉 Teacher: Make the student spell their name right now!</div>
+                    <div class="space-y-4 max-w-2xl">
+                        <button class="option-btn bg-charcoal text-white hover:border-white py-4" onclick="checkAnswer(this, false, 'No. You don\'t speak a name.')">speak</button>
+                        <button class="option-btn bg-charcoal text-white hover:border-white py-4" onclick="checkAnswer(this, true, 'Yes! Spell = letters (A-B-C).')">spell</button>
+                        <button class="option-btn bg-charcoal text-white hover:border-white py-4" onclick="checkAnswer(this, false, 'No. If he needs to write it, he needs you to spell it.')">say</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- L2 Q7 (Template B: Centered Focus) -->
+        <div class="slide flex-col items-center justify-center bg-charcoal p-12 text-white">
+            <h3 class="text-yellow text-3xl font-black mb-8 tracking-widest uppercase">Challenge 7/10</h3>
+            <h2 class="text-5xl text-center mb-12 max-w-4xl font-bold leading-relaxed border-b-4 border-yellow pb-8">You introduce Liam to Titó. How do you do it correctly?</h2>
+            <div class="flex flex-col space-y-4 w-full max-w-3xl">
+                <button class="option-btn text-center text-xl py-5" onclick="checkAnswer(this, true, 'Yes! THIS IS [Name]. Very common.')">"Titó, this is Liam."</button>
+                <button class="option-btn text-center text-xl py-5" onclick="checkAnswer(this, false, 'No. We use THIS IS for introductions.')">"Titó, he is Liam."</button>
+                <button class="option-btn text-center text-xl py-5" onclick="checkAnswer(this, false, 'No. This is incorrect.')">"Titó, look to Liam."</button>
+            </div>
+            <div class="feedback-box hidden w-full max-w-3xl mt-6 p-6 rounded text-xl font-bold text-center"></div>
+        </div>
+
+        <!-- L2 Q8 (Template A: Split Layout) -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-left">
+                    <h3 class="title-bree text-4xl mb-8">Challenge 8/10</h3>
+                    <div class="gossip-paper transform -rotate-1">
+                        Gelmy says: "He looks rich! ______ me about him. What does he do?"
+                    </div>
+                </div>
+                <div class="half split-right items-center">
+                    <div class="w-full max-w-lg space-y-4">
+                        <button class="option-btn py-4" onclick="checkAnswer(this, false, 'No. Say me is incorrect.')">Say</button>
+                        <button class="option-btn py-4" onclick="checkAnswer(this, true, 'Perfect. TELL + Person (me).')">Tell</button>
+                        <button class="option-btn py-4" onclick="checkAnswer(this, false, 'No. Speak me is incorrect.')">Speak</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- L2 Q9 (Template C: Diagonal/Big Number) -->
+        <div class="slide">
+            <div class="flex w-full h-full bg-charcoal text-white">
+                <div class="w-1/3 flex items-center justify-center border-r-8 border-sky bg-sky text-charcoal">
+                    <h1 class="text-[200px] title-bree leading-none">09</h1>
+                </div>
+                <div class="w-2/3 flex flex-col justify-center p-16 relative">
+                    <div class="absolute top-10 right-10 text-xl font-black tracking-widest text-sky">CHALLENGE 9/10</div>
+                    <div class="text-4xl font-bold mb-10 leading-tight">You say to Gelmy:<br><br><span class="text-sky">"Gelmy, don't ______ that! He is listening!"</span></div>
+                    <div class="teacher-note text-yellow border-yellow mb-8">👉 Talk with the teacher about this.</div>
+                    <div class="space-y-4 max-w-2xl">
+                        <button class="option-btn py-4" onclick="checkAnswer(this, true, 'Yes! Say THAT (words).')">say</button>
+                        <button class="option-btn py-4" onclick="checkAnswer(this, false, 'No. Tell needs a person right after it (Tell me that).')">tell</button>
+                        <button class="option-btn py-4" onclick="checkAnswer(this, false, 'No. Speak that is not correct.')">speak</button>
+                        <div class="feedback-box hidden mt-6 p-6 rounded text-xl font-bold"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- L2 Q10 (Template B: Centered Focus) -->
+        <div class="slide flex-col items-center justify-center bg-yellow p-12 text-charcoal">
+            <h3 class="text-charcoal text-3xl font-black mb-8 tracking-widest uppercase bg-white px-4 py-1 border-2 border-charcoal">Challenge 10/10</h3>
+            <div class="bg-white p-8 rounded-xl shadow-2xl transform rotate-1 mb-10 max-w-4xl border-4 border-charcoal">
+                <h2 class="text-4xl font-bold leading-relaxed">A girl asks El Pa: "Where are you from?"<br><br>How should El Pa answer?</h2>
+            </div>
+            <div class="flex flex-col space-y-4 w-full max-w-3xl">
+                <button class="option-btn bg-charcoal text-white hover:border-white text-center text-xl py-5" onclick="checkAnswer(this, false, 'No. He speaks Spanish.')">"I speak Colombian."</button>
+                <button class="option-btn bg-charcoal text-white hover:border-white text-center text-xl py-5" onclick="checkAnswer(this, false, 'No. This is incorrect English.')">"Tell me Colombia."</button>
+                <button class="option-btn bg-charcoal text-white hover:border-white text-center text-xl py-5" onclick="checkAnswer(this, true, 'Simple, perfect, correct.')">"I am from Medellín, Colombia."</button>
+            </div>
+            <div class="feedback-box hidden w-full max-w-3xl mt-6 p-6 rounded text-xl font-bold text-center"></div>
+        </div>
+
+        <!-- ==========================================
+             LEVEL 3: THE CHALLENGE (10 Questions)
+             ========================================== -->
+             
+        <!-- L3 Intro -->
+        <div class="slide flex-col items-center justify-center bg-charcoal">
+            <div class="skewed-block mb-6">
+                <div><h2 class="text-3xl text-charcoal font-black tracking-widest">LEVEL 3</h2></div>
+            </div>
+            <h1 class="text-[130px] title-bree text-center text-yellow mb-4 leading-none">YOUR TURN</h1>
+            <p class="text-3xl font-bold mt-4 text-white border-b-4 border-yellow pb-4">Real Life Practice</p>
+            <p class="text-2xl mt-6 text-gray-300">Look at the teacher and speak.</p>
+        </div>
+
+        <!-- L3 Q1 -->
+        <div class="slide flex-col items-center justify-center bg-sky text-charcoal p-12">
+            <div class="skewed-block skewed-charcoal mb-8"><div><h3 class="text-xl font-black tracking-widest uppercase">Your Turn 1/10</h3></div></div>
+            <div class="gossip-paper text-4xl text-center max-w-4xl mb-12">
+                "Say hello to the teacher. Introduce yourself."
+            </div>
+            <p class="text-xl font-bold uppercase tracking-widest mb-4">You need to use:</p>
+            <p class="text-2xl font-bold mb-12 bg-white px-8 py-4 rounded border-2 border-charcoal">Greeting + Your Name</p>
+            <button class="btn-freak bg-charcoal text-white text-2xl py-6 px-16" onclick="this.innerHTML='✔ Teacher Approved'; this.classList.add('bg-green-500', 'text-charcoal', 'border-white'); setTimeout(()=>nav(1), 1200)">I DID IT!</button>
+        </div>
+
+        <!-- L3 Q2 -->
+        <div class="slide flex-col items-center justify-center bg-charcoal text-white p-12">
+            <div class="skewed-block mb-8"><div><h3 class="text-xl font-black tracking-widest uppercase text-charcoal">Your Turn 2/10</h3></div></div>
+            <div class="bg-gray-800 border-l-8 border-yellow p-10 text-4xl text-center max-w-4xl mb-12 shadow-2xl font-bold italic">
+                "The teacher asks: 'Where are you from? What is your nationality?' Answer with your real information."
+            </div>
+            <p class="text-xl font-bold uppercase tracking-widest mb-4 text-gray-400">You need to use:</p>
+            <p class="text-2xl font-bold mb-12 text-yellow">Country + Nationality</p>
+            <button class="btn-freak bg-yellow text-charcoal text-2xl py-6 px-16" onclick="this.innerHTML='✔ Teacher Approved'; this.classList.add('bg-green-500'); setTimeout(()=>nav(1), 1200)">I DID IT!</button>
+        </div>
+
+        <!-- L3 Q3 -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-left items-center text-center">
+                    <h3 class="title-bree text-5xl mb-8">Your Turn 3/10</h3>
+                    <div class="text-4xl font-bold leading-relaxed mb-8">
+                        Ask the teacher to SPELL their name.
+                    </div>
+                </div>
+                <div class="half split-right items-center text-center">
+                    <p class="text-xl font-bold uppercase tracking-widest mb-4 text-gray-400">You need to use:</p>
+                    <p class="text-3xl font-bold mb-12 text-sky border-b-2 border-sky pb-2">The word "spell" in a question.</p>
+                    <button class="btn-freak bg-sky text-charcoal text-2xl py-6 w-full max-w-md" onclick="this.innerHTML='✔ Teacher Approved'; this.classList.add('bg-green-500'); setTimeout(()=>nav(1), 1200)">I DID IT!</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- L3 Q4 -->
+        <div class="slide flex-col items-center justify-center bg-yellow text-charcoal p-12">
+            <div class="skewed-block skewed-charcoal mb-8"><div><h3 class="text-xl font-black tracking-widest uppercase">Your Turn 4/10</h3></div></div>
+            <div class="gossip-paper text-4xl text-center max-w-4xl mb-12">
+                "What languages do you know? Tell the teacher."
+            </div>
+            <p class="text-xl font-bold uppercase tracking-widest mb-4">You need to use:</p>
+            <p class="text-3xl font-bold mb-12 bg-white px-8 py-4 border-4 border-charcoal">"I speak..." + Language(s)</p>
+            <button class="btn-freak bg-charcoal text-white text-2xl py-6 px-16" onclick="this.innerHTML='✔ Teacher Approved'; this.classList.add('bg-green-500', 'text-charcoal'); setTimeout(()=>nav(1), 1200)">I DID IT!</button>
+        </div>
+
+        <!-- L3 Q5 -->
+        <div class="slide flex-col items-center justify-center bg-charcoal text-white p-12">
+            <h3 class="text-sky text-4xl font-black mb-12 tracking-widest uppercase">Your Turn 5/10</h3>
+            <h2 class="text-5xl text-center mb-12 max-w-5xl font-bold leading-relaxed">The teacher asks: "What do you do?"<br><br>Tell them your job or what you study.</h2>
+            <p class="text-xl font-bold uppercase tracking-widest mb-4 text-gray-400">You need to use:</p>
+            <p class="text-3xl font-bold mb-12 text-sky border-2 border-sky p-4 rounded-lg">Real life info (Example: I am an engineer, I study medicine).</p>
+            <button class="btn-freak bg-sky text-charcoal text-2xl py-6 px-16" onclick="this.innerHTML='✔ Teacher Approved'; this.classList.add('bg-green-500'); setTimeout(()=>nav(1), 1200)">I DID IT!</button>
+        </div>
+
+        <!-- L3 Q6 -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-right items-center text-center">
+                    <h3 class="text-yellow text-5xl font-black mb-8 uppercase tracking-widest">Your Turn 6/10</h3>
+                    <div class="text-4xl font-bold leading-relaxed mb-8">
+                        You see a famous person. TELL the teacher who it is.
+                    </div>
+                </div>
+                <div class="half split-left items-center text-center">
+                    <p class="text-xl font-bold uppercase tracking-widest mb-4 text-charcoal">You need to use:</p>
+                    <p class="text-3xl font-bold mb-12 border-b-4 border-charcoal pb-4">Use "tell" or "say".<br><span class="text-xl">(Example: Let me tell you who that is!)</span></p>
+                    <button class="btn-freak bg-charcoal text-white text-2xl py-6 w-full max-w-md" onclick="this.innerHTML='✔ Teacher Approved'; this.classList.add('bg-green-500', 'text-charcoal'); setTimeout(()=>nav(1), 1200)">I DID IT!</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- L3 Q7 -->
+        <div class="slide flex-col items-center justify-center bg-sky text-charcoal p-12">
+            <div class="skewed-block skewed-charcoal mb-8"><div><h3 class="text-xl font-black tracking-widest uppercase">Your Turn 7/10</h3></div></div>
+            <div class="gossip-paper text-4xl text-center max-w-4xl mb-12 transform rotate-1">
+                "Where is the famous person from? Answer with their Country and Nationality."
+            </div>
+            <p class="text-xl font-bold uppercase tracking-widest mb-4">You need to use:</p>
+            <p class="text-3xl font-bold mb-12 bg-white px-8 py-4 border-4 border-charcoal shadow-xl">He/She is from X. He/She is Y.</p>
+            <button class="btn-freak bg-charcoal text-white text-2xl py-6 px-16" onclick="this.innerHTML='✔ Teacher Approved'; this.classList.add('bg-green-500', 'text-charcoal'); setTimeout(()=>nav(1), 1200)">I DID IT!</button>
+        </div>
+
+        <!-- L3 Q8 -->
+        <div class="slide flex-col items-center justify-center bg-charcoal text-white p-12">
+            <h3 class="text-yellow text-4xl font-black mb-12 tracking-widest uppercase">Your Turn 8/10</h3>
+            <h2 class="text-5xl text-center mb-12 max-w-5xl font-bold leading-relaxed">How do YOU say hello to new people in real life? Tell the teacher.</h2>
+            <p class="text-xl font-bold uppercase tracking-widest mb-4 text-gray-400">You need to use:</p>
+            <p class="text-2xl font-bold mb-12 text-yellow">Your real answer.</p>
+            <button class="btn-freak bg-yellow text-charcoal text-2xl py-6 px-16" onclick="this.innerHTML='✔ Teacher Approved'; this.classList.add('bg-green-500'); setTimeout(()=>nav(1), 1200)">I DID IT!</button>
+        </div>
+
+        <!-- L3 Q9 -->
+        <div class="slide flex-col items-center justify-center bg-yellow text-charcoal p-12">
+            <div class="skewed-block skewed-charcoal mb-8"><div><h3 class="text-xl font-black tracking-widest uppercase">Your Turn 9/10</h3></div></div>
+            <div class="gossip-paper text-4xl text-center max-w-4xl mb-12 transform -rotate-2">
+                "You need to leave the class. Say goodbye politely."
+            </div>
+            <p class="text-xl font-bold uppercase tracking-widest mb-4">You need to use:</p>
+            <p class="text-3xl font-bold mb-12 bg-white px-8 py-4 border-4 border-charcoal shadow-xl">A polite goodbye.</p>
+            <button class="btn-freak bg-charcoal text-white text-2xl py-6 px-16" onclick="this.innerHTML='✔ Teacher Approved'; this.classList.add('bg-green-500', 'text-charcoal'); setTimeout(()=>nav(1), 1200)">I DID IT!</button>
+        </div>
+
+        <!-- L3 Q10 -->
+        <div class="slide">
+            <div class="layout-split">
+                <div class="half split-left items-center text-center">
+                    <h3 class="title-bree text-6xl mb-8">Your Turn 10/10</h3>
+                    <div class="text-5xl font-black leading-relaxed mb-8 uppercase">
+                        Finish!
+                    </div>
+                    <p class="text-3xl font-bold">Tell the teacher one thing you learned today.</p>
+                </div>
+                <div class="half split-right items-center text-center">
+                    <p class="text-xl font-bold uppercase tracking-widest mb-4 text-gray-400">You need to use:</p>
+                    <p class="text-3xl font-bold mb-12 text-yellow border-b-2 border-yellow pb-4">Speak in English.</p>
+                    <button class="btn-freak bg-yellow text-charcoal text-2xl py-6 w-full max-w-md" onclick="this.innerHTML='✔ Module Conquered'; this.classList.add('bg-green-500'); setTimeout(()=>nav(1), 1200)">I DID IT!</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             OUTRO SLIDE
+             ========================================== -->
+             
+        <div class="slide flex-col items-center justify-center bg-charcoal text-white" id="outro-slide">
+            <h1 class="text-[140px] title-bree text-center leading-none mb-8 text-sky drop-shadow-lg">PARTY'S<br>OVER</h1>
+            <p class="text-4xl font-bold mb-6 text-yellow">You survived Gelmy's party.</p>
+            <p class="text-2xl mb-12 max-w-3xl text-center leading-relaxed text-gray-300">You said hello naturally, talked about nationalities, fixed mistakes, and spoke about your real life. Great job!</p>
+            <button class="btn-freak bg-yellow text-charcoal text-3xl py-6 px-12" onclick="alert('Unit 1, Module 1 Complete! Good job.'); reportarResultado();">FINISH MODULE</button>
+        </div>
+
+    </div> <!-- End App Wrapper -->
+
+    <!-- Navigation Footer -->
+    <div id="nav-bar">
+        <button class="btn-nav" onclick="nav(-1)" id="btn-prev">Previous</button>
+        <div class="text-gray-400 font-black tracking-widest text-lg" id="slide-counter">SLIDE 1 / 36</div>
+        <button class="btn-nav bg-yellow text-charcoal border-yellow hover:bg-white hover:text-black hover:border-white" onclick="nav(1)" id="btn-next">Next Step ➔</button>
+    </div>
+
+    <script>
+        // Freakn Activity tracking (lesson-quiz)
+        var freaknAnswers = [];
+        function extractQuestionText(slide) {
+            var selectors = ['.gossip-paper', '.bg-gray-800', 'h2', '[class*="text-4xl"]', '[class*="text-5xl"]', '[class*="text-3xl"]'];
+            for (var i = 0; i < selectors.length; i++) {
+                var el = slide.querySelector(selectors[i]);
+                if (el && el.innerText && el.innerText.trim().length > 3) return el.innerText.trim();
+            }
+            return document.title;
+        }
+        function registrarRespuesta(id, pregunta, respuesta, acerto, esperada) {
+            if (freaknAnswers.some(function (a) { return a.id === id; })) return; // 1er intento
+            freaknAnswers.push({ id: id, question: pregunta, answer: respuesta, correct: acerto, expected: esperada });
+        }
+        function reportarResultado() {
+            FreaknActivity.submit({
+                activityId: "lesson-quiz",
+                title: document.title,
+                score: freaknAnswers.filter(function (a) { return a.correct; }).length,
+                maxScore: freaknAnswers.length,
+                answers: freaknAnswers
+            });
+        }
+
+        // Navigation Logic
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const counter = document.getElementById('slide-counter');
+        const progress = document.getElementById('progress');
+        const appWrapper = document.getElementById('app-wrapper');
+
+        function updateUI() {
+            slides.forEach((s, i) => {
+                if (i === currentSlide) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+
+            // Update counter
+            counter.innerText = `SLIDE ${currentSlide + 1} / ${slides.length}`;
+            
+            // Update progress bar
+            const percent = ((currentSlide) / (slides.length - 1)) * 100;
+            progress.style.width = `${percent}%`;
+
+            // Hide previous on first slide
+            document.getElementById('btn-prev').style.visibility = currentSlide === 0 ? 'hidden' : 'visible';
+            
+            // Hide next on last slide
+            document.getElementById('btn-next').style.visibility = currentSlide === slides.length - 1 ? 'hidden' : 'visible';
+            
+            // Reset scroll position on slide change
+            slides[currentSlide].scrollTop = 0;
+        }
+
+        function nav(direction) {
+            currentSlide += direction;
+            if (currentSlide < 0) currentSlide = 0;
+            if (currentSlide >= slides.length) currentSlide = slides.length - 1;
+            updateUI();
+        }
+
+        // Multiple Choice Logic
+        function checkAnswer(btn, isCorrect, feedbackText) {
+            // Find parent slide to scope the interaction
+            const slide = btn.closest('.slide');
+            
+            // Disable all buttons in this specific slide
+            const buttons = slide.querySelectorAll('.option-btn');
+            buttons.forEach(b => {
+                b.style.pointerEvents = 'none';
+                b.classList.remove('correct', 'wrong');
+            });
+
+            // Mark chosen button
+            if (isCorrect) {
+                btn.classList.add('correct');
+            } else {
+                btn.classList.add('wrong');
+            }
+
+            // Show feedback
+            const feedbackBox = slide.querySelector('.feedback-box');
+            if (feedbackBox) {
+                feedbackBox.classList.remove('hidden');
+                feedbackBox.innerText = feedbackText;
+
+                if (isCorrect) {
+                    // Success styling
+                    feedbackBox.className = 'feedback-box mt-8 p-6 rounded-lg text-2xl font-black bg-sky text-charcoal shadow-lg border-4 border-charcoal';
+                } else {
+                    // Error styling
+                    feedbackBox.className = 'feedback-box mt-8 p-6 rounded-lg text-2xl font-black bg-red-600 text-white shadow-lg border-4 border-white';
+                }
+            }
+
+            // Freakn: record this answer
+            var expected = null;
+            buttons.forEach(function (b) {
+                var oc = b.getAttribute('onclick') || '';
+                if (/,\s*true\s*,/.test(oc)) expected = b.innerText.trim();
+            });
+            registrarRespuesta(
+                'q' + (freaknAnswers.length + 1),
+                extractQuestionText(slide),
+                btn.innerText.trim(),
+                isCorrect,
+                expected
+            );
+        }
+
+        // Initialize on load
+        window.onload = updateUI;
+    </script>
+
+    <script>
+      /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+         Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+      window.FreaknActivity = (function () {
+        function post(type, payload) {
+          try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+          catch (e) {}
+        }
+        return {
+          /** Reporta el resultado de una actividad calificable. */
+          submit: function (r) {
+            post("freakn:activity:result", {
+              activityId: r.activityId,          // id estable dentro del archivo
+              title: r.title || document.title,  // nombre legible
+              score: r.score,                    // puntos obtenidos
+              maxScore: r.maxScore,              // puntaje máximo
+              answers: r.answers || []           // ver formato abajo
+            });
+          },
+          /** Marca la lección como vista/terminada (sin puntaje). */
+          complete: function () { post("freakn:lesson:complete", {}); }
+        };
+      })();
+    </script>
+</body>
+</html>

@@ -52,6 +52,7 @@ export class ContentSyncService implements OnModuleInit {
         title: string
         description?: string
         position: number
+        unit?: number
         lessons: Array<{
           id: string
           title: string
@@ -66,10 +67,17 @@ export class ContentSyncService implements OnModuleInit {
     let modules = 0
     let lessons = 0
     for (const m of manifest.modules ?? []) {
+      const modData = {
+        title: m.title,
+        description: m.description,
+        level: m.level,
+        position: m.position,
+        unit: m.unit ?? null,
+      }
       await this.prisma.module.upsert({
         where: { id: m.id },
-        update: { title: m.title, description: m.description, level: m.level, position: m.position },
-        create: { id: m.id, title: m.title, description: m.description, level: m.level, position: m.position },
+        update: modData,
+        create: { id: m.id, ...modData },
       })
       modules++
       for (const l of m.lessons ?? []) {

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson 42 | Ready for Intermediate (Wrap-Up)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #111;
+            color: #FFFFFF;
+            overflow-x: hidden;
+            margin: 0;
+        }
+        h1, h2, h3, .font-bree { font-family: 'Bree Serif', serif; }
+        
+        .slide-container {
+            display: none;
+            width: 100vw;
+            min-height: 100vh;
+            background-color: #30302F;
+            position: relative;
+        }
+        .slide-container.active { display: flex; }
+        
+        .bg-yellow-freak { background-color: #E4DF33; }
+        .text-yellow-freak { color: #E4DF33; }
+        .bg-charcoal { background-color: #30302F; }
+        .text-charcoal { color: #30302F; }
+        .bg-sky { background-color: #93E5FF; }
+        
+        .skewed-block {
+            transform: skew(-12deg);
+            background-color: #E4DF33;
+            color: #30302F;
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+        .skewed-text { transform: skew(12deg); display: inline-block; }
+        
+        .btn-freak {
+            transform: skew(-12deg);
+            font-weight: 900;
+            background-color: #93E5FF;
+            color: #30302F;
+            padding: 1rem 2rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+        .btn-freak > span { transform: skew(12deg); display: inline-block; }
+        .btn-freak:hover { transform: skew(-12deg) scale(1.05); }
+        .btn-freak:active { transform: skew(-12deg) scale(0.95); }
+        
+        .gossip-paper {
+            background-color: #FFFFFF;
+            font-family: 'Bree Serif', serif;
+            color: #30302F;
+            box-shadow: 12px 12px 0px #E4DF33;
+            padding: 2.5rem;
+            border-radius: 4px;
+        }
+
+        .pill-tag {
+            background: #E4DF33;
+            color: #30302F;
+            padding: 0.25rem 1rem;
+            border-radius: 999px;
+            font-weight: 800;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .option-btn {
+            background-color: #FFFFFF;
+            color: #30302F;
+            font-weight: 700;
+            padding: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 4px solid transparent;
+        }
+        .option-btn:hover { border-color: #E4DF33; transform: translateY(-2px); }
+        .option-btn.selected { background-color: #E4DF33; }
+        
+        .input-freak {
+            background: transparent;
+            border: none;
+            border-bottom: 4px solid #E4DF33;
+            color: #FFFFFF;
+            font-size: 1.5rem;
+            font-weight: 700;
+            padding: 0.5rem;
+            width: 100%;
+            outline: none;
+            font-family: 'Montserrat', sans-serif;
+            margin-bottom: 1rem;
+        }
+        .input-freak:focus { border-color: #93E5FF; }
+
+        .feedback-pop {
+            display: none;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            border-radius: 4px;
+        }
+        .feedback-pop.correct { display: block; background-color: #93E5FF; color: #30302F; }
+        .feedback-pop.wrong { display: block; background-color: #FF4D4D; color: #FFFFFF; }
+        
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8));
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SLIDE 1: HOOK -->
+    <div class="slide-container active flex-col md:flex-row" id="slide-0">
+        <div class="split-left w-full md:w-1/2 flex flex-col justify-center items-center p-10 text-center">
+            <div class="skewed-block mb-6 text-2xl"><span class="skewed-text">Lesson 42</span></div>
+            <h1 class="text-6xl md:text-8xl uppercase leading-none mb-4 text-charcoal">The Final<br>Boss</h1>
+            <p class="text-xl font-bold mt-4 text-charcoal">Are you ready for the intermediate level?</p>
+        </div>
+        <div class="split-right w-full md:w-1/2 flex flex-col justify-center items-center p-10 bg-charcoal">
+            <p class="text-2xl mb-8 text-center max-w-md">This is it. The end of the basics. We are talking about control, permissions, and ultimate success or failure. Let's finish strong.</p>
+            <button class="btn-freak text-xl bg-yellow-freak" onclick="nav(1)"><span>Face The Boss ➔</span></button>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: THE VIBE -->
+    <div class="slide-container flex-col" id="slide-1">
+        <div class="flex-1 p-10 flex flex-col justify-center items-center max-w-4xl mx-auto w-full">
+            <div class="pill-tag mb-4">The Vibe</div>
+            <h2 class="text-4xl md:text-5xl font-bree mb-8 text-center text-yellow-freak">Power & Results.</h2>
+            
+            <p class="text-xl mb-6 text-center">Who holds the power in a situation? And what is the final outcome? Master these five power words.</p>
+            
+            <div class="flex flex-col md:flex-row gap-6 w-full mb-8">
+                <div class="flex-1 bg-gray-800 p-6 rounded-xl text-center border-t-8 border-sky-400">
+                    <p class="text-2xl font-bold text-sky-400 mb-2">The Control</p>
+                    <p><b>ALLOW / LET:</b> Giving permission (Yes).</p>
+                    <p><b>FORBID:</b> Denying permission (No way).</p>
+                </div>
+                <div class="flex-1 bg-gray-800 p-6 rounded-xl text-center border-t-8 border-yellow-freak">
+                    <p class="text-2xl font-bold text-yellow-freak mb-2">The Results</p>
+                    <p><b>SUCCEED:</b> You won. You did it.</p>
+                    <p><b>FAIL:</b> You lost. It didn't work.</p>
+                </div>
+            </div>
+
+            <!-- INTERACTION REQUIRED -->
+            <div class="w-full text-center bg-gray-900 p-6 rounded-lg">
+                <p class="text-xl font-bold mb-4">If Gelmy says "You cannot go to the party", what is she doing?</p>
+                <div class="flex gap-4 justify-center">
+                    <button class="option-btn text-sm" onclick="checkVibe('forbid')">She is forbidding it.</button>
+                    <button class="option-btn text-sm" onclick="checkVibe('allow')">She is allowing it.</button>
+                </div>
+                <div id="vibe-feedback" class="mt-4 font-bold text-lg hidden"></div>
+            </div>
+        </div>
+        
+        <div class="bottom-nav">
+            <button class="text-gray-400 font-bold hover:text-white uppercase tracking-widest" onclick="nav(0)">❮ Previous</button>
+            <button id="vibe-next" class="btn-freak hidden" onclick="nav(2)"><span>The Story ➔</span></button>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: THE STORY -->
+    <div class="slide-container flex-col" id="slide-2">
+        <div class="flex-1 p-10 flex flex-col lg:flex-row gap-10 items-center justify-center max-w-6xl mx-auto w-full">
+            <div class="w-full lg:w-1/2">
+                <div class="pill-tag mb-4">The Story</div>
+                <h2 class="text-4xl font-bree text-yellow-freak mb-4">The Ultimatum</h2>
+                <p class="text-lg mb-6">Gelmy sits El pa down at the kitchen table. She is not playing games anymore about his future.</p>
+                
+                <!-- STORY INTERACTION -->
+                <div class="bg-gray-800 p-6 rounded-xl border border-gray-700">
+                    <p class="font-bold mb-4 text-sky-400">Information Gap Challenge:</p>
+                    <p class="mb-4">Why is Gelmy so strict with El pa right now?</p>
+                    <div class="flex flex-col gap-2">
+                        <button class="option-btn text-left" onclick="checkStory('wrong')">Because she hates the English language.</button>
+                        <button class="option-btn text-left" onclick="checkStory('correct')">Because she wants him to have a good future.</button>
+                    </div>
+                    <div id="story-feedback" class="mt-4 font-bold text-lg hidden"></div>
+                </div>
+            </div>
+            
+            <div class="w-full lg:w-1/2">
+                <div class="gossip-paper text-lg leading-relaxed">
+                    <p class="mb-4"><strong>Gelmy:</strong> "Listen to me, El pa. I will not <span class="bg-yellow-100 px-1 font-bold">let</span> you waste your life. I absolutely <span class="text-red-500 font-bold">forbid</span> you to quit your English classes."</p>
+                    <p class="mb-4"><strong>El pa:</strong> "But ma, it's hard! Sometimes I feel like I'm going to <span class="text-red-500 font-bold">fail</span>."</p>
+                    <p class="mb-4"><strong>Titó:</strong> "Mijo, nobody <span class="bg-yellow-100 px-1 font-bold">succeeds</span> without working hard. I will <span class="bg-yellow-100 px-1 font-bold">allow</span> you to use my truck on weekends, but ONLY if you study."</p>
+                    <p><strong>Gelmy:</strong> <i>(raises right eyebrow)</i> "Exactly. We don't <span class="text-red-500 font-bold">fail</span> in this family. Now, go review your verbs."</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-nav">
+            <button class="text-gray-400 font-bold hover:text-white uppercase tracking-widest" onclick="nav(1)">❮ Previous</button>
+            <button id="story-next" class="btn-freak hidden" onclick="startLevel(1)"><span>Enter The Game ➔</span></button>
+        </div>
+    </div>
+
+    <!-- GAME INTERFACE -->
+    <div class="slide-container flex-col" id="game-slide">
+        <div class="w-full bg-black p-4 flex justify-between items-center border-b border-gray-800">
+            <div class="flex items-center gap-4">
+                <div class="skewed-block text-sm"><span class="skewed-text" id="level-indicator">Level 1</span></div>
+                <div class="text-gray-400 font-bold" id="question-counter">1 / 10</div>
+            </div>
+            <div class="text-yellow-freak font-900 text-xl tracking-wider">SCORE: <span id="score-display">0</span>/30</div>
+        </div>
+
+        <div class="flex-1 flex flex-col justify-center items-center p-6 max-w-4xl mx-auto w-full" id="game-content">
+            <!-- Content injected here -->
+        </div>
+        
+        <div class="w-full p-6 flex justify-center bg-gray-900 border-t border-gray-800">
+            <button id="game-action-btn" class="btn-freak hidden" onclick="processGameAction()"><span>Check Answer ➔</span></button>
+        </div>
+    </div>
+
+    <!-- FINAL SLIDE -->
+    <div class="slide-container flex-col" id="slide-final">
+        <div class="flex-1 flex flex-col justify-center items-center p-10 text-center">
+            <h1 class="text-6xl font-bree text-yellow-freak mb-4">BASICS COMPLETE! 🏆</h1>
+            <p class="text-2xl mb-8">You survived Unit 8. You survived Gelmy. You are ready for Intermediate.</p>
+            <div class="bg-charcoal p-8 rounded-lg border-2 border-sky-400 text-xl font-bold mb-8">
+                FINAL SCORE: <span id="final-score" class="text-yellow-freak text-3xl">0</span> / 30
+            </div>
+            <p class="text-gray-400 max-w-xl mx-auto italic mb-8">👉 Teacher Note: Congratulations! Take 5 minutes to discuss the student's biggest win and biggest challenge during this entire Basics level.</p>
+            <button class="btn-freak" onclick="location.reload()"><span>Restart Boss Fight</span></button>
+        </div>
+    </div>
+
+    <script>
+        // NAVIGATION SYSTEM
+        let currentSlide = 0;
+
+        function nav(target) {
+            document.querySelectorAll('.slide-container').forEach(s => s.classList.remove('active'));
+            document.getElementById(`slide-${target}`).classList.add('active');
+            currentSlide = target;
+        }
+
+        // SLIDE INTERACTIONS
+        function checkVibe(action) {
+            const fb = document.getElementById('vibe-feedback');
+            fb.classList.remove('hidden', 'text-sky-400', 'text-red-400');
+            if(action === 'forbid') {
+                fb.innerHTML = "THAT'S FREAKN' RIGHT! 🔥 Forbid means ZERO permission.";
+                fb.classList.add('text-sky-400');
+                document.getElementById('vibe-next').classList.remove('hidden');
+            } else {
+                fb.innerHTML = "WAKE UP! ❌ 'Cannot go' means she is blocking him.";
+                fb.classList.add('text-red-400');
+            }
+        }
+
+        function checkStory(answer) {
+            const fb = document.getElementById('story-feedback');
+            fb.classList.remove('hidden', 'text-sky-400', 'text-red-400');
+            if(answer === 'correct') {
+                fb.innerHTML = "SPOT ON! 🔥 Tough love from Gelmy. She wants him to win.";
+                fb.classList.add('text-sky-400');
+                document.getElementById('story-next').classList.remove('hidden');
+            } else {
+                fb.innerHTML = "OOPS! NOT QUITE ❌ She loves English! She just hates seeing him lazy.";
+                fb.classList.add('text-red-400');
+            }
+        }
+
+        // GAME ENGINE
+        let score = 0;
+        let currentLevel = 1;
+        let currentQ = 0;
+        let currentSelection = null;
+        let isAnswered = false;
+
+        // LEVEL DATA
+        const L1_Data = [
+            { quote: "Yes, you can use my car tonight.", verb: "Allow / Let" },
+            { quote: "I got 100% on the final test!", verb: "Succeed" },
+            { quote: "Absolutely no phones at the dinner table.", verb: "Forbid" },
+            { quote: "I missed the goal and we lost the game.", verb: "Fail" },
+            { quote: "My boss said I can go home early.", verb: "Allow / Let" },
+            { quote: "You are not permitted to enter this room.", verb: "Forbid" },
+            { quote: "After years of trying, she opened her own business.", verb: "Succeed" },
+            { quote: "I crashed the car during my driving test.", verb: "Fail" },
+            { quote: "Sure, go ahead and eat the last slice of pizza.", verb: "Allow / Let" },
+            { quote: "Smoking is not allowed in this building.", verb: "Forbid" }
+        ];
+
+        const L2_Data = [
+            { text: "Gelmy does not _____ Titó to wear boots in the kitchen.", options: ["allow", "forbid", "succeed"], correct: "allow" },
+            { text: "If you don't practice speaking, you will _____ in the real world.", options: ["succeed", "fail", "let"], correct: "fail" },
+            { text: "I completely _____ you from texting your ex!", options: ["allow", "let", "forbid"], correct: "forbid" },
+            { text: "To _____ in business, you need to work hard every day.", options: ["fail", "succeed", "forbid"], correct: "succeed" },
+            { text: "Please _____ me explain what happened!", options: ["let", "forbid", "fail"], correct: "let" },
+            { text: "The school rules _____ students from running in the halls.", options: ["allow", "forbid", "succeed"], correct: "forbid" },
+            { text: "He tried to fix the TV, but he _____.", options: ["failed", "succeeded", "allowed"], correct: "failed" },
+            { text: "My parents didn't _____ me go to the concert because I was grounded.", options: ["forbid", "let", "succeed"], correct: "let" },
+            { text: "She studied all night and finally _____ in passing the exam.", options: ["failed", "succeeded", "forbade"], correct: "succeeded" },
+            { text: "Will they _____ us to bring our own food to the movie theater?", options: ["allow", "forbid", "succeed"], correct: "allow" }
+        ];
+
+        const L3_Data = [
+            "What is something your parents absolutely forbade you to do as a teenager?",
+            "What is one big goal you want to succeed in next year?",
+            "Tell me about a time you failed at something, but learned a lesson from it.",
+            "If you were a boss, what is one thing you would never allow in the office?",
+            "Who do you let borrow your personal things? (Phone, car, clothes)",
+            "Gelmy says: 'Failure is not an option.' Do you agree or disagree?",
+            "What is a rule that society forbids, but you think should be allowed?",
+            "How do you feel when you succeed after a very difficult challenge?",
+            "What do you allow yourself to buy when you want to celebrate?",
+            "Final message: Why will you succeed in learning English?"
+        ];
+
+        function startLevel(level) {
+            document.querySelectorAll('.slide-container').forEach(s => s.classList.remove('active'));
+            document.getElementById('game-slide').classList.add('active');
+            currentLevel = level;
+            currentQ = 0;
+            document.getElementById('level-indicator').innerText = `Level ${level}`;
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            isAnswered = false;
+            currentSelection = null;
+            document.getElementById('question-counter').innerText = `${currentQ + 1} / 10`;
+            const content = document.getElementById('game-content');
+            const actionBtn = document.getElementById('game-action-btn');
+            
+            actionBtn.innerHTML = "<span>Check Answer ➔</span>";
+            actionBtn.classList.remove('hidden');
+            actionBtn.style.background = "#93E5FF";
+
+            let html = '';
+
+            if(currentLevel === 1) {
+                const q = L1_Data[currentQ];
+                let options = [q.verb];
+                const pool = ["Allow / Let", "Forbid", "Succeed", "Fail"].filter(v => v !== q.verb);
+                options.push(pool[Math.floor(Math.random() * pool.length)]);
+                options.push(pool[Math.floor(Math.random() * pool.length)]);
+                options = [...new Set(options)];
+                if(options.length < 3) options.push(pool.find(v => !options.includes(v)));
+                options.sort(() => Math.random() - 0.5);
+
+                window.currentL1Correct = q.verb;
+
+                html = `
+                    <p class="text-gray-400 mb-2 uppercase tracking-widest font-bold">Find the Power Word</p>
+                    <div class="gossip-paper text-2xl text-center mb-8 w-full border-l-8 border-yellow-freak">"${q.quote}"</div>
+                    <div class="flex flex-wrap gap-4 w-full justify-center">
+                        ${options.map(opt => `<button class="option-btn flex-1 min-w-[120px]" onclick="selectL1('${opt}', this)">${opt}</button>`).join('')}
+                    </div>
+                    <div id="game-feedback" class="feedback-pop w-full text-center mt-6"></div>
+                `;
+            } 
+            else if(currentLevel === 2) {
+                const q = L2_Data[currentQ];
+                const parts = q.text.split("_____");
+                
+                html = `
+                    <p class="text-gray-400 mb-2 uppercase tracking-widest font-bold">Fill the gap</p>
+                    <div class="text-3xl text-center mb-10 w-full font-bree leading-relaxed">
+                        ${parts[0]} <span id="l2-gap" class="border-b-4 border-yellow-freak px-4 text-yellow-freak">_____</span> ${parts[1]}
+                    </div>
+                    <div class="flex gap-4 w-full justify-center">
+                        ${q.options.map(opt => `<button class="option-btn flex-1 max-w-xs text-xl" onclick="selectL2('${opt}', this)">${opt}</button>`).join('')}
+                    </div>
+                    <div id="game-feedback" class="feedback-pop w-full text-center mt-6"></div>
+                `;
+            }
+            else if(currentLevel === 3) {
+                const q = L3_Data[currentQ];
+                html = `
+                    <p class="text-gray-400 mb-2 uppercase tracking-widest font-bold">Your Truth</p>
+                    <div class="text-2xl text-center mb-8 w-full font-bree text-yellow-freak bg-gray-800 p-6 rounded-lg">
+                        ${q}
+                    </div>
+                    <div class="w-full max-w-2xl mx-auto">
+                        <input type="text" id="l3-input" class="input-freak border-sky-400 focus:border-yellow-freak" placeholder="Speak your mind..." oninput="checkInput()">
+                    </div>
+                    <p class="text-gray-500 italic mt-4 text-center text-sm">Write your final answers proudly.</p>
+                    <div id="game-feedback" class="feedback-pop w-full text-center mt-6"></div>
+                `;
+                actionBtn.classList.add('hidden'); 
+            }
+
+            content.innerHTML = html;
+        }
+
+        function selectL1(val, btn) {
+            if(isAnswered) return;
+            currentSelection = val;
+            document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        }
+
+        function selectL2(val, btn) {
+            if(isAnswered) return;
+            currentSelection = val;
+            document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            document.getElementById('l2-gap').innerText = val;
+        }
+
+        function checkInput() {
+            if(isAnswered) return;
+            const val = document.getElementById('l3-input').value.trim();
+            const btn = document.getElementById('game-action-btn');
+            if(val.length > 5) {
+                btn.classList.remove('hidden');
+            } else {
+                btn.classList.add('hidden');
+            }
+        }
+
+        function processGameAction() {
+            const btn = document.getElementById('game-action-btn');
+            
+            if(isAnswered) {
+                currentQ++;
+                if(currentQ >= 10) {
+                    if(currentLevel < 3) {
+                        startLevel(currentLevel + 1);
+                    } else {
+                        document.getElementById('game-slide').classList.remove('active');
+                        document.getElementById('slide-final').classList.add('active');
+                        document.getElementById('final-score').innerText = score;
+                    }
+                } else {
+                    loadQuestion();
+                }
+                return;
+            }
+
+            let isCorrect = false;
+            let fbMsg = "";
+
+            if(currentLevel === 1) {
+                if(!currentSelection) return;
+                isCorrect = (currentSelection === window.currentL1Correct);
+                fbMsg = isCorrect ? "THAT'S FREAKN' RIGHT! 🔥" : "OOPS! NOT QUITE ❌ Read the vibe again.";
+            } 
+            else if(currentLevel === 2) {
+                if(!currentSelection) return;
+                isCorrect = (currentSelection === L2_Data[currentQ].correct);
+                fbMsg = isCorrect ? "SPOT ON! 🔥" : `WAKE UP! ❌ It must be '${L2_Data[currentQ].correct}'.`;
+            }
+            else if(currentLevel === 3) {
+                const val = document.getElementById('l3-input').value.trim();
+                if(val.length < 5) return;
+                isCorrect = true; 
+                fbMsg = "YES! WE LOVE THAT! 🔥 👉 Teacher: Celebrate this answer with the student.";
+            }
+
+            isAnswered = true;
+            if(isCorrect) {
+                score++;
+                document.getElementById('score-display').innerText = score;
+            }
+
+            const fb = document.getElementById('game-feedback');
+            fb.innerHTML = fbMsg;
+            fb.className = `feedback-pop w-full text-center mt-6 ${isCorrect ? 'correct' : 'wrong'}`;
+
+            btn.innerHTML = "<span>Next Step ➔</span>";
+            btn.style.background = "#E4DF33"; 
+        }
+    </script>
+</body>
+</html>

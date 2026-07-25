@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 33: Survival Manual</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:ital,wght@0,400;0,700;0,900;1,400;1,900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        freakYellow: '#E4DF33',
+                        freakDark: '#30302F',
+                        freakBlue: '#93E5FF',
+                        freakBg: '#111111',
+                        freakGreen: '#4ade80',
+                        freakRed: '#f87171'
+                    },
+                    fontFamily: {
+                        bree: ['"Bree Serif"', 'serif'],
+                        mont: ['Montserrat', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #111111; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; overflow: hidden; }
+        #app-container { width: 1280px; height: 720px; position: relative; background-color: #30302F; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        
+        .title-freak { font-family: 'Bree Serif', serif; font-weight: 400; text-transform: uppercase; }
+        .text-freak { font-family: 'Montserrat', sans-serif; }
+        
+        .btn-freak {
+            background-color: #93E5FF; color: #30302F; font-family: 'Montserrat', sans-serif; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.05em; padding: 1rem 2rem; border: none;
+            transition: all 0.2s ease; cursor: pointer; display: inline-block;
+        }
+        .btn-freak:hover { background-color: #E4DF33; transform: scale(1.05); }
+        .btn-freak:disabled { opacity: 0.5; cursor: not-allowed; transform: none; background-color: #ccc; color: #666; }
+        
+        .slide-enter { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Module 33 Specific UI Elements */
+        .hazard-stripes {
+            background: repeating-linear-gradient(
+                -45deg,
+                #E4DF33,
+                #E4DF33 30px,
+                #111111 30px,
+                #111111 60px
+            );
+        }
+        
+        .smart-dash-btn {
+            background: #1a1a1a;
+            border: 2px solid #444;
+            color: #93E5FF;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+        .smart-dash-btn:hover:not(:disabled) {
+            border-color: #E4DF33;
+            color: #E4DF33;
+            box-shadow: 0 0 15px rgba(228, 223, 51, 0.4);
+            transform: translateY(-2px);
+        }
+        .smart-dash-btn.correct { background: #4ade80; color: #111; border-color: #4ade80; box-shadow: 0 0 20px rgba(74, 222, 128, 0.6); }
+        .smart-dash-btn.wrong { background: #f87171; color: #fff; border-color: #f87171; opacity: 0.6; }
+
+        .clipboard-paper {
+            background-color: white;
+            background-image: linear-gradient(transparent 95%, #cbd5e1 5%);
+            background-size: 100% 3rem;
+            line-height: 3rem;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #30302F; }
+        ::-webkit-scrollbar-thumb { background: #E4DF33; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div id="global-score" class="absolute top-8 right-8 text-freakYellow font-mont font-black text-4xl z-50 hidden">SCORE: 0/30</div>
+        <div id="slide-mount" class="w-full h-full flex slide-enter"></div>
+    </div>
+
+    <script>
+        const lessonData = [
+            // SLIDE 0: INTRO
+            {
+                type: 'intro',
+                unitModule: "UNIT 7 • MODULE 33",
+                title: "SURVIVAL MANUAL",
+                objective: "Learn the power of IMPERATIVES. Give commands, tell people what to do, and manage the chaos of household chores.",
+                bottomTag: "THE LOGIC OF LIFE • PART 3"
+            },
+            
+            // --- THE CHEAT CODE ---
+            {
+                type: 'cheatsheet',
+                title: "THE COMMAND CENTER",
+                subtitle: "How to be the boss of the house.",
+                rules: [
+                    { title: "THE IMPERATIVE", desc: "No subject needed. Start directly with the base verb to give an order.", example: "• Open the door.<br>• Clean the kitchen." },
+                    { title: "THE NEGATIVE", desc: "Always use 'Don't' to stop an action.", example: "• Don't touch that!<br>• Don't open the fridge." },
+                    { title: "THE CORE VERBS", desc: "The ultimate survival chores.", example: "• Turn on / Turn off (Machines, lights)<br>• Open / Close / Shut (Doors, windows)" }
+                ]
+            },
+
+            // --- LEVEL 1: THE WARNING LABEL (Hazard Style) ---
+            { type: 'transition', level: 1, title: "LEVEL 1", subtitle: "THE WARNING", desc: "Read the household emergency. What is the most logical command to fix the situation? Follow the manual." },
+            
+            { qType: 'hazard', level: 1, qNum: 1, situation: "The kitchen is filling up with smoke from the oven!", options: ["A) Open the window.", "B) Turn on the oven."], correct: 0, rationale: "You need fresh air. Opening the window lets the smoke out.", teacherPrompt: "👉 TEACHER: Ask: What is the worst thing you have ever burned in the kitchen?" },
+            { qType: 'hazard', level: 1, qNum: 2, situation: "The TV is blasting loud music and I am trying to sleep.", options: ["A) Turn on the TV.", "B) Turn off the TV."], correct: 1, rationale: "To stop a machine or electronic device, we use 'Turn off'.", teacherPrompt: "👉 TEACHER: Ask: Do you need complete silence to fall asleep?" },
+            { qType: 'hazard', level: 1, qNum: 3, situation: "It's freezing outside and the wind is coming inside the house.", options: ["A) Shut the door.", "B) Open the door."], correct: 0, rationale: "'Shut' is a strong, urgent way to say 'Close'. You need to block the wind.", teacherPrompt: "👉 TEACHER: Ask: Do you prefer extremely cold or extremely hot weather?" },
+            { qType: 'hazard', level: 1, qNum: 4, situation: "You are walking down into a completely black, scary basement.", options: ["A) Turn off the lights.", "B) Turn on the lights."], correct: 1, rationale: "To activate electricity or lights, we use 'Turn on'.", teacherPrompt: "👉 TEACHER: Ask: Are you afraid of the dark?" },
+            { qType: 'hazard', level: 1, qNum: 5, situation: "The refrigerator is losing all its cold air, and the food will spoil.", options: ["A) Close the fridge.", "B) Open the fridge."], correct: 0, rationale: "You must secure the door to keep the cold inside.", teacherPrompt: "👉 TEACHER: Ask: How many times a day do you open the fridge just to look inside?" },
+            { qType: 'hazard', level: 1, qNum: 6, situation: "We are leaving for a 2-week vacation.", options: ["A) Turn off the air conditioner.", "B) Turn on the air conditioner."], correct: 0, rationale: "To save electricity and avoid accidents, turn off machines when leaving.", teacherPrompt: "👉 TEACHER: Ask: What is the one thing you always forget to turn off before leaving?" },
+            { qType: 'hazard', level: 1, qNum: 7, situation: "A stranger is knocking aggressively at the front door.", options: ["A) Open the door quickly.", "B) Don't open the door."], correct: 1, rationale: "Negative imperative ('Don't') is used for warnings and safety.", teacherPrompt: "👉 TEACHER: Ask: Do you open the door if you aren't expecting anyone?" },
+            { qType: 'hazard', level: 1, qNum: 8, situation: "The bathroom sink is overflowing with water!", options: ["A) Turn off the tap.", "B) Turn on the tap."], correct: 0, rationale: "To stop the flow of water, you must 'turn off' the tap/faucet.", teacherPrompt: "👉 TEACHER: Ask: Have you ever flooded a bathroom by accident?" },
+            { qType: 'hazard', level: 1, qNum: 9, situation: "The floor is covered in mud and important guests are arriving.", options: ["A) Don't clean the floor.", "B) Clean the floor."], correct: 1, rationale: "A direct positive command is needed to solve the mess.", teacherPrompt: "👉 TEACHER: Ask: Who does the most chores in your house?" },
+            { qType: 'hazard', level: 1, qNum: 10, situation: "The oven is literally on fire inside!", options: ["A) Don't open the oven!", "B) Open the oven!"], correct: 0, rationale: "Opening the oven gives the fire oxygen. The survival rule is: Don't open it!", teacherPrompt: "👉 TEACHER: Ask: Would you panic if you saw a fire in your kitchen?" },
+
+            // --- LEVEL 2: THE DASHBOARD (Smart Home UI) ---
+            { type: 'transition', level: 2, title: "LEVEL 2", subtitle: "SMART HOME", desc: "You control the house. Read the family's complaint and click the correct command on the smart dashboard to fix their problem." },
+
+            { qType: 'dashboard', level: 2, qNum: 11, log: "GELMY: 'Mijo, I can't see anything. It's too dark to read my book!'", options: ["TURN ON THE LIGHTS", "SHUT THE LIGHTS"], correct: 0, rationale: "Use 'Turn on' to activate lights. 'Shut' is only for physical doors/windows.", teacherPrompt: "👉 TEACHER: Ask: Do you like reading physical books or on a screen?" },
+            { qType: 'dashboard', level: 2, qNum: 12, log: "TITÓ: 'The mosquitoes are eating me alive! They are coming inside!'", options: ["CLOSE THE WINDOW", "TURN OFF THE WINDOW"], correct: 0, rationale: "Windows are physical objects that open and close. You cannot 'turn off' a window.", teacherPrompt: "👉 TEACHER: Ask: What's the best way to get rid of mosquitoes?" },
+            { qType: 'dashboard', level: 2, qNum: 13, log: "EL PA: 'Bro, this song is a banger! I can't hear the lyrics clearly.'", options: ["TURN ON THE VOLUME", "TURN UP THE VOLUME"], correct: 1, rationale: "To increase sound, we 'Turn up'. To activate the machine, we 'Turn on'.", teacherPrompt: "👉 TEACHER: Ask: What kind of music do you always turn up?" },
+            { qType: 'dashboard', level: 2, qNum: 14, log: "GELMY: 'I bought groceries, and the milk needs to stay cold.'", options: ["OPEN THE FRIDGE", "TURN ON THE FRIDGE"], correct: 0, rationale: "The fridge is already on. She just needs you to physically 'open' the door to put the milk inside.", teacherPrompt: "👉 TEACHER: Ask: What is something that is always inside your fridge?" },
+            { qType: 'dashboard', level: 2, qNum: 15, log: "TITÓ: 'That alarm clock has been ringing for 10 minutes! I'm going crazy!'", options: ["TURN IT OFF", "DON't TURN IT OFF"], correct: 0, rationale: "To stop an electronic noise or machine, 'Turn off' is the command.", teacherPrompt: "👉 TEACHER: Ask: How many alarms do you set to wake up in the morning?" },
+            { qType: 'dashboard', level: 2, qNum: 16, log: "EL PA: 'It smells terrible in here, parce. We need fresh air.'", options: ["TURN ON THE DOOR", "OPEN THE DOOR"], correct: 1, rationale: "Again, physical entrances require 'Open', not 'Turn on'.", teacherPrompt: "👉 TEACHER: Ask: Do you keep your bedroom door open or closed at night?" },
+            { qType: 'dashboard', level: 2, qNum: 17, log: "GELMY: 'A massive storm is starting! The wind is blowing my papers!'", options: ["SHUT THE WINDOWS", "OPEN THE WINDOWS"], correct: 0, rationale: "'Shut' is an urgent, forceful way to say 'Close'. Perfect for storms.", teacherPrompt: "👉 TEACHER: Ask: Do you like thunderstorms?" },
+            { qType: 'dashboard', level: 2, qNum: 18, log: "TITÓ: 'My favorite soccer match is starting in 1 minute!'", options: ["TURN ON THE TV", "CLOSE THE TV"], correct: 0, rationale: "Electronics require 'Turn on'. You cannot close a TV.", teacherPrompt: "👉 TEACHER: Ask: What is a TV show or sport you never miss?" },
+            { qType: 'dashboard', level: 2, qNum: 19, log: "EL PA: 'Parce, we are the last ones leaving the house. We have to go.'", options: ["TURN OFF EVERYTHING", "TURN ON EVERYTHING"], correct: 0, rationale: "When leaving an empty house, the rule is to power down to save energy.", teacherPrompt: "👉 TEACHER: Ask: Do you unplug electronics when you travel?" },
+            { qType: 'dashboard', level: 2, qNum: 20, log: "GELMY: 'I just washed the floor. It is very wet and slippery!'", options: ["DON'T WALK THERE", "WALK THERE"], correct: 0, rationale: "A negative command (Don't) is used to prevent an accident.", teacherPrompt: "👉 TEACHER: Ask: Have you ever slipped and fallen in public?" },
+
+            // --- LEVEL 3: THE CHORE LIST (Clipboard UI) ---
+            { type: 'transition', level: 3, title: "LEVEL 3", subtitle: "THE CHORE LIST", desc: "No more buttons. Read the situation and write the exact command (Imperative) to handle the chore." },
+
+            { qType: 'clipboard', level: 3, qNum: 21, task: "Your roommate left the front door wide open at night.", prompt: "Write the command to fix this.", acceptable: "Close the door / Shut the door.", teacherPrompt: "👉 TEACHER: Ask: Do you always lock your door at night?" },
+            { qType: 'clipboard', level: 3, qNum: 22, task: "The TV is playing, but everyone is asleep on the sofa.", prompt: "Write the command for the electronics.", acceptable: "Turn off the TV / Turn it off.", teacherPrompt: "👉 TEACHER: Ask: Do you ever fall asleep with the TV on?" },
+            { qType: 'clipboard', level: 3, qNum: 23, task: "The kitchen is completely full of smoke from cooking.", prompt: "Write the command for the physical space.", acceptable: "Open the window / Open the door.", teacherPrompt: "👉 TEACHER: Ask: Are you a good cook, or a danger in the kitchen?" },
+            { qType: 'clipboard', level: 3, qNum: 24, task: "The bathroom faucet is running and wasting water.", prompt: "Write the command for the plumbing.", acceptable: "Turn off the water / Turn off the tap.", teacherPrompt: "👉 TEACHER: Ask: Do you turn off the water while brushing your teeth?" },
+            { qType: 'clipboard', level: 3, qNum: 25, task: "You walk into a very dark basement with a friend.", prompt: "Tell your friend to fix the lighting.", acceptable: "Turn on the light / Turn on the lights.", teacherPrompt: "👉 TEACHER: Ask: Would you go into a dark basement alone?" },
+            { qType: 'clipboard', level: 3, qNum: 26, task: "Gelmy tells El pa to start washing his dirty clothes.", prompt: "Write the command for the machine.", acceptable: "Turn on the washing machine / Wash your clothes.", teacherPrompt: "👉 TEACHER: Ask: Do you like doing laundry?" },
+            { qType: 'clipboard', level: 3, qNum: 27, task: "You need to put the groceries away in the refrigerator.", prompt: "Give the command to access the inside.", acceptable: "Open the fridge / Open the refrigerator.", teacherPrompt: "👉 TEACHER: Ask: What is your least favorite household chore?" },
+            { qType: 'clipboard', level: 3, qNum: 28, task: "El pa is playing music so loud the walls are shaking.", prompt: "Write a NEGATIVE command using 'Don't'.", acceptable: "Don't play loud music / Don't turn up the volume.", teacherPrompt: "👉 TEACHER: Ask: Have you ever had noisy neighbors?" },
+            { qType: 'clipboard', level: 3, qNum: 29, task: "You see a dog trying to escape through the gate.", prompt: "Write the command to block the exit.", acceptable: "Shut the gate / Close the gate.", teacherPrompt: "👉 TEACHER: Ask: Have you ever chased a dog that ran away?" },
+            { qType: 'clipboard', level: 3, qNum: 30, task: "You see a stranger trying to enter the house.", prompt: "Write a NEGATIVE command about the door.", acceptable: "Don't open the door / Don't let them in.", teacherPrompt: "👉 TEACHER: Ask: What would you do in this situation?" }
+        ];
+
+        let currentSlide = 0;
+        let score = 0;
+        let answeredQuestions = new Set();
+        let selectedAnswers = {}; 
+        let isGradingState = false;
+
+        const appContainer = document.getElementById('slide-mount');
+        const scoreDisplay = document.getElementById('global-score');
+
+        function renderSlide() {
+            const data = lessonData[currentSlide];
+            appContainer.innerHTML = '';
+            appContainer.className = 'w-full h-full flex slide-enter'; 
+
+            if (['intro', 'cheatsheet', 'outro', 'transition'].includes(data.type)) {
+                scoreDisplay.classList.add('hidden');
+            } else {
+                scoreDisplay.classList.remove('hidden');
+                scoreDisplay.innerText = `SCORE: ${score}/30`;
+            }
+
+            const buildNav = (isAnswered) => `
+                <div class="absolute bottom-6 w-full px-12 flex justify-between items-center z-40">
+                    <button onclick="nav(-1)" class="btn-freak bg-transparent text-white border-2 border-white hover:bg-white hover:text-freakDark text-sm py-2 px-6 shadow-none">PREVIOUS</button>
+                    ${isAnswered && data.qType !== 'clipboard' ? `<button onclick="nav(1)" class="btn-freak bg-freakYellow text-freakDark py-2 px-6 shadow-[4px_4px_0px_#111] animate-bounce">NEXT STEP ➔</button>` : ``}
+                    ${isAnswered && data.qType === 'clipboard' && !isGradingState ? `<button onclick="nav(1)" class="btn-freak bg-freakYellow text-freakDark py-2 px-6 shadow-[4px_4px_0px_#111] animate-bounce">NEXT STEP ➔</button>` : ``}
+                </div>
+            `;
+
+            // SLIDE: INTRO
+            if (data.type === 'intro') {
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col items-center justify-center text-center p-12 relative h-full bg-[#111]">
+                        <div class="inline-block bg-freakYellow text-freakDark font-mont font-black uppercase text-xl px-10 py-2 transform -skew-x-12 mb-6 mt-10">
+                            <span class="block transform skew-x-12">${data.unitModule}</span>
+                        </div>
+                        <h1 class="title-freak text-[110px] text-freakYellow mb-8 leading-none">${data.title}</h1>
+                        <p class="text-white font-mont font-bold text-3xl max-w-5xl leading-relaxed mb-12">${data.objective}</p>
+                        <div class="border-4 border-white px-12 py-4 mb-16 inline-block">
+                            <span class="text-freakBlue font-mont font-black text-3xl uppercase tracking-widest">${data.bottomTag}</span>
+                        </div>
+                        <div class="flex gap-6 mt-8">
+                            <button class="bg-[#888] text-freakDark font-mont font-black uppercase px-10 py-3 opacity-70 cursor-not-allowed">PREVIOUS</button>
+                            <button class="bg-freakYellow text-freakDark font-mont font-black uppercase px-10 py-3 hover:scale-105 transition-transform cursor-pointer shadow-[6px_6px_0px_#111]" onclick="nav(1)">NEXT STEP ➔</button>
+                        </div>
+                    </div>
+                `;
+            } 
+            // SLIDE: CHEATSHEET
+            else if (data.type === 'cheatsheet') {
+                let rulesHtml = '';
+                data.rules.forEach((rule, idx) => {
+                    rulesHtml += `
+                        <div class="bg-[#222] p-8 border-l-8 border-freakBlue flex flex-col h-full shadow-lg">
+                            <h3 class="font-bree text-3xl text-freakYellow mb-4">${rule.title}</h3>
+                            <p class="font-mont font-bold text-white text-xl mb-6 flex-grow">${rule.desc}</p>
+                            <div class="bg-black p-4 font-mont text-lg font-medium text-gray-300 italic border-l-4 border-freakYellow">
+                                ${rule.example}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col justify-center items-center p-12 bg-freakDark text-white relative h-full">
+                        <h2 class="title-freak text-7xl text-white mb-2">${data.title}</h2>
+                        <p class="font-mont text-2xl font-bold mb-12 text-freakBlue">${data.subtitle}</p>
+                        <div class="grid grid-cols-3 gap-8 w-full max-w-6xl">${rulesHtml}</div>
+                        <div class="absolute bottom-8 right-12">
+                            <button onclick="nav(1)" class="btn-freak bg-freakYellow hover:bg-white text-sm py-3 px-6 animate-bounce shadow-[4px_4px_0px_#111]">START LEVEL 1 ➔</button>
+                        </div>
+                        <div class="absolute bottom-8 left-12">
+                            <button onclick="nav(-1)" class="btn-freak bg-transparent text-white border-2 border-white hover:bg-white hover:text-freakDark shadow-none py-3 px-6 text-sm">PREVIOUS</button>
+                        </div>
+                    </div>
+                `;
+            }
+            // SLIDE: TRANSITION
+            else if (data.type === 'transition') {
+                appContainer.innerHTML = `
+                    <div class="w-1/2 h-full bg-freakYellow flex flex-col justify-center p-16 relative overflow-hidden">
+                        <div class="text-freakDark font-mont font-black italic text-[40px] mb-4 tracking-tight">${data.title}</div>
+                        <h1 class="font-mont font-black text-[60px] leading-[1] text-white uppercase tracking-tight">${data.subtitle.replace(' ', '<br>')}</h1>
+                    </div>
+                    <div class="w-1/2 h-full bg-freakDark flex flex-col justify-center items-start p-20 text-white relative">
+                        <div class="border-l-[8px] border-freakBlue pl-8 mb-12">
+                            <p class="font-mont text-[38px] font-bold leading-[1.3] tracking-tight">${data.desc}</p>
+                        </div>
+                        <div class="absolute bottom-20 flex items-center gap-10 pl-8">
+                            <button onclick="nav(-1)" class="font-mont font-black text-white text-xl uppercase tracking-wider hover:text-gray-300 transition-colors">PREVIOUS</button>
+                            <button onclick="nav(1)" class="bg-freakBlue text-freakDark font-mont font-black text-xl uppercase tracking-wider py-4 px-8 hover:bg-white transition-colors">BEGIN ➔</button>
+                        </div>
+                    </div>
+                `;
+            }
+            // LEVEL 1: THE WARNING (Hazard UI)
+            else if (data.qType === 'hazard') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                const selectedOpt = selectedAnswers[currentSlide];
+
+                let optionsHtml = '';
+                data.options.forEach((opt, idx) => {
+                    let btnClass = "bg-[#111] text-white border-4 border-[#333] hover:border-freakYellow transition-all";
+                    let disabled = isAnswered ? "disabled" : "";
+                    
+                    if (isAnswered) {
+                        if (idx === data.correct) btnClass = "bg-freakGreen text-freakDark border-4 border-freakGreen font-black shadow-[8px_8px_0px_#14532d]";
+                        else if (idx === selectedOpt && idx !== data.correct) btnClass = "bg-freakRed text-white border-4 border-freakRed opacity-70 shadow-[4px_4px_0px_#7f1d1d]";
+                        else btnClass = "bg-[#111] text-gray-600 border-4 border-[#222] opacity-40";
+                    }
+
+                    optionsHtml += `<button ${disabled} onclick="handleAnswer(${idx})" class="w-full text-left font-mont font-black text-2xl p-6 flex flex-col justify-center ${btnClass}">${opt}</button>`;
+                });
+
+                let feedbackHtml = isAnswered ? `
+                    <div class="mt-8 bg-black border-4 border-freakYellow p-5 shadow-[8px_8px_0px_#E4DF33] animate-[fadeIn_0.3s_ease-out] flex items-center z-30 relative">
+                        <div class="absolute -top-4 -right-4 text-4xl">${selectedOpt === data.correct ? '✅' : '❌'}</div>
+                        <div class="flex-1 pr-4">
+                            <p class="font-mont text-white text-lg font-bold leading-snug">${data.rationale}</p>
+                        </div>
+                        <div class="w-1/3 bg-freakBlue text-freakDark p-3 font-bold font-mont text-sm transform -skew-x-2 text-center border-2 border-freakDark">
+                            ${data.teacherPrompt}
+                        </div>
+                    </div>` : '';
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-[#222] flex flex-col justify-center items-center relative p-12 pb-24">
+                        
+                        <!-- Hazard Border -->
+                        <div class="absolute inset-0 hazard-stripes z-0 opacity-50"></div>
+                        <div class="absolute inset-4 bg-[#222] z-0"></div> <!-- Inner dark container -->
+
+                        <div class="absolute top-10 left-10 text-freakYellow font-mont font-black text-2xl z-10 bg-black px-4 py-2 border-2 border-freakYellow uppercase tracking-widest">
+                            WARNING NO. ${data.qNum}
+                        </div>
+
+                        <!-- Situation Block -->
+                        <div class="bg-freakYellow border-8 border-black p-8 mb-8 mt-12 w-full max-w-4xl z-10 shadow-[12px_12px_0px_#111]">
+                            <h3 class="text-freakDark font-mont font-black text-[45px] text-center leading-tight">
+                                " ${data.situation} "
+                            </h3>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-6 w-full max-w-4xl z-10">
+                            ${optionsHtml}
+                        </div>
+
+                        <div class="z-10 w-full max-w-4xl">${feedbackHtml}</div>
+                    </div>
+                    ${buildNav(isAnswered)}
+                `;
+            }
+            // LEVEL 2: SMART HOME (Dashboard UI)
+            else if (data.qType === 'dashboard') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                const selectedOpt = selectedAnswers[currentSlide];
+
+                let optionsHtml = '';
+                data.options.forEach((opt, idx) => {
+                    let btnClass = "smart-dash-btn";
+                    let disabled = isAnswered ? "disabled" : "";
+                    
+                    if (isAnswered) {
+                        if (idx === data.correct) btnClass += " correct";
+                        else if (idx === selectedOpt && idx !== data.correct) btnClass += " wrong";
+                        else btnClass += " opacity-30 border-[#222]";
+                    }
+
+                    optionsHtml += `<button ${disabled} onclick="handleAnswer(${idx})" class="w-full px-6 py-6 font-mont font-black text-2xl tracking-widest rounded-lg ${btnClass}">${opt}</button>`;
+                });
+
+                let feedbackHtml = isAnswered ? `
+                    <div class="w-full mt-6 bg-[#000] border-l-8 border-freakBlue p-4 animate-[fadeIn_0.3s_ease-out] z-20 flex gap-4 items-center">
+                        <div class="flex-1">
+                            <p class="font-mont text-gray-300 text-md font-medium"><span class="text-freakYellow font-bold">SYSTEM LOG:</span> ${data.rationale}</p>
+                        </div>
+                        <div class="w-[40%] bg-[#222] text-freakBlue p-2 font-bold font-mont text-xs border border-freakBlue text-center">
+                            ${data.teacherPrompt}
+                        </div>
+                    </div>` : '';
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-[#0a0a0a] flex flex-col items-center justify-center relative p-8 pb-20">
+                        <div class="absolute top-8 left-8 text-freakBlue font-mont font-bold text-lg tracking-[0.2em] opacity-60">HQ DASHBOARD // TERMINAL ${data.qNum}</div>
+                        
+                        <!-- Dashboard Panel -->
+                        <div class="bg-[#111] rounded-2xl w-full max-w-5xl min-h-[450px] p-8 shadow-[0_0_40px_rgba(147,229,255,0.1)] relative text-white flex flex-col border border-[#333] z-10">
+                            
+                            <!-- Header -->
+                            <div class="flex justify-between items-center border-b border-[#333] pb-4 mb-8">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-3 h-3 rounded-full bg-freakRed animate-pulse"></div>
+                                    <span class="font-mont font-bold text-gray-400 tracking-widest text-sm">COMPLAINT DETECTED</span>
+                                </div>
+                                <div class="font-mont font-mono text-xl text-gray-500">ID: 00${data.qNum}</div>
+                            </div>
+                            
+                            <!-- Problem Log -->
+                            <div class="bg-[#050505] border border-[#222] p-8 rounded-lg mb-10">
+                                <p class="font-mont font-mono text-[28px] text-gray-200 leading-relaxed">${data.log}</p>
+                            </div>
+                            
+                            <!-- Options -->
+                            <div class="w-full grid grid-cols-2 gap-8 mt-auto">
+                                ${optionsHtml}
+                            </div>
+                        </div>
+                        
+                        <div class="w-full max-w-5xl">${feedbackHtml}</div>
+                    </div>
+                    ${buildNav(isAnswered)}
+                `;
+            }
+            // LEVEL 3: THE CHORE LIST (Clipboard UI)
+            else if (data.qType === 'clipboard') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                
+                let contentHtml = '';
+
+                if (!isGradingState && !isAnswered) {
+                    contentHtml = `
+                        <div class="w-[600px] bg-[#f8f9fa] shadow-2xl relative mr-8 shrink-0 flex flex-col">
+                            <!-- Metal Clip -->
+                            <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 w-40 h-12 bg-gray-400 rounded-t-lg border-b-4 border-gray-600 z-20 flex justify-center items-end pb-1">
+                                <div class="w-20 h-2 bg-gray-600 rounded-full"></div>
+                            </div>
+                            
+                            <!-- Clipboard Paper -->
+                            <div class="flex-grow clipboard-paper p-10 pt-16 flex flex-col relative z-10 border border-gray-300">
+                                <h2 class="font-bree text-freakDark text-4xl mb-2 text-center uppercase border-b-4 border-freakDark pb-2 inline-block self-center">TO-DO LIST</h2>
+                                <p class="font-mont font-bold text-gray-500 text-sm text-center mb-8 uppercase tracking-widest">Task ${data.qNum}</p>
+                                
+                                <p class="font-mont font-bold text-freakDark text-2xl leading-snug mb-10">
+                                    <span class="text-freakRed">ISSUE:</span> ${data.task}
+                                </p>
+                                
+                                <div class="mt-auto relative">
+                                    <span class="absolute -left-6 top-4 text-freakDark text-xl font-bold">➔</span>
+                                    <textarea id="diagnose-input" placeholder="Write the command here..." autocomplete="off"
+                                        class="w-full bg-transparent text-freakBlue font-bree text-3xl outline-none resize-none h-16 border-b-2 border-dashed border-gray-400 focus:border-freakBlue text-center leading-loose"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Typing Station Info -->
+                        <div class="flex-1 flex flex-col justify-center">
+                            <div class="bg-freakDark border-l-8 border-freakYellow p-8 shadow-xl mb-8">
+                                <p class="text-freakYellow font-mont font-black text-sm uppercase tracking-widest mb-2">INSTRUCTION:</p>
+                                <p class="font-mont text-2xl font-bold text-white">${data.prompt}</p>
+                            </div>
+                            <div class="flex justify-start">
+                                <button onclick="submitWriting()" class="btn-freak bg-freakYellow hover:bg-white text-freakDark text-lg py-4 px-10 shadow-[6px_6px_0px_#111]">COMPLETE TASK ➔</button>
+                            </div>
+                        </div>
+                    `;
+                } else if (isGradingState) {
+                    const userText = selectedAnswers[currentSlide];
+                    contentHtml = `
+                        <div class="w-[600px] bg-[#f8f9fa] shadow-2xl relative mr-8 shrink-0 flex flex-col">
+                            <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 w-40 h-12 bg-gray-400 rounded-t-lg border-b-4 border-gray-600 z-20 flex justify-center items-end pb-1">
+                                <div class="w-20 h-2 bg-gray-600 rounded-full"></div>
+                            </div>
+                            <div class="flex-grow clipboard-paper p-10 pt-16 flex flex-col relative z-10 border border-gray-300">
+                                <h2 class="font-bree text-freakDark text-4xl mb-8 text-center uppercase border-b-4 border-freakDark pb-2 inline-block self-center">TO-DO LIST</h2>
+                                <p class="font-mont font-bold text-gray-500 text-sm text-center mb-8 uppercase tracking-widest">Task ${data.qNum} Review</p>
+                                
+                                <div class="mt-auto text-center border-b-2 border-dashed border-freakDark pb-2">
+                                    <p class="font-bree text-freakBlue text-4xl">"${userText}"</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Grading Station -->
+                        <div class="flex-1 flex flex-col justify-center">
+                            <div class="bg-white border-4 border-freakDark p-6 shadow-[8px_8px_0px_#93E5FF] mb-6">
+                                <h4 class="font-bree text-freakDark text-xl mb-2 uppercase">Expected Command:</h4>
+                                <p class="font-mont text-freakDark text-2xl font-black">${data.acceptable}</p>
+                            </div>
+                            
+                            <div class="w-full bg-freakDark p-4 mb-6 border-2 border-freakYellow text-center transform -rotate-1 shadow-md">
+                                <p class="font-mont font-bold text-freakYellow">${data.teacherPrompt}</p>
+                            </div>
+
+                            <div class="bg-black border-2 border-gray-700 p-6 text-center shadow-xl">
+                                <h3 class="font-bree text-white text-2xl mb-2">IS THE CHORE DONE?</h3>
+                                <p class="font-mont text-gray-400 text-sm mb-6">Did you use the correct imperative verb?</p>
+                                <div class="flex justify-center gap-4">
+                                    <button onclick="selfGrade(false)" class="btn-freak bg-red-500 text-white hover:bg-red-600 shadow-none py-3 px-4 text-sm">NO, I FAILED (0 PT)</button>
+                                    <button onclick="selfGrade(true)" class="btn-freak bg-green-500 text-freakDark hover:bg-green-600 shadow-none py-3 px-4 text-sm">YES, DONE (+1 PT)</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if (isAnswered) {
+                    const userText = selectedAnswers[currentSlide];
+                    contentHtml = `
+                        <!-- Reviewed State -->
+                        <div class="w-full max-w-4xl bg-white border-4 border-gray-300 p-10 shadow-xl opacity-60 flex flex-col items-center justify-center transform rotate-1">
+                            <h4 class="font-bree text-gray-400 text-4xl mb-6 uppercase">Task Crossed Off</h4>
+                            <div class="relative">
+                                <div class="absolute inset-0 flex items-center justify-center"><div class="w-full h-1 bg-freakRed transform rotate-2"></div></div>
+                                <p class="font-bree text-freakDark text-4xl opacity-50 relative z-10 px-8">"${userText}"</p>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-[#1a1a1a] flex flex-col justify-center items-center relative p-12 pb-20">
+                        <div class="absolute top-8 left-8 text-gray-500 font-mont font-black italic text-2xl">Q${data.qNum}/30 | CLIPBOARD</div>
+                        
+                        <div class="w-full max-w-6xl flex justify-center items-stretch h-full mt-8">
+                            ${contentHtml}
+                        </div>
+                    </div>
+                    ${buildNav(isAnswered && !isGradingState)}
+                `;
+                
+                const inputEl = document.getElementById('diagnose-input');
+                if(inputEl) inputEl.focus();
+            }
+            // OUTRO
+            else if (data.type === 'outro') {
+                const percentage = Math.round((score / 30) * 100);
+                let message = "";
+                if (percentage >= 90) message = "THE BOSS. You control the house.";
+                else if (percentage >= 70) message = "SURVIVOR. You can handle the chores.";
+                else message = "DISASTER. The house is a total mess.";
+
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col justify-center items-center text-center p-12 bg-freakYellow text-freakDark relative h-full">
+                        <h1 class="font-bree text-[120px] mb-2 leading-none uppercase">CHORES<br>COMPLETE</h1>
+                        <div class="bg-freakDark text-white p-12 mt-8 w-[600px] shadow-[16px_16px_0px_#93E5FF]">
+                            <h2 class="font-mont font-black italic text-3xl mb-4 text-gray-400">FINAL SCORE</h2>
+                            <p class="font-mont text-[100px] font-black text-freakYellow leading-none mb-4">${score} / 30</p>
+                            <p class="font-mont text-2xl font-bold bg-white text-freakDark inline-block px-6 py-2 transform -skew-x-6 mt-4">${message}</p>
+                        </div>
+                        <div class="mt-16">
+                            <button onclick="location.reload()" class="btn-freak bg-white text-freakDark hover:bg-freakBlue shadow-[6px_6px_0px_#111]">PLAY AGAIN ➔</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        window.handleAnswer = function(optIndex) {
+            const data = lessonData[currentSlide];
+            if (answeredQuestions.has(currentSlide)) return; 
+            
+            selectedAnswers[currentSlide] = optIndex;
+            answeredQuestions.add(currentSlide);
+            
+            if (optIndex === data.correct) score++;
+            
+            renderSlide(); 
+        }
+
+        window.submitWriting = function() {
+            const inputEl = document.getElementById('diagnose-input');
+            const userText = inputEl ? inputEl.value.trim() : "";
+            if (!userText) {
+                inputEl.classList.add('border-red-500', 'bg-red-100');
+                return; 
+            }
+            selectedAnswers[currentSlide] = userText;
+            isGradingState = true;
+            renderSlide();
+        }
+
+        window.selfGrade = function(isCorrect) {
+            isGradingState = false;
+            answeredQuestions.add(currentSlide);
+            if (isCorrect) score++;
+            nav(1); 
+        }
+
+        window.nav = function(dir) {
+            let nextSlide = currentSlide + dir;
+            if (nextSlide >= 0 && nextSlide < lessonData.length) {
+                currentSlide = nextSlide;
+                renderSlide();
+            } else if (nextSlide >= lessonData.length) {
+                lessonData.push({type: 'outro'});
+                currentSlide = lessonData.length -1;
+                renderSlide();
+            }
+        }
+
+        document.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter' && lessonData[currentSlide]?.qType === 'clipboard' && !isGradingState && !answeredQuestions.has(currentSlide)) {
+                if (!e.shiftKey) {
+                    e.preventDefault();
+                    submitWriting();
+                }
+            }
+        });
+
+        // Init
+        renderSlide();
+    </script>
+</body>
+</html>

@@ -1,22 +1,1553 @@
 {
-  "$comment": "Manifiesto del contenido versionado. ContentSyncService lo aplica al boot (upsert idempotente). Los módulos de beginner del Drive se agregan aquí al procesarlos con scripts/process-lesson.mjs.",
+  "$comment": "GENERADO por scripts/build-content.mjs desde content/beginner/. Los HTML se editan a mano siguiendo content/ESTANDAR-HTML.md; este script solo indexa.",
   "modules": [
     {
-      "id": "beg-00-welcome",
+      "id": "beg-u1-m01",
       "level": "beginner",
-      "title": "Welcome · Demo del formato estándar",
-      "description": "Módulo de ejemplo del pipeline de contenido: lección HTML responsive con actividad que reporta resultados a la plataforma (bridge FreaknActivity). Se reemplaza por el contenido real de Drive.",
-      "position": 0,
+      "unit": 1,
+      "title": "Módulo 1 · Breaking the Ice",
+      "description": "Unidad 1 del programa beginner.",
       "lessons": [
         {
-          "id": "beg-00-welcome-lesson",
-          "title": "Lesson 0 · Greetings básicos",
+          "id": "beg-u1-m01-lesson",
+          "title": "Lección interactiva",
           "position": 1,
-          "durationMin": 10,
+          "durationMin": 45,
           "kind": "html",
-          "file": "beginner/00-welcome/lesson.html"
+          "file": "beginner/u1-m01/lesson.html"
+        },
+        {
+          "id": "beg-u1-m01-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u1-m01/extra.html"
+        },
+        {
+          "id": "beg-u1-m01-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u1-m01/guide.html"
         }
-      ]
+      ],
+      "position": 1
+    },
+    {
+      "id": "beg-u1-m02",
+      "level": "beginner",
+      "unit": 1,
+      "title": "Módulo 2 · The ID Card",
+      "description": "Unidad 1 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u1-m02-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u1-m02/lesson.html"
+        },
+        {
+          "id": "beg-u1-m02-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u1-m02/extra.html"
+        },
+        {
+          "id": "beg-u1-m02-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u1-m02/guide.html"
+        }
+      ],
+      "position": 2
+    },
+    {
+      "id": "beg-u1-m03",
+      "level": "beginner",
+      "unit": 1,
+      "title": "Módulo 3 · Naming My World",
+      "description": "Unidad 1 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u1-m03-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u1-m03/lesson.html"
+        },
+        {
+          "id": "beg-u1-m03-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u1-m03/extra.html"
+        },
+        {
+          "id": "beg-u1-m03-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u1-m03/guide.html"
+        }
+      ],
+      "position": 3
+    },
+    {
+      "id": "beg-u1-m04",
+      "level": "beginner",
+      "unit": 1,
+      "title": "Módulo 4 · Save the Date",
+      "description": "Unidad 1 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u1-m04-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u1-m04/lesson.html"
+        },
+        {
+          "id": "beg-u1-m04-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u1-m04/extra.html"
+        },
+        {
+          "id": "beg-u1-m04-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u1-m04/guide.html"
+        }
+      ],
+      "position": 4
+    },
+    {
+      "id": "beg-u1-m05",
+      "level": "beginner",
+      "unit": 1,
+      "title": "Módulo 5 · Meet the Parents",
+      "description": "Unidad 1 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u1-m05-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u1-m05/lesson.html"
+        },
+        {
+          "id": "beg-u1-m05-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u1-m05/extra.html"
+        },
+        {
+          "id": "beg-u1-m05-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u1-m05/guide.html"
+        }
+      ],
+      "position": 5
+    },
+    {
+      "id": "beg-u1-checkpoint",
+      "level": "beginner",
+      "unit": 1,
+      "title": "Checkpoint · Unidad 1",
+      "description": "Repaso evaluado de la unidad 1. Tus respuestas quedan registradas para tu profe.",
+      "lessons": [
+        {
+          "id": "beg-u1-checkpoint-quiz",
+          "title": "Checkpoint de la unidad",
+          "position": 1,
+          "durationMin": 30,
+          "kind": "html",
+          "file": "beginner/u1-checkpoint/checkpoint.html"
+        }
+      ],
+      "position": 6
+    },
+    {
+      "id": "beg-u2-m06",
+      "level": "beginner",
+      "unit": 2,
+      "title": "Módulo 6 · My Daily Routine",
+      "description": "Unidad 2 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u2-m06-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u2-m06/lesson.html"
+        },
+        {
+          "id": "beg-u2-m06-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u2-m06/extra.html"
+        },
+        {
+          "id": "beg-u2-m06-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u2-m06/guide.html"
+        }
+      ],
+      "position": 7
+    },
+    {
+      "id": "beg-u2-m07",
+      "level": "beginner",
+      "unit": 2,
+      "title": "Módulo 7 · The Bodyguard Rule",
+      "description": "Unidad 2 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u2-m07-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u2-m07/lesson.html"
+        },
+        {
+          "id": "beg-u2-m07-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u2-m07/extra.html"
+        },
+        {
+          "id": "beg-u2-m07-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u2-m07/guide.html"
+        }
+      ],
+      "position": 8
+    },
+    {
+      "id": "beg-u2-m08",
+      "level": "beginner",
+      "unit": 2,
+      "title": "Módulo 8 · The Interrogation",
+      "description": "Unidad 2 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u2-m08-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u2-m08/lesson.html"
+        },
+        {
+          "id": "beg-u2-m08-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u2-m08/extra.html"
+        },
+        {
+          "id": "beg-u2-m08-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u2-m08/guide.html"
+        }
+      ],
+      "position": 9
+    },
+    {
+      "id": "beg-u2-m09",
+      "level": "beginner",
+      "unit": 2,
+      "title": "Módulo 9 · Love It or Hate It",
+      "description": "Unidad 2 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u2-m09-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u2-m09/lesson.html"
+        },
+        {
+          "id": "beg-u2-m09-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u2-m09/extra.html"
+        },
+        {
+          "id": "beg-u2-m09-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u2-m09/guide.html"
+        }
+      ],
+      "position": 10
+    },
+    {
+      "id": "beg-u2-m10",
+      "level": "beginner",
+      "unit": 2,
+      "title": "Módulo 10 · Question Tags",
+      "description": "Unidad 2 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u2-m10-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u2-m10/lesson.html"
+        },
+        {
+          "id": "beg-u2-m10-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u2-m10/extra.html"
+        },
+        {
+          "id": "beg-u2-m10-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u2-m10/guide.html"
+        }
+      ],
+      "position": 11
+    },
+    {
+      "id": "beg-u2-checkpoint",
+      "level": "beginner",
+      "unit": 2,
+      "title": "Checkpoint · Unidad 2",
+      "description": "Repaso evaluado de la unidad 2. Tus respuestas quedan registradas para tu profe.",
+      "lessons": [
+        {
+          "id": "beg-u2-checkpoint-quiz",
+          "title": "Checkpoint de la unidad",
+          "position": 1,
+          "durationMin": 30,
+          "kind": "html",
+          "file": "beginner/u2-checkpoint/checkpoint.html"
+        }
+      ],
+      "position": 12
+    },
+    {
+      "id": "beg-u3-m11",
+      "level": "beginner",
+      "unit": 3,
+      "title": "Módulo 11 · Yesterday's News",
+      "description": "Unidad 3 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u3-m11-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u3-m11/lesson.html"
+        },
+        {
+          "id": "beg-u3-m11-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u3-m11/extra.html"
+        },
+        {
+          "id": "beg-u3-m11-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u3-m11/guide.html"
+        }
+      ],
+      "position": 13
+    },
+    {
+      "id": "beg-u3-m12",
+      "level": "beginner",
+      "unit": 3,
+      "title": "Módulo 12 · My Best Vacation",
+      "description": "Unidad 3 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u3-m12-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u3-m12/lesson.html"
+        },
+        {
+          "id": "beg-u3-m12-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u3-m12/extra.html"
+        },
+        {
+          "id": "beg-u3-m12-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u3-m12/guide.html"
+        }
+      ],
+      "position": 14
+    },
+    {
+      "id": "beg-u3-m13",
+      "level": "beginner",
+      "unit": 3,
+      "title": "Módulo 13 · The Good Old Days",
+      "description": "Unidad 3 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u3-m13-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u3-m13/lesson.html"
+        },
+        {
+          "id": "beg-u3-m13-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u3-m13/extra.html"
+        },
+        {
+          "id": "beg-u3-m13-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u3-m13/guide.html"
+        }
+      ],
+      "position": 15
+    },
+    {
+      "id": "beg-u3-m14",
+      "level": "beginner",
+      "unit": 3,
+      "title": "Módulo 14 · Changes & Transitions",
+      "description": "Unidad 3 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u3-m14-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u3-m14/lesson.html"
+        },
+        {
+          "id": "beg-u3-m14-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u3-m14/extra.html"
+        },
+        {
+          "id": "beg-u3-m14-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u3-m14/guide.html"
+        }
+      ],
+      "position": 16
+    },
+    {
+      "id": "beg-u3-m15",
+      "level": "beginner",
+      "unit": 3,
+      "title": "Módulo 15 · Past Simple vs. Progressive",
+      "description": "Unidad 3 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u3-m15-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u3-m15/lesson.html"
+        },
+        {
+          "id": "beg-u3-m15-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u3-m15/extra.html"
+        },
+        {
+          "id": "beg-u3-m15-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u3-m15/guide.html"
+        }
+      ],
+      "position": 17
+    },
+    {
+      "id": "beg-u3-checkpoint",
+      "level": "beginner",
+      "unit": 3,
+      "title": "Checkpoint · Unidad 3",
+      "description": "Repaso evaluado de la unidad 3. Tus respuestas quedan registradas para tu profe.",
+      "lessons": [
+        {
+          "id": "beg-u3-checkpoint-quiz",
+          "title": "Checkpoint de la unidad",
+          "position": 1,
+          "durationMin": 30,
+          "kind": "html",
+          "file": "beginner/u3-checkpoint/checkpoint.html"
+        }
+      ],
+      "position": 18
+    },
+    {
+      "id": "beg-u4-m16",
+      "level": "beginner",
+      "unit": 4,
+      "title": "Módulo 16 · The Bucket",
+      "description": "Unidad 4 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u4-m16-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u4-m16/lesson.html"
+        },
+        {
+          "id": "beg-u4-m16-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u4-m16/extra.html"
+        },
+        {
+          "id": "beg-u4-m16-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u4-m16/guide.html"
+        }
+      ],
+      "position": 19
+    },
+    {
+      "id": "beg-u4-m17",
+      "level": "beginner",
+      "unit": 4,
+      "title": "Módulo 17 · My Bucket List",
+      "description": "Unidad 4 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u4-m17-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u4-m17/lesson.html"
+        },
+        {
+          "id": "beg-u4-m17-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u4-m17/extra.html"
+        },
+        {
+          "id": "beg-u4-m17-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u4-m17/guide.html"
+        }
+      ],
+      "position": 20
+    },
+    {
+      "id": "beg-u4-m18",
+      "level": "beginner",
+      "unit": 4,
+      "title": "Módulo 18 · This Time Tomorrow",
+      "description": "Unidad 4 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u4-m18-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u4-m18/lesson.html"
+        },
+        {
+          "id": "beg-u4-m18-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u4-m18/extra.html"
+        },
+        {
+          "id": "beg-u4-m18-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u4-m18/guide.html"
+        }
+      ],
+      "position": 21
+    },
+    {
+      "id": "beg-u4-m19",
+      "level": "beginner",
+      "unit": 4,
+      "title": "Módulo 19 · Superstitions & Science",
+      "description": "Unidad 4 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u4-m19-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u4-m19/lesson.html"
+        },
+        {
+          "id": "beg-u4-m19-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u4-m19/extra.html"
+        },
+        {
+          "id": "beg-u4-m19-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u4-m19/guide.html"
+        }
+      ],
+      "position": 22
+    },
+    {
+      "id": "beg-u4-m20",
+      "level": "beginner",
+      "unit": 4,
+      "title": "Módulo 20 · The Timeline of Success",
+      "description": "Unidad 4 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u4-m20-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u4-m20/lesson.html"
+        },
+        {
+          "id": "beg-u4-m20-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u4-m20/extra.html"
+        },
+        {
+          "id": "beg-u4-m20-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u4-m20/guide.html"
+        }
+      ],
+      "position": 23
+    },
+    {
+      "id": "beg-u4-checkpoint",
+      "level": "beginner",
+      "unit": 4,
+      "title": "Checkpoint · Unidad 4",
+      "description": "Repaso evaluado de la unidad 4. Tus respuestas quedan registradas para tu profe.",
+      "lessons": [
+        {
+          "id": "beg-u4-checkpoint-quiz",
+          "title": "Checkpoint de la unidad",
+          "position": 1,
+          "durationMin": 30,
+          "kind": "html",
+          "file": "beginner/u4-checkpoint/checkpoint.html"
+        }
+      ],
+      "position": 24
+    },
+    {
+      "id": "beg-u5-m21",
+      "level": "beginner",
+      "unit": 5,
+      "title": "Módulo 21 · The Suspect",
+      "description": "Unidad 5 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u5-m21-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u5-m21/lesson.html"
+        },
+        {
+          "id": "beg-u5-m21-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u5-m21/extra.html"
+        },
+        {
+          "id": "beg-u5-m21-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u5-m21/guide.html"
+        }
+      ],
+      "position": 25
+    },
+    {
+      "id": "beg-u5-m22",
+      "level": "beginner",
+      "unit": 5,
+      "title": "Módulo 22 · Shopping Guide",
+      "description": "Unidad 5 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u5-m22-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u5-m22/lesson.html"
+        },
+        {
+          "id": "beg-u5-m22-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u5-m22/extra.html"
+        },
+        {
+          "id": "beg-u5-m22-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u5-m22/guide.html"
+        }
+      ],
+      "position": 26
+    },
+    {
+      "id": "beg-u5-m23",
+      "level": "beginner",
+      "unit": 5,
+      "title": "Módulo 23 · Talent Show",
+      "description": "Unidad 5 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u5-m23-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u5-m23/lesson.html"
+        },
+        {
+          "id": "beg-u5-m23-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u5-m23/extra.html"
+        },
+        {
+          "id": "beg-u5-m23-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u5-m23/guide.html"
+        }
+      ],
+      "position": 27
+    },
+    {
+      "id": "beg-u5-m24",
+      "level": "beginner",
+      "unit": 5,
+      "title": "Módulo 24 · This vs. That",
+      "description": "Unidad 5 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u5-m24-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u5-m24/lesson.html"
+        },
+        {
+          "id": "beg-u5-m24-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u5-m24/extra.html"
+        },
+        {
+          "id": "beg-u5-m24-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u5-m24/guide.html"
+        }
+      ],
+      "position": 28
+    },
+    {
+      "id": "beg-u5-m25",
+      "level": "beginner",
+      "unit": 5,
+      "title": "Módulo 25 · The Food Critic",
+      "description": "Unidad 5 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u5-m25-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u5-m25/lesson.html"
+        },
+        {
+          "id": "beg-u5-m25-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u5-m25/extra.html"
+        },
+        {
+          "id": "beg-u5-m25-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u5-m25/guide.html"
+        }
+      ],
+      "position": 29
+    },
+    {
+      "id": "beg-u5-checkpoint",
+      "level": "beginner",
+      "unit": 5,
+      "title": "Checkpoint · Unidad 5",
+      "description": "Repaso evaluado de la unidad 5. Tus respuestas quedan registradas para tu profe.",
+      "lessons": [
+        {
+          "id": "beg-u5-checkpoint-quiz",
+          "title": "Checkpoint de la unidad",
+          "position": 1,
+          "durationMin": 30,
+          "kind": "html",
+          "file": "beginner/u5-checkpoint/checkpoint.html"
+        }
+      ],
+      "position": 30
+    },
+    {
+      "id": "beg-u6-m26",
+      "level": "beginner",
+      "unit": 6,
+      "title": "Módulo 26 · Masterchef at Home",
+      "description": "Unidad 6 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u6-m26-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u6-m26/lesson.html"
+        },
+        {
+          "id": "beg-u6-m26-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u6-m26/extra.html"
+        },
+        {
+          "id": "beg-u6-m26-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u6-m26/guide.html"
+        }
+      ],
+      "position": 31
+    },
+    {
+      "id": "beg-u6-m27",
+      "level": "beginner",
+      "unit": 6,
+      "title": "Módulo 27 · The Grocery List",
+      "description": "Unidad 6 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u6-m27-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u6-m27/lesson.html"
+        },
+        {
+          "id": "beg-u6-m27-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u6-m27/extra.html"
+        },
+        {
+          "id": "beg-u6-m27-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u6-m27/guide.html"
+        }
+      ],
+      "position": 32
+    },
+    {
+      "id": "beg-u6-m28",
+      "level": "beginner",
+      "unit": 6,
+      "title": "Módulo 28 · The Empty Fridge",
+      "description": "Unidad 6 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u6-m28-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u6-m28/lesson.html"
+        },
+        {
+          "id": "beg-u6-m28-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u6-m28/extra.html"
+        },
+        {
+          "id": "beg-u6-m28-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u6-m28/guide.html"
+        }
+      ],
+      "position": 33
+    },
+    {
+      "id": "beg-u6-m29",
+      "level": "beginner",
+      "unit": 6,
+      "title": "Módulo 29 · My Neighborhood",
+      "description": "Unidad 6 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u6-m29-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u6-m29/lesson.html"
+        },
+        {
+          "id": "beg-u6-m29-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u6-m29/extra.html"
+        },
+        {
+          "id": "beg-u6-m29-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u6-m29/guide.html"
+        }
+      ],
+      "position": 34
+    },
+    {
+      "id": "beg-u6-m30",
+      "level": "beginner",
+      "unit": 6,
+      "title": "Módulo 30 · Whose Is This?",
+      "description": "Unidad 6 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u6-m30-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u6-m30/lesson.html"
+        },
+        {
+          "id": "beg-u6-m30-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u6-m30/extra.html"
+        },
+        {
+          "id": "beg-u6-m30-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u6-m30/guide.html"
+        }
+      ],
+      "position": 35
+    },
+    {
+      "id": "beg-u6-checkpoint",
+      "level": "beginner",
+      "unit": 6,
+      "title": "Checkpoint · Unidad 6",
+      "description": "Repaso evaluado de la unidad 6. Tus respuestas quedan registradas para tu profe.",
+      "lessons": [
+        {
+          "id": "beg-u6-checkpoint-quiz",
+          "title": "Checkpoint de la unidad",
+          "position": 1,
+          "durationMin": 30,
+          "kind": "html",
+          "file": "beginner/u6-checkpoint/checkpoint.html"
+        }
+      ],
+      "position": 36
+    },
+    {
+      "id": "beg-u7-m31",
+      "level": "beginner",
+      "unit": 7,
+      "title": "Módulo 31 · Doctor's Advice",
+      "description": "Unidad 7 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u7-m31-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u7-m31/lesson.html"
+        },
+        {
+          "id": "beg-u7-m31-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u7-m31/extra.html"
+        },
+        {
+          "id": "beg-u7-m31-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u7-m31/guide.html"
+        }
+      ],
+      "position": 37
+    },
+    {
+      "id": "beg-u7-m32",
+      "level": "beginner",
+      "unit": 7,
+      "title": "Módulo 32 · Lost in the City",
+      "description": "Unidad 7 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u7-m32-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u7-m32/lesson.html"
+        },
+        {
+          "id": "beg-u7-m32-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u7-m32/extra.html"
+        },
+        {
+          "id": "beg-u7-m32-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u7-m32/guide.html"
+        }
+      ],
+      "position": 38
+    },
+    {
+      "id": "beg-u7-m33",
+      "level": "beginner",
+      "unit": 7,
+      "title": "Módulo 33 · Survival Manual",
+      "description": "Unidad 7 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u7-m33-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u7-m33/lesson.html"
+        },
+        {
+          "id": "beg-u7-m33-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u7-m33/extra.html"
+        },
+        {
+          "id": "beg-u7-m33-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u7-m33/guide.html"
+        }
+      ],
+      "position": 39
+    },
+    {
+      "id": "beg-u7-m34",
+      "level": "beginner",
+      "unit": 7,
+      "title": "Módulo 34 · If I Won the Lottery",
+      "description": "Unidad 7 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u7-m34-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u7-m34/lesson.html"
+        },
+        {
+          "id": "beg-u7-m34-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u7-m34/extra.html"
+        },
+        {
+          "id": "beg-u7-m34-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u7-m34/guide.html"
+        }
+      ],
+      "position": 40
+    },
+    {
+      "id": "beg-u7-m35",
+      "level": "beginner",
+      "unit": 7,
+      "title": "Módulo 35 · How It's Made",
+      "description": "Unidad 7 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u7-m35-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u7-m35/lesson.html"
+        },
+        {
+          "id": "beg-u7-m35-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u7-m35/extra.html"
+        },
+        {
+          "id": "beg-u7-m35-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u7-m35/guide.html"
+        }
+      ],
+      "position": 41
+    },
+    {
+      "id": "beg-u7-checkpoint",
+      "level": "beginner",
+      "unit": 7,
+      "title": "Checkpoint · Unidad 7",
+      "description": "Repaso evaluado de la unidad 7. Tus respuestas quedan registradas para tu profe.",
+      "lessons": [
+        {
+          "id": "beg-u7-checkpoint-quiz",
+          "title": "Checkpoint de la unidad",
+          "position": 1,
+          "durationMin": 30,
+          "kind": "html",
+          "file": "beginner/u7-checkpoint/checkpoint.html"
+        }
+      ],
+      "position": 42
+    },
+    {
+      "id": "beg-u8-m36",
+      "level": "beginner",
+      "unit": 8,
+      "title": "Módulo 36 · Life Experiences",
+      "description": "Unidad 8 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u8-m36-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u8-m36/lesson.html"
+        },
+        {
+          "id": "beg-u8-m36-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u8-m36/extra.html"
+        },
+        {
+          "id": "beg-u8-m36-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u8-m36/guide.html"
+        }
+      ],
+      "position": 43
+    },
+    {
+      "id": "beg-u8-m37",
+      "level": "beginner",
+      "unit": 8,
+      "title": "Módulo 37 · Matching Vibes",
+      "description": "Unidad 8 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u8-m37-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u8-m37/lesson.html"
+        },
+        {
+          "id": "beg-u8-m37-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u8-m37/extra.html"
+        },
+        {
+          "id": "beg-u8-m37-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u8-m37/guide.html"
+        }
+      ],
+      "position": 44
+    },
+    {
+      "id": "beg-u8-m38",
+      "level": "beginner",
+      "unit": 8,
+      "title": "Módulo 38 · Daily Actions 2.0",
+      "description": "Unidad 8 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u8-m38-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u8-m38/lesson.html"
+        },
+        {
+          "id": "beg-u8-m38-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u8-m38/extra.html"
+        },
+        {
+          "id": "beg-u8-m38-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u8-m38/guide.html"
+        }
+      ],
+      "position": 45
+    },
+    {
+      "id": "beg-u8-m39",
+      "level": "beginner",
+      "unit": 8,
+      "title": "Módulo 39 · The Big Story",
+      "description": "Unidad 8 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u8-m39-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u8-m39/lesson.html"
+        },
+        {
+          "id": "beg-u8-m39-extra",
+          "title": "Actividad extra",
+          "position": 2,
+          "durationMin": 20,
+          "kind": "html",
+          "file": "beginner/u8-m39/extra.html"
+        },
+        {
+          "id": "beg-u8-m39-guide",
+          "title": "Guía de estudio",
+          "position": 3,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u8-m39/guide.html"
+        }
+      ],
+      "position": 46
+    },
+    {
+      "id": "beg-u8-m40",
+      "level": "beginner",
+      "unit": 8,
+      "title": "Módulo 40 · Real World Challenges",
+      "description": "Unidad 8 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u8-m40-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u8-m40/lesson.html"
+        },
+        {
+          "id": "beg-u8-m40-guide",
+          "title": "Guía de estudio",
+          "position": 2,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u8-m40/guide.html"
+        }
+      ],
+      "position": 47
+    },
+    {
+      "id": "beg-u8-m41",
+      "level": "beginner",
+      "unit": 8,
+      "title": "Módulo 41 · Murder Mystery",
+      "description": "Unidad 8 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u8-m41-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u8-m41/lesson.html"
+        },
+        {
+          "id": "beg-u8-m41-guide",
+          "title": "Guía de estudio",
+          "position": 2,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u8-m41/guide.html"
+        }
+      ],
+      "position": 48
+    },
+    {
+      "id": "beg-u8-m42",
+      "level": "beginner",
+      "unit": 8,
+      "title": "Módulo 42 · Ready for Intermediate (Wrap-Up)",
+      "description": "Unidad 8 del programa beginner.",
+      "lessons": [
+        {
+          "id": "beg-u8-m42-lesson",
+          "title": "Lección interactiva",
+          "position": 1,
+          "durationMin": 45,
+          "kind": "html",
+          "file": "beginner/u8-m42/lesson.html"
+        },
+        {
+          "id": "beg-u8-m42-guide",
+          "title": "Guía de estudio",
+          "position": 2,
+          "durationMin": 15,
+          "kind": "html",
+          "file": "beginner/u8-m42/guide.html"
+        }
+      ],
+      "position": 49
+    },
+    {
+      "id": "beg-u8-checkpoint",
+      "level": "beginner",
+      "unit": 8,
+      "title": "Checkpoint · Unidad 8",
+      "description": "Repaso evaluado de la unidad 8. Tus respuestas quedan registradas para tu profe.",
+      "lessons": [
+        {
+          "id": "beg-u8-checkpoint-quiz",
+          "title": "Checkpoint de la unidad",
+          "position": 1,
+          "durationMin": 30,
+          "kind": "html",
+          "file": "beginner/u8-checkpoint/checkpoint.html"
+        }
+      ],
+      "position": 50
     }
   ]
 }

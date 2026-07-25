@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 32: Lost in the City</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:ital,wght@0,400;0,700;0,900;1,400;1,900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        freakYellow: '#E4DF33',
+                        freakDark: '#30302F',
+                        freakBlue: '#93E5FF',
+                        freakBg: '#111111',
+                        freakGreen: '#4ade80',
+                        freakRed: '#f87171'
+                    },
+                    fontFamily: {
+                        bree: ['"Bree Serif"', 'serif'],
+                        mont: ['Montserrat', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #111111; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; overflow: hidden; }
+        #app-container { width: 1280px; height: 720px; position: relative; background-color: #30302F; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        
+        .title-freak { font-family: 'Bree Serif', serif; font-weight: 400; text-transform: uppercase; }
+        .text-freak { font-family: 'Montserrat', sans-serif; }
+        
+        .btn-freak {
+            background-color: #93E5FF; color: #30302F; font-family: 'Montserrat', sans-serif; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.05em; padding: 1rem 2rem; border: none;
+            transition: all 0.2s ease; cursor: pointer; display: inline-block;
+        }
+        .btn-freak:hover { background-color: #E4DF33; transform: scale(1.05); }
+        .btn-freak:disabled { opacity: 0.5; cursor: not-allowed; transform: none; background-color: #ccc; color: #666; }
+        
+        .slide-enter { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #30302F; }
+        ::-webkit-scrollbar-thumb { background: #E4DF33; }
+        
+        /* GPS Map Background Pattern */
+        .bg-gps {
+            background-image: radial-gradient(#444 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-color: #1a1a1a;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <!-- Global Score overlay -->
+        <div id="global-score" class="absolute top-8 right-8 text-freakYellow font-mont font-black text-4xl z-50 hidden">SCORE: 0/30</div>
+        
+        <div id="slide-mount" class="w-full h-full flex slide-enter"></div>
+    </div>
+
+    <script>
+        const lessonData = [
+            // SLIDE 0: INTRO
+            {
+                type: 'intro',
+                unitModule: "UNIT 7 • MODULE 32",
+                title: "LOST IN THE CITY",
+                objective: "Learn to navigate the streets, understand directions, and guide people from point A to point B without getting them killed.",
+                bottomTag: "THE LOGIC OF LIFE • PART 2"
+            },
+            
+            // --- THE CHEAT CODE ---
+            {
+                type: 'cheatsheet',
+                title: "THE COMPASS",
+                subtitle: "The survival verbs for the street.",
+                rules: [
+                    { title: "THE MOVEMENT", desc: "Verbs that take you places.", example: "• Enter (Go inside)<br>• Exit (Leave)<br>• Stop (Don't move)" },
+                    { title: "THE GUIDANCE", desc: "Who is in charge?", example: "• Lead (You show the way in front)<br>• Follow (You go behind someone)" },
+                    { title: "THE POSITION", desc: "Where exactly is it?", example: "• Next to (Beside it)<br>• Across from (On the other side)<br>• Between (In the middle)" }
+                ]
+            },
+
+            // --- LEVEL 1: THE NAV (Recognition - Card Layout) ---
+            { type: 'transition', level: 1, title: "LEVEL 1", subtitle: "THE NAV", desc: "Read the navigation instruction or the street sign. What exactly does it mean? Choose the correct translation of the rule." },
+            
+            { qType: 'recognize', level: 1, qNum: 1, q: "Go straight ahead for two blocks.", options: ["A) Keep moving forward.", "B) Turn around immediately."], correct: 0, rationale: "'Straight ahead' means continuing in the exact same direction without turning.", teacherPrompt: "👉 TEACHER: Ask: Are there many straight roads in your city, or are they all curves?" },
+            { qType: 'recognize', level: 1, qNum: 2, q: "You must exit the highway now.", options: ["A) Stay on the main road.", "B) Leave the main road."], correct: 1, rationale: "To 'exit' means to leave a place or a route.", teacherPrompt: "👉 TEACHER: Ask: Have you ever missed your exit on the highway? What happened?" },
+            { qType: 'recognize', level: 1, qNum: 3, q: "The bank is across from the park.", options: ["A) On the other side of the street.", "B) Right next to the park."], correct: 0, rationale: "'Across from' means facing it, usually separated by a street or pathway.", teacherPrompt: "👉 TEACHER: Ask: What is across from your house or apartment?" },
+            { qType: 'recognize', level: 1, qNum: 4, q: "Turn right at the traffic light.", options: ["A) Keep driving past the light.", "B) Change direction to the right."], correct: 1, rationale: "'Turn' means to change your physical direction.", teacherPrompt: "👉 TEACHER: Ask: Do people in your city respect red traffic lights?" },
+            { qType: 'recognize', level: 1, qNum: 5, q: "Follow this street until you see the hospital.", options: ["A) Stay on this exact street.", "B) Turn off this street immediately."], correct: 0, rationale: "To 'follow a street' means to continue traveling along it.", teacherPrompt: "👉 TEACHER: Ask: Are you good at following directions, or do you always use Google Maps?" },
+            { qType: 'recognize', level: 1, qNum: 6, q: "Stop at the intersection.", options: ["A) Walk or drive faster.", "B) Wait at the crossing."], correct: 1, rationale: "An intersection is where two roads cross, and 'stop' means to halt all movement.", teacherPrompt: "👉 TEACHER: Ask: What is the most dangerous intersection in your city?" },
+            { qType: 'recognize', level: 1, qNum: 7, q: "Enter the building through the back door.", options: ["A) Go inside the building.", "B) Go outside the building."], correct: 0, rationale: "'Enter' means to move into an enclosed space.", teacherPrompt: "👉 TEACHER: Ask: Do you enter your house through the front door or the garage?" },
+            { qType: 'recognize', level: 1, qNum: 8, q: "The subway station is next to the mall.", options: ["A) Beside the mall.", "B) Inside the mall."], correct: 0, rationale: "'Next to' means immediately adjacent or right beside something.", teacherPrompt: "👉 TEACHER: Ask: What is next to your favorite restaurant?" },
+            { qType: 'recognize', level: 1, qNum: 9, q: "This road will lead you to the city center.", options: ["A) Keep you away from the center.", "B) Take you directly there."], correct: 1, rationale: "If a road 'leads' somewhere, it guides or takes you to that destination.", teacherPrompt: "👉 TEACHER: Ask: Where does the road outside your house lead to?" },
+            { qType: 'recognize', level: 1, qNum: 10, q: "Walk past the supermarket.", options: ["A) Continue walking after you see it.", "B) Go inside it to buy something."], correct: 0, rationale: "To go 'past' something means to move beyond it without stopping.", teacherPrompt: "👉 TEACHER: Ask: Name three places you walk or drive past every day." },
+
+            // --- LEVEL 2: THE CO-PILOT (GPS Device UI) ---
+            { type: 'transition', level: 2, title: "LEVEL 2", subtitle: "THE CO-PILOT", desc: "You are holding the GPS. Read the map's prompt and select the exact missing word to guide the driver to safety." },
+
+            { qType: 'gps', level: 2, qNum: 11, distance: "200m", context: "Titó: The museum is on the other side of the road. It is ___ the park.", options: ["across from", "next to"], correct: 0, rationale: "If it's on the other side of a road, it is 'across from' it.", teacherPrompt: "👉 TEACHER: Is your city easy or hard to navigate?" },
+            { qType: 'gps', level: 2, qNum: 12, distance: "50m", context: "El pa: The police are behind me! I need to ___ the highway right now!", options: ["exit", "enter"], correct: 0, rationale: "If you are already on the highway and need to escape, you 'exit'.", teacherPrompt: "👉 TEACHER: Have you ever had to exit a place quickly?" },
+            { qType: 'gps', level: 2, qNum: 13, distance: "1.2km", context: "Gelmy: Mijo, just ___ my car. I know the way to the church.", options: ["follow", "lead"], correct: 0, rationale: "Since Gelmy knows the way, you must travel behind her (follow).", teacherPrompt: "👉 TEACHER: Do you prefer to lead the group or follow someone else?" },
+            { qType: 'gps', level: 2, qNum: 14, distance: "10m", context: "Titó: I see the red light! I must ___ the car immediately!", options: ["stop", "follow"], correct: 0, rationale: "Red lights require you to halt your vehicle entirely.", teacherPrompt: "👉 TEACHER: What do you do while stopped at a red light?" },
+            { qType: 'gps', level: 2, qNum: 15, distance: "500m", context: "El pa: The concert is ___ the stadium. Let's go inside.", options: ["in", "on"], correct: 0, rationale: "When referring to the inside of an enclosed building, use 'in'.", teacherPrompt: "👉 TEACHER: What was the last event you attended in a stadium?" },
+            { qType: 'gps', level: 2, qNum: 16, distance: "Calculating...", context: "Gelmy: Don't get lost! This map will ___ you to the correct place.", options: ["lead", "exit"], correct: 0, rationale: "A map's job is to guide or 'lead' you to your destination.", teacherPrompt: "👉 TEACHER: Do you use Waze, Google Maps, or your brain to navigate?" },
+            { qType: 'gps', level: 2, qNum: 17, distance: "300m", context: "Titó: To get to my farm, you must ___ the dirt road on the left.", options: ["enter", "stop"], correct: 0, rationale: "You transition from the main road into the new dirt road (enter).", teacherPrompt: "👉 TEACHER: Do you like driving on dirt roads in the country?" },
+            { qType: 'gps', level: 2, qNum: 18, distance: "0m (Arrived)", context: "El pa: I am waiting for you ___ the bus stop right now.", options: ["at", "in"], correct: 0, rationale: "For a specific point or location like a bus stop, we use 'at'.", teacherPrompt: "👉 TEACHER: How is the public transport in your city?" },
+            { qType: 'gps', level: 2, qNum: 19, distance: "150m", context: "Gelmy: Walk two blocks and turn left ___ the corner.", options: ["at", "in"], correct: 0, rationale: "A corner is a specific point of intersection, so we use 'at'.", teacherPrompt: "👉 TEACHER: What is usually located at the corners in your neighborhood?" },
+            { qType: 'gps', level: 2, qNum: 20, distance: "20m", context: "Titó: The bakery is exactly ___ the pharmacy and the butcher.", options: ["between", "across"], correct: 0, rationale: "When an object is in the middle of two other named objects, it is 'between' them.", teacherPrompt: "👉 TEACHER: What is between your house and your job/school?" },
+
+            // --- LEVEL 3: THE LOCAL GUIDE (Live Chat UI) ---
+            { type: 'transition', level: 3, title: "LEVEL 3", subtitle: "THE LOCAL GUIDE", desc: "Your family and tourists are texting you for directions. Reply to their messages using your real knowledge of your city." },
+
+            { qType: 'chat', level: 3, qNum: 21, sender: "Lost Tourist 🎒", msg: "Excuse me, I'm at the main square. How do I get to the nearest coffee shop?", prompt: "Give one specific direction (e.g., Walk two blocks, turn left...)", acceptable: "Walk straight / Turn left / It's next to the bank.", teacherPrompt: "👉 TEACHER: Ask: What is the best coffee shop in your city?" },
+            { qType: 'chat', level: 3, qNum: 22, sender: "Titó 🤠", msg: "I am driving in your neighborhood but I don't know the rules. Where should I park?", prompt: "Tell him where he must STOP or park his car.", acceptable: "Stop next to the park / Park on the street / You must stop here.", teacherPrompt: "👉 TEACHER: Ask: Is it hard to find parking near your house?" },
+            { qType: 'chat', level: 3, qNum: 23, sender: "Gelmy 👵", msg: "Mijo, I want to visit that famous place in your city. What is it, and where is it?", prompt: "Name a landmark and state what it is NEXT TO.", acceptable: "The museum is next to the park / The mall is next to the river.", teacherPrompt: "👉 TEACHER: Ask: Why is that place so famous?" },
+            { qType: 'chat', level: 3, qNum: 24, sender: "El pa 🧢", msg: "Bro, I found this amazing restaurant you recommended, but the door is locked!", prompt: "Tell him how to ENTER the building.", acceptable: "Enter through the back / Enter the red door / You must enter the lobby.", teacherPrompt: "👉 TEACHER: Ask: What's a restaurant with a really cool entrance?" },
+            { qType: 'chat', level: 3, qNum: 25, sender: "Titó 🤠", msg: "I'm on the big avenue. If I keep driving straight, where does this road take me?", prompt: "Tell him where the road LEADS.", acceptable: "It leads to the center / It leads to the highway / It leads to the mountains.", teacherPrompt: "👉 TEACHER: Ask: Do you enjoy long drives on the highway?" },
+            { qType: 'chat', level: 3, qNum: 26, sender: "Gelmy 👵", msg: "I don't like this neighborhood, mijo. It's too dark. How do I get out of here?", prompt: "Give her instructions to EXIT the area.", acceptable: "Exit the street on the right / Exit through the main avenue.", teacherPrompt: "👉 TEACHER: Ask: Have you ever been lost in a bad neighborhood?" },
+            { qType: 'chat', level: 3, qNum: 27, sender: "El pa 🧢", msg: "I'm outside your house, but I don't see you. Where are you standing?", prompt: "Tell him you are ACROSS FROM something near your house.", acceptable: "I'm across from the bakery / Across from the park.", teacherPrompt: "👉 TEACHER: Ask: What do you see when you look out your window?" },
+            { qType: 'chat', level: 3, qNum: 28, sender: "Lost Tourist 🎒", msg: "I'm trying to find the metro station. Can I just walk behind you?", prompt: "Tell the tourist to FOLLOW you.", acceptable: "Yes, follow me / Follow my car / Follow this street.", teacherPrompt: "👉 TEACHER: Ask: Are people in your city helpful to tourists?" },
+            { qType: 'chat', level: 3, qNum: 29, sender: "Gelmy 👵", msg: "I'm at the airport. I want to take the bus to your house. What do I do?", prompt: "Give her one instruction using a transport verb.", acceptable: "Take the green bus / Enter the station / Stop at the mall.", teacherPrompt: "👉 TEACHER: Ask: What is the fastest way to get from the airport to your house?" },
+            { qType: 'chat', level: 3, qNum: 30, sender: "Titó 🤠", msg: "I'm at the park near your house. Send me the exact directions to your door!", prompt: "Write a quick 2-step text to guide him to your house.", acceptable: "Walk straight and turn left / Go past the shop and enter the gate.", teacherPrompt: "👉 TEACHER: Ask: Is your house hard to find for delivery drivers?" }
+        ];
+
+        let currentSlide = 0;
+        let score = 0;
+        let answeredQuestions = new Set();
+        let selectedAnswers = {}; 
+        let isGradingState = false;
+
+        const appContainer = document.getElementById('slide-mount');
+        const scoreDisplay = document.getElementById('global-score');
+
+        function renderSlide() {
+            const data = lessonData[currentSlide];
+            appContainer.innerHTML = '';
+            appContainer.className = 'w-full h-full flex slide-enter'; 
+
+            // Show/hide global score
+            if (['intro', 'cheatsheet', 'outro', 'transition'].includes(data.type)) {
+                scoreDisplay.classList.add('hidden');
+            } else {
+                scoreDisplay.classList.remove('hidden');
+                scoreDisplay.innerText = `SCORE: ${score}/30`;
+            }
+
+            const buildNav = (isAnswered) => `
+                <div class="absolute bottom-6 w-full px-12 flex justify-between items-center z-40">
+                    <button onclick="nav(-1)" class="btn-freak bg-transparent text-white border-2 border-white hover:bg-white hover:text-freakDark text-sm py-2 px-6 shadow-none">PREVIOUS</button>
+                    ${isAnswered && data.qType !== 'chat' ? `<button onclick="nav(1)" class="btn-freak bg-freakYellow text-freakDark py-2 px-6 shadow-[4px_4px_0px_#111] animate-bounce">NEXT STEP ➔</button>` : ``}
+                    ${isAnswered && data.qType === 'chat' && !isGradingState ? `<button onclick="nav(1)" class="btn-freak bg-freakYellow text-freakDark py-2 px-6 shadow-[4px_4px_0px_#111] animate-bounce">NEXT STEP ➔</button>` : ``}
+                </div>
+            `;
+
+            // SLIDE: INTRO
+            if (data.type === 'intro') {
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col items-center justify-center text-center p-12 relative h-full">
+                        <div class="inline-block bg-freakYellow text-freakDark font-mont font-black uppercase text-xl px-10 py-2 transform -skew-x-12 mb-6 mt-10">
+                            <span class="block transform skew-x-12">${data.unitModule}</span>
+                        </div>
+                        <h1 class="title-freak text-[110px] text-freakYellow mb-8 leading-none">${data.title}</h1>
+                        <p class="text-white font-mont font-bold text-3xl max-w-5xl leading-relaxed mb-12">${data.objective}</p>
+                        <div class="border-4 border-white px-12 py-4 mb-16 inline-block">
+                            <span class="text-freakBlue font-mont font-black text-3xl uppercase tracking-widest">${data.bottomTag}</span>
+                        </div>
+                        <div class="flex gap-6 mt-8">
+                            <button class="bg-[#888] text-freakDark font-mont font-black uppercase px-10 py-3 opacity-70 cursor-not-allowed">PREVIOUS</button>
+                            <button class="bg-freakYellow text-freakDark font-mont font-black uppercase px-10 py-3 hover:scale-105 transition-transform cursor-pointer shadow-[6px_6px_0px_#111]" onclick="nav(1)">NEXT STEP ➔</button>
+                        </div>
+                    </div>
+                `;
+            } 
+            // SLIDE: CHEATSHEET
+            else if (data.type === 'cheatsheet') {
+                let rulesHtml = '';
+                data.rules.forEach((rule, idx) => {
+                    rulesHtml += `
+                        <div class="bg-[#222] p-8 border-l-8 border-freakBlue flex flex-col h-full shadow-lg">
+                            <h3 class="font-bree text-3xl text-freakYellow mb-4">${rule.title}</h3>
+                            <p class="font-mont font-bold text-white text-xl mb-6 flex-grow">${rule.desc}</p>
+                            <div class="bg-black p-4 font-mont text-lg font-medium text-gray-300 italic border-l-4 border-freakYellow">
+                                ${rule.example}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col justify-center items-center p-12 bg-freakDark text-white relative h-full">
+                        <h2 class="title-freak text-7xl text-white mb-2">${data.title}</h2>
+                        <p class="font-mont text-2xl font-bold mb-12 text-freakBlue">${data.subtitle}</p>
+                        
+                        <div class="grid grid-cols-3 gap-8 w-full max-w-6xl">
+                            ${rulesHtml}
+                        </div>
+                        
+                        <div class="absolute bottom-8 right-12">
+                            <button onclick="nav(1)" class="btn-freak bg-freakYellow hover:bg-white text-sm py-3 px-6 animate-bounce shadow-[4px_4px_0px_#111]">START LEVEL 1 ➔</button>
+                        </div>
+                        <div class="absolute bottom-8 left-12">
+                            <button onclick="nav(-1)" class="btn-freak bg-transparent text-white border-2 border-white hover:bg-white hover:text-freakDark shadow-none py-3 px-6 text-sm">PREVIOUS</button>
+                        </div>
+                    </div>
+                `;
+            }
+            // SLIDE: TRANSITION
+            else if (data.type === 'transition') {
+                appContainer.innerHTML = `
+                    <div class="w-1/2 h-full bg-freakYellow flex flex-col justify-center p-16 relative overflow-hidden">
+                        <div class="text-freakDark font-mont font-black italic text-[40px] mb-4 tracking-tight">${data.title}</div>
+                        <h1 class="font-mont font-black text-[60px] leading-[1] text-white uppercase tracking-tight">${data.subtitle.replace(' ', '<br>')}</h1>
+                    </div>
+                    <div class="w-1/2 h-full bg-freakDark flex flex-col justify-center items-start p-20 text-white relative">
+                        <div class="border-l-[8px] border-freakBlue pl-8 mb-12">
+                            <p class="font-mont text-[38px] font-bold leading-[1.3] tracking-tight">${data.desc}</p>
+                        </div>
+                        <div class="absolute bottom-20 flex items-center gap-10 pl-8">
+                            <button onclick="nav(-1)" class="font-mont font-black text-white text-xl uppercase tracking-wider hover:text-gray-300 transition-colors">PREVIOUS</button>
+                            <button onclick="nav(1)" class="bg-freakBlue text-freakDark font-mont font-black text-xl uppercase tracking-wider py-4 px-8 hover:bg-white transition-colors">BEGIN ➔</button>
+                        </div>
+                    </div>
+                `;
+            }
+            // LEVEL 1: RECOGNIZE (Floating Card Design)
+            else if (data.qType === 'recognize') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                const selectedOpt = selectedAnswers[currentSlide];
+
+                let optionsHtml = '';
+                data.options.forEach((opt, idx) => {
+                    let btnClass = "bg-[#222] text-white border-4 border-[#444] hover:border-freakYellow hover:text-freakYellow transition-all transform hover:-translate-y-2 hover:shadow-[8px_8px_0px_#E4DF33] cursor-pointer";
+                    let disabled = isAnswered ? "disabled" : "";
+                    
+                    if (isAnswered) {
+                        if (idx === data.correct) btnClass = "bg-green-400 text-freakDark border-4 border-green-600 font-black shadow-[8px_8px_0px_#14532d] z-10 scale-105";
+                        else if (idx === selectedOpt && idx !== data.correct) btnClass = "bg-red-500 text-white border-4 border-red-700 opacity-80 shadow-[4px_4px_0px_#7f1d1d]";
+                        else btnClass = "bg-[#111] text-gray-600 border-4 border-[#222] opacity-40";
+                    }
+
+                    let formattedText = opt.replace(' (', '<span class="block text-sm font-normal opacity-80 mt-2">(').replace(')', ')</span>');
+
+                    optionsHtml += `<button ${disabled} onclick="handleAnswer(${idx})" class="w-full text-center font-mont font-black text-3xl p-8 flex flex-col items-center justify-center ${btnClass}">${formattedText}</button>`;
+                });
+
+                let feedbackHtml = isAnswered ? `
+                    <div class="mt-8 w-full max-w-5xl bg-freakYellow border-4 border-freakDark p-5 shadow-[8px_8px_0px_#30302F] animate-[fadeIn_0.3s_ease-out] flex items-center justify-between z-30">
+                        <div class="pr-6 border-r-4 border-freakDark flex-1">
+                            <h4 class="font-bree text-freakDark text-3xl uppercase mb-1">${selectedOpt === data.correct ? '📍 RIGHT ON TRACK!' : '🛑 WRONG TURN.'}</h4>
+                            <p class="font-mont text-freakDark text-lg font-bold leading-snug">${data.rationale}</p>
+                        </div>
+                        <div class="pl-6 w-1/3 flex-shrink-0">
+                            <div class="bg-white text-freakDark p-3 font-bold font-mont text-sm border-2 border-freakDark transform rotate-1 text-center shadow-md">
+                                ${data.teacherPrompt}
+                            </div>
+                        </div>
+                    </div>` : '';
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-[#111] flex flex-col justify-center items-center relative p-12 pb-24">
+                        
+                        <div class="absolute top-8 left-12 flex items-center gap-4">
+                            <div class="bg-freakYellow text-freakDark font-mont font-black px-4 py-1 transform -skew-x-12 text-xl">LEVEL ${data.level}</div>
+                            <div class="text-gray-500 font-mont font-bold uppercase tracking-widest text-xl">${data.subtitle}</div>
+                        </div>
+                        <div class="absolute top-8 right-12 text-freakYellow font-mont font-black text-2xl">
+                            ${data.qNum} / 10
+                        </div>
+
+                        <!-- Street Sign Quote -->
+                        <div class="bg-freakDark border-4 border-freakBlue p-10 mb-8 mt-6 relative w-full max-w-5xl shadow-[12px_12px_0px_#93E5FF] transform -rotate-1">
+                            <div class="absolute -top-10 -left-6 text-freakBlue text-[100px] font-bree leading-none">"</div>
+                            <h3 class="text-white font-mont font-black text-[50px] text-center leading-tight relative z-10 px-8">
+                                ${data.q}
+                            </h3>
+                            <div class="absolute -bottom-16 -right-4 text-freakBlue text-[100px] font-bree leading-none">"</div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-8 w-full max-w-5xl">
+                            ${optionsHtml}
+                        </div>
+
+                        ${feedbackHtml}
+                    </div>
+                    ${buildNav(isAnswered)}
+                `;
+            }
+            // LEVEL 2: PRESCRIPTION (GPS Device UI)
+            else if (data.qType === 'gps') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                const selectedOpt = selectedAnswers[currentSlide];
+
+                let optionsHtml = '';
+                data.options.forEach((opt, idx) => {
+                    let bgClass = "bg-[#222] text-white hover:bg-freakYellow hover:text-freakDark border-2 border-gray-600 hover:border-freakDark shadow-md";
+                    let disabled = isAnswered ? "disabled" : "";
+                    
+                    if (isAnswered) {
+                        if (idx === data.correct) bgClass = "bg-green-400 text-freakDark border-2 border-freakDark font-black shadow-none";
+                        else if (idx === selectedOpt && idx !== data.correct) bgClass = "bg-red-500 text-white opacity-50";
+                        else bgClass = "bg-gray-800 text-gray-500 opacity-50 border-gray-700";
+                    }
+
+                    optionsHtml += `<button ${disabled} onclick="handleAnswer(${idx})" class="flex-1 px-8 py-5 font-mont font-black text-2xl transition-all uppercase tracking-widest rounded-xl ${bgClass}">${opt}</button>`;
+                });
+
+                let displayContext = data.context;
+                if (isAnswered && selectedOpt === data.correct) {
+                    displayContext = displayContext.replace('___', `<span class="bg-green-400 text-freakDark px-2 py-1 rounded uppercase border-2 border-freakDark">${data.options[data.correct]}</span>`);
+                } else if (isAnswered) {
+                    displayContext = displayContext.replace('___', `<span class="bg-red-500 text-white px-2 py-1 rounded uppercase line-through border-2 border-red-900">${data.options[selectedOpt]}</span> <span class="bg-green-400 text-freakDark px-2 py-1 rounded uppercase border-2 border-freakDark">${data.options[data.correct]}</span>`);
+                } else {
+                    displayContext = displayContext.replace('___', `<span class="text-freakYellow border-b-4 border-freakYellow pb-1">______</span>`);
+                }
+
+                let feedbackHtml = isAnswered ? `
+                    <div class="w-full max-w-4xl mt-6 bg-freakYellow border-4 border-freakDark p-4 shadow-[6px_6px_0px_#111] animate-[fadeIn_0.3s_ease-out] z-20 flex gap-4 items-center">
+                        <div class="flex-1">
+                            <p class="font-mont text-freakDark text-md font-bold">${data.rationale}</p>
+                        </div>
+                        <div class="w-[40%] bg-white text-freakDark p-2 font-bold font-mont text-sm border-2 border-freakDark text-center transform -skew-x-2">
+                            ${data.teacherPrompt}
+                        </div>
+                    </div>` : '';
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-gps flex flex-col items-center justify-center relative p-8 pb-20">
+                        <div class="absolute top-8 left-8 text-white font-mont font-black italic text-2xl opacity-50 bg-black px-4 py-1 rounded">Q${data.qNum}/30 | THE CO-PILOT</div>
+                        
+                        <!-- GPS Device -->
+                        <div class="bg-[#111] rounded-[40px] w-full max-w-4xl min-h-[400px] p-6 shadow-2xl relative text-white flex flex-col border-[12px] border-[#333] z-10">
+                            
+                            <!-- GPS Header bar -->
+                            <div class="bg-[#222] rounded-t-2xl p-4 flex justify-between items-center border-b-2 border-[#444] mb-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-4 h-4 rounded-full bg-freakGreen animate-pulse"></div>
+                                    <span class="font-mont font-bold text-gray-400">GPS ACTIVE</span>
+                                </div>
+                                <div class="font-bree text-3xl text-freakYellow">${data.distance}</div>
+                            </div>
+                            
+                            <!-- Content -->
+                            <div class="flex-grow flex flex-col justify-center px-10">
+                                <p class="font-mont text-[32px] font-bold leading-[1.4] text-center mb-10">${displayContext}</p>
+                            </div>
+                            
+                            <!-- GPS Options -->
+                            <div class="w-full flex gap-6 justify-center mt-auto">
+                                ${optionsHtml}
+                            </div>
+                        </div>
+                        
+                        ${feedbackHtml}
+                    </div>
+                    ${buildNav(isAnswered)}
+                `;
+            }
+            // LEVEL 3: THE LOCAL GUIDE (Live Chat UI)
+            else if (data.qType === 'chat') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                
+                let contentHtml = '';
+
+                if (!isGradingState && !isAnswered) {
+                    contentHtml = `
+                        <!-- Chat interface -->
+                        <div class="w-[450px] bg-white rounded-3xl border-[10px] border-gray-800 shadow-2xl flex flex-col h-[500px] overflow-hidden relative mr-8 shrink-0">
+                            <!-- Notch -->
+                            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-xl z-20"></div>
+                            
+                            <!-- Header -->
+                            <div class="bg-gray-100 pt-8 pb-3 px-4 border-b border-gray-300 text-center relative z-10">
+                                <div class="font-mont font-bold text-freakDark text-lg">${data.sender}</div>
+                                <div class="text-xs text-gray-500 font-mont">Active now</div>
+                            </div>
+                            
+                            <!-- Messages -->
+                            <div class="flex-grow p-4 bg-[#ece5dd] flex flex-col gap-4 overflow-y-auto">
+                                <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm max-w-[85%] self-start border border-gray-200">
+                                    <p class="font-mont font-medium text-freakDark text-md leading-relaxed">${data.msg}</p>
+                                    <p class="text-right text-[10px] text-gray-400 mt-2">Just now</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Input Area (Fake) -->
+                            <div class="bg-gray-100 p-3 border-t border-gray-300">
+                                <div class="bg-white rounded-full px-4 py-2 text-gray-400 font-mont text-sm border border-gray-300">Typing reply on the right...</div>
+                            </div>
+                        </div>
+
+                        <!-- Typing Station -->
+                        <div class="flex-1 flex flex-col justify-center">
+                            <div class="bg-[#1e1e1e] border-l-8 border-freakBlue p-8 shadow-2xl mb-8">
+                                <p class="text-freakYellow font-mont font-black text-sm uppercase tracking-widest mb-2">YOUR MISSION:</p>
+                                <p class="font-bree text-3xl text-white mb-6">${data.prompt}</p>
+                                
+                                <textarea id="diagnose-input" placeholder="Type your text message reply here..." autocomplete="off"
+                                    class="w-full bg-black text-white font-mont text-2xl p-4 outline-none resize-none border-2 border-gray-700 focus:border-freakBlue transition-colors h-32 rounded-lg"></textarea>
+                            </div>
+                            <div class="flex justify-end">
+                                <button onclick="submitWriting()" class="btn-freak bg-freakBlue hover:bg-white text-freakDark text-lg py-4 px-10 shadow-[6px_6px_0px_#111]">SEND MESSAGE ➔</button>
+                            </div>
+                        </div>
+                    `;
+                } else if (isGradingState) {
+                    const userText = selectedAnswers[currentSlide];
+                    contentHtml = `
+                        <!-- Chat interface (With Reply) -->
+                        <div class="w-[450px] bg-white rounded-3xl border-[10px] border-gray-800 shadow-2xl flex flex-col h-[500px] overflow-hidden relative mr-8 shrink-0">
+                            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-xl z-20"></div>
+                            <div class="bg-gray-100 pt-8 pb-3 px-4 border-b border-gray-300 text-center">
+                                <div class="font-mont font-bold text-freakDark text-lg">${data.sender}</div>
+                            </div>
+                            <div class="flex-grow p-4 bg-[#ece5dd] flex flex-col gap-4 overflow-y-auto">
+                                <div class="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm max-w-[85%] self-start">
+                                    <p class="font-mont font-medium text-freakDark text-md">${data.msg}</p>
+                                </div>
+                                <div class="bg-[#dcf8c6] p-4 rounded-2xl rounded-tr-none shadow-sm max-w-[85%] self-end border border-green-200 animate-[fadeIn_0.3s_ease-out]">
+                                    <p class="font-mont font-bold text-freakDark text-lg leading-snug">"${userText}"</p>
+                                    <p class="text-right text-[10px] text-gray-500 mt-2">Delivered</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Grading Station -->
+                        <div class="flex-1 flex flex-col justify-center">
+                            <div class="bg-freakDark border-4 border-freakBlue p-6 shadow-xl mb-6">
+                                <h4 class="font-bree text-freakBlue text-xl mb-2">EXPECTED VIBE:</h4>
+                                <p class="font-mont text-white text-xl font-bold">${data.acceptable}</p>
+                            </div>
+                            
+                            <div class="w-full bg-white p-4 mb-6 border-2 border-freakDark text-center transform rotate-1 shadow-md">
+                                <p class="font-mont font-bold text-freakDark">${data.teacherPrompt}</p>
+                            </div>
+
+                            <div class="bg-black border-2 border-gray-700 p-6 text-center shadow-xl">
+                                <h3 class="font-bree text-freakYellow text-2xl mb-2">DID THEY SURVIVE?</h3>
+                                <p class="font-mont text-gray-400 text-sm mb-6">Did your directions make sense, or are they completely lost?</p>
+                                <div class="flex justify-center gap-6">
+                                    <button onclick="selfGrade(false)" class="btn-freak bg-red-500 text-white hover:bg-red-600 shadow-none py-3 px-6">THEY ARE LOST (0 PT)</button>
+                                    <button onclick="selfGrade(true)" class="btn-freak bg-green-500 text-white hover:bg-green-600 shadow-none py-3 px-6">THEY ARRIVED (+1 PT)</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if (isAnswered) {
+                    const userText = selectedAnswers[currentSlide];
+                    contentHtml = `
+                        <!-- Reviewed State -->
+                        <div class="w-full max-w-4xl bg-[#1e1e1e] border-l-8 border-gray-600 p-10 shadow-xl opacity-60 flex flex-col items-center justify-center">
+                            <h4 class="font-bree text-gray-400 text-3xl mb-6 uppercase">Message Sent successfully</h4>
+                            <div class="bg-[#dcf8c6] p-6 rounded-2xl rounded-tr-none max-w-2xl text-center">
+                                <p class="font-mont text-freakDark text-2xl font-bold">"${userText}"</p>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-[#111] flex flex-col justify-center items-center relative p-12 pb-20">
+                        <div class="absolute top-8 left-8 text-gray-600 font-mont font-black italic text-2xl">Q${data.qNum}/30 | LIVE CHAT</div>
+                        
+                        <div class="w-full max-w-6xl flex justify-center items-stretch h-full mt-8">
+                            ${contentHtml}
+                        </div>
+                    </div>
+                    ${buildNav(isAnswered && !isGradingState)}
+                `;
+                
+                const inputEl = document.getElementById('diagnose-input');
+                if(inputEl) inputEl.focus();
+            }
+            // OUTRO
+            else if (data.type === 'outro') {
+                const percentage = Math.round((score / 30) * 100);
+                let message = "";
+                if (percentage >= 90) message = "LOCAL LEGEND. You own these streets.";
+                else if (percentage >= 70) message = "SURVIVOR. You found your way home.";
+                else message = "HOPELESSLY LOST. You need a map immediately.";
+
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col justify-center items-center text-center p-12 bg-freakYellow text-freakDark relative h-full">
+                        <h1 class="font-bree text-[120px] mb-2 leading-none uppercase">DESTINATION<br>REACHED</h1>
+                        <div class="bg-freakDark text-white p-12 mt-8 w-[600px] shadow-[16px_16px_0px_#93E5FF]">
+                            <h2 class="font-mont font-black italic text-3xl mb-4 text-gray-400">FINAL SCORE</h2>
+                            <p class="font-mont text-[100px] font-black text-freakYellow leading-none mb-4">${score} / 30</p>
+                            <p class="font-mont text-2xl font-bold bg-white text-freakDark inline-block px-6 py-2 transform -skew-x-6 mt-4">${message}</p>
+                        </div>
+                        <div class="mt-16">
+                            <button onclick="location.reload()" class="btn-freak bg-white text-freakDark hover:bg-freakBlue shadow-[6px_6px_0px_#111]">DRIVE AGAIN ➔</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        window.handleAnswer = function(optIndex) {
+            const data = lessonData[currentSlide];
+            if (answeredQuestions.has(currentSlide)) return; 
+            
+            selectedAnswers[currentSlide] = optIndex;
+            answeredQuestions.add(currentSlide);
+            
+            if (optIndex === data.correct) score++;
+            
+            renderSlide(); 
+        }
+
+        window.submitWriting = function() {
+            const inputEl = document.getElementById('diagnose-input');
+            const userText = inputEl ? inputEl.value.trim() : "";
+            if (!userText) {
+                inputEl.classList.add('border-red-500', 'bg-red-900', 'bg-opacity-20');
+                return; 
+            }
+            selectedAnswers[currentSlide] = userText;
+            isGradingState = true;
+            renderSlide();
+        }
+
+        window.selfGrade = function(isCorrect) {
+            isGradingState = false;
+            answeredQuestions.add(currentSlide);
+            if (isCorrect) score++;
+            nav(1); 
+        }
+
+        window.nav = function(dir) {
+            let nextSlide = currentSlide + dir;
+            if (nextSlide >= 0 && nextSlide < lessonData.length) {
+                currentSlide = nextSlide;
+                renderSlide();
+            } else if (nextSlide >= lessonData.length) {
+                lessonData.push({type: 'outro'});
+                currentSlide = lessonData.length -1;
+                renderSlide();
+            }
+        }
+
+        document.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter' && lessonData[currentSlide]?.qType === 'chat' && !isGradingState && !answeredQuestions.has(currentSlide)) {
+                // To allow multiline texting, we require Shift+Enter for new line, regular Enter to submit
+                if (!e.shiftKey) {
+                    e.preventDefault();
+                    submitWriting();
+                }
+            }
+        });
+
+        // Init
+        renderSlide();
+    </script>
+</body>
+</html>

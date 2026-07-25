@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FLG 4.0 - BASIC 2.0 | Module 17</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #E4DF33; /* Yellow */
+            --charcoal: #30302F;
+            --accent: #93E5FF; /* Sky Blue */
+            --bg-outer: #111;
+            --white: #FFFFFF;
+        }
+
+        body {
+            background-color: var(--bg-outer);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Montserrat', sans-serif;
+            color: var(--white);
+            overflow: hidden;
+        }
+
+        h1, h2, h3, .bree {
+            font-family: 'Bree Serif', serif;
+            text-transform: uppercase;
+            font-weight: 900;
+        }
+
+        .slide-container {
+            width: 1280px;
+            height: 720px;
+            background-color: var(--charcoal);
+            position: relative;
+            overflow: hidden;
+            display: none;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        .slide-container.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Split Layout */
+        .split-left {
+            background-color: var(--primary);
+            color: var(--charcoal);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 60px;
+        }
+
+        .split-right {
+            background-color: var(--charcoal);
+            color: var(--white);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 60px;
+        }
+
+        /* Skewed Elements */
+        .skewed-block {
+            transform: skewX(-12deg);
+            background-color: var(--primary);
+            color: var(--charcoal);
+            padding: 10px 30px;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+        .skewed-block > * {
+            transform: skewX(12deg);
+        }
+
+        .btn-freak {
+            transform: skewX(-12deg);
+            background-color: var(--accent);
+            color: var(--charcoal);
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            padding: 15px 40px;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .btn-freak:hover {
+            transform: skewX(-12deg) scale(1.05);
+            background-color: var(--white);
+        }
+        .btn-freak:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: skewX(-12deg);
+        }
+        .btn-freak span {
+            display: inline-block;
+            transform: skewX(12deg);
+        }
+
+        .btn-nav-small {
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            background-color: var(--white);
+        }
+
+        /* Gossip Paper */
+        .gossip-paper {
+            background-color: var(--white);
+            color: var(--charcoal);
+            padding: 40px;
+            font-family: 'Bree Serif', serif;
+            box-shadow: 15px 15px 0px var(--primary);
+            position: relative;
+            max-width: 90%;
+            margin: 0 auto;
+        }
+
+        /* UI Options */
+        .option-btn {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid var(--white);
+            padding: 15px;
+            margin: 10px 0;
+            text-align: left;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: 700;
+            width: 100%;
+            font-size: 1.2rem;
+        }
+        .option-btn:hover:not(:disabled) {
+            background: var(--primary);
+            color: var(--charcoal);
+            border-color: var(--primary);
+        }
+
+        /* Navigation Box */
+        .nav-bar {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            gap: 20px;
+            z-index: 100;
+        }
+
+        /* Input Styles */
+        .freak-input {
+            background: rgba(0,0,0,0.3);
+            border: none;
+            border-bottom: 4px solid var(--primary);
+            color: var(--white);
+            font-size: 1.8rem;
+            font-weight: 900;
+            outline: none;
+            width: 100%;
+            padding: 15px;
+            font-family: 'Bree Serif', serif;
+        }
+
+        .q-nav-bar {
+            border-top: 2px dashed rgba(255,255,255,0.2);
+            padding-top: 20px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SLIDE 1: HOOK -->
+    <div id="slide-1" class="slide-container active">
+        <div class="flex h-full">
+            <div class="split-left">
+                <div class="skewed-block">
+                    <h1 class="text-6xl">MODULE 17</h1>
+                </div>
+                <h2 class="text-8xl leading-none">THE BUCKET<br>LIST</h2>
+                <p class="mt-6 text-xl font-bold italic">"Stop wishing. Start planning."</p>
+            </div>
+            <div class="split-right relative items-center text-center">
+                <h3 class="text-4xl mb-4 text-[#93E5FF]">LISTEN UP!</h3>
+                <p class="text-2xl leading-relaxed">Dreams are nice, but <b>PLANS</b> get things done. Today we drop the "maybe" and focus on what you are <b>actually going to do</b>.</p>
+                <div class="mt-10">
+                    <button class="btn-freak" onclick="nav(2)"><span>NEXT STEP ➔</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: THE VIBE -->
+    <div id="slide-2" class="slide-container">
+        <div class="p-20 flex flex-col h-full">
+            <div class="skewed-block self-start">
+                <h2 class="text-4xl">THE VIBE: GOING TO</h2>
+            </div>
+            <div class="grid grid-cols-2 gap-10 mt-10">
+                <div>
+                    <h3 class="text-5xl mb-6 text-[#93E5FF]">INTENTIONS & PLANS</h3>
+                    <p class="text-2xl mb-6">Forget "WILL" for a second. We use <b>GOING TO</b> when the decision is ALREADY made.</p>
+                    <ul class="text-xl space-y-4 font-bold">
+                        <li>📅 It's in your calendar.</li>
+                        <li>🧠 You already thought about it.</li>
+                        <li>🚀 It's a fact waiting to happen.</li>
+                    </ul>
+                    <div class="mt-8 p-6 bg-white/10 rounded-xl">
+                        <p class="text-lg"><b>Coach Tip:</b> You need the verb TO BE (am/is/are) + GOING TO + The Action.</p>
+                    </div>
+                </div>
+                <div class="bg-black/30 p-10 rounded-3xl flex flex-col justify-center">
+                    <p class="text-2xl mb-6">👉 <b>QUICK CHECK:</b> Which one is a SOLID PLAN?</p>
+                    <button class="option-btn" onclick="vibeCheck(this, false)">"I hope I travel to Medellín next year."</button>
+                    <button class="option-btn" onclick="vibeCheck(this, true)">"I am going to travel to Medellín next year. I bought the tickets!"</button>
+                    <div id="vibe-feedback" class="mt-4 h-10 font-black text-2xl uppercase"></div>
+                </div>
+            </div>
+        </div>
+        <div class="nav-bar">
+            <button class="btn-freak !bg-white" onclick="nav(1)"><span>PREVIOUS</span></button>
+            <button id="next-to-story" class="btn-freak opacity-50 pointer-events-none" onclick="nav(3)"><span>NEXT STEP ➔</span></button>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: THE GOSSIP -->
+    <div id="slide-3" class="slide-container">
+        <div class="px-20 pt-10 pb-32 flex flex-col h-full items-center justify-center">
+            <div class="skewed-block mb-6">
+                <h2 class="text-4xl">THE GOSSIP</h2>
+            </div>
+            <div class="gossip-paper" style="padding: 30px;">
+                <p class="text-xl leading-relaxed">
+                    Titó fixes his poncho and looks at his son. "El Pa, what are you <span class="text-blue-600 underline font-bold">going to do</span> today? You can't just play video games."<br><br>
+                    El Pa adjusts his cap. "Relax, Pa. I <span class="text-blue-600 underline font-bold">am going to start</span> my own streetwear brand! I already have the logo."<br><br>
+                    Gelmy rolls her eyes, lifting her right eyebrow. "Ay, mijo... You <span class="text-red-600 underline font-bold">aren't going to do</span> anything if you don't wake up before noon!"
+                </p>
+            </div>
+            <div class="mt-6 bg-white/10 p-6 rounded-xl w-full max-w-3xl text-center">
+                <p class="text-xl mb-4 font-bold">What is the reality of this conversation?</p>
+                <div class="flex gap-4 justify-center">
+                    <button class="btn-freak" onclick="storyCheck(this, 'mom')"><span>Gelmy doesn't believe his plan.</span></button>
+                    <button class="btn-freak" onclick="storyCheck(this, 'son')"><span>El Pa is already rich.</span></button>
+                </div>
+                <div id="story-feedback" class="mt-4 font-black text-[#93E5FF] text-2xl min-h-[32px]"></div>
+            </div>
+        </div>
+        <div class="nav-bar">
+            <button class="btn-freak !bg-white" onclick="nav(2)"><span>PREVIOUS</span></button>
+            <button id="next-to-game" class="btn-freak opacity-50 pointer-events-none" onclick="startGame()"><span>START THE GAME ➔</span></button>
+        </div>
+    </div>
+
+    <!-- GAME SLIDE -->
+    <div id="slide-game" class="slide-container">
+        <div class="h-full flex flex-col p-12 relative">
+            <!-- Header -->
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <div id="level-indicator" class="skewed-block">
+                        <h2 class="text-3xl">LEVEL 1</h2>
+                    </div>
+                    <div id="game-title" class="text-xl font-bold text-[#93E5FF] uppercase">RECOGNITION: Plan or Just a Wish?</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm uppercase font-bold opacity-60">Total Score</div>
+                    <div id="score-display" class="text-6xl font-black text-[#E4DF33]">00</div>
+                </div>
+            </div>
+
+            <!-- Question Area -->
+            <div id="question-box" class="flex-grow flex flex-col justify-center">
+                <div class="text-[#E4DF33] font-bold text-lg mb-2 tracking-widest uppercase" id="q-counter">QUESTION 1/10</div>
+                <div id="q-text" class="text-4xl font-black mb-8 leading-tight">QUESTION TEXT HERE?</div>
+                
+                <div id="options-grid" class="grid grid-cols-1 gap-4 max-w-3xl">
+                    <!-- Options injected here -->
+                </div>
+                
+                <div id="input-area" class="hidden max-w-3xl w-full">
+                    <input type="text" id="user-input" class="freak-input" placeholder="Type your answer here..." autocomplete="off">
+                    <button class="btn-freak mt-6 w-full" onclick="submitInput()"><span>CHECK ANSWER ➔</span></button>
+                </div>
+
+                <!-- Feedback Overlay -->
+                <div id="game-feedback" class="mt-6 hidden flex-col justify-center">
+                    <div id="feedback-title" class="font-black text-3xl"></div>
+                    <div id="feedback-hint" class="text-white text-lg mt-1 mb-2"></div>
+                    <div class="mt-2 p-4 bg-white/10 rounded-xl border-l-4 border-[#E4DF33]">
+                        <span class="font-black text-[#E4DF33] uppercase">🎤 Micro-Conversation:</span> 
+                        <span id="feedback-followup" class="text-white text-lg ml-2 font-bold"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question Navigation (Requested Feature) -->
+            <div class="flex justify-between items-center q-nav-bar w-full">
+                <button class="btn-freak btn-nav-small" onclick="navQuestion(-1)" id="btn-prev-q"><span>⬅️ PREVIOUS Q</span></button>
+                
+                <div class="flex gap-4">
+                    <button class="btn-freak btn-nav-small !bg-red-400 !text-black hidden" id="btn-skip-q" onclick="navQuestion(1)"><span>SKIP ➔</span></button>
+                    <button class="btn-freak" id="btn-next-q" onclick="navQuestion(1)"><span>NEXT QUESTION ➔</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FINAL SCORE SLIDE -->
+    <div id="slide-final" class="slide-container">
+        <div class="flex h-full">
+            <div class="split-left items-center text-center">
+                <h2 class="text-8xl mb-4">FINISH!</h2>
+                <div class="text-9xl font-black" id="final-score-val">0</div>
+                <p class="text-3xl font-bold mt-4 text-charcoal">OUT OF 30 POINTS</p>
+            </div>
+            <div class="split-right justify-center">
+                <h3 id="final-status" class="text-5xl mb-6">NOT BAD...</h3>
+                <p id="final-comment" class="text-2xl leading-relaxed mb-10">You've established your future. Now the only thing left is to actually wake up before noon like Gelmy says, and do it!</p>
+                <div class="flex gap-4">
+                    <button class="btn-freak !bg-white" onclick="nav(4); loadQuestion(0);"><span>⬅️ BACK TO GAME</span></button>
+                    <button class="btn-freak" onclick="location.reload()"><span>RESTART LESSON</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSlide = 1;
+        let currentLevel = 1;
+        let currentQIndex = 0;
+        let score = 0;
+        let answeredQuestions = new Set(); // Prevent farming points by going back and forth
+
+        // 10 Questions exactly per level. 
+        const gameData = {
+            level1: [ // Recognition: Plan (Going to) vs Not a Plan (Wish/Will/Maybe)
+                { q: "I am going to travel to Miami next week. I have the tickets!", options: ["Solid Plan", "Just a Wish/Maybe"], a: 0, hint: "They already bought the tickets! It's happening.", followUp: "👉 Ask the student: When is your next trip and where to?" },
+                { q: "I hope I win the lottery someday.", options: ["Solid Plan", "Just a Wish/Maybe"], a: 1, hint: "Hope is not a plan.", followUp: "👉 Ask the student: What is the first thing you would buy if you won?" },
+                { q: "We are going to buy a new TV this Friday.", options: ["Solid Plan", "Just a Wish/Maybe"], a: 0, hint: "They have a specific day set.", followUp: "👉 Ask the student: What's your favorite show to watch right now?" },
+                { q: "Maybe I will start a diet...", options: ["Solid Plan", "Just a Wish/Maybe"], a: 1, hint: "'Maybe' means you haven't decided yet.", followUp: "👉 Ask the student: Are diets actually effective, or just torture?" },
+                { q: "She is going to study medicine at the university.", options: ["Solid Plan", "Just a Wish/Maybe"], a: 0, hint: "This is a life decision already made.", followUp: "👉 Ask the student: Did you ever change your mind about what you wanted to study?" },
+                { q: "I want to be famous one day.", options: ["Solid Plan", "Just a Wish/Maybe"], a: 1, hint: "Wanting something doesn't make it a plan.", followUp: "👉 Ask the student: Would you actually enjoy being famous? Why or why not?" },
+                { q: "They are going to get married in December.", options: ["Solid Plan", "Just a Wish/Maybe"], a: 0, hint: "Weddings take months of planning!", followUp: "👉 Ask the student: Are big weddings a waste of money?" },
+                { q: "One day, I might learn how to dance salsa.", options: ["Solid Plan", "Just a Wish/Maybe"], a: 1, hint: "'Might' is a low possibility.", followUp: "👉 Ask the student: Are you a good dancer or do you have two left feet?" },
+                { q: "I am going to quit my job tomorrow. I already wrote the letter.", options: ["Solid Plan", "Just a Wish/Maybe"], a: 0, hint: "The letter is written. It's going down.", followUp: "👉 Ask the student: Have you ever quit a job dramatically?" },
+                { q: "I would like to visit Japan.", options: ["Solid Plan", "Just a Wish/Maybe"], a: 1, hint: "Would like = a desire, not a booked trip.", followUp: "👉 Ask the student: Name one place you definitely WILL NOT visit." }
+            ],
+            level2: [ // Guided Build
+                { q: "Gelmy says: El Pa, ___ you going to clean the kitchen?", keywords: ["are", "aren't"], hint: "You need the 'to be' verb for 'you'.", followUp: "👉 Follow-up: Do you think El Pa actually cleans?" },
+                { q: "El Pa: Yes Ma, I ___ going to do it right now.", keywords: ["am", "'m"], hint: "Verb to be for 'I'.", followUp: "👉 Follow-up: What chore do you absolutely hate doing?" },
+                { q: "Titó: We ___ going to visit your aunt this Sunday.", keywords: ["are", "'re"], hint: "Verb to be for 'We'.", followUp: "👉 Follow-up: Do you like visiting relatives on Sundays?" },
+                { q: "El Pa: I am ___ going to wear that ugly sweater.", keywords: ["not"], hint: "Make it negative.", followUp: "👉 Follow-up: What is the ugliest piece of clothing you own?" },
+                { q: "Fix the error: She is go to travel to Europe.", keywords: ["going"], hint: "It's an ongoing plan. Needs -ing.", followUp: "👉 Follow-up: Who are you going to travel with next?" },
+                { q: "Gelmy: What are you ___ to do with your life?", keywords: ["going"], hint: "The main structure word.", followUp: "👉 Follow-up: Did your parents ever ask you this question?" },
+                { q: "El Pa: I am going ___ be a famous streamer.", keywords: ["to"], hint: "Don't forget the preposition before the verb.", followUp: "👉 Follow-up: What video game would you stream?" },
+                { q: "Titó: He ___ going to learn if he doesn't practice.", keywords: ["isn't", "is not", "'s not"], hint: "Negative verb to be for 'He'.", followUp: "👉 Follow-up: What is something you gave up trying to learn?" },
+                { q: "Fix the error: I going to start working out tomorrow.", keywords: ["am going", "'m going", "am"], hint: "You forgot the verb TO BE!", followUp: "👉 Follow-up: Do you prefer the gym or working out at home?" },
+                { q: "Gelmy: Are they ___ to come for dinner?", keywords: ["going"], hint: "The missing action piece.", followUp: "👉 Follow-up: What is the best meal to serve guests?" }
+            ],
+            level3: [ // Full Creation / Personalization
+                { q: "What are you going to do this weekend?", a: "FREE", hint: "Start with 'I am going to...'", followUp: "👉 Follow-up: Is that your final plan or could it change?" },
+                { q: "Name one country you are going to visit before you die.", a: "FREE", hint: "I am going to visit...", followUp: "👉 Follow-up: Why that specific country?" },
+                { q: "What are you going to have for dinner tonight?", a: "FREE", hint: "Are you cooking or ordering?", followUp: "👉 Follow-up: Who usually cooks in your house?" },
+                { q: "Are you going to study something new this year? What?", a: "FREE", hint: "Yes, I'm going to study...", followUp: "👉 Follow-up: Do you prefer studying online or in person?" },
+                { q: "Who is going to be the next person you call on the phone?", a: "FREE", hint: "I am going to call...", followUp: "👉 Follow-up: Do you prefer calling or texting?" },
+                { q: "Tell me a bad habit you are going to stop doing.", a: "FREE", hint: "I'm not going to [habit] anymore.", followUp: "👉 Follow-up: How hard will it be to stop?" },
+                { q: "What big purchase are you going to make in the next 5 years?", a: "FREE", hint: "A car? A house? A PS6?", followUp: "👉 Follow-up: Are you good at saving money?" },
+                { q: "Are you going to watch a series this weekend? Which one?", a: "FREE", hint: "I am going to watch...", followUp: "👉 Follow-up: Do you binge-watch or take it slow?" },
+                { q: "What time are you going to wake up tomorrow?", a: "FREE", hint: "I am going to wake up at...", followUp: "👉 Follow-up: Are you a morning person or a night owl?" },
+                { q: "What is your biggest life goal? (Use 'I am going to...')", a: "FREE", hint: "Make a big, bold statement.", followUp: "👉 Follow-up: What is the first step you need to take?" }
+            ]
+        };
+
+        function nav(slideNum) {
+            document.querySelectorAll('.slide-container').forEach(s => s.classList.remove('active'));
+            document.getElementById(`slide-${slideNum}`).classList.add('active');
+            currentSlide = slideNum;
+        }
+
+        function vibeCheck(btn, correct) {
+            const feedback = document.getElementById('vibe-feedback');
+            if(correct) {
+                feedback.innerText = "THAT’S FREAKN’ RIGHT! Tickets = Fact. 🔥";
+                feedback.style.color = "#93E5FF";
+                document.getElementById('next-to-story').classList.remove('opacity-50', 'pointer-events-none');
+            } else {
+                feedback.innerText = "WAKE UP! 'Hope' is just a dream. ❌";
+                feedback.style.color = "#FF4C4C";
+            }
+        }
+
+        function storyCheck(btn, type) {
+            const feedback = document.getElementById('story-feedback');
+            if(type === 'mom') {
+                feedback.innerText = "EXACTLY! Gelmy knows her son. 🔥";
+                feedback.style.color = "#93E5FF";
+                document.getElementById('next-to-game').classList.remove('opacity-50', 'pointer-events-none');
+            } else {
+                feedback.innerText = "NOPE! Did you even read it? ❌";
+                feedback.style.color = "#FF4C4C";
+            }
+        }
+
+        function startGame() {
+            nav('game');
+            currentLevel = 1;
+            currentQIndex = 0;
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            // Reset UI states
+            document.getElementById('game-feedback').classList.add('hidden');
+            document.getElementById('game-feedback').classList.remove('flex');
+            document.getElementById('btn-next-q').classList.remove('hidden');
+            
+            // Get current question set
+            let qSet = currentLevel === 1 ? gameData.level1 : (currentLevel === 2 ? gameData.level2 : gameData.level3);
+            const q = qSet[currentQIndex];
+
+            // Update Headers & Counters
+            document.getElementById('level-indicator').querySelector('h2').innerText = `LEVEL ${currentLevel}`;
+            document.getElementById('q-counter').innerText = `QUESTION ${currentQIndex + 1}/10`;
+            const titles = ["RECOGNITION: Plan or Just a Wish?", "GUIDED BUILD: Fix the Family Talk", "FULL CREATION: Your Life, Your Rules!"];
+            document.getElementById('game-title').innerText = titles[currentLevel-1];
+            
+            document.getElementById('q-text').innerText = q.q;
+
+            // Handle Input Areas vs Options
+            const optionsGrid = document.getElementById('options-grid');
+            const inputArea = document.getElementById('input-area');
+            optionsGrid.innerHTML = "";
+            inputArea.classList.add('hidden');
+
+            if(currentLevel === 1) {
+                q.options.forEach((opt, idx) => {
+                    const b = document.createElement('button');
+                    b.className = "option-btn";
+                    b.innerText = opt;
+                    b.onclick = () => checkAnswer(idx);
+                    optionsGrid.appendChild(b);
+                });
+                optionsGrid.classList.remove('hidden');
+            } else {
+                optionsGrid.classList.add('hidden');
+                inputArea.classList.remove('hidden');
+                document.getElementById('user-input').value = "";
+                document.getElementById('user-input').disabled = false;
+                setTimeout(() => document.getElementById('user-input').focus(), 100);
+            }
+
+            // Manage Nav Buttons
+            document.getElementById('btn-prev-q').disabled = (currentLevel === 1 && currentQIndex === 0);
+            
+            // If they already answered this question, let them proceed without re-answering
+            const qId = `${currentLevel}-${currentQIndex}`;
+            if(answeredQuestions.has(qId)) {
+                document.getElementById('btn-skip-q').classList.remove('hidden');
+                document.getElementById('btn-next-q').classList.add('hidden');
+            } else {
+                document.getElementById('btn-skip-q').classList.add('hidden');
+                document.getElementById('btn-next-q').classList.add('hidden');
+            }
+        }
+
+        // Specifically added to handle the "Previous and Next button on the level exercises" requirement
+        function navQuestion(dir) {
+            currentQIndex += dir;
+
+            // Handle level boundaries
+            if(currentQIndex < 0) {
+                if(currentLevel > 1) {
+                    currentLevel--;
+                    currentQIndex = 9;
+                } else {
+                    currentQIndex = 0; // Lock at start
+                }
+            } else if (currentQIndex > 9) {
+                if(currentLevel < 3) {
+                    currentLevel++;
+                    currentQIndex = 0;
+                } else {
+                    finishGame();
+                    return;
+                }
+            }
+            loadQuestion();
+        }
+
+        function checkAnswer(idx) {
+            const q = gameData.level1[currentQIndex];
+            if(idx === q.a) {
+                successFeedback(q);
+            } else {
+                failFeedback(q);
+            }
+        }
+
+        function submitInput() {
+            const val = document.getElementById('user-input').value.toLowerCase().trim();
+            const qSet = currentLevel === 2 ? gameData.level2 : gameData.level3;
+            const q = qSet[currentQIndex];
+
+            if(currentLevel === 3) {
+                if(val.length >= 5) successFeedback(q);
+                else failFeedback({ hint: "Come on, write a real sentence! Be bold!", followUp: q.followUp });
+                return;
+            }
+
+            // Level 2 logic
+            let isCorrect = q.keywords.some(kw => val.includes(kw));
+
+            if(isCorrect) {
+                successFeedback(q);
+            } else {
+                failFeedback(q);
+            }
+        }
+
+        function successFeedback(q) {
+            const qId = `${currentLevel}-${currentQIndex}`;
+            if(!answeredQuestions.has(qId)) {
+                score++;
+                answeredQuestions.add(qId);
+                document.getElementById('score-display').innerText = score < 10 ? `0${score}` : score;
+            }
+
+            showFeedbackUI("THAT’S FREAKN’ RIGHT! 🔥", "#93E5FF", "", q.followUp);
+        }
+
+        function failFeedback(q) {
+            showFeedbackUI("WAKE UP! ❌", "#FF4C4C", q.hint, q.followUp);
+        }
+
+        function showFeedbackUI(titleTxt, color, hintTxt, followupTxt) {
+            const fbBox = document.getElementById('game-feedback');
+            fbBox.classList.remove('hidden');
+            fbBox.classList.add('flex');
+
+            const title = document.getElementById('feedback-title');
+            title.innerText = titleTxt;
+            title.style.color = color;
+
+            const hint = document.getElementById('feedback-hint');
+            hint.innerText = hintTxt || "";
+
+            const follow = document.getElementById('feedback-followup');
+            follow.innerText = followupTxt;
+
+            // Disable inputs
+            document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+            document.getElementById('user-input').disabled = true;
+
+            // Switch action button to Next
+            document.getElementById('btn-skip-q').classList.add('hidden');
+            document.getElementById('btn-next-q').classList.remove('hidden');
+            document.getElementById('btn-next-q').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function finishGame() {
+            nav('final');
+            document.getElementById('final-score-val').innerText = score;
+            const status = document.getElementById('final-status');
+            const comment = document.getElementById('final-comment');
+
+            if(score >= 25) {
+                status.innerText = "FUTURE MASTER! 🔥";
+                status.style.color = "var(--primary)";
+                comment.innerText = "You have real plans. Your English is going straight to the top!";
+            } else if(score >= 15) {
+                status.innerText = "NOT BAD!";
+                status.style.color = "var(--accent)";
+                comment.innerText = "You've got the basics down, but stop hoping and start planning!";
+            } else {
+                status.innerText = "WAKE UP!";
+                status.style.color = "#FF4C4C";
+                comment.innerText = "Gelmy is disappointed. Restart the lesson and pay attention to your future!";
+            }
+        }
+    </script>
+</body>
+</html>

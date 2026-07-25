@@ -44,6 +44,7 @@ import { Route as AuthenticatedAdminSiteRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAdminScheduleRouteImport } from './routes/_authenticated/admin.schedule'
 import { Route as AuthenticatedAdminPayrollRouteImport } from './routes/_authenticated/admin.payroll'
 import { Route as AuthenticatedAdminNotificationsRouteImport } from './routes/_authenticated/admin.notifications'
+import { Route as AuthenticatedAdminContentPromptRouteImport } from './routes/_authenticated/admin.content-prompt'
 import { Route as AuthenticatedAdminContentRouteImport } from './routes/_authenticated/admin.content'
 import { Route as AuthenticatedAdminCleanupRouteImport } from './routes/_authenticated/admin.cleanup'
 import { Route as AuthenticatedAdminCartsRouteImport } from './routes/_authenticated/admin.carts'
@@ -248,6 +249,12 @@ const AuthenticatedAdminNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminContentPromptRoute =
+  AuthenticatedAdminContentPromptRouteImport.update({
+    id: '/content-prompt',
+    path: '/content-prompt',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminContentRoute =
   AuthenticatedAdminContentRouteImport.update({
     id: '/content',
@@ -345,6 +352,7 @@ export interface FileRoutesByFullPath {
   '/admin/carts': typeof AuthenticatedAdminCartsRoute
   '/admin/cleanup': typeof AuthenticatedAdminCleanupRoute
   '/admin/content': typeof AuthenticatedAdminContentRoute
+  '/admin/content-prompt': typeof AuthenticatedAdminContentPromptRoute
   '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/admin/schedule': typeof AuthenticatedAdminScheduleRoute
@@ -391,6 +399,7 @@ export interface FileRoutesByTo {
   '/admin/carts': typeof AuthenticatedAdminCartsRoute
   '/admin/cleanup': typeof AuthenticatedAdminCleanupRoute
   '/admin/content': typeof AuthenticatedAdminContentRoute
+  '/admin/content-prompt': typeof AuthenticatedAdminContentPromptRoute
   '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/admin/schedule': typeof AuthenticatedAdminScheduleRoute
@@ -441,6 +450,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/carts': typeof AuthenticatedAdminCartsRoute
   '/_authenticated/admin/cleanup': typeof AuthenticatedAdminCleanupRoute
   '/_authenticated/admin/content': typeof AuthenticatedAdminContentRoute
+  '/_authenticated/admin/content-prompt': typeof AuthenticatedAdminContentPromptRoute
   '/_authenticated/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/_authenticated/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/_authenticated/admin/schedule': typeof AuthenticatedAdminScheduleRoute
@@ -492,6 +502,7 @@ export interface FileRouteTypes {
     | '/admin/carts'
     | '/admin/cleanup'
     | '/admin/content'
+    | '/admin/content-prompt'
     | '/admin/notifications'
     | '/admin/payroll'
     | '/admin/schedule'
@@ -538,6 +549,7 @@ export interface FileRouteTypes {
     | '/admin/carts'
     | '/admin/cleanup'
     | '/admin/content'
+    | '/admin/content-prompt'
     | '/admin/notifications'
     | '/admin/payroll'
     | '/admin/schedule'
@@ -587,6 +599,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/carts'
     | '/_authenticated/admin/cleanup'
     | '/_authenticated/admin/content'
+    | '/_authenticated/admin/content-prompt'
     | '/_authenticated/admin/notifications'
     | '/_authenticated/admin/payroll'
     | '/_authenticated/admin/schedule'
@@ -880,6 +893,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminNotificationsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/content-prompt': {
+      id: '/_authenticated/admin/content-prompt'
+      path: '/content-prompt'
+      fullPath: '/admin/content-prompt'
+      preLoaderRoute: typeof AuthenticatedAdminContentPromptRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/content': {
       id: '/_authenticated/admin/content'
       path: '/content'
@@ -995,6 +1015,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminCartsRoute: typeof AuthenticatedAdminCartsRoute
   AuthenticatedAdminCleanupRoute: typeof AuthenticatedAdminCleanupRoute
   AuthenticatedAdminContentRoute: typeof AuthenticatedAdminContentRoute
+  AuthenticatedAdminContentPromptRoute: typeof AuthenticatedAdminContentPromptRoute
   AuthenticatedAdminNotificationsRoute: typeof AuthenticatedAdminNotificationsRoute
   AuthenticatedAdminPayrollRoute: typeof AuthenticatedAdminPayrollRoute
   AuthenticatedAdminScheduleRoute: typeof AuthenticatedAdminScheduleRoute
@@ -1010,6 +1031,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminCartsRoute: AuthenticatedAdminCartsRoute,
   AuthenticatedAdminCleanupRoute: AuthenticatedAdminCleanupRoute,
   AuthenticatedAdminContentRoute: AuthenticatedAdminContentRoute,
+  AuthenticatedAdminContentPromptRoute: AuthenticatedAdminContentPromptRoute,
   AuthenticatedAdminNotificationsRoute: AuthenticatedAdminNotificationsRoute,
   AuthenticatedAdminPayrollRoute: AuthenticatedAdminPayrollRoute,
   AuthenticatedAdminScheduleRoute: AuthenticatedAdminScheduleRoute,

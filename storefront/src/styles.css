@@ -157,7 +157,47 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+
+  /* ── Freakn brand en oscuro ─────────────────────────────────────────
+     El flip principal es semántico: `brand-ink` pasa a ser texto CLARO y
+     `brand-cream` una superficie cálida oscura. Los casos donde brand-ink
+     se usa como FONDO (botones CTA) se corrigen con overrides abajo. */
+  --brand-cream: oklch(0.22 0.02 95);
+  --brand-cream-soft: oklch(0.19 0.015 95);
+  --brand-yellow: oklch(0.85 0.16 100);
+  --brand-yellow-soft: oklch(0.35 0.05 100);
+  --brand-ink: oklch(0.93 0 0);
+  --brand-ink-soft: oklch(0.82 0 0);
+  --brand-muted: oklch(0.68 0 0);
+  --brand-surface: oklch(0.17 0 0);
+  --brand-line: oklch(0.3 0 0);
+  --brand-success: oklch(0.72 0.15 145);
+
+  color-scheme: dark;
 }
+
+/* ── Dark mode: overrides quirúrgicos ─────────────────────────────────
+   La UI usa utilidades quemadas (bg-white, bg-brand-ink + text-white).
+   Estas reglas van SIN @layer, así que ganan sobre las utilities de
+   Tailwind sin tocar componente por componente. */
+
+/* Superficies blancas → superficie oscura. */
+.dark :where(.bg-white) { background-color: oklch(0.17 0 0); }
+.dark :where([class*="bg-white/"]) { background-color: oklch(0.17 0 0 / 0.92); }
+
+/* Botones/CTAs oscuros (bg-brand-ink + text-white): en dark el token ink es
+   claro, así que se remapea el fondo a un gris elevado y el texto se mantiene
+   blanco y legible. */
+.dark :where(.bg-brand-ink) { background-color: oklch(0.34 0 0); }
+.dark :where(.bg-brand-ink-soft, .hover\:bg-brand-ink-soft:hover) { background-color: oklch(0.42 0 0); }
+.dark :where([class*="bg-brand-ink/"]) { background-color: oklch(0.34 0 0 / 0.6); }
+
+/* Chips/badges amarillos: el texto interno debe seguir oscuro sobre amarillo. */
+.dark :where(.bg-brand-yellow, [class*="bg-brand-yellow/"]) { color: oklch(0.15 0 0); }
+.dark :where(.bg-brand-yellow, [class*="bg-brand-yellow/"]) :where([class*="text-brand-ink"]) { color: oklch(0.15 0 0); }
+
+/* Footer/nav oscuros que ya eran bg-brand-ink con texto blanco fijo: ok con
+   el remap de arriba. Inputs nativos y scrollbars usan color-scheme: dark. */
 
 @layer base {
   /* Form input baseline used by admin/CMS dialogs. */

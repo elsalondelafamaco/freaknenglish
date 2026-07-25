@@ -67,5 +67,50 @@
     };
     // Aviso de que la lección cargó con bridge (para telemetría del viewer).
     post("freakn:lesson:ready", { url: location.href });
+
+    /**
+     * AUTO-WIRING para las lecciones Freakn generadas por template:
+     * todas usan `checkAnswer(btn, isCorrect, feedback)` en los quizzes.
+     * Envolvemos esa función al cargar el DOM: cada primera respuesta por
+     * slide se acumula y se reporta (debounced) vía FreaknActivity.submit.
+     * Si una lección no define checkAnswer, esto es un no-op.
+     */
+    document.addEventListener("DOMContentLoaded", function () {
+      var orig = window.checkAnswer;
+      if (typeof orig !== "function" || orig.__freaknWrapped) return;
+      var bySlide = {}; // idx → answer
+      var timer = null;
+      function report() {
+        var answers = Object.keys(bySlide).sort(function (a, b) { return a - b; }).map(function (k) { return bySlide[k]; });
+        var score = answers.filter(function (a) { return a.correct; }).length;
+        window.FreaknActivity.submit({
+          activityId: "lesson-quiz",
+          title: (document.title || "Quiz").slice(0, 120),
+          score: score,
+          maxScore: answers.length,
+          answers: answers,
+        });
+      }
+      function wrapped(btn, isCorrect, feedback) {
+        try { orig.apply(this, arguments); } catch (e) { console.warn("[freakn] checkAnswer original falló", e); }
+        try {
+          var slide = btn && btn.closest ? btn.closest(".slide") : null;
+          var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+          var idx = slide ? slides.indexOf(slide) : Object.keys(bySlide).length;
+          if (bySlide[idx] != null) return; // solo la primera respuesta por pregunta
+          var heading = slide ? slide.querySelector("h1,h2,h3,.question") : null;
+          bySlide[idx] = {
+            id: "slide-" + idx,
+            question: (heading ? heading.textContent : "Pregunta " + (idx + 1)).trim().slice(0, 160),
+            answer: (btn && btn.textContent ? btn.textContent : "").trim().slice(0, 160),
+            correct: !!isCorrect,
+          };
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(report, 1200);
+        } catch (e) { /* nunca romper la lección */ }
+      }
+      wrapped.__freaknWrapped = true;
+      window.checkAnswer = wrapped;
+    });
   })();
 </script>

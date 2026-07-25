@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "../lib/auth/AuthProvider";
 import { LanguageProvider } from "../lib/i18n";
 import { registerPwa } from "../lib/pwa/register";
+import { THEME_BOOT_SCRIPT } from "../lib/theme";
 
 function NotFoundComponent() {
   return (
@@ -130,6 +131,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "canonical", href: SITE_URL },
     ],
     scripts: [
+      // Aplica el tema (dark/claro) ANTES del primer paint para evitar flash.
+      { children: THEME_BOOT_SCRIPT },
       {
         type: "application/ld+json",
         children: JSON.stringify(ORGANIZATION_JSONLD),

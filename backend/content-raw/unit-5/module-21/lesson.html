@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unit 5 Module 21 | The Suspect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        freakYellow: '#E4DF33',
+                        freakDark: '#30302F',
+                        freakBlue: '#93E5FF',
+                        freakBg: '#111111'
+                    },
+                    fontFamily: {
+                        bree: ['"Bree Serif"', 'serif'],
+                        mont: ['Montserrat', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #111111; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; overflow: hidden; }
+        #app-container { width: 1280px; height: 720px; position: relative; background-color: #30302F; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        
+        /* Typography System */
+        .title-freak { font-family: 'Bree Serif', serif; font-weight: 400; text-transform: uppercase; }
+        .text-freak { font-family: 'Montserrat', sans-serif; }
+        
+        /* Components */
+        .btn-freak {
+            background-color: #93E5FF; color: #30302F; font-family: 'Montserrat', sans-serif; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 0.05em; padding: 1rem 2rem; border: 4px solid #30302F;
+            box-shadow: 4px 4px 0px #30302F; transition: all 0.2s ease; cursor: pointer;
+        }
+        .btn-freak:hover { background-color: #E4DF33; transform: translate(-2px, -2px); box-shadow: 6px 6px 0px #30302F; }
+        .btn-freak:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; transform: none; background-color: #ccc; }
+        
+        .slide-enter { animation: slideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: translateX(0); } }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #30302F; }
+        ::-webkit-scrollbar-thumb { background: #E4DF33; }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <div id="slide-mount" class="w-full h-full flex slide-enter"></div>
+    </div>
+
+    <script>
+        const lessonData = [
+            // SLIDE 0: OBJECTIVE
+            {
+                type: 'intro',
+                unitModule: "UNIT 5 • MODULE 21",
+                title: "THE SUSPECT",
+                objective: "Learn how to describe physical appearances, talk about body parts, and paint a clear picture of a suspect. Speak like a real detective!",
+                bottomTag: "THE OBSERVER • PART 1"
+            },
+            
+            // --- LEVEL 1: THE VIBE (Exercise Type: Multiple Choice / Contextual Logic) ---
+            { type: 'transition', level: 1, title: "LEVEL 1: THE VIBE", desc: "Gelmy, Titó, and El pa saw something suspicious. Listen to their gossip. Based on logic, which detail or action fits their story best? Don't just translate, visualize it." },
+            
+            {
+                type: 'q_vibe', level: 1, qNum: 1,
+                context: "Gelmy: 'Mijo, I'm telling you, the man had a massive, scary tattoo right on his face, right above his eye.'",
+                question: "What body part is Gelmy talking about?",
+                options: ["His forehead.", "His chin."],
+                correct: 0,
+                rationale: "The forehead is the flat part of the face ABOVE the eyes, making it correct. The chin is wrong because it's at the bottom of the face, below the mouth."
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 2,
+                context: "El pa: 'Bro, she is super tall and has long, dark, and curly...'",
+                question: "Complete El pa's description logically:",
+                options: ["...eyes.", "...hair."],
+                correct: 1,
+                rationale: "Hair is the only correct answer because hair can be 'long and curly'. The other option is wrong because eyes can be dark, but they cannot physically be curly or long!"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 3,
+                context: "Titó: 'I couldn't see his face properly! He had a thick scarf covering his...'",
+                question: "Where was the scarf?",
+                options: ["Neck.", "Knees."],
+                correct: 0,
+                rationale: "Scarves go around the neck to keep warm or hide the lower face, which covers the face. Knees is wrong because nobody wears a winter scarf on their legs!"
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 4,
+                context: "El pa: 'The bouncer at the club was huge, parce. He had very broad...'",
+                question: "What physical feature is 'broad' (wide)?",
+                options: ["Shoulders.", "Fingers."],
+                correct: 0,
+                rationale: "'Broad' is used specifically for wide, muscular shoulders or backs. Fingers is wrong because fingers are described as long, short, or thick, never 'broad'."
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 5,
+                context: "Gelmy: 'I remember she was wearing an elegant, heavy gold ring right on her thumb.'",
+                question: "Where did Gelmy see the ring?",
+                options: ["On her hand.", "On her foot."],
+                correct: 0,
+                rationale: "The thumb is the thick digit on your hand, making it correct. The other option is wrong because the thick digit on your foot is called the 'big toe'."
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 6,
+                context: "Titó: 'The suspect was waiting outside the bank, not moving, just...'",
+                question: "Which action verb fits best?",
+                options: ["...standing near the door.", "...sitting near the door."],
+                correct: 0,
+                rationale: "Waiting outside usually implies 'standing' upright on your feet. Sitting is wrong because it requires a chair, bench, or sitting on the ground, which isn't typical for someone quickly waiting outside a door."
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 7,
+                context: "El pa: 'She didn't even use a bag. She used her bare hands to ___ the stolen money.'",
+                question: "What was she doing with the money?",
+                options: ["Carry.", "Touch."],
+                correct: 0,
+                rationale: "To transport something in your hands from one place to another is to 'Carry'. 'Touch' is wrong because touching just means making physical contact, not moving the object."
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 8,
+                context: "Titó: 'He looked so tired, so he decided to ___ on the park bench.'",
+                question: "What did he do?",
+                options: ["Sit.", "Hold."],
+                correct: 0,
+                rationale: "A bench is a piece of furniture designed for people to 'sit' on. 'Hold' is wrong because you cannot 'hold' on a bench unless you are grabbing it with your hands."
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 9,
+                context: "Gelmy: 'Don't ___ the broken glass, El pa! The police need to check it for fingerprints!'",
+                question: "What is Gelmy warning him about?",
+                options: ["Touch.", "Stand."],
+                correct: 0,
+                rationale: "Fingerprints are left when you 'touch' something with your fingers. 'Stand' is wrong because standing on glass would break it, but wouldn't leave fingerprints."
+            },
+            {
+                type: 'q_vibe', level: 1, qNum: 10,
+                context: "El pa: 'The thief tried to ___ the woman's purse tightly so she couldn't pull it away.'",
+                question: "What was the thief doing?",
+                options: ["Hold.", "Carry."],
+                correct: 0,
+                rationale: "To grip something tightly with your hands so it doesn't move is to 'Hold' it. 'Carry' is wrong because he wasn't transporting it yet, he was just gripping it."
+            },
+
+            // --- LEVEL 2: THE GAME (Exercise Type: Chat Interface / Real World) ---
+            { type: 'transition', level: 2, title: "LEVEL 2: THE GAME", desc: "Real-world texting with the family. Pick the most natural, street-smart reply to the incoming message." },
+
+            {
+                type: 'q_chat', level: 2, qNum: 11, sender: "El pa 🧢",
+                incoming: "Ma, I'm at the crowded coffee shop but I don't see your friend Titó. What does he look like today?",
+                options: ["He is tall, wearing his poncho and a hat.", "He likes arepas and works on the farm."],
+                correct: 0,
+                rationale: "Option 1 is correct because when someone is looking for a person in a crowd, they need visual, physical descriptions. Option 2 is useless because you can't see 'likes arepas' from across a room.",
+                teacherPrompt: "👉 TEACHER: Ask the student to physically describe a family member to you right now."
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 12, sender: "Gelmy 👵",
+                incoming: "Mijo, we are looking for your lost little cousin. What is she carrying?",
+                options: ["She is holding my hand right now.", "She is carrying a big pink teddy bear."],
+                correct: 1,
+                rationale: "Option 2 gives Gelmy a visual object to look for. Option 1 is completely illogical because if she is lost, she cannot be holding your hand!",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'What do you usually carry in your pockets or bag every day?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 13, sender: "Titó 🤠",
+                incoming: "Did you see the guy who delivers the coffee? Where was he?",
+                options: ["Yeah, he was standing by the gate holding a box.", "Yeah, he was touching the gate."],
+                correct: 0,
+                rationale: "Option 1 paints a clear picture of his position (standing) and action (holding). Option 2 is weird; nobody describes a delivery guy as just 'touching' a gate.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Who usually carries the heavy things in your house?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 14, sender: "El pa 🧢",
+                incoming: "Bro, I just walked into the restaurant. How will I recognize you?",
+                options: ["I'm sitting at the corner table, wearing a red jacket.", "I have a good personality and I'm sitting."],
+                correct: 0,
+                rationale: "Option 1 tells them your physical position and clothing. Option 2 is wrong because a stranger cannot visually see a 'good personality'.",
+                teacherPrompt: "👉 TEACHER: Tell the student: 'Describe exactly what you are wearing and your physical position right now.'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 15, sender: "Gelmy 👵",
+                incoming: "There's a suspicious person outside the house! What is he doing?",
+                options: ["He is sitting in his car inside his own garage.", "He is standing near the door for 20 minutes just watching our windows."],
+                correct: 1,
+                rationale: "Option 2 is correct because standing near a door staring at windows is sketchy. Option 1 is wrong because sitting in your own garage is completely normal, not an emergency.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Have you ever seen someone looking suspicious? What were they doing?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 16, sender: "Titó 🤠",
+                incoming: "A guy dropped this carriel (bag). Did he have long sleeves on?",
+                options: ["Yes, he was carrying a heavy coat.", "No, he was wearing a T-shirt. I saw a tattoo on his arm."],
+                correct: 1,
+                rationale: "Option 2 is logical: if you saw an arm tattoo, he couldn't be wearing long sleeves. Option 1 is wrong because carrying a coat doesn't mean you are wearing long sleeves.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Do you have any tattoos or scars? Describe where they are on your body.'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 17, sender: "Gelmy 👵",
+                incoming: "Mijo, did you see the new neighbor today? What is she like?",
+                options: ["Yes, she touches her desk a lot.", "Yes, she's short, has blonde hair, and looks very serious."],
+                correct: 1,
+                rationale: "Option 2 is correct because gossip is about overall physical appearance and vibe. Option 1 is wrong because it's a weird, robotic micro-action to report.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Describe the physical appearance of your boss or a teacher you had.'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 18, sender: "El pa 🧢",
+                incoming: "Ouch! I just burnt my hand cooking arepas!",
+                options: ["Oh no! Are your fingers okay?", "Oh no! Can you stand up?"],
+                correct: 0,
+                rationale: "Option 1 makes sense because fingers are part of the hand. Option 2 is totally wrong because a burnt hand has nothing to do with your legs or ability to stand.",
+                teacherPrompt: "👉 TEACHER: Ask the student: 'Have you ever broken a bone or hurt a body part badly? What happened?'"
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 19, sender: "Titó 🤠",
+                incoming: "Mijo, help me carry this super heavy box to the truck!",
+                options: ["I can't, I am standing.", "I can't, my back hurts really bad today."],
+                correct: 1,
+                rationale: "Option 2 is a valid excuse because carrying heavy things requires back strength. Option 1 is wrong because 'I am standing' is not an excuse to avoid carrying something.",
+                teacherPrompt: "👉 TEACHER: Tell the student to imagine they don't want to go to the gym. Make up an excuse using a body part."
+            },
+            {
+                type: 'q_chat', level: 2, qNum: 20, sender: "El pa 🧢",
+                incoming: "Time to set up my Tinder profile! How do I describe myself?",
+                options: ["I am average height, have brown eyes, and an athletic build.", "I sit at home, touch things, and hold my phone."],
+                correct: 0,
+                rationale: "Option 1 is correct because it uses standard adjectives for physical description. Option 2 is wrong because it sounds like a creepy robot listing random verbs.",
+                teacherPrompt: "👉 TEACHER: 'Give me your real dating app (or professional) physical description in 3 sentences! Go!'"
+            },
+
+            // --- LEVEL 3: THE CHALLENGE (Exercise Type: Unstructured Text Input) ---
+            { type: 'transition', level: 3, title: "LEVEL 3: THE CHALLENGE", desc: "No options. No safety net. The family is asking you direct questions. Type your answer to prove you actually know the vocabulary." },
+
+            {
+                type: 'q_write', level: 3, qNum: 21,
+                character: "Titó", title: "THE VOCAB TEST",
+                prompt: "Hey! I am practicing my English. Tell me, what do you call the part of the body between your head and your shoulders?",
+                acceptable: "Neck / The neck",
+                rationale: "The neck connects the head to the body. Easy start."
+            },
+            {
+                type: 'q_write', level: 3, qNum: 22,
+                character: "Gelmy", title: "THE ACTION",
+                prompt: "Mijo, what is the action verb when you grip something tightly with your hands so it doesn't fall?",
+                acceptable: "Hold / Holding",
+                rationale: "To secure something in your hands without dropping it is to HOLD it."
+            },
+            {
+                type: 'q_write', level: 3, qNum: 23,
+                character: "El pa", title: "THE GYM BRO",
+                prompt: "Bro, how do you describe a guy who goes to the gym a lot and has big arms and chest?",
+                acceptable: "Muscular / Well-built / Strong",
+                rationale: "Muscular or well-built are the perfect adjectives for a gym body."
+            },
+            {
+                type: 'q_write', level: 3, qNum: 24,
+                character: "Gelmy", title: "THE DESCRIPTION",
+                prompt: "Mijo, if a person has absolutely no hair on their head, how do you describe them?",
+                acceptable: "Bald / He is bald",
+                rationale: "Bald is the specific adjective for having a hairless head."
+            },
+            {
+                type: 'q_write', level: 3, qNum: 25,
+                character: "Titó", title: "THE REST",
+                prompt: "What action verb do you do when you are tired of standing and you find a chair?",
+                acceptable: "Sit / Sit down",
+                rationale: "You sit to rest your legs using a chair or bench."
+            },
+            {
+                type: 'q_write', level: 3, qNum: 26,
+                character: "El pa", title: "THE BARBER",
+                prompt: "Look at that dude. If he has hair growing on his chin and lower face, what is it called?",
+                acceptable: "Beard / A beard",
+                rationale: "Hair on the chin and jaw is a beard. (Mustache is upper lip)."
+            },
+            {
+                type: 'q_write', level: 3, qNum: 27,
+                character: "Gelmy", title: "THE GROCERIES",
+                prompt: "When you transport heavy grocery bags from the car to the kitchen in your hands, what verb do you use?",
+                acceptable: "Carry / Carrying",
+                rationale: "Carrying means holding something while moving it from point A to point B."
+            },
+            {
+                type: 'q_write', level: 3, qNum: 28,
+                character: "Titó", title: "THE JEWELRY",
+                prompt: "What part of the body do you use to wear a ring?",
+                acceptable: "Finger / Hand / Thumb",
+                rationale: "Rings are worn on the fingers or thumbs of the hand."
+            },
+            {
+                type: 'q_write', level: 3, qNum: 29,
+                character: "El pa", title: "THE SENSES",
+                prompt: "If you want to feel if a surface is rough or smooth, what action do you do to it with your hand?",
+                acceptable: "Touch / Touching",
+                rationale: "Touching is making physical contact to feel texture."
+            },
+            {
+                type: 'q_write', level: 3, qNum: 30,
+                character: "Gelmy", title: "THE BACKPACK",
+                prompt: "What do you call the wide part of your body where a backpack rests?",
+                acceptable: "Shoulders / Back",
+                rationale: "A backpack relies on your shoulders and rests on your back."
+            }
+        ];
+
+        let currentSlide = 0;
+        let score = 0;
+        let answeredQuestions = new Set();
+        let selectedAnswers = {}; 
+        let isGradingState = false; // Used for Level 3 self-grading
+
+        const appContainer = document.getElementById('slide-mount');
+
+        function renderSlide() {
+            const data = lessonData[currentSlide];
+            appContainer.innerHTML = '';
+            appContainer.className = 'w-full h-full flex slide-enter'; 
+
+            const buildNav = (isAnswered) => `
+                <div class="absolute bottom-6 w-full px-12 flex justify-between items-center z-50">
+                    <button onclick="nav(-1)" class="btn-freak bg-transparent text-white border-white hover:bg-white hover:text-freakDark shadow-none py-2 px-4 text-sm">PREVIOUS</button>
+                    ${isAnswered && data.type !== 'q_write' ? `<button onclick="nav(1)" class="btn-freak bg-freakYellow animate-bounce">NEXT STEP ➔</button>` : ``}
+                    ${isAnswered && data.type === 'q_write' && !isGradingState ? `<button onclick="nav(1)" class="btn-freak bg-freakYellow animate-bounce">NEXT STEP ➔</button>` : ``}
+                </div>
+            `;
+
+            if (data.type === 'intro') {
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col justify-center items-center text-center p-12 bg-freakDark text-white relative h-full">
+                        <div class="bg-freakYellow text-freakDark font-mont font-bold tracking-widest uppercase py-3 px-8 mb-8 transform -skew-x-12">
+                            <span class="block transform skew-x-12 text-xl">${data.unitModule}</span>
+                        </div>
+                        <h1 class="title-freak text-[110px] text-freakYellow mb-8 leading-none max-w-4xl">${data.title}</h1>
+                        <p class="text-freak text-3xl font-bold mb-16 max-w-4xl leading-relaxed">${data.objective}</p>
+                        <div class="border-4 border-white py-3 px-10 mb-12">
+                            <span class="font-mont font-black tracking-widest uppercase text-freakBlue text-2xl">${data.bottomTag}</span>
+                        </div>
+                        <div class="flex gap-6 absolute bottom-12">
+                            <button class="btn-freak opacity-50 cursor-not-allowed text-sm py-3 px-6" disabled>PREVIOUS</button>
+                            <button onclick="nav(1)" class="btn-freak bg-freakYellow hover:bg-freakBlue text-sm py-3 px-6">NEXT STEP ➔</button>
+                        </div>
+                    </div>
+                `;
+            } 
+            else if (data.type === 'transition') {
+                appContainer.innerHTML = `
+                    <div class="w-1/2 h-full bg-freakYellow flex flex-col justify-center p-16">
+                        <h1 class="title-freak text-8xl text-freakDark leading-none mb-6">${data.title}</h1>
+                    </div>
+                    <div class="w-1/2 h-full bg-freakDark flex flex-col justify-center items-start p-16 text-white relative">
+                        <p class="text-freak text-3xl font-bold mb-12 border-l-8 border-freakBlue pl-6 leading-relaxed">${data.desc}</p>
+                        <div class="absolute bottom-12 flex gap-6">
+                            <button onclick="nav(-1)" class="btn-freak bg-transparent border-white text-white hover:bg-white hover:text-freakDark text-sm py-2 px-4">PREVIOUS</button>
+                            <button onclick="nav(1)" class="btn-freak bg-freakBlue hover:bg-freakYellow">START LEVEL ➔</button>
+                        </div>
+                    </div>
+                `;
+            }
+            // LEVEL 1: THE VIBE
+            else if (data.type === 'q_vibe') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                const selectedOpt = selectedAnswers[currentSlide];
+
+                let optionsHtml = '';
+                data.options.forEach((opt, idx) => {
+                    let btnClass = "bg-white text-freakDark hover:bg-gray-100 border-4 border-freakDark shadow-[4px_4px_0px_#30302F]";
+                    let disabled = isAnswered ? "disabled" : "";
+                    
+                    if (isAnswered) {
+                        if (idx === data.correct) btnClass = "bg-freakBlue text-freakDark border-4 border-freakDark shadow-[4px_4px_0px_#30302F]";
+                        else if (idx === selectedOpt && idx !== data.correct) btnClass = "bg-red-400 text-white border-4 border-red-900 shadow-[4px_4px_0px_#7f1d1d] opacity-50";
+                        else btnClass = "bg-gray-200 text-gray-500 border-4 border-gray-400 opacity-50";
+                    }
+
+                    optionsHtml += `<button ${disabled} onclick="handleAnswer(${idx})" class="text-left font-mont font-bold text-xl p-4 w-full transition-all ${btnClass}">${opt}</button>`;
+                });
+
+                let feedbackHtml = isAnswered ? `
+                    <div class="mt-8 p-5 bg-gray-50 border-4 border-freakDark shadow-[6px_6px_0px_#30302F] animate-[slideIn_0.3s_ease-out]">
+                        <h4 class="font-bree text-2xl mb-1">${selectedOpt === data.correct ? "<span class='text-green-600'>BOOM. CORRECT.</span>" : "<span class='text-red-600'>HOLD UP. INCORRECT.</span>"}</h4>
+                        <p class="font-mont text-md font-bold">${data.rationale}</p>
+                    </div>` : '';
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full flex pb-20">
+                        <div class="w-[45%] h-full bg-freakYellow p-12 flex flex-col justify-center relative">
+                            <div class="absolute top-6 left-6 text-freakDark font-bree text-xl opacity-50">Q${data.qNum}/30 | THE VIBE</div>
+                            <div class="bg-white text-freakDark p-8 border-4 border-freakDark shadow-[8px_8px_0px_#30302F] transform -rotate-1">
+                                <p class="text-2xl leading-relaxed font-bree">${data.context}</p>
+                            </div>
+                        </div>
+                        <div class="w-[55%] h-full bg-freakDark p-12 flex flex-col justify-center relative">
+                            <h2 class="text-freakBlue font-bree text-4xl mb-8">${data.question}</h2>
+                            <div class="flex flex-col gap-4">${optionsHtml}</div>
+                            ${feedbackHtml}
+                        </div>
+                    </div>
+                    ${buildNav(isAnswered)}
+                `;
+            }
+            // LEVEL 2: THE GAME (Chat Interface)
+            else if (data.type === 'q_chat') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                const selectedOpt = selectedAnswers[currentSlide];
+
+                let optionsHtml = '';
+                if (!isAnswered) {
+                    data.options.forEach((opt, idx) => {
+                        optionsHtml += `
+                            <button onclick="handleAnswer(${idx})" class="w-full text-right bg-freakBlue text-freakDark font-mont font-bold text-sm p-4 rounded-2xl rounded-br-none border-2 border-freakDark hover:bg-freakYellow transition-all mb-3 shadow-[4px_4px_0px_#30302F]">
+                                ${opt}
+                            </button>
+                        `;
+                    });
+                } else {
+                    const isCorrect = selectedOpt === data.correct;
+                    const bubbleColor = isCorrect ? 'bg-green-400' : 'bg-red-400';
+                    optionsHtml = `
+                        <div class="w-[85%] self-end text-right ${bubbleColor} text-freakDark font-mont font-bold text-sm p-4 rounded-2xl rounded-br-none border-2 border-freakDark shadow-[4px_4px_0px_#30302F] mb-3">
+                            ${data.options[selectedOpt]}
+                        </div>
+                        <div class="text-right text-xs text-gray-500 font-mont italic pr-2">Read</div>
+                    `;
+                }
+
+                let feedbackHtml = isAnswered ? `
+                    <div class="bg-freakDark border-4 border-freakYellow p-6 text-white shadow-[8px_8px_0px_#E4DF33] animate-[slideIn_0.3s_ease-out]">
+                        <h4 class="font-bree text-2xl mb-2 text-freakYellow">${selectedOpt === data.correct ? "STREET SMART." : "AWKWARD TEXT."}</h4>
+                        <p class="font-mont text-md font-bold mb-4">${data.rationale}</p>
+                        <div class="bg-freakYellow text-freakDark p-3 font-bold font-mont text-sm transform -skew-x-6">
+                            ${data.teacherPrompt}
+                        </div>
+                    </div>` : `
+                    <div class="h-full flex flex-col justify-center">
+                        <h2 class="font-bree text-5xl text-freakYellow mb-4">YOUR TURN</h2>
+                        <p class="font-mont text-xl text-white leading-relaxed">Read the incoming message. Choose the best reply to handle the situation logically.</p>
+                    </div>`;
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-[#1a1a1a] flex items-center justify-center gap-12 p-8 relative pb-20">
+                        <div class="absolute top-6 left-6 text-white font-bree text-xl opacity-50">Q${data.qNum}/30 | THE GAME</div>
+                        
+                        <!-- Phone UI -->
+                        <div class="w-[380px] h-[550px] bg-white rounded-[3rem] border-[12px] border-gray-800 p-4 flex flex-col relative shadow-2xl flex-shrink-0">
+                            <!-- Notch -->
+                            <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-gray-800 rounded-b-2xl"></div>
+                            
+                            <!-- Header -->
+                            <div class="text-center font-bold font-mont border-b-2 border-gray-200 pb-3 mt-4 mb-4 text-freakDark">
+                                ${data.sender}
+                            </div>
+                            
+                            <!-- Chat Area -->
+                            <div class="flex-1 overflow-y-auto flex flex-col pr-2">
+                                <!-- Incoming -->
+                                <div class="w-[85%] bg-gray-200 text-freakDark font-mont font-medium text-sm p-4 rounded-2xl rounded-bl-none mb-6">
+                                    ${data.incoming}
+                                </div>
+                                
+                                <!-- Options / Sent -->
+                                <div class="mt-auto flex flex-col items-end w-full">
+                                    ${optionsHtml}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="w-[500px]">
+                            ${feedbackHtml}
+                        </div>
+                    </div>
+                    ${buildNav(isAnswered)}
+                `;
+            }
+            // LEVEL 3: THE CHALLENGE (Unstructured Text Input)
+            else if (data.type === 'q_write') {
+                const isAnswered = answeredQuestions.has(currentSlide);
+                
+                let contentHtml = '';
+
+                if (!isGradingState && !isAnswered) {
+                    // State 1: Input
+                    contentHtml = `
+                        <div class="bg-white p-8 border-4 border-freakDark shadow-[8px_8px_0px_#E4DF33] relative mb-8">
+                            <div class="absolute -top-5 -left-5 bg-freakBlue text-freakDark font-bree text-xl px-4 py-1 border-4 border-freakDark transform -rotate-3">${data.character}</div>
+                            <p class="font-mont text-2xl font-bold text-freakDark mb-6">${data.prompt}</p>
+                            <input type="text" id="write-input" placeholder="Type your answer here..." autocomplete="off"
+                                class="w-full bg-gray-100 border-4 border-gray-300 text-freakDark p-4 font-mont text-2xl font-bold outline-none focus:border-freakBlue transition-all">
+                        </div>
+                        <div class="flex justify-end">
+                            <button onclick="submitWriting()" class="btn-freak bg-freakYellow hover:bg-freakBlue text-xl py-4 px-8">REVEAL ANSWER ➔</button>
+                        </div>
+                    `;
+                } else if (isGradingState) {
+                    // State 2: Self-Grading (Teacher Check)
+                    const userText = selectedAnswers[currentSlide];
+                    contentHtml = `
+                        <div class="flex gap-8 mb-8 animate-[slideIn_0.3s_ease-out]">
+                            <!-- Left: User Answer -->
+                            <div class="w-1/2 bg-gray-800 border-4 border-gray-600 p-6 shadow-[6px_6px_0px_#30302F]">
+                                <h4 class="font-bree text-freakYellow text-xl mb-4">YOU WROTE:</h4>
+                                <p class="font-mont text-white text-3xl font-bold italic">"${userText}"</p>
+                            </div>
+                            <!-- Right: Expected Answer -->
+                            <div class="w-1/2 bg-white border-4 border-freakDark p-6 shadow-[6px_6px_0px_#93E5FF]">
+                                <h4 class="font-bree text-freakBlue text-xl mb-4">FREAKN' ACCEPTABLE ANSWERS:</h4>
+                                <p class="font-mont text-freakDark text-3xl font-bold">${data.acceptable}</p>
+                                <p class="font-mont text-gray-500 text-sm mt-4 border-t-2 border-gray-200 pt-2">${data.rationale}</p>
+                            </div>
+                        </div>
+
+                        <!-- Self-Grade Decision -->
+                        <div class="bg-freakDark border-4 border-freakYellow p-6 text-center transform skew-x-2">
+                            <h3 class="font-bree text-freakYellow text-3xl mb-4">THE VIBE CHECK</h3>
+                            <p class="font-mont text-white text-lg mb-6">Be honest. Did your answer capture the right meaning and vocabulary?</p>
+                            <div class="flex justify-center gap-6">
+                                <button onclick="selfGrade(false)" class="btn-freak bg-red-400 text-white border-red-900 shadow-[4px_4px_0px_#7f1d1d] hover:bg-red-500">I MESSED UP</button>
+                                <button onclick="selfGrade(true)" class="btn-freak bg-green-400 text-freakDark border-green-900 shadow-[4px_4px_0px_#14532d] hover:bg-green-500">I GOT IT (+1 PT)</button>
+                            </div>
+                        </div>
+                    `;
+                } else if (isAnswered) {
+                    // State 3: Reviewed (Just showing what was done)
+                    const userText = selectedAnswers[currentSlide];
+                    contentHtml = `
+                         <div class="bg-gray-800 border-4 border-gray-600 p-6 shadow-[6px_6px_0px_#30302F] opacity-50 mb-8">
+                            <h4 class="font-bree text-gray-400 text-xl mb-2">YOU WROTE:</h4>
+                            <p class="font-mont text-gray-300 text-2xl font-bold">"${userText}"</p>
+                        </div>
+                        <div class="text-center font-mont text-freakYellow font-bold text-xl">Answer recorded. Move to the next step.</div>
+                    `;
+                }
+
+                appContainer.innerHTML = `
+                    <div class="w-full h-full bg-[#111] flex flex-col justify-center items-center relative p-12 pb-24">
+                        <div class="absolute top-6 left-6 text-gray-600 font-bree text-xl">Q${data.qNum}/30 | THE CHALLENGE</div>
+                        
+                        <div class="w-full max-w-4xl">
+                            <h2 class="text-freakBlue font-bree text-5xl mb-2 text-center uppercase">${data.title}</h2>
+                            <p class="text-gray-400 font-mont text-lg mb-10 text-center">Read the prompt and type your answer. You are your own coach.</p>
+                            
+                            ${contentHtml}
+                        </div>
+                    </div>
+                    ${buildNav(isAnswered && !isGradingState)}
+                `;
+                
+                // Auto-focus input if it exists
+                const inputEl = document.getElementById('write-input');
+                if(inputEl) inputEl.focus();
+            }
+            // OUTRO
+            else if (data.type === 'outro') {
+                const percentage = Math.round((score / 30) * 100);
+                let message = "";
+                if (percentage >= 90) message = "ABSOLUTE LEGEND. You own this vocabulary.";
+                else if (percentage >= 70) message = "SOLID WORK. You survived the streets.";
+                else message = "WE NEED TO TALK. Time to review the basics.";
+
+                appContainer.innerHTML = `
+                    <div class="w-full flex flex-col justify-center items-center text-center p-12 bg-freakYellow text-freakDark relative h-full">
+                        <h1 class="title-freak text-8xl mb-4">LESSON COMPLETE</h1>
+                        <div class="bg-freakDark text-white p-12 mt-8 border-8 border-white shadow-[12px_12px_0px_#30302F] transform skew-y-2">
+                            <h2 class="font-bree text-4xl mb-4">YOUR SCORE</h2>
+                            <p class="font-mont text-7xl font-black text-freakBlue mb-4">${score} / 30</p>
+                            <p class="font-mont text-2xl font-bold">${message}</p>
+                        </div>
+                        <div class="mt-16 flex gap-6">
+                            <button onclick="location.reload()" class="btn-freak bg-white hover:bg-freakBlue">RESTART LESSON</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        window.handleAnswer = function(optIndex) {
+            const data = lessonData[currentSlide];
+            if (answeredQuestions.has(currentSlide)) return; 
+            
+            selectedAnswers[currentSlide] = optIndex;
+            answeredQuestions.add(currentSlide);
+            
+            if (optIndex === data.correct) score++;
+            
+            renderSlide(); 
+        }
+
+        // Functions for Level 3 Free Writing
+        window.submitWriting = function() {
+            const inputEl = document.getElementById('write-input');
+            const userText = inputEl ? inputEl.value.trim() : "";
+            if (!userText) {
+                inputEl.classList.add('border-red-500');
+                return; // Don't submit empty
+            }
+            selectedAnswers[currentSlide] = userText;
+            isGradingState = true;
+            renderSlide();
+        }
+
+        window.selfGrade = function(isCorrect) {
+            isGradingState = false;
+            answeredQuestions.add(currentSlide);
+            if (isCorrect) score++;
+            nav(1); // Auto advance after grading
+        }
+
+        window.nav = function(dir) {
+            let nextSlide = currentSlide + dir;
+            if (nextSlide >= 0 && nextSlide < lessonData.length) {
+                currentSlide = nextSlide;
+                renderSlide();
+            } else if (nextSlide >= lessonData.length) {
+                lessonData.push({type: 'outro'});
+                currentSlide = lessonData.length -1;
+                renderSlide();
+            }
+        }
+
+        // Allow 'Enter' key to submit text input
+        document.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter' && lessonData[currentSlide]?.type === 'q_write' && !isGradingState && !answeredQuestions.has(currentSlide)) {
+                submitWriting();
+            }
+        });
+
+        renderSlide();
+    </script>
+</body>
+</html>

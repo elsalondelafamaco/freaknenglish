@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { settingsApi } from "@/lib/api/endpoints";
 import { Logo } from "./Logo";
 import { DarkPillLink } from "./DarkPillButton";
+import { ThemeToggle } from "@/components/app/ThemeToggle";
 
 const NAV = [
   { label: "¿Cómo Funciona?", href: "#como-funciona" },
@@ -46,6 +47,7 @@ export function Navbar() {
               Escríbenos
             </a>
           </span>
+          <ThemeToggle />
           {isAuthenticated ? (
             <DarkPillLink to="/app" size="md" withArrow>
               {firstName ? `Hola, ${firstName}` : "Mi cuenta"}
@@ -57,13 +59,16 @@ export function Navbar() {
           )}
         </div>
 
+        <div className="lg:hidden -mr-2 flex items-center gap-1">
+        <ThemeToggle className="border-0 bg-transparent" />
         <button
           onClick={() => setOpen((v) => !v)}
-          className="lg:hidden rounded-full p-2 -mr-2 text-brand-ink hover:bg-brand-ink/5"
+          className="rounded-full p-2 text-brand-ink hover:bg-brand-ink/5"
           aria-label="Abrir menú"
         >
           {open ? <X className="size-6" /> : <Menu className="size-6" />}
         </button>
+        </div>
       </div>
 
       {open ? (

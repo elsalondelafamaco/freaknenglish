@@ -1058,7 +1058,9 @@ function adaptAdminNote(n: any): import("@/lib/domain/types").ClassNote {
     classId: n.classId ?? undefined,
     studentId: n.studentId,
     teacherId: n.teacherId,
-    body: n.body ?? "",
+    // El backend guarda el texto en `notes` (ClassNote.notes); `body` es el
+    // shape del dominio del storefront.
+    body: n.notes ?? n.body ?? "",
     rating: n.rating ?? undefined,
     createdAt: n.createdAt ?? new Date().toISOString(),
   };

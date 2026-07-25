@@ -62,15 +62,23 @@ export class LearningService {
   ) {
     const activityId = String(body.activityId ?? '').trim()
     if (!activityId) throw new Error('activityId requerido')
+    const answers = (Array.isArray(body.answers) ? body.answers : []) as any[]
     const data = {
       title: body.title ?? undefined,
       score: typeof body.score === 'number' ? Math.round(body.score) : null,
       maxScore: typeof body.maxScore === 'number' ? Math.round(body.maxScore) : null,
-      answers: (Array.isArray(body.answers) ? body.answers : []) as any,
+      answers: answers as any,
     }
+    // Las lecciones reportan PROGRESIVAMENTE (cada respuesta re-envía el
+    // acumulado). Solo cuenta como intento nuevo cuando el envío trae MENOS
+    // respuestas que lo guardado (el estudiante empezó la actividad de cero).
+    const key = { userId_lessonId_activityId: { userId, lessonId, activityId } }
+    const existing = await this.prisma.activityResult.findUnique({ where: key })
+    const prevCount = Array.isArray(existing?.answers) ? (existing!.answers as any[]).length : 0
+    const isNewRun = !!existing && answers.length < prevCount
     return this.prisma.activityResult.upsert({
-      where: { userId_lessonId_activityId: { userId, lessonId, activityId } },
-      update: { ...data, attempts: { increment: 1 } },
+      where: key,
+      update: { ...data, ...(isNewRun ? { attempts: { increment: 1 } } : {}) },
       create: { userId, lessonId, activityId, ...data },
     })
   }

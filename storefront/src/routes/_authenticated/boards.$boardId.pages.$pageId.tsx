@@ -9,7 +9,7 @@ import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import TextAlign from "@tiptap/extension-text-align";
-import { TextStyle } from "@tiptap/extension-text-style";
+import { TextStyle, FontFamily, FontSize } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
 import TaskList from "@tiptap/extension-task-list";
@@ -21,8 +21,8 @@ import TableHeader from "@tiptap/extension-table-header";
 import {
   Bold, Italic, Strikethrough, Underline as UnderlineIcon, Heading1, Heading2, Heading3,
   List, ListOrdered, CheckSquare, Quote, Code, Undo2, Redo2, Link as LinkIcon,
-  Image as ImageIcon, Table as TableIcon, AlignLeft, AlignCenter, AlignRight, Highlighter,
-  Palette, Download, Printer,
+  Image as ImageIcon, Table as TableIcon, AlignLeft, AlignCenter, AlignRight, AlignJustify,
+  Highlighter, Palette, Download, Printer, Minus, RemoveFormatting, Indent, Outdent,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -71,9 +71,11 @@ function BoardPage() {
             StarterKit.configure({ undoRedo: false } as any),
             Underline,
             TextStyle,
+            FontFamily,
+            FontSize,
             Color,
             Highlight.configure({ multicolor: true }),
-            TextAlign.configure({ types: ["heading", "paragraph"] }),
+            TextAlign.configure({ types: ["heading", "paragraph"], alignments: ["left", "center", "right", "justify"] }),
             Link.configure({ openOnClick: false, autolink: true }),
             Image.configure({ inline: false, allowBase64: false }),
             TaskList,
@@ -175,10 +177,21 @@ function PresenceDots({ peers, selfId }: { peers: any[]; selfId: string }) {
 const TEXT_COLORS = ["#111827", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899"];
 const HIGHLIGHTS = ["#fef08a", "#bbf7d0", "#bfdbfe", "#fecaca", "#e9d5ff"];
 
+const FONT_FAMILIES = [
+  { label: "Predeterminada", value: "" },
+  { label: "Sans (Inter)", value: "Inter, ui-sans-serif, system-ui, sans-serif" },
+  { label: "Serif (Georgia)", value: "Georgia, 'Times New Roman', serif" },
+  { label: "Mono (Consolas)", value: "Consolas, 'Courier New', monospace" },
+  { label: "Redondeada (Comic)", value: "'Comic Sans MS', 'Comic Sans', cursive" },
+];
+const FONT_SIZES = ["12px", "14px", "16px", "18px", "24px", "30px", "36px"];
+
 function Toolbar({ editor, boardId }: { editor: NonNullable<ReturnType<typeof useEditor>>; boardId: string }) {
   const btn = "rounded p-1.5 text-brand-ink/70 hover:bg-brand-cream/50 data-[active=true]:bg-brand-ink data-[active=true]:text-white";
+  const sel = "rounded-md border border-brand-line bg-white px-1.5 py-1 text-xs text-brand-ink";
   const [openColor, setOpenColor] = useState(false);
   const [openHi, setOpenHi] = useState(false);
+  const inTable = editor.isActive("table");
 
   async function uploadImage() {
     const input = document.createElement("input");
@@ -209,6 +222,36 @@ function Toolbar({ editor, boardId }: { editor: NonNullable<ReturnType<typeof us
 
   return (
     <div className="-mx-1 flex max-w-full items-center gap-1 overflow-x-auto px-1 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0">
+      {/* Fuente y tamaño (estilo Google Docs) */}
+      <select
+        className={sel}
+        title="Fuente"
+        value={(editor.getAttributes("textStyle").fontFamily as string) ?? ""}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v) editor.chain().focus().setFontFamily(v).run();
+          else editor.chain().focus().unsetFontFamily().run();
+        }}
+      >
+        {FONT_FAMILIES.map((f) => (
+          <option key={f.label} value={f.value} style={f.value ? { fontFamily: f.value } : undefined}>{f.label}</option>
+        ))}
+      </select>
+      <select
+        className={sel}
+        title="Tamaño de letra"
+        value={(editor.getAttributes("textStyle").fontSize as string) ?? ""}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v) editor.chain().focus().setFontSize(v).run();
+          else editor.chain().focus().unsetFontSize().run();
+        }}
+      >
+        <option value="">Tamaño</option>
+        {FONT_SIZES.map((s) => (<option key={s} value={s}>{s.replace("px", "")}</option>))}
+      </select>
+
+      <span className="mx-1 h-4 w-px bg-brand-line" />
       <button className={btn} data-active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()}><Bold className="size-4" /></button>
       <button className={btn} data-active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()}><Italic className="size-4" /></button>
       <button className={btn} data-active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()}><UnderlineIcon className="size-4" /></button>
@@ -249,6 +292,7 @@ function Toolbar({ editor, boardId }: { editor: NonNullable<ReturnType<typeof us
       <button className={btn} data-active={editor.isActive({ textAlign: "left" })} onClick={() => editor.chain().focus().setTextAlign("left").run()}><AlignLeft className="size-4" /></button>
       <button className={btn} data-active={editor.isActive({ textAlign: "center" })} onClick={() => editor.chain().focus().setTextAlign("center").run()}><AlignCenter className="size-4" /></button>
       <button className={btn} data-active={editor.isActive({ textAlign: "right" })} onClick={() => editor.chain().focus().setTextAlign("right").run()}><AlignRight className="size-4" /></button>
+      <button className={btn} data-active={editor.isActive({ textAlign: "justify" })} onClick={() => editor.chain().focus().setTextAlign("justify").run()}><AlignJustify className="size-4" /></button>
 
       <span className="mx-1 h-4 w-px bg-brand-line" />
       <button className={btn} data-active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()}><List className="size-4" /></button>
@@ -256,11 +300,25 @@ function Toolbar({ editor, boardId }: { editor: NonNullable<ReturnType<typeof us
       <button className={btn} data-active={editor.isActive("taskList")} onClick={() => editor.chain().focus().toggleTaskList().run()}><CheckSquare className="size-4" /></button>
       <button className={btn} data-active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()}><Quote className="size-4" /></button>
       <button className={btn} data-active={editor.isActive("codeBlock")} onClick={() => editor.chain().focus().toggleCodeBlock().run()}><Code className="size-4" /></button>
+      <button className={btn} title="Aumentar sangría (en listas)" onClick={() => editor.chain().focus().sinkListItem(editor.isActive("taskItem") ? "taskItem" : "listItem").run()}><Indent className="size-4" /></button>
+      <button className={btn} title="Reducir sangría" onClick={() => editor.chain().focus().liftListItem(editor.isActive("taskItem") ? "taskItem" : "listItem").run()}><Outdent className="size-4" /></button>
+      <button className={btn} title="Línea divisoria" onClick={() => editor.chain().focus().setHorizontalRule().run()}><Minus className="size-4" /></button>
+      <button className={btn} title="Limpiar formato" onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}><RemoveFormatting className="size-4" /></button>
 
       <span className="mx-1 h-4 w-px bg-brand-line" />
       <button className={btn} data-active={editor.isActive("link")} onClick={addLink}><LinkIcon className="size-4" /></button>
       <button className={btn} onClick={uploadImage}><ImageIcon className="size-4" /></button>
       <button className={btn} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><TableIcon className="size-4" /></button>
+      {inTable ? (
+        <span className="flex items-center gap-0.5 rounded-lg bg-brand-cream/60 px-1 py-0.5 text-[10px] font-semibold text-brand-ink/70">
+          <button className="rounded px-1.5 py-1 hover:bg-white" title="Fila abajo" onClick={() => editor.chain().focus().addRowAfter().run()}>+Fila</button>
+          <button className="rounded px-1.5 py-1 hover:bg-white" title="Columna a la derecha" onClick={() => editor.chain().focus().addColumnAfter().run()}>+Col</button>
+          <button className="rounded px-1.5 py-1 hover:bg-white" title="Eliminar fila" onClick={() => editor.chain().focus().deleteRow().run()}>−Fila</button>
+          <button className="rounded px-1.5 py-1 hover:bg-white" title="Eliminar columna" onClick={() => editor.chain().focus().deleteColumn().run()}>−Col</button>
+          <button className="rounded px-1.5 py-1 hover:bg-white" title="Combinar/dividir celdas" onClick={() => editor.chain().focus().mergeOrSplit().run()}>⊞</button>
+          <button className="rounded px-1.5 py-1 text-red-600 hover:bg-white" title="Eliminar tabla" onClick={() => editor.chain().focus().deleteTable().run()}>×Tabla</button>
+        </span>
+      ) : null}
 
       <span className="mx-1 h-4 w-px bg-brand-line" />
       <button className={btn} onClick={() => (editor as any).chain().focus().undo?.().run()}><Undo2 className="size-4" /></button>

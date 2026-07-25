@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { ImpersonationBanner } from "@/components/app/ImpersonationBanner";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
 import { InstallAppButton } from "@/components/app/InstallAppButton";
+import { ThemeToggle } from "@/components/app/ThemeToggle";
 import { useLang } from "@/lib/i18n";
 
 const STUDENT_NAV = [
@@ -154,6 +155,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 {l.toUpperCase()}
               </button>
             ))}
+            <ThemeToggle className="ml-auto size-7" />
           </div>
           <button
             onClick={handleSignOut}

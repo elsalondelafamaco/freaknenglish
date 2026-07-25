@@ -180,6 +180,7 @@ function TeacherStudentDetail() {
       </section>
 
       <ActivityResultsSection studentId={studentId} />
+      <CheckpointAttemptsSection studentId={studentId} />
     </div>
   );
 }
@@ -260,6 +261,87 @@ export function ActivityResultsSection({ studentId }: { studentId: string }) {
                         ))}
                       </ul>
                     </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/** Intentos de checkpoints del estudiante con corrección detallada. */
+export function CheckpointAttemptsSection({ studentId }: { studentId: string }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const q = useQuery({
+    queryKey: ["checkpoint-attempts", studentId],
+    queryFn: () => teachersApi.studentCheckpointAttempts(studentId),
+  });
+  const rows = q.data ?? [];
+
+  return (
+    <section>
+      <h2 className="text-lg font-semibold text-brand-ink">Checkpoints (exámenes de nivel)</h2>
+      <p className="mt-0.5 text-xs text-brand-ink/55">
+        Cada intento con su puntaje y corrección pregunta a pregunta.
+      </p>
+      <div className="mt-3 overflow-hidden rounded-2xl border border-brand-line bg-white">
+        {q.isLoading ? (
+          <p className="p-5 text-sm text-brand-ink/55">Cargando…</p>
+        ) : rows.length === 0 ? (
+          <p className="p-5 text-sm text-brand-ink/55">Aún no ha presentado checkpoints.</p>
+        ) : (
+          <ul className="divide-y divide-brand-line/70">
+            {rows.map((a) => {
+              const open = expanded === a.id;
+              const feedback = (a.answers as any)?.feedback as
+                | Array<{ id: string; correct: boolean; given: string; expected?: string }>
+                | undefined;
+              return (
+                <li key={a.id}>
+                  <button
+                    onClick={() => setExpanded(open ? null : a.id)}
+                    className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-3 text-left text-sm transition hover:bg-brand-cream/30"
+                  >
+                    <div>
+                      <div className="font-semibold text-brand-ink">
+                        {a.checkpoint?.module?.title ?? "Checkpoint"} · {a.checkpoint?.fromLevel} → {a.checkpoint?.toLevel}
+                      </div>
+                      <div className="text-xs text-brand-ink/55">
+                        {new Date(a.createdAt).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}
+                        {feedback ? ` · ${feedback.filter((f) => f.correct).length}/${feedback.length} correctas` : ""}
+                      </div>
+                    </div>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                        a.passed ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {a.score}% · {a.passed ? "Aprobado" : "No aprobado"}
+                    </span>
+                  </button>
+                  {open && feedback ? (
+                    <div className="border-t border-brand-line/60 bg-brand-cream/20 px-4 py-3">
+                      <ul className="space-y-1.5 text-sm">
+                        {feedback.map((f, i) => (
+                          <li key={f.id ?? i} className="rounded-xl bg-white p-2.5">
+                            <span className={f.correct ? "font-semibold text-emerald-600" : "font-semibold text-red-600"}>
+                              {f.correct ? "✓" : "✗"}
+                            </span>{" "}
+                            <span className="text-brand-ink">{f.given}</span>
+                            {!f.correct && f.expected ? (
+                              <span className="text-xs text-brand-ink/55"> · correcta: {f.expected}</span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : open ? (
+                    <p className="border-t border-brand-line/60 bg-brand-cream/20 px-4 py-3 text-xs text-brand-ink/55">
+                      Intento antiguo sin corrección detallada.
+                    </p>
                   ) : null}
                 </li>
               );

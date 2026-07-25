@@ -242,7 +242,7 @@ export const learningApi = {
     attempts: CheckpointAttempt[];
   }>("/learning/progress"),
   levelCheckpoint: (level: EnglishLevel) =>
-    apiGet<(Checkpoint & { moduleId: string; passingScore: number }) | null>("/learning/level-checkpoint", { level }),
+    apiGet<CheckpointV2 | null>("/learning/level-checkpoint", { level }),
   saveLessonProgress: (lessonId: string, secondsWatched: number, completed: boolean) =>
     apiPost("/learning/progress", { lessonId, secondsWatched, completed }),
   // Resultados de actividades interactivas (bridge FreaknActivity)
@@ -250,9 +250,54 @@ export const learningApi = {
     apiPost<ActivityResultRow>(`/learning/lessons/${lessonId}/activity-result`, body),
   myActivityResults: (lessonId?: string) =>
     apiGet<ActivityResultRow[]>("/learning/my/activity-results", lessonId ? { lessonId } : undefined),
-  checkpoint: (id: string) => apiGet<Checkpoint>(`/learning/checkpoints/${id}`),
-  submitCheckpoint: (id: string, answers: Record<string, number>) =>
-    apiPost<CheckpointAttempt>(`/learning/checkpoints/${id}/submit`, { answers }),
+  checkpoint: (id: string) => apiGet<CheckpointV2>(`/learning/checkpoints/${id}`),
+  submitCheckpoint: (id: string, answers: Record<string, unknown>) =>
+    apiPost<CheckpointSubmitResult>(`/learning/checkpoints/${id}/submit`, { answers }),
+};
+
+// ─── Checkpoints v2 ────────────────────────────────────────────────────
+export type CheckpointSettings = {
+  allowRetryAfterPass: boolean;
+  maxAttempts: number | null;
+  cooldownHours: number | null;
+  shuffleQuestions: boolean;
+  showAnswers: boolean;
+  timeLimitMin: number | null;
+};
+export type CheckpointAttemptState = {
+  attemptCount: number;
+  remainingAttempts: number | null;
+  passed: boolean;
+  lastScore: number | null;
+  lastAt: string | null;
+  bestScore: number | null;
+  canAttempt: boolean;
+  blockReason: "already_passed" | "max_attempts" | "cooldown" | null;
+  retryAt: string | null;
+};
+export type CheckpointV2 = {
+  id: string;
+  moduleId: string;
+  fromLevel: EnglishLevel;
+  toLevel: EnglishLevel;
+  passingScore: number;
+  questions: import("@/components/app/checkpoint/QuestionRenderers").PublicQuestion[];
+  settings: CheckpointSettings;
+  myAttempts: CheckpointAttemptState;
+};
+export type CheckpointSubmitResult = {
+  attemptId: string;
+  score: number;
+  passed: boolean;
+  correct: number;
+  total: number;
+  passingScore: number;
+  feedback: Array<{ id: string; correct: boolean; given: string; expected?: string }>;
+  showAnswers: boolean;
+  canRetry: boolean;
+  blockReason: string | null;
+  retryAt: string | null;
+  remainingAttempts: number | null;
 };
 
 // ─── Teachers ──────────────────────────────────────────────────────────
@@ -291,6 +336,12 @@ export const teachersApi = {
     apiPatch<{ id: string; meetingUrl: string | null }>(`/teacher/students/${studentId}/meeting-url`, { url }),
   studentActivityResults: (studentId: string) =>
     apiGet<ActivityResultRow[]>(`/teacher/students/${studentId}/activity-results`),
+  studentCheckpointAttempts: (studentId: string) =>
+    apiGet<Array<{
+      id: string; score: number; passed: boolean; createdAt: string;
+      answers: { given?: Record<string, unknown>; feedback?: Array<{ id: string; correct: boolean; given: string; expected?: string }> } | Record<string, unknown>;
+      checkpoint: { id: string; fromLevel: string; toLevel: string; passingScore: number; module: { id: string; title: string } | null } | null;
+    }>>(`/teacher/students/${studentId}/checkpoint-attempts`),
   pinNote: (noteId: string, pinned: boolean) =>
     apiPatch<any>(`/teacher/notes/${noteId}/pin`, { pinned }),
   calendar: (from: string, to: string) =>
@@ -339,7 +390,7 @@ export const adminApi = {
     byPlan: Array<{ planId: string; active: number }>;
   }>("/admin/analytics"),
   metrics: (rangeDays = 30) => apiGet<AdminMetrics>("/admin/metrics", { range: String(rangeDays) }),
-  saveCheckpoint: (body: { id?: string; moduleId: string; fromLevel: string; toLevel: string; passingScore?: number; questions?: unknown }) =>
+  saveCheckpoint: (body: { id?: string; moduleId: string; fromLevel: string; toLevel: string; passingScore?: number; questions?: unknown; settings?: unknown }) =>
     apiPost<any>("/admin/content/checkpoints", body),
   updateCheckpoint: (id: string, body: any) => apiPatch<any>(`/admin/content/checkpoints/${id}`, body),
   deleteCheckpoint: (id: string) => apiPatch<any>(`/admin/content/checkpoints/${id}/delete`, {}),

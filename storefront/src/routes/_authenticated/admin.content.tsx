@@ -21,7 +21,31 @@ interface BELesson {
   contentHtml?: string | null;
   notes?: string | null;
 }
-interface BECheckpointQuestion { id: string; prompt: string; options: string[]; correctIndex: number }
+// Checkpoints v2: pregunta editable de cualquier tipo (ver backend
+// checkpoint-questions.ts). Los campos aplican según `type`.
+interface BECheckpointQuestion {
+  id: string;
+  type?: "single" | "multi" | "truefalse" | "fill" | "order" | "match" | "dragwords";
+  prompt: string;
+  options?: string[];
+  correctIndex?: number;
+  correctIndexes?: number[];
+  correct?: boolean;
+  accepted?: string[];
+  items?: string[];
+  pairs?: Array<{ left: string; right: string }>;
+  text?: string;
+  words?: string[];
+  extraWords?: string[];
+}
+interface BECheckpointSettings {
+  allowRetryAfterPass?: boolean;
+  maxAttempts?: number | null;
+  cooldownHours?: number | null;
+  shuffleQuestions?: boolean;
+  showAnswers?: boolean;
+  timeLimitMin?: number | null;
+}
 interface BECheckpoint {
   id: string;
   moduleId: string;
@@ -29,6 +53,7 @@ interface BECheckpoint {
   toLevel: Level;
   passingScore: number;
   questions: BECheckpointQuestion[];
+  settings?: BECheckpointSettings;
 }
 interface BEModule {
   id: string;
@@ -614,30 +639,35 @@ function CheckpointDialog({
   const [fromLevel, setFromLevel] = useState<Level>((checkpoint?.fromLevel ?? level) as Level);
   const [toLevel, setToLevel] = useState<Level>((checkpoint?.toLevel ?? nextLevel(level)) as Level);
   const [passingScore, setPassingScore] = useState<number>(checkpoint?.passingScore ?? 70);
+  const [settings, setSettings] = useState<BECheckpointSettings>({
+    allowRetryAfterPass: checkpoint?.settings?.allowRetryAfterPass ?? false,
+    maxAttempts: checkpoint?.settings?.maxAttempts ?? null,
+    cooldownHours: checkpoint?.settings?.cooldownHours ?? null,
+    shuffleQuestions: checkpoint?.settings?.shuffleQuestions ?? false,
+    showAnswers: checkpoint?.settings?.showAnswers ?? true,
+    timeLimitMin: checkpoint?.settings?.timeLimitMin ?? null,
+  });
   const [questions, setQuestions] = useState<BECheckpointQuestion[]>(
     checkpoint?.questions?.length
-      ? checkpoint.questions.map((q) => ({ ...q, options: [...q.options] }))
-      : [{ id: crypto.randomUUID(), prompt: "", options: ["", ""], correctIndex: 0 }],
+      ? checkpoint.questions.map((q) => JSON.parse(JSON.stringify(q)))
+      : [newQuestion("single")],
   );
   const [pending, setPending] = useState(false);
 
   function patchQ(i: number, patch: Partial<BECheckpointQuestion>) {
     setQuestions((qs) => qs.map((q, idx) => (idx === i ? { ...q, ...patch } : q)));
   }
-  function patchOpt(qi: number, oi: number, val: string) {
-    setQuestions((qs) => qs.map((q, idx) => (idx === qi ? { ...q, options: q.options.map((o, j) => (j === oi ? val : o)) } : q)));
-  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // La validación fuerte por tipo la hace el backend (validateQuestion) y
+    // devuelve el mensaje exacto; aquí solo lo mínimo.
     for (const q of questions) {
       if (!q.prompt.trim()) return toast.error("Cada pregunta necesita enunciado");
-      if (q.options.filter((o) => o.trim()).length < 2) return toast.error("Cada pregunta necesita al menos 2 opciones");
-      if (q.correctIndex < 0 || q.correctIndex >= q.options.length) return toast.error("Marca la opción correcta");
     }
     setPending(true);
     try {
-      await adminApi.saveCheckpoint({ id: checkpoint?.id, moduleId, fromLevel, toLevel, passingScore, questions });
+      await adminApi.saveCheckpoint({ id: checkpoint?.id, moduleId, fromLevel, toLevel, passingScore, questions, settings });
       toast.success("Checkpoint guardado");
       onSaved();
     } catch (err: any) {
@@ -666,41 +696,248 @@ function CheckpointDialog({
           </Field>
         </div>
 
-        <div className="max-h-[45vh] space-y-3 overflow-y-auto pr-1">
+        {/* ── Configuración del checkpoint ── */}
+        <div className="rounded-xl border border-brand-line bg-brand-cream/20 p-3">
+          <div className="mb-2 text-xs font-bold uppercase tracking-wide text-brand-ink/60">Configuración</div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 md:grid-cols-3">
+            <label className="flex items-center gap-2 text-xs text-brand-ink/80">
+              <input type="checkbox" checked={!!settings.shuffleQuestions} onChange={(e) => setSettings((s) => ({ ...s, shuffleQuestions: e.target.checked }))} />
+              Barajar preguntas
+            </label>
+            <label className="flex items-center gap-2 text-xs text-brand-ink/80">
+              <input type="checkbox" checked={!!settings.showAnswers} onChange={(e) => setSettings((s) => ({ ...s, showAnswers: e.target.checked }))} />
+              Mostrar respuestas al terminar
+            </label>
+            <label className="flex items-center gap-2 text-xs text-brand-ink/80">
+              <input type="checkbox" checked={!!settings.allowRetryAfterPass} onChange={(e) => setSettings((s) => ({ ...s, allowRetryAfterPass: e.target.checked }))} />
+              Puede repetir tras aprobar
+            </label>
+            <label className="text-xs text-brand-ink/80">
+              Máx. intentos <span className="text-brand-ink/40">(vacío = ∞)</span>
+              <input type="number" min={1} value={settings.maxAttempts ?? ""} onChange={(e) => setSettings((s) => ({ ...s, maxAttempts: e.target.value ? Number(e.target.value) : null }))} className="input mt-1" />
+            </label>
+            <label className="text-xs text-brand-ink/80">
+              Espera entre intentos (horas)
+              <input type="number" min={1} value={settings.cooldownHours ?? ""} onChange={(e) => setSettings((s) => ({ ...s, cooldownHours: e.target.value ? Number(e.target.value) : null }))} className="input mt-1" />
+            </label>
+            <label className="text-xs text-brand-ink/80">
+              Límite de tiempo (min)
+              <input type="number" min={1} value={settings.timeLimitMin ?? ""} onChange={(e) => setSettings((s) => ({ ...s, timeLimitMin: e.target.value ? Number(e.target.value) : null }))} className="input mt-1" />
+            </label>
+          </div>
+        </div>
+
+        {/* ── Preguntas ── */}
+        <div className="max-h-[42vh] space-y-3 overflow-y-auto pr-1">
           {questions.map((q, qi) => (
-            <div key={q.id} className="rounded-xl border border-brand-line bg-brand-cream/20 p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-xs font-semibold text-brand-ink/70">Pregunta {qi + 1}</span>
-                <button type="button" onClick={() => setQuestions((qs) => qs.filter((_, i) => i !== qi))} className="text-red-600 hover:text-red-700" aria-label="Eliminar pregunta">
-                  <Trash2 className="size-3.5" />
-                </button>
-              </div>
-              <input value={q.prompt} onChange={(e) => patchQ(qi, { prompt: e.target.value })} placeholder="Enunciado de la pregunta" className="input mb-2" />
-              <div className="space-y-1.5">
-                {q.options.map((o, oi) => (
-                  <div key={oi} className="flex items-center gap-2">
-                    <input type="radio" name={`correct-${q.id}`} checked={q.correctIndex === oi} onChange={() => patchQ(qi, { correctIndex: oi })} title="Marcar como correcta" />
-                    <input value={o} onChange={(e) => patchOpt(qi, oi, e.target.value)} placeholder={`Opción ${oi + 1}`} className="input flex-1" />
-                    <button type="button" onClick={() => patchQ(qi, { options: q.options.filter((_, j) => j !== oi), correctIndex: Math.max(0, q.correctIndex >= oi ? q.correctIndex - 1 : q.correctIndex) })} disabled={q.options.length <= 2} className="rounded p-1 text-brand-ink/50 hover:bg-white disabled:opacity-30" aria-label="Quitar opción">
-                      <Trash2 className="size-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <button type="button" onClick={() => patchQ(qi, { options: [...q.options, ""] })} className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-brand-ink/70 hover:text-brand-ink">
-                <Plus className="size-3" /> Añadir opción
-              </button>
-            </div>
+            <QuestionEditor
+              key={q.id}
+              q={q}
+              index={qi}
+              onPatch={(patch) => patchQ(qi, patch)}
+              onDelete={() => setQuestions((qs) => qs.filter((_, i) => i !== qi))}
+            />
           ))}
         </div>
 
-        <button type="button" onClick={() => setQuestions((qs) => [...qs, { id: crypto.randomUUID(), prompt: "", options: ["", ""], correctIndex: 0 }])} className="inline-flex items-center gap-1 self-start rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink/80 hover:-translate-y-0.5">
-          <Plus className="size-3.5" /> Añadir pregunta
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-brand-ink/50">Añadir pregunta:</span>
+          {(Object.keys(Q_TYPE_LABEL) as Array<NonNullable<BECheckpointQuestion["type"]>>).map((t) => (
+            <button key={t} type="button" onClick={() => setQuestions((qs) => [...qs, newQuestion(t)])}
+              className="inline-flex items-center gap-1 rounded-full border border-brand-line bg-white px-2.5 py-1 text-[11px] font-semibold text-brand-ink/80 transition hover:-translate-y-0.5 hover:bg-brand-cream/40">
+              <Plus className="size-3" /> {Q_TYPE_LABEL[t]}
+            </button>
+          ))}
+        </div>
 
         <Actions onClose={onClose} pending={pending} />
       </form>
     </Modal>
+  );
+}
+
+/* ── Checkpoints v2 · editor de preguntas por tipo ─────────────────────── */
+
+const Q_TYPE_LABEL: Record<NonNullable<BECheckpointQuestion["type"]>, string> = {
+  single: "Selección única",
+  multi: "Selección múltiple",
+  truefalse: "Verdadero/Falso",
+  fill: "Completar (escribe)",
+  order: "Ordenar",
+  match: "Emparejar",
+  dragwords: "Arrastrar palabras",
+};
+
+function newQuestion(type: NonNullable<BECheckpointQuestion["type"]>): BECheckpointQuestion {
+  const base = { id: crypto.randomUUID(), type, prompt: "" };
+  switch (type) {
+    case "single": return { ...base, options: ["", ""], correctIndex: 0 };
+    case "multi": return { ...base, options: ["", ""], correctIndexes: [] };
+    case "truefalse": return { ...base, correct: true };
+    case "fill": return { ...base, accepted: [""] };
+    case "order": return { ...base, items: ["", ""] };
+    case "match": return { ...base, pairs: [{ left: "", right: "" }, { left: "", right: "" }] };
+    case "dragwords": return { ...base, text: "", words: [], extraWords: [] };
+  }
+}
+
+/** Lista editable de strings (opciones, items, aceptadas…). */
+function StrList({ values, onChange, placeholder, min = 1, prefix }: {
+  values: string[]; onChange: (v: string[]) => void; placeholder: string; min?: number;
+  prefix?: (i: number) => React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      {values.map((v, i) => (
+        <div key={i} className="flex items-center gap-2">
+          {prefix ? prefix(i) : null}
+          <input value={v} onChange={(e) => onChange(values.map((x, j) => (j === i ? e.target.value : x)))} placeholder={`${placeholder} ${i + 1}`} className="input flex-1" />
+          <button type="button" onClick={() => onChange(values.filter((_, j) => j !== i))} disabled={values.length <= min}
+            className="rounded p-1 text-brand-ink/50 hover:bg-white disabled:opacity-30" aria-label="Quitar">
+            <Trash2 className="size-3" />
+          </button>
+        </div>
+      ))}
+      <button type="button" onClick={() => onChange([...values, ""])}
+        className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-ink/70 hover:text-brand-ink">
+        <Plus className="size-3" /> Añadir
+      </button>
+    </div>
+  );
+}
+
+function QuestionEditor({ q, index, onPatch, onDelete }: {
+  q: BECheckpointQuestion; index: number;
+  onPatch: (patch: Partial<BECheckpointQuestion>) => void; onDelete: () => void;
+}) {
+  const type = q.type ?? "single";
+  const blanks = (String(q.text ?? "").match(/\{\{\d+\}\}/g) ?? []).length;
+  return (
+    <div className="rounded-xl border border-brand-line bg-brand-cream/20 p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold text-brand-ink/70">
+          Pregunta {index + 1} · <span className="rounded-full bg-brand-yellow/60 px-2 py-0.5">{Q_TYPE_LABEL[type]}</span>
+        </span>
+        <button type="button" onClick={onDelete} className="text-red-600 hover:text-red-700" aria-label="Eliminar pregunta">
+          <Trash2 className="size-3.5" />
+        </button>
+      </div>
+      <input value={q.prompt} onChange={(e) => onPatch({ prompt: e.target.value })} placeholder="Enunciado de la pregunta" className="input mb-2" />
+
+      {type === "single" ? (
+        <StrList
+          values={q.options ?? []}
+          min={2}
+          placeholder="Opción"
+          onChange={(options) => onPatch({ options })}
+          prefix={(i) => (
+            <input type="radio" name={`correct-${q.id}`} checked={q.correctIndex === i} onChange={() => onPatch({ correctIndex: i })} title="Correcta" />
+          )}
+        />
+      ) : null}
+
+      {type === "multi" ? (
+        <StrList
+          values={q.options ?? []}
+          min={2}
+          placeholder="Opción"
+          onChange={(options) => onPatch({ options })}
+          prefix={(i) => (
+            <input
+              type="checkbox"
+              checked={(q.correctIndexes ?? []).includes(i)}
+              onChange={(e) => {
+                const set = new Set(q.correctIndexes ?? []);
+                if (e.target.checked) set.add(i); else set.delete(i);
+                onPatch({ correctIndexes: [...set].sort() });
+              }}
+              title="Correcta"
+            />
+          )}
+        />
+      ) : null}
+
+      {type === "truefalse" ? (
+        <div className="flex items-center gap-3 text-xs text-brand-ink/80">
+          Respuesta correcta:
+          {[true, false].map((v) => (
+            <label key={String(v)} className="flex items-center gap-1.5">
+              <input type="radio" name={`tf-${q.id}`} checked={q.correct === v} onChange={() => onPatch({ correct: v })} />
+              {v ? "Verdadero" : "Falso"}
+            </label>
+          ))}
+        </div>
+      ) : null}
+
+      {type === "fill" ? (
+        <div>
+          <p className="mb-1 text-[11px] text-brand-ink/55">Respuestas aceptadas (cualquiera vale; no distingue mayúsculas/tildes):</p>
+          <StrList values={q.accepted ?? []} min={1} placeholder="Respuesta aceptada" onChange={(accepted) => onPatch({ accepted })} />
+        </div>
+      ) : null}
+
+      {type === "order" ? (
+        <div>
+          <p className="mb-1 text-[11px] text-brand-ink/55">Escribe los elementos EN EL ORDEN CORRECTO (al estudiante se le muestran barajados):</p>
+          <StrList values={q.items ?? []} min={2} placeholder="Elemento" onChange={(items) => onPatch({ items })} />
+        </div>
+      ) : null}
+
+      {type === "match" ? (
+        <div className="space-y-1.5">
+          <p className="text-[11px] text-brand-ink/55">Parejas correctas (la columna derecha se baraja al presentarla):</p>
+          {(q.pairs ?? []).map((p, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input value={p.left} onChange={(e) => onPatch({ pairs: (q.pairs ?? []).map((x, j) => (j === i ? { ...x, left: e.target.value } : x)) })} placeholder="Izquierda" className="input flex-1" />
+              <span className="text-brand-ink/40">→</span>
+              <input value={p.right} onChange={(e) => onPatch({ pairs: (q.pairs ?? []).map((x, j) => (j === i ? { ...x, right: e.target.value } : x)) })} placeholder="Derecha" className="input flex-1" />
+              <button type="button" onClick={() => onPatch({ pairs: (q.pairs ?? []).filter((_, j) => j !== i) })} disabled={(q.pairs ?? []).length <= 2}
+                className="rounded p-1 text-brand-ink/50 hover:bg-white disabled:opacity-30" aria-label="Quitar pareja">
+                <Trash2 className="size-3" />
+              </button>
+            </div>
+          ))}
+          <button type="button" onClick={() => onPatch({ pairs: [...(q.pairs ?? []), { left: "", right: "" }] })}
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-ink/70 hover:text-brand-ink">
+            <Plus className="size-3" /> Añadir pareja
+          </button>
+        </div>
+      ) : null}
+
+      {type === "dragwords" ? (
+        <div className="space-y-2">
+          <div>
+            <p className="mb-1 text-[11px] text-brand-ink/55">
+              Frase con huecos <code className="rounded bg-white px-1">{"{{1}}"}</code>, <code className="rounded bg-white px-1">{"{{2}}"}</code>… ({blanks} hueco(s) detectados)
+            </p>
+            <textarea value={q.text ?? ""} onChange={(e) => {
+              const text = e.target.value;
+              const n = (text.match(/\{\{\d+\}\}/g) ?? []).length;
+              const words = [...(q.words ?? [])];
+              while (words.length < n) words.push("");
+              onPatch({ text, words: words.slice(0, n) });
+            }} rows={2} placeholder='Ej: I {{1}} to the gym every {{2}}.' className="input w-full" />
+          </div>
+          {blanks > 0 ? (
+            <div>
+              <p className="mb-1 text-[11px] text-brand-ink/55">Palabra correcta de cada hueco:</p>
+              <div className="grid gap-1.5 md:grid-cols-2">
+                {Array.from({ length: blanks }, (_, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-brand-yellow text-[10px] font-bold">{i + 1}</span>
+                    <input value={q.words?.[i] ?? ""} onChange={(e) => onPatch({ words: Array.from({ length: blanks }, (_, j) => (j === i ? e.target.value : q.words?.[j] ?? "")) })} placeholder={`Palabra del hueco ${i + 1}`} className="input flex-1" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          <div>
+            <p className="mb-1 text-[11px] text-brand-ink/55">Palabras distractoras (opcionales, van al banco):</p>
+            <StrList values={q.extraWords ?? []} min={0} placeholder="Distractor" onChange={(extraWords) => onPatch({ extraWords })} />
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

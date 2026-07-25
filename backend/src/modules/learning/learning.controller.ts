@@ -53,14 +53,14 @@ export class LearningController {
   @Get('progress')
   getProgress(@CurrentUser() u: AuthUser) { return this.svc.userProgress(u.id) }
 
-  /** @endpoint GET /api/v1/learning/checkpoints/:id */
+  /** @endpoint GET /api/v1/learning/checkpoints/:id  (sanitizado + estado de intentos) */
   @Get('checkpoints/:id')
-  checkpoint(@Param('id') id: string) { return this.svc.checkpoint(id) }
+  checkpoint(@CurrentUser() u: AuthUser, @Param('id') id: string) { return this.svc.checkpoint(id, u.id) }
 
   /** @endpoint GET /api/v1/learning/level-checkpoint?level=beginner */
   @Get('level-checkpoint')
-  levelCheckpoint(@Query('level') level: 'beginner' | 'intermediate' | 'advanced') {
-    return this.svc.levelCheckpoint(level)
+  levelCheckpoint(@CurrentUser() u: AuthUser, @Query('level') level: 'beginner' | 'intermediate' | 'advanced') {
+    return this.svc.levelCheckpoint(level, u.id)
   }
 
   /** @endpoint POST /api/v1/learning/progress */
@@ -72,13 +72,17 @@ export class LearningController {
     return this.svc.upsertProgress(u.id, body.lessonId, body.secondsWatched, body.completed)
   }
 
-  /** @endpoint POST /api/v1/learning/checkpoints/:id/submit */
+  /**
+   * @endpoint POST /api/v1/learning/checkpoints/:id/submit
+   * Respuestas por tipo: single=índice|string, multi=array, truefalse=bool,
+   * fill=string, order/match/dragwords=array de strings.
+   */
   @Post('checkpoints/:id/submit')
   submitCheckpoint(
     @CurrentUser() u: AuthUser,
     @Param('id') id: string,
-    @Body() body: { answers: Record<string, number> },
+    @Body() body: { answers: Record<string, unknown> },
   ) {
-    return this.svc.submitCheckpoint(u.id, id, body.answers)
+    return this.svc.submitCheckpoint(u.id, id, body?.answers ?? {})
   }
 }

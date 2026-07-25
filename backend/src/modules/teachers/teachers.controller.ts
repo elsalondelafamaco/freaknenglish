@@ -37,6 +37,12 @@ export class TeachersController {
     return this.svc.studentActivityResults(u.id, id, u.role === 'admin')
   }
 
+  /** @endpoint GET /api/v1/teacher/students/:id/checkpoint-attempts */
+  @Get('students/:id/checkpoint-attempts')
+  studentCheckpointAttempts(@CurrentUser() u: AuthUser, @Param('id') id: string) {
+    return this.svc.studentCheckpointAttempts(u.id, id, u.role === 'admin')
+  }
+
   /** @endpoint PATCH /api/v1/teacher/students/:id/meeting-url  Body: { url } */
   @Patch('students/:id/meeting-url')
   setMeetingUrl(

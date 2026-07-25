@@ -270,7 +270,7 @@ export class AdminController {
 
   /** @endpoint POST /api/v1/admin/content/checkpoints */
   @Post('content/checkpoints')
-  createCheckpoint(@Body() body: { id?: string; moduleId: string; fromLevel: 'beginner' | 'intermediate' | 'advanced'; toLevel: 'beginner' | 'intermediate' | 'advanced'; passingScore?: number; questions?: unknown }) {
+  createCheckpoint(@Body() body: { id?: string; moduleId: string; fromLevel: 'beginner' | 'intermediate' | 'advanced'; toLevel: 'beginner' | 'intermediate' | 'advanced'; passingScore?: number; questions?: unknown; settings?: unknown }) {
     return this.svc.saveCheckpoint(body)
   }
 

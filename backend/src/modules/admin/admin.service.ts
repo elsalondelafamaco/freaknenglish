@@ -9,6 +9,7 @@ import { randomBytes, randomUUID, createHash } from 'crypto'
 import { StorageService } from '../storage/storage.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { SchedulingService } from '../scheduling/scheduling.service'
+import { validateQuestion } from '../learning/checkpoint-questions'
 
 @Injectable()
 export class AdminService {
@@ -928,17 +929,26 @@ export class AdminService {
     toLevel?: 'beginner' | 'intermediate' | 'advanced'
     passingScore?: number
     questions?: unknown
+    settings?: unknown
   }) {
     const id = input.id ?? randomUUID()
     const existing = await this.prisma.checkpoint.findUnique({ where: { id } })
     const moduleId = input.moduleId ?? existing?.moduleId
     if (!moduleId) throw new Error('moduleId required')
+    // Validación por tipo de pregunta (checkpoints v2).
+    if (Array.isArray(input.questions)) {
+      for (let i = 0; i < input.questions.length; i++) {
+        const err = validateQuestion(input.questions[i], i)
+        if (err) throw new BadRequestException(err)
+      }
+    }
     const data = {
       moduleId,
       fromLevel: (input.fromLevel ?? existing?.fromLevel) as any,
       toLevel: (input.toLevel ?? existing?.toLevel) as any,
       passingScore: input.passingScore ?? existing?.passingScore ?? 70,
       questions: (input.questions ?? existing?.questions ?? []) as any,
+      settings: (input.settings ?? (existing as any)?.settings ?? {}) as any,
     }
     if (existing) return this.prisma.checkpoint.update({ where: { id }, data })
     return this.prisma.checkpoint.create({ data: { id, ...data } })

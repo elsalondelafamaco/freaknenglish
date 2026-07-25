@@ -423,9 +423,14 @@ model Checkpoint {
   id           String       @id
   moduleId     String       @map("module_id")
   fromLevel    EnglishLevel @map("from_level")
-  toLevel      EnglishLevel @map("to_level")
+  toLevel     EnglishLevel @map("to_level")
   passingScore Int          @map("passing_score") // %
-  questions    Json         // [{ id, prompt, options, correctIndex }]
+  /// Preguntas tipadas — ver checkpoint-questions.ts (single, multi, truefalse,
+  /// fill, order, match, dragwords). Legacy sin `type` = single.
+  questions    Json
+  /// { allowRetryAfterPass?, maxAttempts?, cooldownHours?, shuffleQuestions?,
+  ///   showAnswers?, timeLimitMin? } — ver DEFAULT_CHECKPOINT_SETTINGS.
+  settings     Json         @default("{}")
 
   module   Module              @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   attempts CheckpointAttempt[]

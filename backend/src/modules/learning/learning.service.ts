@@ -1,6 +1,12 @@
-import { Injectable } from '@nestjs/common'
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
+import {
+  CheckpointQuestion,
+  gradeQuestion,
+  parseSettings,
+  sanitizeQuestion,
+} from './checkpoint-questions'
 
 @Injectable()
 export class LearningService {
@@ -101,13 +107,63 @@ export class LearningService {
    * respuesta correcta permitiria hacer trampa. La calificacion es server-side
    * en submitCheckpoint leyendo las respuestas desde la BD.
    */
-  async checkpoint(id: string) {
+  /**
+   * Estado de intentos del usuario sobre un checkpoint según su settings:
+   * cuántos lleva, si aprobó, si puede intentar ahora y por qué no.
+   */
+  private async attemptState(userId: string, cp: { id: string; settings: unknown }) {
+    const s = parseSettings(cp.settings)
+    const attempts = await this.prisma.checkpointAttempt.findMany({
+      where: { userId, checkpointId: cp.id },
+      orderBy: { createdAt: 'desc' },
+    })
+    const passed = attempts.some((a) => a.passed)
+    const last = attempts[0] ?? null
+    let canAttempt = true
+    let blockReason: string | null = null
+    let retryAt: Date | null = null
+    if (passed && !s.allowRetryAfterPass) {
+      canAttempt = false
+      blockReason = 'already_passed'
+    } else if (s.maxAttempts != null && attempts.length >= s.maxAttempts) {
+      canAttempt = false
+      blockReason = 'max_attempts'
+    } else if (s.cooldownHours != null && last) {
+      const next = new Date(last.createdAt.getTime() + s.cooldownHours * 3600_000)
+      if (next.getTime() > Date.now()) {
+        canAttempt = false
+        blockReason = 'cooldown'
+        retryAt = next
+      }
+    }
+    return {
+      settings: s,
+      attemptCount: attempts.length,
+      remainingAttempts: s.maxAttempts != null ? Math.max(0, s.maxAttempts - attempts.length) : null,
+      passed,
+      lastScore: last?.score ?? null,
+      lastAt: last?.createdAt ?? null,
+      bestScore: attempts.reduce<number | null>((b, a) => (b == null || a.score > b ? a.score : b), null),
+      canAttempt,
+      blockReason,
+      retryAt,
+    }
+  }
+
+  /** Checkpoint listo para presentar: preguntas sin respuestas + estado de intentos. */
+  async checkpoint(id: string, userId: string) {
     const cp = await this.prisma.checkpoint.findUnique({ where: { id } })
     if (!cp) return null
-    const questions = Array.isArray(cp.questions)
-      ? (cp.questions as any[]).map(({ correctIndex, ...rest }) => rest)
-      : cp.questions
-    return { ...cp, questions }
+    const state = await this.attemptState(userId, cp)
+    let questions = (Array.isArray(cp.questions) ? (cp.questions as CheckpointQuestion[]) : []).map(sanitizeQuestion)
+    if (state.settings.shuffleQuestions) {
+      questions = questions
+        .map((q) => [Math.random(), q] as const)
+        .sort((a, b) => a[0] - b[0])
+        .map(([, q]) => q)
+    }
+    const { settings: _raw, ...rest } = cp as any
+    return { ...rest, questions, settings: state.settings, myAttempts: state }
   }
 
   async userProgress(userId: string) {
@@ -124,17 +180,14 @@ export class LearningService {
     }
   }
 
-  /** Checkpoint del nivel (por fromLevel), sin correctIndex. */
-  async levelCheckpoint(level: 'beginner' | 'intermediate' | 'advanced') {
+  /** Checkpoint del nivel (por fromLevel), sanitizado + estado de intentos. */
+  async levelCheckpoint(level: 'beginner' | 'intermediate' | 'advanced', userId: string) {
     const cp = await this.prisma.checkpoint.findFirst({
       where: { fromLevel: level as any },
       orderBy: { id: 'asc' },
     })
     if (!cp) return null
-    const questions = Array.isArray(cp.questions)
-      ? (cp.questions as any[]).map(({ correctIndex, ...rest }) => rest)
-      : cp.questions
-    return { ...cp, questions }
+    return this.checkpoint(cp.id, userId)
   }
 
   upsertProgress(userId: string, lessonId: string, secondsWatched: number, completed: boolean) {
@@ -145,15 +198,34 @@ export class LearningService {
     })
   }
 
-  async submitCheckpoint(userId: string, checkpointId: string, answers: Record<string, number>) {
+  /**
+   * Envío de checkpoint v2: valida gating (reintentos/cooldown), califica por
+   * tipo de pregunta server-side y guarda el intento con feedback detallado
+   * (visible para profesor/admin siempre; para el estudiante según settings).
+   */
+  async submitCheckpoint(userId: string, checkpointId: string, answers: Record<string, unknown>) {
     const cp = await this.prisma.checkpoint.findUniqueOrThrow({ where: { id: checkpointId } })
-    const questions = cp.questions as Array<{ id: string; correctIndex: number }>
+    const state = await this.attemptState(userId, cp)
+    if (!state.canAttempt) {
+      const msg =
+        state.blockReason === 'already_passed'
+          ? 'Ya aprobaste este checkpoint.'
+          : state.blockReason === 'max_attempts'
+            ? 'Alcanzaste el máximo de intentos permitidos.'
+            : `Debes esperar para volver a intentarlo (disponible ${state.retryAt?.toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' })}).`
+      throw new ForbiddenException({ statusCode: 403, message: msg, code: state.blockReason })
+    }
+    const questions = (Array.isArray(cp.questions) ? (cp.questions as CheckpointQuestion[]) : [])
+    if (questions.length === 0) throw new BadRequestException('Checkpoint sin preguntas')
+
+    const feedback = questions.map((q) => gradeQuestion(q, (answers ?? {})[q.id]))
     const total = questions.length
-    const correct = questions.filter((q) => answers[q.id] === q.correctIndex).length
+    const correct = feedback.filter((f) => f.correct).length
     const score = Math.round((correct / total) * 100)
     const passed = score >= cp.passingScore
     const attempt = await this.prisma.checkpointAttempt.create({
-      data: { userId, checkpointId, score, passed, answers },
+      // `answers` guarda lo respondido + la corrección: profesor/admin lo ven completo.
+      data: { userId, checkpointId, score, passed, answers: { given: answers, feedback } as any },
     })
     if (passed) {
       await this.prisma.user.update({ where: { id: userId }, data: { englishLevel: cp.toLevel } })
@@ -174,6 +246,25 @@ export class LearningService {
         })
       }
     }
-    return attempt
+    // Feedback al estudiante: si showAnswers está apagado, sin `expected`.
+    const s = state.settings
+    const studentFeedback = s.showAnswers
+      ? feedback
+      : feedback.map(({ expected: _e, ...rest }) => rest)
+    const after = await this.attemptState(userId, cp)
+    return {
+      attemptId: attempt.id,
+      score,
+      passed,
+      correct,
+      total,
+      passingScore: cp.passingScore,
+      feedback: studentFeedback,
+      showAnswers: s.showAnswers,
+      canRetry: after.canAttempt,
+      blockReason: after.blockReason,
+      retryAt: after.retryAt,
+      remainingAttempts: after.remainingAttempts,
+    }
   }
 }

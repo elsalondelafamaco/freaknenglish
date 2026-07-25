@@ -36,6 +36,8 @@ export interface User {
   schedulePreferences?: Array<{ weekday: number; hour: number }>;
   /** Estado del onboarding de horario. */
   scheduleAssignmentStatus?: "auto_assigned" | "manual_pending";
+  /** Link de Meet/Zoom para las clases (lo asigna el profesor). */
+  meetingUrl?: string;
   /** Si está definido, el usuario está deshabilitado y no puede iniciar sesión. */
   disabledAt?: string;
   /** Soft delete. */

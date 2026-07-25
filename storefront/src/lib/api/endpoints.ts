@@ -72,6 +72,22 @@ export const notificationsApi = {
   unreadCount: () => apiGet<{ count: number }>("/notifications/unread-count"),
   markRead: (id: string) => apiPost<{ ok: boolean }>(`/notifications/${id}/read`),
   markAllRead: () => apiPost<{ ok: true; count: number }>("/notifications/read-all"),
+  // Trazabilidad global (solo admin)
+  adminAll: (filters: {
+    q?: string; template?: string; status?: string; channel?: string;
+    from?: string; to?: string; page?: number; pageSize?: number;
+  } = {}) =>
+    apiGet<{
+      total: number; page: number; pageSize: number;
+      byStatus: Record<string, number>;
+      items: Array<{
+        id: string; toEmail: string; channel: string; template: string; subject: string;
+        status: "pending" | "sent" | "failed"; error: string | null; sentAt: string | null;
+        createdAt: string; readAt: string | null; type: string; providerId: string | null;
+        user: { id: string; fullName: string; role: string } | null;
+      }>;
+    }>("/notifications/admin/all", filters as any),
+  adminTemplates: () => apiGet<Array<{ template: string; count: number }>>("/notifications/admin/templates"),
 };
 
 // ─── Me / Users ────────────────────────────────────────────────────────
@@ -206,6 +222,11 @@ export const classesApi = {
   reschedule: (id: string, startsAt: string, endsAt: string) =>
     apiPost<ClassSession>(`/classes/${id}/reschedule`, { startsAt, endsAt }),
   cancel: (id: string, reason?: string) => apiPost<ClassSession>(`/classes/${id}/cancel`, { reason }),
+  /** Estudiante reporta un problema con una clase dictada → avisa a admins. */
+  report: (id: string, note: string) => apiPost<{ ok: boolean }>(`/classes/${id}/report`, { note }),
+  /** Solo admin: fuerza el estado de una clase (ajuste de nómina/métricas). */
+  adminSetStatus: (id: string, status: "validated" | "no_show" | "scheduled" | "cancelled") =>
+    apiPatch<ClassSession>(`/classes/${id}/status`, { status }),
 };
 
 // ─── Learning ──────────────────────────────────────────────────────────
@@ -239,6 +260,8 @@ export const teachersApi = {
     apiPost<any>(`/teacher/classes/${classId}/notes`, { notes }),
   addStudentNote: (studentId: string, notes: string) =>
     apiPost<any>(`/teacher/students/${studentId}/notes`, { notes }),
+  setMeetingUrl: (studentId: string, url: string | null) =>
+    apiPatch<{ id: string; meetingUrl: string | null }>(`/teacher/students/${studentId}/meeting-url`, { url }),
   pinNote: (noteId: string, pinned: boolean) =>
     apiPatch<any>(`/teacher/notes/${noteId}/pin`, { pinned }),
   calendar: (from: string, to: string) =>
@@ -311,6 +334,23 @@ export const adminApi = {
   updateScheduleConfig: (body: Partial<{ days: number[]; startHour: number; endHour: number; maxPerDay: number }>) =>
     apiPost<any>("/admin/settings/schedule", body),
   contactSettings: () => apiGet<{ whatsappNumber: string; whatsappMessage: string }>("/admin/settings/contact"),
+  abandonedCarts: () =>
+    apiGet<{
+      carts: Array<{
+        intentId: string; email: string; fullName: string; phone: string | null;
+        planName: string; amountInCents: number; currency: string; createdAt: string;
+        userId: string | null; reminder: { status: string; at: string } | null;
+      }>;
+      registered: Array<{
+        userId: string; email: string; fullName: string; phone: string | null;
+        createdAt: string; lastLoginAt: string | null; reminder: { status: string; at: string } | null;
+      }>;
+    }>("/admin/carts"),
+  sendCartReminder: (body: { intentId?: string; userId?: string }) =>
+    apiPost<any>("/admin/carts/remind", body),
+  cleanupPreview: () => apiGet<Record<string, number>>("/admin/cleanup"),
+  cleanup: (targets: string[]) =>
+    apiPost<{ ok: boolean; deleted: Record<string, number> }>("/admin/cleanup", { targets }),
   siteContent: () => apiGet<SiteContentOverrides>("/admin/settings/site"),
   updateSiteContent: (body: {
     media?: Record<string, string | null>;
@@ -393,7 +433,8 @@ export const adminApi = {
   softDeleteUser: (id: string) => apiPatch<User>(`/admin/users/${id}/delete`, {}),
   resetPassword: (id: string) => apiPost<{ ok: true; link?: string; expiresAt?: string }>(`/admin/users/${id}/reset-password`),
   resetNps: (id: string) => apiPost<{ ok: true }>(`/admin/users/${id}/surveys/reset`),
-  surveys: (filter?: "all" | "promoters" | "detractors") =>
+  requestNps: (id: string) => apiPost<{ ok: true }>(`/admin/users/${id}/nps/request`),
+  surveys: (opts: { filter?: "all" | "promoters" | "detractors"; month?: string; orderBy?: "recent" | "oldest" | "score_desc" | "score_asc" } = {}) =>
     apiGet<{
       rows: Array<{
         id: string;
@@ -403,10 +444,16 @@ export const adminApi = {
         platformScore: number | null;
         comment: string | null;
         createdAt: string;
+        period: string;
         user: { id: string; fullName: string; email: string; role: string };
       }>;
       totals: { count: number; promoters: number; detractors: number; nps: number | null };
-    }>("/admin/surveys", filter ? { filter } : undefined),
+      periods: string[];
+    }>("/admin/surveys", {
+      ...(opts.filter ? { filter: opts.filter } : {}),
+      ...(opts.month ? { month: opts.month } : {}),
+      ...(opts.orderBy ? { orderBy: opts.orderBy } : {}),
+    }),
   assignTeacher: (studentId: string, teacherId: string | null) =>
     apiPatch<User>(`/admin/users/${studentId}/assign-teacher`, { teacherId }),
   impersonate: (userId: string) =>

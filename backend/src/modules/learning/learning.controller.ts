@@ -1,12 +1,13 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
+import { ActiveSubscriptionGuard } from '../../common/guards/active-subscription.guard'
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator'
 import { LearningService } from './learning.service'
 
 @ApiTags('learning')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ActiveSubscriptionGuard)
 @Controller('learning')
 export class LearningController {
   constructor(private svc: LearningService) {}

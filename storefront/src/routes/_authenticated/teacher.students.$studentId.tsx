@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Pin, PinOff } from "lucide-react";
+import { ArrowLeft, Pin, PinOff, Video } from "lucide-react";
 import { toast } from "sonner";
 import { teachersApi } from "@/lib/api/endpoints";
 
@@ -30,6 +30,16 @@ function TeacherStudentDetail() {
     mutationFn: (v: { id: string; pinned: boolean }) => teachersApi.pinNote(v.id, v.pinned),
     onSuccess: invalidate,
     onError: (e: any) => toast.error(e?.message ?? "Error"),
+  });
+  const [meetDraft, setMeetDraft] = useState<string | null>(null);
+  const meetM = useMutation({
+    mutationFn: (url: string) => teachersApi.setMeetingUrl(studentId, url || null),
+    onSuccess: () => {
+      toast.success("Link de clase guardado — el estudiante lo verá en su calendario.");
+      setMeetDraft(null);
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo guardar el link"),
   });
 
   if (q.isLoading) return <div className="text-sm text-brand-ink/60">Cargando…</div>;
@@ -69,6 +79,41 @@ function TeacherStudentDetail() {
           <Mini label="No asistió" value={missed} tone={missed > 0 ? "warn" : undefined} />
         </div>
       </header>
+
+      {/* Link de Meet/Zoom del estudiante: con él entra a clase desde su calendario. */}
+      <section className="rounded-2xl border border-brand-line bg-white p-5">
+        <div className="flex items-center gap-2 text-sm font-semibold text-brand-ink">
+          <Video className="size-4" /> Link de clase (Meet / Zoom)
+        </div>
+        <p className="mt-1 text-xs text-brand-ink/55">
+          Este es el link con el que {student.fullName.split(" ")[0]} entra a todas sus clases contigo.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            value={meetDraft ?? student.meetingUrl ?? ""}
+            onChange={(e) => setMeetDraft(e.target.value)}
+            placeholder="https://meet.google.com/…"
+            className="w-full max-w-md rounded-xl border border-brand-line px-4 py-2 text-sm focus:border-brand-ink focus:outline-none"
+          />
+          <button
+            onClick={() => meetM.mutate((meetDraft ?? student.meetingUrl ?? "").trim())}
+            disabled={meetM.isPending || meetDraft === null}
+            className="rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-50"
+          >
+            {meetM.isPending ? "Guardando…" : "Guardar link"}
+          </button>
+          {student.meetingUrl ? (
+            <a
+              href={student.meetingUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-brand-line px-4 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-cream/40"
+            >
+              Probar link
+            </a>
+          ) : null}
+        </div>
+      </section>
 
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">

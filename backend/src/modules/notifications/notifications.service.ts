@@ -93,6 +93,71 @@ export class NotificationsService {
     }
   }
 
+  // ─── Trazabilidad (admin) ───────────────────────────────────────
+  /**
+   * Listado global de notificaciones enviadas (email/whatsapp/in-app) con
+   * filtros para rastrear qué le llegó a un usuario.
+   */
+  async adminList(opts: {
+    q?: string
+    template?: string
+    status?: string
+    channel?: string
+    from?: Date
+    to?: Date
+    page?: number
+    pageSize?: number
+  }) {
+    const where: Prisma.NotificationWhereInput = {
+      ...(opts.q
+        ? {
+            OR: [
+              { toEmail: { contains: opts.q, mode: 'insensitive' } },
+              { subject: { contains: opts.q, mode: 'insensitive' } },
+              { user: { fullName: { contains: opts.q, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+      ...(opts.template ? { template: opts.template } : {}),
+      ...(opts.status ? { status: opts.status as any } : {}),
+      ...(opts.channel ? { channel: opts.channel } : {}),
+      ...(opts.from || opts.to
+        ? { createdAt: { ...(opts.from ? { gte: opts.from } : {}), ...(opts.to ? { lte: opts.to } : {}) } }
+        : {}),
+    }
+    const pageSize = Math.min(opts.pageSize ?? 50, 200)
+    const page = Math.max(opts.page ?? 1, 1)
+    const [total, items, byStatus] = await Promise.all([
+      this.prisma.notification.count({ where }),
+      this.prisma.notification.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true, toEmail: true, channel: true, template: true, subject: true,
+          status: true, error: true, sentAt: true, createdAt: true, readAt: true,
+          type: true, providerId: true,
+          user: { select: { id: true, fullName: true, role: true } },
+        },
+      }),
+      this.prisma.notification.groupBy({ by: ['status'], where, _count: true }),
+    ])
+    return {
+      total,
+      page,
+      pageSize,
+      byStatus: Object.fromEntries(byStatus.map((s) => [s.status, s._count])),
+      items,
+    }
+  }
+
+  /** Plantillas distintas usadas (para el dropdown de filtro del admin). */
+  async adminTemplates() {
+    const rows = await this.prisma.notification.groupBy({ by: ['template'], _count: true })
+    return rows.map((r) => ({ template: r.template, count: r._count })).sort((a, b) => b.count - a.count)
+  }
+
   // ─── In-app inbox ───────────────────────────────────────────────
 
   listForUser(userId: string, opts: { unreadOnly?: boolean; limit?: number } = {}) {

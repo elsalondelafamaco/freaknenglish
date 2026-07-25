@@ -22,13 +22,19 @@ function avg(nums: number[]): string {
 
 function AdminSurveys() {
   const [filter, setFilter] = useState<"all" | "detractors" | "promoters">("all");
+  const [month, setMonth] = useState("");
+  const [orderBy, setOrderBy] = useState<"recent" | "oldest" | "score_desc" | "score_asc">("recent");
   const { data, isLoading } = useQuery({
-    queryKey: ["admin", "surveys", filter],
-    queryFn: () => adminApi.surveys(filter),
+    queryKey: ["admin", "surveys", filter, month, orderBy],
+    queryFn: () => adminApi.surveys({ filter, month: month || undefined, orderBy }),
   });
   const rows = data?.rows ?? [];
   const totals = data?.totals;
   const nps = totals?.nps == null ? "—" : String(totals.nps);
+  const fmtMonth = (p: string) => {
+    const [y, m] = p.split("-").map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -53,7 +59,7 @@ function AdminSurveys() {
         />
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         {([
           ["all", "Todas"],
           ["promoters", "Promotores (9-10)"],
@@ -71,6 +77,32 @@ function AdminSurveys() {
             {label}
           </button>
         ))}
+        {/* Mes: para conocer el NPS de un mes puntual */}
+        <select
+          value={month}
+          onChange={(e) => setMonth(e.target.value)}
+          className="ml-2 rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-medium text-brand-ink"
+        >
+          <option value="">Todos los meses</option>
+          {(data?.periods ?? []).map((p) => (
+            <option key={p} value={p}>{fmtMonth(p)}</option>
+          ))}
+        </select>
+        <select
+          value={orderBy}
+          onChange={(e) => setOrderBy(e.target.value as typeof orderBy)}
+          className="rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-medium text-brand-ink"
+        >
+          <option value="recent">Más recientes</option>
+          <option value="oldest">Más antiguas</option>
+          <option value="score_desc">Mayor puntaje</option>
+          <option value="score_asc">Menor puntaje</option>
+        </select>
+        {month ? (
+          <span className="rounded-full bg-brand-yellow px-3 py-1.5 text-xs font-bold text-brand-ink">
+            NPS de {fmtMonth(month)}: {nps}
+          </span>
+        ) : null}
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-brand-line bg-white">

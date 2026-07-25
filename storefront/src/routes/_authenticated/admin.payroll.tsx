@@ -96,7 +96,7 @@ function AdminPayroll() {
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-[11px] font-semibold uppercase tracking-wide text-brand-ink/55">
-              Tarifa por hora (COP)
+              Tarifa por clase (COP)
             </label>
             <input
               type="number"
@@ -116,8 +116,9 @@ function AdminPayroll() {
             <Save className="size-3.5" /> Guardar tarifa
           </button>
           <p className="ml-auto text-[11px] text-brand-ink/55">
-            Tarifa vigente: <strong>{formatCop(rateCop)}</strong> /h. Solo se cuentan
-            clases completadas y validadas por el profesor.
+            Tarifa vigente: <strong>{formatCop(rateCop)}</strong> por clase (la clase
+            de 50 min paga tarifa completa). Solo se cuentan clases completadas y
+            validadas.
           </p>
         </div>
       </div>
@@ -130,7 +131,7 @@ function AdminPayroll() {
               <th className="px-4 py-3">Profesor</th>
               <th className="px-4 py-3">Clases</th>
               <th className="px-4 py-3">Horas</th>
-              <th className="px-4 py-3">Tarifa/h</th>
+              <th className="px-4 py-3">Tarifa/clase</th>
               <th className="px-4 py-3 text-right">Monto</th>
             </tr>
           </thead>

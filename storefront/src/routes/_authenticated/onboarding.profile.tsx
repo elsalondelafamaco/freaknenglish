@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { usersApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { PhoneInput, validatePhone } from "@/components/app/PhoneInput";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/onboarding/profile")({
@@ -36,7 +37,9 @@ function OnboardingProfile() {
         className="mt-6 space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!phone.trim() || !documentNumber.trim()) return toast.error("Todos los campos son obligatorios");
+          if (!documentNumber.trim()) return toast.error("Todos los campos son obligatorios");
+          const phoneError = validatePhone(phone);
+          if (phoneError) return toast.error(phoneError);
           save.mutate();
         }}
       >
@@ -51,12 +54,7 @@ function OnboardingProfile() {
         </div>
         <div>
           <label className="text-sm font-medium">Teléfono</label>
-          <input
-            className="mt-1 w-full rounded-xl border border-brand-line px-4 py-2"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            required
-          />
+          <PhoneInput className="mt-1" value={phone} onChange={setPhone} required />
         </div>
         <button
           type="submit"

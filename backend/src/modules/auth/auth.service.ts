@@ -79,6 +79,8 @@ export class AuthService {
     }
     await this.prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } })
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: payload.sub } })
+    // Baneado/eliminado: sin renovación de sesión.
+    if (user.disabledAt || user.deletedAt) throw new UnauthorizedException('User disabled')
     return this.issueTokens(user)
   }
 

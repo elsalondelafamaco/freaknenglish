@@ -72,6 +72,10 @@ model User {
   assignedTeacherId String?     @map("assigned_teacher_id")
   disabledAt      DateTime?     @map("disabled_at")
   deletedAt       DateTime?     @map("deleted_at")
+  // Admin pidió la encuesta NPS explícitamente (pending=true hasta responder).
+  npsRequestedAt  DateTime?     @map("nps_requested_at")
+  // Link de Meet/Zoom del estudiante, asignado por su profesor.
+  meetingUrl      String?       @map("meeting_url")
   lastLoginAt     DateTime?     @map("last_login_at")
   setPasswordToken String?      @map("set_password_token")
   setPasswordTokenExpiresAt DateTime? @map("set_password_token_expires_at")

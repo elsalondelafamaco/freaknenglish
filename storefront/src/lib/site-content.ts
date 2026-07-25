@@ -14,6 +14,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { settingsApi, type SiteContentOverrides, type SiteFaq } from "@/lib/api/endpoints";
 import heroStudent from "@/assets/hero-student.jpg";
+import teacherAvatar from "@/assets/avatar-teacher.jpg";
 import how1 from "@/assets/how-1-schedule.jpg";
 import how2 from "@/assets/how-2-classes.jpg";
 import how3 from "@/assets/how-3-confidence.jpg";
@@ -39,6 +40,11 @@ export const MEDIA_SLOTS = [
   { id: "testimonial-3-video", kind: "video", label: "Testimonio 3 · Video", where: "Play sobre la foto del testimonio 3." },
   { id: "testimonial-4-image", kind: "image", label: "Testimonio 4 · Foto (Mariana G.)", where: "Cuarta card del carrusel." },
   { id: "testimonial-4-video", kind: "video", label: "Testimonio 4 · Video", where: "Play sobre la foto del testimonio 4." },
+  { id: "avatar-teacher", kind: "image", label: "Hero · Avatar del teacher", where: "Carita circular en la tarjeta 'Teacher: Great job!' del hero." },
+  { id: "sphere-1", kind: "image", label: "Esferita 1 (estudiante)", where: "Primera bolita: barra '+2000 Estudiantes' y tarjeta 'Clase en Vivo' del hero. Sin imagen se ve una esfera de color." },
+  { id: "sphere-2", kind: "image", label: "Esferita 2 (estudiante)", where: "Segunda bolita de la barra de estudiantes y del hero." },
+  { id: "sphere-3", kind: "image", label: "Esferita 3 (estudiante)", where: "Tercera bolita de la barra de estudiantes y del hero." },
+  { id: "sphere-4", kind: "image", label: "Esferita 4 (estudiante)", where: "Cuarta bolita de la barra '+2000 Estudiantes'." },
 ] as const;
 
 export type MediaSlotId = (typeof MEDIA_SLOTS)[number]["id"];
@@ -53,6 +59,8 @@ const DEFAULT_MEDIA: Record<string, string> = {
   "testimonial-2-image": t2,
   "testimonial-3-image": t3,
   "testimonial-4-image": t4,
+  "avatar-teacher": teacherAvatar,
+  // sphere-1..4 sin default: sin imagen se pinta una esfera de color.
   // Los slots de video no tienen default: sin URL el botón play se oculta.
 };
 

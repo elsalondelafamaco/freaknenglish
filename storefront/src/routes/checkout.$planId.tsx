@@ -7,6 +7,7 @@ import { Logo } from "@/components/site/Logo";
 import { Field, inputClass, ErrorBox } from "@/components/site/AuthShell";
 import { ActivePlanScreen, useActivePlanGate } from "@/components/site/ActivePlanGate";
 import { LegalLinks } from "@/components/site/LegalLinks";
+import { PhoneInput, validatePhone } from "@/components/app/PhoneInput";
 import { checkoutApi, plansApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
@@ -97,6 +98,11 @@ function CheckoutPage() {
     setError(null);
     if (!form.fullName.trim() || !form.email.trim() || !form.document.trim() || !form.phone.trim()) {
       setError("Nombre, email, documento y celular son obligatorios.");
+      return;
+    }
+    const phoneError = validatePhone(form.phone);
+    if (phoneError) {
+      setError(phoneError);
       return;
     }
     if (!loggedIn) {
@@ -195,10 +201,10 @@ function CheckoutPage() {
                     onChange={(e) => setForm({ ...form, document: e.target.value })}
                     inputMode="numeric" required readOnly={lockField} disabled={lockField} />
                 </Field>
-                <Field label="Celular" htmlFor="phone" hint="Formato internacional (+57...).">
-                  <input id="phone" className={inputClass} value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    inputMode="tel" autoComplete="tel" required readOnly={lockField} disabled={lockField} />
+                <Field label="Celular" htmlFor="phone">
+                  <PhoneInput id="phone" value={form.phone}
+                    onChange={(phone) => setForm({ ...form, phone })}
+                    required disabled={lockField} />
                 </Field>
               </div>
               {!loggedIn ? (

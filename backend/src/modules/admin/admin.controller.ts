@@ -4,6 +4,7 @@ import type { Response } from 'express'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { RolesGuard } from '../../common/guards/roles.guard'
 import { Roles } from '../../common/decorators/roles.decorator'
+import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator'
 import { AdminService } from './admin.service'
 
 @ApiTags('admin')
@@ -73,8 +74,18 @@ export class AdminController {
    * NO tienen acceso a esta ruta — protegida por RolesGuard("admin")).
    */
   @Get('surveys')
-  surveys(@Query('filter') filter?: 'promoters' | 'detractors' | 'all') {
-    return this.svc.surveys(filter)
+  surveys(
+    @Query('filter') filter?: 'promoters' | 'detractors' | 'all',
+    @Query('month') month?: string,
+    @Query('orderBy') orderBy?: 'recent' | 'oldest' | 'score_desc' | 'score_asc',
+  ) {
+    return this.svc.surveys(filter, month || undefined, orderBy || undefined)
+  }
+
+  /** @endpoint POST /api/v1/admin/users/:id/nps/request  (pedir NPS ya) */
+  @Post('users/:id/nps/request')
+  requestNps(@Param('id') id: string) {
+    return this.svc.requestNps(id)
   }
 
   /**
@@ -284,6 +295,29 @@ export class AdminController {
   /** @endpoint PATCH /api/v1/admin/plans/:id */
   @Patch('plans/:id')
   updatePlan(@Param('id') id: string, @Body() body: any) { return this.svc.updatePlan(id, body) }
+
+  /** @endpoint GET /api/v1/admin/cleanup  (conteos de lo que se puede borrar) */
+  @Get('cleanup')
+  cleanupPreview() { return this.svc.cleanupPreview() }
+
+  /**
+   * @endpoint POST /api/v1/admin/cleanup  body: { targets: string[] }
+   * Reset de datos para pruebas. Nunca borra admins (ni al ejecutor).
+   */
+  @Post('cleanup')
+  cleanup(@CurrentUser() u: AuthUser, @Body() body: { targets: string[] }) {
+    return this.svc.cleanup(u.id, body?.targets ?? [])
+  }
+
+  /** @endpoint GET /api/v1/admin/carts  (carritos abandonados + registrados sin compra) */
+  @Get('carts')
+  abandonedCarts() { return this.svc.abandonedCarts() }
+
+  /** @endpoint POST /api/v1/admin/carts/remind  body: { intentId? , userId? } */
+  @Post('carts/remind')
+  sendCartReminder(@Body() body: { intentId?: string; userId?: string }) {
+    return this.svc.sendCartReminder(body)
+  }
 
   /** @endpoint GET /api/v1/admin/settings/site  (contenido editable de la home) */
   @Get('settings/site')

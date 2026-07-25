@@ -16,8 +16,15 @@ export const Route = createFileRoute("/_authenticated/teacher/calendar")({
 type PendingMove = { classId: string; startsAt: string; revert: () => void; label: string };
 type Selected = {
   id: string; startsAt: string; endsAt: string; status: string;
-  meetingUrl: string | null; student: { id: string; fullName: string; paymentActive: boolean };
+  meetingUrl: string | null;
+  student: { id: string; fullName: string; paymentActive: boolean; meetingUrl?: string | null };
 };
+
+/** ISO → valor para <input type="datetime-local"> en hora local. */
+function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
 
 const STATUS_COLOR: Record<string, string> = {
   scheduled: "#111827",
@@ -32,6 +39,8 @@ function TeacherCalendar() {
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
   const [selected, setSelected] = useState<Selected | null>(null);
+  // Mover a otra fecha/semana (one-off) sin depender del drag de la semana visible.
+  const [moveDraft, setMoveDraft] = useState<string | null>(null);
   const calRef = useRef<FullCalendar | null>(null);
 
   const cfgQ = useQuery({ queryKey: ["schedule", "config"], queryFn: () => scheduleApi.config() });
@@ -216,9 +225,14 @@ function TeacherCalendar() {
               </div>
             ) : null}
             <div className="mt-5 flex flex-wrap gap-2">
+              {selected.student.meetingUrl ? (
+                <a href={selected.student.meetingUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink-soft">
+                  Entrar <ExternalLink className="size-3.5" />
+                </a>
+              ) : null}
               {selected.meetingUrl ? (
-                <a href={selected.meetingUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink-soft">
-                  Abrir aula <ExternalLink className="size-3.5" />
+                <a href={selected.meetingUrl} className="inline-flex items-center gap-1.5 rounded-full border border-brand-line bg-white px-4 py-2 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40">
+                  Board
                 </a>
               ) : null}
               {["scheduled", "validated"].includes(selected.status) ? (
@@ -238,6 +252,37 @@ function TeacherCalendar() {
                 Ver estudiante
               </Link>
             </div>
+
+            {/* Mover a otra fecha (incluida OTRA SEMANA) — solo esta clase. */}
+            {["scheduled", "rescheduled"].includes(selected.status) ? (
+              <div className="mt-4 rounded-2xl border border-brand-line bg-brand-cream/30 p-3">
+                <div className="text-xs font-semibold text-brand-ink">
+                  Mover esta clase (una sola vez, puede ser a otra semana)
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <input
+                    type="datetime-local"
+                    value={moveDraft ?? toLocalInput(selected.startsAt)}
+                    onChange={(e) => setMoveDraft(e.target.value)}
+                    className="rounded-xl border border-brand-line bg-white px-3 py-2 text-xs focus:border-brand-ink focus:outline-none"
+                  />
+                  <button
+                    disabled={moveM.isPending || moveDraft === null}
+                    onClick={() => {
+                      moveM.mutate({ id: selected.id, startsAt: new Date(moveDraft!).toISOString(), scope: "once" });
+                      setSelected(null);
+                      setMoveDraft(null);
+                    }}
+                    className="rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-50"
+                  >
+                    Mover clase
+                  </button>
+                </div>
+                <p className="mt-1.5 text-[11px] text-brand-ink/55">
+                  El horario recurrente no cambia: la próxima semana la clase vuelve a su franja habitual.
+                </p>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

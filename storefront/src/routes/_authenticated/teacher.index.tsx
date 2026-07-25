@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Clock, Users, Video, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, LayoutGrid, Users, Video, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { classesApi, teachersApi } from "@/lib/api/endpoints";
@@ -90,9 +90,14 @@ function TeacherHome() {
                   <div className="text-sm text-brand-ink/65">{c.topic ?? "Sesión 1-on-1"}</div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  {c.student?.meetingUrl ? (
+                    <a href={c.student.meetingUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink-soft">
+                      <Video className="size-3.5" /> Entrar
+                    </a>
+                  ) : null}
                   {c.meetingUrl ? (
-                    <a href={c.meetingUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink-soft">
-                      <Video className="size-3.5" /> Abrir aula
+                    <a href={c.meetingUrl} className="inline-flex items-center gap-1.5 rounded-full border border-brand-line bg-white px-4 py-2 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40">
+                      <LayoutGrid className="size-3.5" /> Board
                     </a>
                   ) : null}
                   <button
@@ -130,7 +135,7 @@ function TeacherHome() {
             </div>
           ) : (
             upcoming.map((c: any) => (
-              <div key={c.id} className="rounded-2xl border border-brand-line bg-white p-4">
+              <div key={c.id} className="rounded-2xl border border-brand-line bg-white p-4 transition hover:shadow-soft">
                 <div className="text-xs uppercase tracking-wide text-brand-ink/55">
                   {new Date(c.startsAt).toLocaleDateString("es-CO", { weekday: "long", day: "2-digit", month: "short" })}{" "}
                   · {timeFmt.format(new Date(c.startsAt))}
@@ -139,6 +144,18 @@ function TeacherHome() {
                   {c.student?.fullName ?? `Estudiante #${String(c.studentId).slice(-6)}`}
                 </div>
                 <div className="text-sm text-brand-ink/65">{c.topic ?? "Sesión 1-on-1"}</div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {c.student?.meetingUrl ? (
+                    <a href={c.student.meetingUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-brand-ink-soft">
+                      <Video className="size-3" /> Entrar
+                    </a>
+                  ) : null}
+                  {c.meetingUrl ? (
+                    <a href={c.meetingUrl} className="inline-flex items-center gap-1.5 rounded-full border border-brand-line bg-white px-3 py-1.5 text-[11px] font-semibold text-brand-ink hover:bg-brand-cream/40">
+                      <LayoutGrid className="size-3" /> Board
+                    </a>
+                  ) : null}
+                </div>
               </div>
             ))
           )}

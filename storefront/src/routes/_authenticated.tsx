@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { AppShell } from "@/components/app/AppShell";
-import { BackendDownBanner, PlatformError } from "@/components/app/PlatformError";
+import { BackendDownBanner, BannedScreen, PlatformError } from "@/components/app/PlatformError";
 import { subscriptionsApi, surveysApi } from "@/lib/api/endpoints";
 import { useQuery } from "@tanstack/react-query";
 import { SatisfactionDialog } from "@/components/app/SatisfactionDialog";
@@ -44,6 +44,14 @@ function AuthenticatedLayout() {
   );
   const redirected = useRef(false);
   const [checked, setChecked] = useState(false);
+  // Cualquier request que devuelva 403 account_banned dispara este evento
+  // (ver lib/api/client.ts) y bloquea toda la UI.
+  const [banned, setBanned] = useState(false);
+  useEffect(() => {
+    const onBanned = () => setBanned(true);
+    window.addEventListener("freakn:banned", onBanned);
+    return () => window.removeEventListener("freakn:banned", onBanned);
+  }, []);
 
   // Estudiantes: consultamos su suscripción real para decidir gating.
   const isStudent = !!user?.roles.includes("student");
@@ -107,6 +115,17 @@ function AuthenticatedLayout() {
       setChecked(true);
     }
   }, [isAuthenticated, loading, navigate, user, pathname, mySub, backendDown]);
+
+  // Cuenta baneada: pantalla de bloqueo total, sin acceso a nada del portal.
+  if (banned) {
+    return (
+      <BannedScreen
+        onSignOut={() => {
+          window.location.href = "/login";
+        }}
+      />
+    );
+  }
 
   // El backend no respondió al restaurar la sesión: UI de error con acciones.
   if (!loading && backendDown && !isAuthenticated) {

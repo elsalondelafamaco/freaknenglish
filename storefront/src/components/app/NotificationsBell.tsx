@@ -13,6 +13,14 @@ const ICON_BY_TYPE: Record<InAppNotification["type"], string> = {
   learning: "📚",
 };
 
+const TYPE_LABEL: Record<string, string> = {
+  system: "Sistema",
+  payment: "Pagos",
+  class: "Clases",
+  teacher: "Asignaciones",
+  learning: "Aprendizaje",
+};
+
 function timeAgo(iso: string) {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
   if (diff < 60) return "ahora";
@@ -23,6 +31,7 @@ function timeAgo(iso: string) {
 
 export function NotificationsBell() {
   const [open, setOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<string>("");
   const qc = useQueryClient();
   const countQ = useQuery({
     queryKey: ["notifications", "count"],
@@ -31,9 +40,10 @@ export function NotificationsBell() {
   });
   const listQ = useQuery({
     queryKey: ["notifications", "list"],
-    queryFn: () => notificationsApi.list({ limit: 10 }),
+    queryFn: () => notificationsApi.list({ limit: 50 }),
     enabled: open,
   });
+  const filtered = typeFilter ? (listQ.data ?? []).filter((n) => n.type === typeFilter) : (listQ.data ?? []).slice(0, 15);
   const markRead = useMutation({
     mutationFn: (id: string) => notificationsApi.markRead(id),
     onSuccess: () => {
@@ -77,13 +87,30 @@ export function NotificationsBell() {
                 </button>
               ) : null}
             </div>
+            {/* Filtro por tipo (útil para el admin: ej. solo Asignaciones) */}
+            <div className="flex flex-wrap gap-1 px-2 pb-1">
+              {["", "teacher", "class", "payment", "system"].map((tp) => (
+                <button
+                  key={tp || "all"}
+                  onClick={() => setTypeFilter(tp)}
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-[11px] font-semibold transition",
+                    typeFilter === tp
+                      ? "bg-brand-ink text-white"
+                      : "bg-brand-cream/50 text-brand-ink/60 hover:bg-brand-cream",
+                  )}
+                >
+                  {tp ? TYPE_LABEL[tp] : "Todas"}
+                </button>
+              ))}
+            </div>
             <div className="max-h-80 overflow-y-auto">
               {listQ.isLoading ? (
                 <div className="p-4 text-center text-xs text-brand-ink/60">Cargando…</div>
-              ) : (listQ.data?.length ?? 0) === 0 ? (
+              ) : filtered.length === 0 ? (
                 <div className="p-6 text-center text-xs text-brand-ink/60">Sin notificaciones</div>
               ) : (
-                listQ.data!.map((n) => {
+                filtered.map((n) => {
                   const inner = (
                     <div
                       className={cn(

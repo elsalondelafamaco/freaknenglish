@@ -36,6 +36,7 @@ export function mapUser(u: any): User {
     avatarUrl: u.avatarUrl ?? undefined,
     phone: u.phone ?? undefined,
     documentNumber: u.documentNumber ?? undefined,
+    meetingUrl: u.meetingUrl ?? undefined,
     roles: [u.role] as AppRole[],
     level: (u.englishLevel ?? undefined) as EnglishLevel | undefined,
     onboardedAt: u.emailVerifiedAt ?? undefined,

@@ -240,6 +240,95 @@ html {
 }
 
 
+/* ─── FullCalendar con la identidad del sitio (.freakn-calendar) ────────── */
+.freakn-calendar {
+  --fc-border-color: var(--brand-line, #ece9df);
+  --fc-page-bg-color: transparent;
+  --fc-today-bg-color: rgb(254 246 199 / 0.35); /* brand-yellow suave */
+  --fc-now-indicator-color: #dc2626;
+  font-family: inherit;
+}
+.freakn-calendar .fc {
+  font-size: 13px;
+}
+/* Toolbar: título y botones estilo pill del sitio */
+.freakn-calendar .fc-toolbar-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--brand-ink, #0a0a0a);
+  text-transform: capitalize;
+}
+.freakn-calendar .fc-button {
+  background: #fff !important;
+  border: 1px solid var(--brand-line, #ece9df) !important;
+  color: var(--brand-ink, #0a0a0a) !important;
+  border-radius: 9999px !important;
+  padding: 6px 14px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.freakn-calendar .fc-button:hover {
+  background: var(--brand-cream, #faf6ea) !important;
+  transform: translateY(-1px);
+}
+.freakn-calendar .fc-button:disabled {
+  opacity: 0.4 !important;
+}
+.freakn-calendar .fc-button-primary:not(:disabled).fc-button-active,
+.freakn-calendar .fc-today-button {
+  background: var(--brand-ink, #0a0a0a) !important;
+  color: #fff !important;
+  border-color: var(--brand-ink, #0a0a0a) !important;
+}
+.freakn-calendar .fc-button-group {
+  gap: 6px;
+}
+/* Cabeceras de día */
+.freakn-calendar .fc-col-header-cell {
+  background: var(--brand-cream, #faf6ea);
+  border: none;
+}
+.freakn-calendar .fc-col-header-cell-cushion {
+  padding: 10px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgb(10 10 10 / 0.6);
+}
+/* Horas laterales */
+.freakn-calendar .fc-timegrid-slot-label-cushion {
+  font-size: 11px;
+  color: rgb(10 10 10 / 0.45);
+}
+.freakn-calendar .fc-timegrid-slot {
+  height: 2.6rem;
+}
+/* Eventos: pills redondeadas con sombra suave */
+.freakn-calendar .fc-event {
+  border-radius: 10px;
+  border-width: 0 0 0 3px;
+  padding: 1px 2px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.freakn-calendar .fc-event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgb(0 0 0 / 0.18);
+}
+.freakn-calendar .fc-timegrid-event-harness {
+  margin: 1px 2px;
+}
+/* Sin scroll feo interno; bordes exteriores limpios */
+.freakn-calendar .fc-scrollgrid {
+  border-radius: 16px;
+  overflow: hidden;
+  border-color: var(--brand-line, #ece9df);
+}
+
 /* Impresión del board: solo el contenido del editor (SDD board fix #5). */
 @media print {
   body * { visibility: hidden !important; }

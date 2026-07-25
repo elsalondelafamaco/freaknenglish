@@ -108,8 +108,34 @@ export const templates = {
   class_cancelled: (v: { reason?: string }) =>
     wrap('Tu clase fue cancelada', `<p>${v.reason ? `Motivo: ${v.reason}` : 'La clase fue cancelada.'}</p>${cta(`${env.PUBLIC_SITE_URL}/app/calendar`, 'Reagendar')}`),
 
-  teacher_assigned: (v: { teacherName: string }) =>
-    wrap('Tienes un nuevo profesor', `<p>Fuiste asignado con <b>${v.teacherName}</b>. Ya puedes ver tus clases.</p>${cta(`${env.PUBLIC_SITE_URL}/app`, 'Ver mi horario')}`),
+  teacher_assigned: (v: { teacherName: string; schedule?: string }) =>
+    wrap(
+      '¡Ya tienes profe! 🎉',
+      `<p>Te presentamos a <b>${v.teacherName}</b>, tu nuevo teacher 1 a 1. A partir de ahora estará contigo en cada clase, enfocado 100% en que hables inglés con confianza.</p>
+       ${v.schedule ? `<p>Tu horario de clases: <b>${v.schedule}</b>.</p>` : ''}
+       <p>Ya puedes ver tus próximas clases en tu calendario. ¡Nos vemos en clase!</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/app/calendar`, 'Ver mis clases')}`,
+      { preheader: `Tu teacher es ${v.teacherName} — revisa tu calendario` },
+    ),
+
+  student_assigned: (v: { studentName: string; schedule?: string }) =>
+    wrap(
+      'Tienes un nuevo estudiante 🎓',
+      `<p><b>${v.studentName}</b> acaba de ser asignado contigo.</p>
+       ${v.schedule ? `<p>Su horario semanal: <b>${v.schedule}</b>.</p>` : ''}
+       <p>Revisa su perfil y prepara su primera clase — la primera impresión hace la diferencia.</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/teacher/students`, 'Ver mi estudiante')}`,
+      { preheader: `${v.studentName} fue asignado contigo` },
+    ),
+
+  student_unassigned: (v: { studentName: string }) =>
+    wrap(
+      'Baja de estudiante',
+      `<p><b>${v.studentName}</b> ya no está asignado contigo. Sus franjas quedaron liberadas en tu agenda.</p>
+       <p>Si tienes dudas sobre este cambio, escríbele al equipo admin.</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/teacher/schedule`, 'Ver mi agenda')}`,
+      { preheader: `${v.studentName} salió de tu agenda` },
+    ),
 
   abandoned_cart: (v: { planName: string; fullName?: string }) =>
     wrap(
@@ -119,6 +145,49 @@ export const templates = {
        ${cta(`${env.PUBLIC_SITE_URL}/checkout`, 'Retomar mi inscripción')}
        <p style="font-size:13px;color:#888;margin-top:16px">¿Tuviste un problema con el pago o una duda del plan? Responde este correo y te ayudamos al instante.</p>`,
       { preheader: 'Quedaste a un paso — tu horario aún está libre' },
+    ),
+
+  class_reported: (v: { studentName: string; teacherName: string; when: string; note: string }) =>
+    wrap(
+      '⚠️ Un estudiante reportó una clase',
+      `<p><b>${v.studentName}</b> reportó un problema con su clase del <b>${v.when}</b> (profe: ${v.teacherName}).</p>
+       <blockquote style="margin:12px 0;padding:10px 14px;background:#FEF6C7;border-radius:10px;font-style:italic">${v.note}</blockquote>
+       <p>Revísalo y contáctalo lo antes posible.</p>`,
+      { preheader: `${v.studentName}: "${v.note.slice(0, 60)}"` },
+    ),
+
+  class_no_show: (v: { fullName?: string; nextClass?: string }) =>
+    wrap(
+      'Te extrañamos en tu clase 💛',
+      `<p>${v.fullName ? `Hola ${v.fullName}, tu` : 'Tu'} profe te esperó con la clase lista, pero esta vez no pudiste conectarte — ¡tranqui, a cualquiera le pasa!</p>
+       <p>Cada clase es un paso más cerca de hablar inglés con confianza, y tu progreso se construye con constancia. ${v.nextClass ? `Tu próxima clase es el <b>${v.nextClass}</b> — ` : ''}te esperamos con toda la energía. 💪</p>
+       <p>Si tuviste un inconveniente con el horario, escríbenos y lo resolvemos juntos.</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/app/calendar`, 'Ver mi próxima clase')}`,
+      { preheader: 'Tu profe te esperó — nos vemos en la próxima' },
+    ),
+
+  payroll_paid: (v: { fullName?: string; period: string; classes: number; rateCop: number; amountCop: number }) =>
+    wrap(
+      `Tu pago de ${v.period} fue aprobado 🎉`,
+      `<p>${v.fullName ? `Hola ${v.fullName}, tu` : 'Tu'} pago de nómina del período <b>${v.period}</b> fue aprobado. Este es el detalle:</p>
+       <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">
+         <tr><td style="padding:8px 0;border-bottom:1px solid #eee">Clases dictadas</td><td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right"><b>${v.classes}</b></td></tr>
+         <tr><td style="padding:8px 0;border-bottom:1px solid #eee">Tarifa por clase</td><td style="padding:8px 0;border-bottom:1px solid #eee;text-align:right">$ ${Number(v.rateCop).toLocaleString('es-CO')} COP</td></tr>
+         <tr><td style="padding:8px 0">Total</td><td style="padding:8px 0;text-align:right;font-size:16px"><b>$ ${Number(v.amountCop).toLocaleString('es-CO')} COP</b></td></tr>
+       </table>
+       <p>Gracias por tu dedicación con cada estudiante. 💛</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/teacher`, 'Ir a mi portal')}`,
+      { preheader: `Pago aprobado: ${v.classes} clases · $ ${Number(v.amountCop).toLocaleString('es-CO')} COP` },
+    ),
+
+  signup_nudge: (v: { fullName?: string }) =>
+    wrap(
+      'Tu inglés te está esperando 💛',
+      `<p>${v.fullName ? `Hola ${v.fullName}, tu` : 'Tu'} cuenta en FreaknEnglish ya está lista — solo falta elegir tu plan para empezar a hablar inglés con tu profe 1 a 1.</p>
+       <p>Los horarios con inicio inmediato vuelan: elige tu plan hoy y arranca esta misma semana.</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/checkout`, 'Elegir mi plan')}
+       <p style="font-size:13px;color:#888;margin-top:16px">¿Dudas sobre qué plan te conviene? Responde este correo y te asesoramos.</p>`,
+      { preheader: 'Elige tu plan y arranca esta semana' },
     ),
 
   nps_monthly: () =>

@@ -1,5 +1,4 @@
 import { Bookmark, Mic, TrendingUp, Video } from "lucide-react";
-import teacherAvatar from "@/assets/avatar-teacher.jpg";
 import { useSiteContent } from "@/lib/site-content";
 import { DarkPillLink } from "./DarkPillButton";
 
@@ -36,13 +35,15 @@ export function Hero() {
 
         {/* Hero composite */}
         <div className="relative mx-auto w-full max-w-[560px]">
-          <div className="relative overflow-hidden rounded-[28px] shadow-soft">
+          {/* aspect fijo: cualquier imagen que suba el admin queda cover sin
+              desproporcionar el layout */}
+          <div className="relative aspect-square overflow-hidden rounded-[28px] shadow-soft">
             <img
               src={media["hero-image"]}
               alt="Estudiante en clase de inglés en vivo"
               width={1280}
               height={1280}
-              className="h-full w-full object-cover"
+              className="absolute inset-0 h-full w-full object-cover"
             />
           </div>
 
@@ -79,7 +80,11 @@ export function Hero() {
             </div>
             <div className="text-[10px] text-brand-ink/60">8:00 PM – 9:00 PM</div>
             <div className="mt-2 flex -space-x-1.5">
-              {[teacherAvatar, teacherAvatar, teacherAvatar].map((src, i) => (
+              {[
+                media["sphere-1"] ?? media["avatar-teacher"],
+                media["sphere-2"] ?? media["avatar-teacher"],
+                media["sphere-3"] ?? media["avatar-teacher"],
+              ].map((src, i) => (
                 <img
                   key={i}
                   src={src}
@@ -108,7 +113,7 @@ export function Hero() {
           <div className="absolute -bottom-2 left-2 sm:left-6 w-[210px] rounded-2xl bg-white p-3 shadow-soft">
             <div className="flex items-start gap-2">
               <img
-                src={teacherAvatar}
+                src={media["avatar-teacher"]}
                 alt="Teacher"
                 className="size-7 rounded-full object-cover"
               />
@@ -151,18 +156,29 @@ export function Hero() {
 }
 
 function SocialProofBar() {
+  const { media } = useSiteContent();
+  const spheres = ["sphere-1", "sphere-2", "sphere-3", "sphere-4"].map((k) => media[k]);
   return (
     <div className="mx-auto max-w-6xl px-5 pb-12 lg:px-8 lg:pb-16">
       <div className="rounded-2xl bg-white/60 backdrop-blur-sm border border-white p-5 shadow-soft lg:p-6">
         <div className="grid gap-5 sm:grid-cols-3 sm:divide-x sm:divide-brand-line">
           <div className="flex items-center gap-3 sm:px-2">
             <div className="flex -space-x-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <span
-                  key={i}
-                  className="size-8 rounded-full border-2 border-white bg-gradient-to-br from-amber-200 to-amber-400"
-                />
-              ))}
+              {spheres.map((src, i) =>
+                src ? (
+                  <img
+                    key={i}
+                    src={src}
+                    alt=""
+                    className="size-8 rounded-full border-2 border-white object-cover"
+                  />
+                ) : (
+                  <span
+                    key={i}
+                    className="size-8 rounded-full border-2 border-white bg-gradient-to-br from-amber-200 to-amber-400"
+                  />
+                ),
+              )}
             </div>
             <div>
               <div className="flex items-center gap-1 text-amber-500">

@@ -10,14 +10,18 @@ import {
   Menu,
   Settings,
   ShieldCheck,
+  ShoppingCart,
+  Trash2,
   Tag,
   Smile,
   Sparkles,
   Users,
   X,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Logo } from "@/components/site/Logo";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { scheduleApi, subscriptionsApi } from "@/lib/api/endpoints";
 import { cn } from "@/lib/utils";
 import { ImpersonationBanner } from "@/components/app/ImpersonationBanner";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
@@ -47,11 +51,14 @@ const ADMIN_NAV = [
   { to: "/admin/calendar", label: "Calendario", tKey: "nav.calendar", icon: CalendarDays, end: false },
   { to: "/admin/schedule", label: "Solicitudes", tKey: "nav.requests", icon: Mail, end: false },
   { to: "/admin/users", label: "Usuarios", tKey: "nav.users", icon: Users, end: false },
+  { to: "/admin/carts", label: "Carritos", tKey: "nav.carts", icon: ShoppingCart, end: false },
   { to: "/admin/content", label: "Contenido", tKey: "nav.content", icon: Sparkles, end: false },
   { to: "/admin/payroll", label: "Nómina", tKey: "nav.payroll", icon: ShieldCheck, end: false },
   { to: "/admin/plans", label: "Planes", tKey: "nav.plans", icon: Tag, end: false },
   { to: "/boards", label: "Boards", tKey: "nav.boards", icon: LayoutGrid, end: false },
   { to: "/admin/surveys", label: "Encuestas", tKey: "nav.surveys", icon: Smile, end: false },
+  { to: "/admin/notifications", label: "Notificaciones", tKey: "nav.notifications", icon: Mail, end: false },
+  { to: "/admin/cleanup", label: "Cleanup", tKey: "nav.cleanup", icon: Trash2, end: false },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -75,11 +82,36 @@ export function AppShell({ children }: { children: ReactNode }) {
     void router.invalidate();
   }
 
+  // Estudiante sin suscripción activa: no tiene acceso a la plataforma, así
+  // que el sidebar solo muestra Inicio (estado/planes) y Configuración.
+  // Comparte queryKey con _authenticated.tsx (misma cache, cero requests extra).
+  const isStudent = !!user?.roles.includes("student");
+  const { data: mySub } = useQuery({
+    queryKey: ["me", "subscription"],
+    queryFn: () => subscriptionsApi.mine(),
+    enabled: isStudent,
+    staleTime: 0,
+  });
+  const studentHasAccess = !!mySub && (mySub as any).status === "active";
+
+  // Admin: cantidad de solicitudes pendientes (badge rojo en "Solicitudes").
+  const isAdmin = !!user?.roles.includes("admin");
+  const { data: pendingRequests } = useQuery({
+    queryKey: ["admin", "schedule-requests"],
+    queryFn: () => scheduleApi.adminPending(),
+    enabled: isAdmin,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const requestsCount = isAdmin ? (pendingRequests?.length ?? 0) : 0;
+
   const NAV = user?.roles.includes("admin")
     ? ADMIN_NAV
     : user?.roles.includes("teacher")
       ? TEACHER_NAV
-      : STUDENT_NAV;
+      : studentHasAccess
+        ? STUDENT_NAV
+        : STUDENT_NAV.filter((i) => i.to === "/app" || i.to === "/app/settings");
 
   return (
     <div className="min-h-screen bg-brand-surface">
@@ -97,7 +129,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             const active = item.end
               ? pathname === item.to
               : pathname === item.to || pathname.startsWith(item.to + "/");
-            return <NavItem key={item.to} {...item} label={t((item as any).tKey, item.label)} active={active} />;
+            return (
+              <NavItem
+                key={item.to}
+                {...item}
+                label={t((item as any).tKey, item.label)}
+                active={active}
+                badge={item.to === "/admin/schedule" ? requestsCount : 0}
+              />
+            );
           })}
         </nav>
         <div className="mt-auto rounded-2xl bg-brand-cream/60 p-4">
@@ -155,6 +195,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   {...item}
                   label={t((item as any).tKey, item.label)}
                   active={active}
+                  badge={item.to === "/admin/schedule" ? requestsCount : 0}
                   onClick={() => setOpen(false)}
                 />
               );
@@ -170,7 +211,18 @@ export function AppShell({ children }: { children: ReactNode }) {
       ) : null}
 
       <main className="lg:pl-64">
-        <div className="mx-auto max-w-6xl px-5 py-8 lg:py-12">{children}</div>
+        {/* Board y aprendizaje usan todo el ancho (se sienten estrechos con
+            max-w-6xl); el resto conserva el contenedor centrado. */}
+        <div
+          className={cn(
+            "mx-auto py-6 lg:py-10",
+            pathname.startsWith("/boards") || pathname.startsWith("/app/learning")
+              ? "max-w-none px-2 sm:px-4 lg:px-6"
+              : "max-w-6xl px-4 sm:px-5",
+          )}
+        >
+          {children}
+        </div>
       </main>
     </div>
   );
@@ -183,12 +235,14 @@ function NavItem({
   label,
   icon: Icon,
   active,
+  badge = 0,
   onClick,
 }: {
   to: string;
   label: string;
   icon: Icon;
   active: boolean;
+  badge?: number;
   onClick?: () => void;
 }) {
   return (
@@ -204,6 +258,11 @@ function NavItem({
     >
       <Icon className="size-4" />
       {label}
+      {badge > 0 ? (
+        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      ) : null}
     </Link>
   );
 }

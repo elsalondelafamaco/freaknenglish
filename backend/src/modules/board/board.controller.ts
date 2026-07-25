@@ -1,12 +1,13 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
+import { ActiveSubscriptionGuard } from '../../common/guards/active-subscription.guard'
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator'
 import { BoardService } from './board.service'
 
 @ApiTags('boards')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ActiveSubscriptionGuard)
 @Controller('boards')
 export class BoardController {
   constructor(private svc: BoardService) {}

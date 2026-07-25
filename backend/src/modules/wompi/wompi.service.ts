@@ -41,9 +41,26 @@ export class WompiService {
    */
   verifyAndParse(rawBody: string, headerEventId?: string): WompiEvent {
     if (!env.WOMPI_EVENTS_SECRET) {
+      this.log.error('[webhook] WOMPI_EVENTS_SECRET no configurado — rechazando evento')
       throw new BadRequestException('Wompi events secret not configured')
     }
-    const payload = JSON.parse(rawBody) as WompiEvent
+    let payload: WompiEvent
+    try {
+      payload = JSON.parse(rawBody) as WompiEvent
+    } catch (e) {
+      this.log.error(`[webhook] body no es JSON válido (len=${rawBody?.length}): ${rawBody?.slice(0, 300)}`)
+      throw new BadRequestException('Invalid JSON body')
+    }
+    const tx = payload?.data?.transaction
+    this.log.log(
+      `[webhook] evento recibido: event=${payload?.event} eventId=${headerEventId ?? '-'} ` +
+        `env=${(payload as any)?.environment ?? '-'} txId=${tx?.id} ref=${tx?.reference} ` +
+        `status=${tx?.status} amount=${tx?.amount_in_cents} props=${JSON.stringify(payload?.signature?.properties)}`,
+    )
+    if (!payload?.signature?.checksum || !Array.isArray(payload?.signature?.properties)) {
+      this.log.error('[webhook] payload sin signature.checksum/properties — rechazado')
+      throw new BadRequestException('Missing signature')
+    }
     const concat = payload.signature.properties
       .map((p) => p.split('.').reduce<any>((acc, k) => acc?.[k], payload.data))
       .join('')
@@ -51,10 +68,17 @@ export class WompiService {
       .createHash('sha256')
       .update(`${concat}${payload.timestamp}${env.WOMPI_EVENTS_SECRET}`)
       .digest('hex')
-    if (expected !== payload.signature.checksum) {
+    // Wompi envía el checksum en mayúsculas; comparamos sin case para no
+    // rechazar firmas válidas (era la causa de webhooks 400 en prod).
+    if (expected.toLowerCase() !== payload.signature.checksum.toLowerCase()) {
+      this.log.error(
+        `[webhook] FIRMA INVÁLIDA txId=${tx?.id} ref=${tx?.reference}: ` +
+          `esperado=${expected} recibido=${payload.signature.checksum} ` +
+          `concat="${concat}" timestamp=${payload.timestamp} secretLen=${env.WOMPI_EVENTS_SECRET.length}`,
+      )
       throw new BadRequestException('Invalid Wompi signature')
     }
-    void headerEventId
+    this.log.log(`[webhook] firma OK txId=${tx?.id} ref=${tx?.reference} status=${tx?.status}`)
     return payload
   }
 
@@ -116,11 +140,16 @@ export class WompiService {
     eventName = 'transaction.updated',
     rawEvent?: unknown,
   ) {
+    this.log.log(`[finalize] txId=${tx.id} ref=${tx.reference} status=${tx.status} via=${eventName}`)
     const intent = await this.prisma.paymentIntent.findUnique({ where: { reference: tx.reference } })
     if (!intent) {
-      this.log.warn(`No intent for reference ${tx.reference}`)
+      this.log.warn(`[finalize] SIN paymentIntent para ref=${tx.reference} txId=${tx.id} — evento ignorado`)
       return { ok: true, ignored: true, status: tx.status }
     }
+    this.log.log(
+      `[finalize] intent=${intent.id} plan=${intent.planId} user=${intent.userId ?? 'GUEST'} ` +
+        `email=${intent.customerEmail} estadoPrevio=${intent.status}`,
+    )
 
     // Gana quien logre crear el paymentEvent (unique). El resto sale como duplicado.
     try {
@@ -134,6 +163,7 @@ export class WompiService {
         },
       })
     } catch {
+      this.log.log(`[finalize] duplicado txId=${tx.id}:${tx.status} — ya procesado, no-op`)
       return { ok: true, duplicate: true, status: tx.status }
     }
 
@@ -147,7 +177,10 @@ export class WompiService {
     })
 
     if (['DECLINED', 'VOIDED', 'ERROR'].includes(tx.status)) {
-      await this.slots.releasePendingForIntent(intent.id).catch(() => null)
+      this.log.warn(`[finalize] pago ${tx.status} intent=${intent.id} — liberando slots reservados`)
+      await this.slots.releasePendingForIntent(intent.id).catch((e) =>
+        this.log.error(`[finalize] releasePendingForIntent falló: ${(e as Error).message}`),
+      )
     }
 
     if (tx.status === 'APPROVED') {
@@ -179,7 +212,9 @@ export class WompiService {
         }
         userId = user.id
         await this.prisma.paymentIntent.update({ where: { id: intent.id }, data: { userId } })
+        this.log.log(`[finalize] usuario invitado/creado para checkout guest: user=${userId} email=${email}`)
       }
+      this.log.log(`[finalize] APROBADO — activando plan=${intent.planId} para user=${userId}`)
       await this.subs.activateForUser(userId, intent.planId)
       // Materializa el horario comprado: reserva→active / renovación / fallback / manual.
       try {

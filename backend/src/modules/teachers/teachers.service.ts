@@ -112,7 +112,7 @@ export class TeachersService {
     return this.prisma.class.findMany({
       where,
       orderBy: { startsAt: status === 'past' ? 'desc' : 'asc' },
-      include: { student: { select: { id: true, fullName: true, englishLevel: true } } },
+      include: { student: { select: { id: true, fullName: true, englishLevel: true, meetingUrl: true } } },
       take: 200,
     })
   }
@@ -232,6 +232,32 @@ export class TeachersService {
     return { ok: true }
   }
 
+  /**
+   * Link de Meet/Zoom del estudiante (lo fija su profesor). El estudiante lo
+   * usa en "Entrar a clase" y el profe lo ve en sus próximas clases.
+   */
+  async setStudentMeetingUrl(teacherId: string, studentId: string, url: string | null, isAdmin = false) {
+    if (!isAdmin) {
+      const rel = await this.prisma.user.findFirst({
+        where: {
+          id: studentId,
+          OR: [{ assignedTeacherId: teacherId }, { classesAsStudent: { some: { teacherId } } }],
+        },
+        select: { id: true },
+      })
+      if (!rel) throw new ForbiddenException('No autorizado sobre este estudiante')
+    }
+    const clean = (url ?? '').trim()
+    if (clean && !/^https:\/\/.+/i.test(clean)) {
+      throw new BadRequestException('El link debe empezar con https:// (Meet, Zoom, etc.)')
+    }
+    return this.prisma.user.update({
+      where: { id: studentId },
+      data: { meetingUrl: clean || null },
+      select: { id: true, meetingUrl: true },
+    })
+  }
+
   // ─── Calendario del profesor (SDD-scheduling-v2 §8) ──────────────────
   private static readonly BOG_MS = 5 * 60 * 60 * 1000
 
@@ -245,7 +271,7 @@ export class TeachersService {
       this.prisma.class.findMany({
         where: { teacherId, startsAt: { gte: from, lt: to } },
         include: {
-          student: { select: { id: true, fullName: true, subscription: { select: { status: true } } } },
+          student: { select: { id: true, fullName: true, meetingUrl: true, subscription: { select: { status: true } } } },
         },
         orderBy: { startsAt: 'asc' },
       }),
@@ -260,10 +286,13 @@ export class TeachersService {
         endsAt: c.endsAt,
         status: c.status,
         autoValidated: c.autoValidated,
+        // meetingUrl de la clase = ruta del board (aula); el link externo de
+        // Meet/Zoom vive en student.meetingUrl.
         meetingUrl: c.meetingUrl,
         student: {
           id: c.student.id,
           fullName: c.student.fullName,
+          meetingUrl: c.student.meetingUrl,
           paymentActive: c.student.subscription?.status === 'active',
         },
       })),

@@ -1,4 +1,5 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { Prisma } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { InjectQueue } from '@nestjs/bullmq'
 import { Queue } from 'bullmq'
@@ -277,9 +278,12 @@ export class AdminService {
       })
   }
 
-  // ─── Payroll (config + cálculo por horas) ─────────────────────────────
+  // ─── Payroll (config + cálculo POR CLASE) ─────────────────────────────
+  // La tarifa es por CLASE completa: una clase de 50 min paga la tarifa
+  // entera, sin prorratear por minutos. (Se mantiene la clave histórica
+  // `payroll.hourlyRateCop` en app_settings para no migrar datos.)
 
-  private async getHourlyRateCop(): Promise<number> {
+  private async getClassRateCop(): Promise<number> {
     const row = await this.prisma.appSetting.findUnique({ where: { key: 'payroll.hourlyRateCop' } as any }).catch(() => null as any)
     const stored = row?.value as any
     const fromDb = typeof stored === 'number' ? stored : Number(stored?.value ?? NaN)
@@ -287,11 +291,11 @@ export class AdminService {
   }
 
   async getPayrollSettings() {
-    return { hourlyRateCop: await this.getHourlyRateCop() }
+    return { hourlyRateCop: await this.getClassRateCop() }
   }
 
   async setPayrollSettings(hourlyRateCop: number) {
-    if (!Number.isFinite(hourlyRateCop) || hourlyRateCop <= 0) throw new Error('Invalid hourly rate')
+    if (!Number.isFinite(hourlyRateCop) || hourlyRateCop <= 0) throw new Error('Invalid class rate')
     await this.prisma.appSetting.upsert({
       where: { key: 'payroll.hourlyRateCop' },
       update: { value: hourlyRateCop as any },
@@ -305,10 +309,19 @@ export class AdminService {
     const start = new Date(year, month - 1, 1)
     const end = new Date(year, month, 1)
     const classes = await this.prisma.class.findMany({
-      where: { status: 'validated', validatedAt: { gte: start, lt: end }, teacherId: { not: null } },
+      // validated (tomadas) + no_show (ausencia del estudiante: el profe
+      // estuvo presente, se paga igual). Las no_show se ubican por endsAt.
+      where: {
+        teacherId: { not: null },
+        OR: [
+          { status: 'validated', validatedAt: { gte: start, lt: end } },
+          { status: 'no_show', endsAt: { gte: start, lt: end } },
+        ],
+      },
       select: { teacherId: true, startsAt: true, endsAt: true },
     })
-    // Acumulamos minutos por profesor (las clases validadas se pagan por hora real).
+    // Tarifa POR CLASE: cada clase validada paga la tarifa completa aunque
+    // dure 50 min. Minutos/horas se reportan solo como dato informativo.
     const minutes = new Map<string, number>()
     const counts = new Map<string, number>()
     for (const c of classes) {
@@ -322,18 +335,18 @@ export class AdminService {
     }
     const teacherIds = Array.from(minutes.keys())
     const teachers = await this.prisma.user.findMany({ where: { id: { in: teacherIds } } })
-    const hourlyRate = await this.getHourlyRateCop()
+    const classRate = await this.getClassRateCop()
     return teachers.map((t) => {
       const mins = minutes.get(t.id) ?? 0
-      const hours = mins / 60
+      const count = counts.get(t.id) ?? 0
       return {
         teacherId: t.id,
         fullName: t.fullName,
-        classes: counts.get(t.id) ?? 0,
+        classes: count,
         minutes: mins,
-        hours: Number(hours.toFixed(2)),
-        hourlyRateCop: hourlyRate,
-        amountCop: Math.round(hours * hourlyRate),
+        hours: Number((mins / 60).toFixed(2)),
+        hourlyRateCop: classRate,
+        amountCop: count * classRate,
       }
     })
   }
@@ -402,11 +415,36 @@ export class AdminService {
     if (!run) throw new NotFoundException('Payroll run not found')
     if (run.status === 'paid') return run
     const payout = await this.dispersePayrollRun(run)
-    return this.prisma.payrollRun.update({
+    const updated = await this.prisma.payrollRun.update({
       where: { id },
       data: { status: 'paid', paidAt: new Date() },
     })
-      .then((updated) => ({ ...updated, dispersed: payout.dispersed, reference: payout.reference }))
+    // Comprobante al profesor con el detalle del pago y sus clases.
+    const teacher = await this.prisma.user.findUnique({
+      where: { id: run.teacherId },
+      select: { id: true, email: true, fullName: true },
+    })
+    if (teacher) {
+      await this.notificationsSvc.enqueue({
+        userId: teacher.id,
+        toEmail: teacher.email,
+        template: 'payroll_paid',
+        subject: `Tu pago de ${run.period} fue aprobado 🎉`,
+        dedupeKey: `payroll-paid:${run.id}`,
+        vars: {
+          fullName: teacher.fullName?.split(' ')[0],
+          period: run.period,
+          classes: run.classes,
+          rateCop: run.rateCop,
+          amountCop: run.amountCop,
+        },
+        type: 'payment',
+        title: 'Pago de nómina aprobado',
+        body: `Tu pago del período ${run.period} (${run.classes} clases) fue aprobado.`,
+        linkUrl: '/teacher',
+      }).catch((e) => this.log.error(`payroll_paid email failed: ${(e as Error).message}`))
+    }
+    return { ...updated, dispersed: payout.dispersed, reference: payout.reference }
   }
 
   /**
@@ -445,16 +483,30 @@ export class AdminService {
     return { ok: true, enqueued: ['tick-5m', 'tick-daily'] }
   }
 
-  async surveys(filter?: 'promoters' | 'detractors' | 'all') {
-    const where =
-      filter === 'promoters'
-        ? { score: { gte: 9 } }
-        : filter === 'detractors'
-          ? { score: { lte: 6 } }
-          : {}
+  /**
+   * Encuestas NPS con filtros: promotores/detractores, mes (period YYYY-MM,
+   * para conocer el NPS de un mes puntual) y ordenamiento.
+   */
+  async surveys(
+    filter?: 'promoters' | 'detractors' | 'all',
+    month?: string,
+    orderBy?: 'recent' | 'oldest' | 'score_desc' | 'score_asc',
+  ) {
+    const where: Prisma.SatisfactionSurveyWhereInput = {
+      ...(filter === 'promoters' ? { score: { gte: 9 } } : filter === 'detractors' ? { score: { lte: 6 } } : {}),
+      ...(month ? { period: month } : {}),
+    }
+    const order: Prisma.SatisfactionSurveyOrderByWithRelationInput =
+      orderBy === 'score_desc'
+        ? { score: 'desc' }
+        : orderBy === 'score_asc'
+          ? { score: 'asc' }
+          : orderBy === 'oldest'
+            ? { createdAt: 'asc' }
+            : { createdAt: 'desc' }
     const rows = await this.prisma.satisfactionSurvey.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: order,
       take: 500,
       include: {
         user: {
@@ -465,7 +517,35 @@ export class AdminService {
     const promoters = rows.filter((r) => r.score >= 9).length
     const detractors = rows.filter((r) => r.score <= 6).length
     const nps = rows.length ? Math.round(((promoters - detractors) / rows.length) * 100) : null
-    return { rows, totals: { count: rows.length, promoters, detractors, nps } }
+    // Meses disponibles para el dropdown del filtro.
+    const periods = await this.prisma.satisfactionSurvey.groupBy({ by: ['period'], _count: true })
+    return {
+      rows,
+      totals: { count: rows.length, promoters, detractors, nps },
+      periods: periods.map((p) => p.period).sort().reverse(),
+    }
+  }
+
+  /**
+   * Pide la encuesta NPS YA a un estudiante: el flag hace que `pending`
+   * devuelva true de inmediato y además se le envía el correo.
+   */
+  async requestNps(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } })
+    if (!user) throw new NotFoundException('User not found')
+    await this.prisma.user.update({ where: { id: userId }, data: { npsRequestedAt: new Date() } })
+    await this.notificationsSvc.enqueue({
+      userId,
+      toEmail: user.email,
+      template: 'nps_monthly',
+      subject: '¿Cómo vamos?',
+      dedupeKey: `nps-request:${userId}:${new Date().toISOString().slice(0, 10)}`,
+      type: 'system',
+      title: 'Cuéntanos cómo vamos',
+      body: 'Tu opinión nos ayuda a mejorar tus clases.',
+      linkUrl: '/app',
+    })
+    return { ok: true }
   }
 
   /**
@@ -683,7 +763,10 @@ export class AdminService {
           : Promise.resolve([] as any[]),
         isStudent
           ? this.prisma.classNote.findMany({
-              where: { class: { studentId: resolvedId } } as any,
+              // Notas de clase (classId) Y notas a nivel estudiante (studentId
+              // sin clase) — antes solo se traían las de clase y el admin no
+              // veía las notas generales del profe.
+              where: { OR: [{ studentId: resolvedId }, { class: { studentId: resolvedId } }] },
               orderBy: { createdAt: 'desc' },
               take: 50,
               include: { teacher: { select: { id: true, fullName: true } } },
@@ -697,10 +780,24 @@ export class AdminService {
           : Promise.resolve([] as any[]),
       ])
 
+    // Totales de clases por estado (todas, no solo las 50 listadas):
+    // estudiante → las suyas; profesor → todas las de sus estudiantes.
+    const totalsWhere = isStudent
+      ? { studentId: resolvedId }
+      : isTeacher
+        ? { teacherId: resolvedId }
+        : null
+    const classTotals: Record<string, number> = {}
+    if (totalsWhere) {
+      const grouped = await this.prisma.class.groupBy({ by: ['status'], where: totalsWhere, _count: true })
+      for (const g of grouped) classTotals[g.status] = g._count
+    }
+
     return {
       user,
       payments,
       classes: isStudent ? classesAsStudent : classesAsTeacher,
+      classTotals,
       surveys, // sólo admin las verá — el guard ya bloquea profesores
       progress,
       notes: isStudent ? notesAboutStudent : notesByTeacher,
@@ -1059,5 +1156,220 @@ export class AdminService {
     await this.storage.delete(att.storageKey)
     await this.prisma.lessonAttachment.delete({ where: { id } })
     return { ok: true }
+  }
+
+  // ─── Cleanup / reset de datos de prueba (solo admin) ────────────────
+
+  /** Conteos actuales para que el admin vea qué borraría. */
+  async cleanupPreview() {
+    const [students, teachers, subscriptions, classes, payments, notifications, boards, surveys, payrollRuns, slots] =
+      await Promise.all([
+        this.prisma.user.count({ where: { role: 'student' } }),
+        this.prisma.user.count({ where: { role: 'teacher' } }),
+        this.prisma.subscription.count(),
+        this.prisma.class.count(),
+        this.prisma.paymentIntent.count(),
+        this.prisma.notification.count(),
+        this.prisma.board.count(),
+        this.prisma.satisfactionSurvey.count(),
+        this.prisma.payrollRun.count(),
+        this.prisma.scheduleSlot.count(),
+      ])
+    return { students, teachers, subscriptions, classes, payments, notifications, boards, surveys, payrollRuns, slots }
+  }
+
+  /**
+   * Reset selectivo para pruebas en prod. `targets` define qué borrar.
+   * Reglas duras: jamás borra usuarios admin (ni el que ejecuta), y borra
+   * en orden de dependencias (FKs sin cascade: impersonation_logs).
+   */
+  async cleanup(adminId: string, targets: string[]) {
+    const valid = new Set([
+      'students', 'teachers', 'subscriptions', 'schedule', 'classes',
+      'payments', 'notifications', 'boards', 'surveys', 'payroll',
+    ])
+    const chosen = (targets ?? []).filter((t) => valid.has(t))
+    if (chosen.length === 0) throw new BadRequestException('Nada para borrar: targets vacío o inválido')
+    this.log.warn(`[cleanup] admin=${adminId} targets=${chosen.join(',')}`)
+
+    const deleted: Record<string, number> = {}
+
+    const wipeUsers = async (role: 'student' | 'teacher') => {
+      const users = await this.prisma.user.findMany({
+        where: { role, id: { not: adminId } },
+        select: { id: true },
+      })
+      const ids = users.map((u) => u.id)
+      if (ids.length === 0) return 0
+      // FKs sin cascade primero.
+      await this.prisma.impersonationLog.deleteMany({
+        where: { OR: [{ adminId: { in: ids } }, { targetId: { in: ids } }] },
+      })
+      // PaymentIntents quedan con userId=null (SetNull) — histórico contable.
+      const r = await this.prisma.user.deleteMany({ where: { id: { in: ids } } })
+      return r.count
+    }
+
+    // Orden: dependientes → usuarios.
+    if (chosen.includes('notifications')) {
+      deleted.notifications = (await this.prisma.notification.deleteMany()).count
+    }
+    if (chosen.includes('surveys')) {
+      deleted.surveys = (await this.prisma.satisfactionSurvey.deleteMany()).count
+    }
+    if (chosen.includes('boards')) {
+      deleted.boards = (await this.prisma.board.deleteMany()).count
+    }
+    if (chosen.includes('payroll')) {
+      deleted.payrollRuns = (await this.prisma.payrollRun.deleteMany()).count
+    }
+    if (chosen.includes('classes')) {
+      await this.prisma.classNote.deleteMany()
+      deleted.classes = (await this.prisma.class.deleteMany()).count
+    }
+    if (chosen.includes('schedule')) {
+      deleted.scheduleSlots = (await this.prisma.scheduleSlot.deleteMany()).count
+      await this.prisma.user.updateMany({
+        where: { role: 'student' },
+        data: { schedulePreferences: Prisma.DbNull, scheduleAssignmentStatus: null, assignedTeacherId: null },
+      })
+    }
+    if (chosen.includes('payments')) {
+      await this.prisma.paymentEvent.deleteMany()
+      deleted.payments = (await this.prisma.paymentIntent.deleteMany()).count
+    }
+    if (chosen.includes('subscriptions')) {
+      deleted.subscriptions = (await this.prisma.subscription.deleteMany()).count
+    }
+    if (chosen.includes('students')) {
+      deleted.students = await wipeUsers('student')
+    }
+    if (chosen.includes('teachers')) {
+      deleted.teachers = await wipeUsers('teacher')
+    }
+
+    this.log.warn(`[cleanup] resultado: ${JSON.stringify(deleted)}`)
+    return { ok: true, deleted }
+  }
+
+  // ─── Carritos abandonados / remarketing ─────────────────────────────
+
+  /**
+   * Dos poblaciones de venta perdida:
+   *  1. `carts`: paymentIntents PENDING (checkout iniciado, pago sin aprobar)
+   *     de emails que nunca han pagado.
+   *  2. `registered`: usuarios student registrados sin suscripción y sin
+   *     ningún pago aprobado (se registró y nunca compró).
+   * Cada fila incluye si ya se le envió recordatorio (automático o manual).
+   */
+  async abandonedCarts() {
+    const approvedEmails = new Set(
+      (
+        await this.prisma.paymentIntent.findMany({
+          where: { status: 'APPROVED' },
+          select: { customerEmail: true },
+        })
+      ).map((i) => i.customerEmail.toLowerCase()),
+    )
+
+    const intents = await this.prisma.paymentIntent.findMany({
+      where: { status: 'PENDING', customerEmail: { not: '' } },
+      include: { plan: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 300,
+    })
+    // Un carrito por email (el más reciente), excluyendo quien ya pagó.
+    const seen = new Set<string>()
+    const carts: any[] = []
+    for (const i of intents) {
+      const email = i.customerEmail.toLowerCase()
+      if (approvedEmails.has(email) || seen.has(email)) continue
+      seen.add(email)
+      carts.push(i)
+    }
+
+    const registered = await this.prisma.user.findMany({
+      where: {
+        role: 'student',
+        deletedAt: null,
+        disabledAt: null,
+        subscription: null,
+        paymentIntents: { none: { status: 'APPROVED' } },
+      },
+      select: { id: true, email: true, fullName: true, phone: true, createdAt: true, lastLoginAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 300,
+    })
+    // Si además dejó un checkout PENDING ya está en `carts`; no duplicar.
+    const registeredFiltered = registered.filter((u) => !seen.has(u.email.toLowerCase()))
+
+    // Estado de recordatorios enviados (automático `cart:<id>` o manual).
+    const reminders = await this.prisma.notification.findMany({
+      where: { template: { in: ['abandoned_cart', 'signup_nudge'] } },
+      select: { toEmail: true, status: true, sentAt: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    })
+    const lastReminder = new Map<string, { status: string; at: Date }>()
+    for (const r of reminders) {
+      const k = r.toEmail.toLowerCase()
+      if (!lastReminder.has(k)) lastReminder.set(k, { status: r.status, at: r.sentAt ?? r.createdAt })
+    }
+
+    return {
+      carts: carts.map((c) => ({
+        intentId: c.id,
+        email: c.customerEmail,
+        fullName: c.customerName,
+        phone: c.customerPhone,
+        planName: c.plan?.name ?? c.planId,
+        amountInCents: c.amountInCents,
+        currency: c.currency,
+        createdAt: c.createdAt,
+        userId: c.userId,
+        reminder: lastReminder.get(c.customerEmail.toLowerCase()) ?? null,
+      })),
+      registered: registeredFiltered.map((u) => ({
+        userId: u.id,
+        email: u.email,
+        fullName: u.fullName,
+        phone: u.phone,
+        createdAt: u.createdAt,
+        lastLoginAt: u.lastLoginAt,
+        reminder: lastReminder.get(u.email.toLowerCase()) ?? null,
+      })),
+    }
+  }
+
+  /** Envía (o reenvía) el recordatorio manualmente desde el admin. */
+  async sendCartReminder(body: { intentId?: string; userId?: string }) {
+    const stamp = new Date().toISOString().slice(0, 10)
+    if (body.intentId) {
+      const intent = await this.prisma.paymentIntent.findUnique({
+        where: { id: body.intentId },
+        include: { plan: { select: { name: true } } },
+      })
+      if (!intent) throw new NotFoundException('Intent no encontrado')
+      return this.notificationsSvc.enqueue({
+        userId: intent.userId ?? undefined,
+        toEmail: intent.customerEmail,
+        template: 'abandoned_cart',
+        subject: 'Tu cupo sigue disponible 💛',
+        dedupeKey: `cart:manual:${intent.id}:${stamp}`,
+        vars: { planName: intent.plan?.name ?? 'tu plan', fullName: intent.customerName?.split(' ')[0] },
+      })
+    }
+    if (body.userId) {
+      const user = await this.prisma.user.findUnique({ where: { id: body.userId } })
+      if (!user) throw new NotFoundException('Usuario no encontrado')
+      return this.notificationsSvc.enqueue({
+        userId: user.id,
+        toEmail: user.email,
+        template: 'signup_nudge',
+        subject: 'Tu inglés te está esperando 💛',
+        dedupeKey: `nudge:manual:${user.id}:${stamp}`,
+        vars: { fullName: user.fullName?.split(' ')[0] },
+      })
+    }
+    throw new BadRequestException('intentId o userId requerido')
   }
 }

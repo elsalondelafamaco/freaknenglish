@@ -40,6 +40,8 @@ export class SurveysController {
     checkScale(body.platformScore, 'platformScore')
 
     const period = new Date().toISOString().slice(0, 7) // YYYY-MM
+    // Respondió: se limpia la solicitud explícita del admin (si la había).
+    await this.prisma.user.update({ where: { id: u.id }, data: { npsRequestedAt: null } }).catch(() => null)
     return this.prisma.satisfactionSurvey.upsert({
       where: { userId_period: { userId: u.id, period } },
       update: {
@@ -76,6 +78,17 @@ export class SurveysController {
   async pending(@CurrentUser() u: AuthUser) {
     const now = new Date()
     const period = now.toISOString().slice(0, 7)
+
+    // El admin la pidió explícitamente: pendiente hasta que responda,
+    // sin importar el estado de la suscripción.
+    const me = await this.prisma.user.findUnique({
+      where: { id: u.id },
+      select: { npsRequestedAt: true },
+    })
+    if (me?.npsRequestedAt) {
+      return { pending: true, period, reason: 'requested' as const }
+    }
+
     const sub = await this.prisma.subscription.findUnique({ where: { userId: u.id } })
     if (!sub) return { pending: false, period, reason: null }
 

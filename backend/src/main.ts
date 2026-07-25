@@ -48,17 +48,24 @@ async function bootstrap() {
   const { RedisIoAdapter } = await import('./modules/board/redis-io.adapter')
 
   out('NestFactory.create(AppModule)...')
-  const app = await NestFactory.create(AppModule, { bufferLogs: false })
+  // bodyParser:false — lo registramos manualmente para que el webhook de Wompi
+  // reciba el body CRUDO (verificación HMAC). Con el parser global activo,
+  // json() y raw() leían el mismo stream dos veces → 500 "stream is not
+  // readable" en todos los webhooks.
+  const app = await NestFactory.create(AppModule, { bufferLogs: false, bodyParser: false })
   out('app creada')
   app.useLogger(app.get(Logger))
 
   app.setGlobalPrefix('api')
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' })
   app.use(cookieParser())
+  // Orden importa: raw primero (marca req._body y json lo respeta después).
   app.use(
     '/api/v1/public/wompi/webhook',
     express.raw({ type: 'application/json', limit: '1mb' }),
   )
+  app.use(express.json({ limit: '5mb' }))
+  app.use(express.urlencoded({ extended: true, limit: '5mb' }))
   app.enableCors({
     origin: env.CORS_ORIGINS.split(',').map((s) => s.trim()),
     credentials: true,

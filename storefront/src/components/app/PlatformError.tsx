@@ -1,4 +1,4 @@
-import { MessageCircle, RefreshCw, WifiOff } from "lucide-react";
+import { Ban, MessageCircle, RefreshCw, WifiOff } from "lucide-react";
 
 export const SUPPORT_WHATSAPP = "573012646770";
 
@@ -34,6 +34,47 @@ export function BackendDownBanner() {
         >
           <MessageCircle className="size-3.5" /> Soporte
         </a>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Cuenta bloqueada por el administrador (API responde 403 account_banned).
+ * Sin acceso a nada: solo puede contactar soporte o salir.
+ */
+export function BannedScreen({ onSignOut }: { onSignOut?: () => void }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-brand-cream px-5">
+      <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-soft">
+        <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-red-100">
+          <Ban className="size-7 text-red-600" />
+        </div>
+        <h1 className="mt-5 text-xl font-bold text-brand-ink">Tu cuenta está bloqueada</h1>
+        <p className="mt-2 text-sm leading-relaxed text-brand-ink/65">
+          El acceso a tu cuenta fue suspendido. Si crees que se trata de un
+          error, escríbenos y lo revisamos contigo.
+        </p>
+        <div className="mt-6 flex flex-col gap-2.5">
+          <a
+            href={supportWhatsAppUrl(
+              "Hola, mi cuenta de FreaknEnglish aparece bloqueada y quiero revisar mi caso.",
+            )}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-brand-ink text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:bg-brand-ink-soft"
+          >
+            <MessageCircle className="size-4" /> Hablar con soporte
+          </a>
+          {onSignOut ? (
+            <button
+              onClick={onSignOut}
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-brand-line bg-white text-sm font-semibold text-brand-ink transition hover:bg-brand-cream/40"
+            >
+              Cerrar sesión
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );

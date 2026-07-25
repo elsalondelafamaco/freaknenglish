@@ -9,6 +9,7 @@ import {
   inputClass,
 } from "@/components/site/AuthShell";
 import { LegalLinks } from "@/components/site/LegalLinks";
+import { PhoneInput, validatePhone } from "@/components/app/PhoneInput";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/signup")({
@@ -41,13 +42,17 @@ function SignupPage() {
       setError("Las contraseñas no coinciden.");
       return;
     }
+    const phoneError = validatePhone(phone);
+    if (phoneError) {
+      setError(phoneError);
+      return;
+    }
+    if (!documentNumber.trim()) {
+      setError("El documento es obligatorio.");
+      return;
+    }
     setBusy(true);
     try {
-      if (!phone.trim() || !documentNumber.trim()) {
-        setError("Celular y documento son obligatorios.");
-        setBusy(false);
-        return;
-      }
       await signUp(fullName, email, password, phone.trim(), documentNumber.trim());
       navigate({ to: "/app" });
     } catch (err) {
@@ -96,16 +101,8 @@ function SignupPage() {
           />
         </Field>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Field label="Celular" htmlFor="phone" hint="Formato internacional (+57...)">
-            <input
-              id="phone"
-              className={inputClass}
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              inputMode="tel"
-              autoComplete="tel"
-              required
-            />
+          <Field label="Celular" htmlFor="phone">
+            <PhoneInput id="phone" value={phone} onChange={setPhone} required />
           </Field>
           <Field label="Documento" htmlFor="documentNumber" hint="Para tu facturación">
             <input

@@ -34,23 +34,69 @@ export class SchedulingService {
     private slots: SlotsService,
   ) {}
 
+  /** Horario semanal legible ("lunes 7:00, miércoles 7:00") para los correos. */
+  private async scheduleSummary(studentId: string): Promise<string | undefined> {
+    const slots = await this.prisma.scheduleSlot.findMany({
+      where: { studentId, status: { in: ['active', 'held'] } },
+      orderBy: [{ weekday: 'asc' }, { hour: 'asc' }],
+      select: { weekday: true, hour: true },
+    })
+    if (slots.length === 0) return undefined
+    return slots.map((s) => `${SchedulingService.DAY_NAMES[s.weekday]} ${s.hour}:00`).join(', ')
+  }
+
+  /** Notifica asignación a AMBOS: estudiante (wording cálido) y profesor. */
   private async notifyTeacherAssigned(studentId: string, teacherId: string, dedupeSuffix: string) {
-    const [student, teacher] = await Promise.all([
+    const [student, teacher, schedule] = await Promise.all([
       this.prisma.user.findUnique({ where: { id: studentId } }),
       this.prisma.user.findUnique({ where: { id: teacherId } }),
+      this.scheduleSummary(studentId),
     ])
     if (!student || !teacher) return
     await this.notifications.enqueue({
       userId: student.id,
       toEmail: student.email,
       template: 'teacher_assigned',
-      subject: 'Tienes un nuevo profesor',
+      subject: `¡Ya tienes profe! Te presentamos a ${teacher.fullName}`,
       dedupeKey: `teacher-assigned:${student.id}:${teacher.id}:${dedupeSuffix}`,
-      vars: { teacherName: teacher.fullName },
+      vars: { teacherName: teacher.fullName, schedule },
       type: 'teacher',
       title: 'Nuevo profesor asignado',
       body: teacher.fullName,
       linkUrl: '/app',
+    })
+    await this.notifications.enqueue({
+      userId: teacher.id,
+      toEmail: teacher.email,
+      template: 'student_assigned',
+      subject: `Nuevo estudiante: ${student.fullName}`,
+      dedupeKey: `student-assigned:${student.id}:${teacher.id}:${dedupeSuffix}`,
+      vars: { studentName: student.fullName, schedule },
+      type: 'teacher',
+      title: 'Nuevo estudiante asignado',
+      body: student.fullName,
+      linkUrl: '/teacher/students',
+    })
+  }
+
+  /** Notifica al profesor que un estudiante salió de su agenda. */
+  private async notifyStudentUnassigned(studentId: string, teacherId: string) {
+    const [student, teacher] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: studentId }, select: { fullName: true } }),
+      this.prisma.user.findUnique({ where: { id: teacherId }, select: { id: true, email: true } }),
+    ])
+    if (!student || !teacher) return
+    await this.notifications.enqueue({
+      userId: teacher.id,
+      toEmail: teacher.email,
+      template: 'student_unassigned',
+      subject: `Baja de estudiante: ${student.fullName}`,
+      dedupeKey: `student-unassigned:${studentId}:${teacherId}:${Date.now()}`,
+      vars: { studentName: student.fullName },
+      type: 'teacher',
+      title: 'Estudiante dado de baja',
+      body: student.fullName,
+      linkUrl: '/teacher/schedule',
     })
   }
 
@@ -404,6 +450,10 @@ export class SchedulingService {
     const slots = await this.prisma.scheduleSlot.findMany({
       where: { studentId, status: { in: ['active', 'held'] } },
     })
+    const prev = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      select: { assignedTeacherId: true },
+    })
 
     if (!newTeacherId) {
       // Quitar profesor: libera franjas y cancela clases futuras.
@@ -416,6 +466,10 @@ export class SchedulingService {
         where: { id: studentId },
         data: { assignedTeacherId: null, scheduleAssignmentStatus: 'manual_pending' },
       })
+      // Aviso de baja al profe que lo tenía.
+      if (prev?.assignedTeacherId) {
+        await this.notifyStudentUnassigned(studentId, prev.assignedTeacherId)
+      }
       return { unassigned: true, movedSlots: 0, movedClasses: 0 }
     }
 
@@ -478,6 +532,10 @@ export class SchedulingService {
       where: { id: studentId },
       data: { assignedTeacherId: newTeacherId, scheduleAssignmentStatus: 'auto_assigned' },
     })
+    // Baja para el profe anterior (si había y es distinto al nuevo).
+    if (prev?.assignedTeacherId && prev.assignedTeacherId !== newTeacherId) {
+      await this.notifyStudentUnassigned(studentId, prev.assignedTeacherId)
+    }
     await this.notifyTeacherAssigned(studentId, newTeacherId, `admin-reassign:${Date.now()}`)
     await this.ensureUpcomingClasses(studentId)
     return { unassigned: false, movedSlots: slots.length, movedClasses: moved }

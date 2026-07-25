@@ -105,6 +105,11 @@ export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Pro
     let payload: any = null;
     try { payload = await res.json(); } catch { /* ignore */ }
     const message = payload?.message ?? payload?.error ?? res.statusText;
+    // Cuenta baneada: cualquier endpoint puede devolverlo; la app escucha
+    // este evento y muestra la pantalla de cuenta bloqueada.
+    if (res.status === 403 && payload?.code === "account_banned" && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("freakn:banned"));
+    }
     throw new ApiError(res.status, payload?.code ?? "api_error", String(message), payload);
   }
 

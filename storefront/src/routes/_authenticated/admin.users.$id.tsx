@@ -2,12 +2,23 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
 import {
   ArrowLeft,
+  Check,
+  Copy,
   Eye,
   Mail,
   Pencil,
   Power,
   KeyRound,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 import type {
   ClassSession,
   SatisfactionSurvey,
@@ -18,7 +29,7 @@ import type {
 } from "@/lib/domain/types";
 import { getPlan, formatCop } from "@/lib/domain/plans";
 type PaymentIntent = Record<string, any>;
-import { adminApi } from "@/lib/api/endpoints";
+import { adminApi, classesApi } from "@/lib/api/endpoints";
 import { setAccessToken } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
@@ -36,6 +47,9 @@ function AdminUserDetail() {
   const [tick, setTick] = useState(0);
   const [tab, setTab] = useState<TabId>("overview");
   const [editing, setEditing] = useState(false);
+  const [banConfirmOpen, setBanConfirmOpen] = useState(false);
+  const [resetInfo, setResetInfo] = useState<{ link: string | null } | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [remote, setRemote] = useState<any | null>(null);
   const [remoteUsers, setRemoteUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,7 +92,8 @@ function AdminUserDetail() {
         completedAt: p.completedAt ?? p.updatedAt ?? p.createdAt ?? new Date().toISOString(),
       }));
       const assignedTeacher = remote.user.assignedTeacher ? adaptAdminUser({ ...remote.user.assignedTeacher, role: "teacher" }) : null;
-      return { user, isStudent, isTeacher, sub: adaptAdminSubscription(remote.user.subscription), payments, classes, teachers, students, assignedTeacher, surveys, notes, progress };
+      const classTotals = (remote.classTotals ?? {}) as Record<string, number>;
+      return { user, isStudent, isTeacher, sub: adaptAdminSubscription(remote.user.subscription), payments, classes, classTotals, teachers, students, assignedTeacher, surveys, notes, progress };
     }
     return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -100,6 +115,7 @@ function AdminUserDetail() {
     sub,
     payments,
     classes,
+    classTotals,
     teachers,
     students,
     assignedTeacher,
@@ -141,15 +157,40 @@ function AdminUserDetail() {
   async function onToggleActive() {
     try {
       await adminApi.setUserStatus(user.id, !user.disabledAt);
+      toast.success(user.disabledAt ? "Ban retirado — la cuenta vuelve a tener acceso." : "Usuario baneado — pierde todo acceso de inmediato.");
+      setBanConfirmOpen(false);
       bump();
     } catch (err) {
-      alert((err as Error).message);
+      toast.error((err as Error).message);
+    }
+  }
+
+  async function onSetClassStatus(classId: string, status: "validated" | "no_show" | "scheduled" | "cancelled") {
+    try {
+      await classesApi.adminSetStatus(classId, status);
+      toast.success("Estado de la clase actualizado (nómina ajustada).");
+      bump();
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  }
+
+  async function onRequestNps() {
+    try {
+      await adminApi.requestNps(user.id);
+      toast.success("Encuesta solicitada: le llegará el correo y la verá al entrar a la plataforma.");
+    } catch (err) {
+      toast.error((err as Error).message);
     }
   }
 
   async function onResetPassword() {
-    const r = await adminApi.resetPassword(user.id);
-    alert(r.link ? `Link de recuperación generado:\n${r.link}` : "Email de recuperación enviado.");
+    try {
+      const r = await adminApi.resetPassword(user.id);
+      setResetInfo({ link: r.link ?? null });
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
   }
 
   async function onResetNps() {
@@ -228,11 +269,11 @@ function AdminUserDetail() {
             <KeyRound className="size-3.5" /> Resetear clave
           </button>
           <button
-            onClick={onToggleActive}
+            onClick={() => (isDisabled ? void onToggleActive() : setBanConfirmOpen(true))}
             disabled={isDeleted}
             className="inline-flex items-center gap-1.5 rounded-full border border-brand-line bg-white px-3 py-2 text-xs font-semibold text-brand-ink/80 transition hover:-translate-y-0.5 hover:bg-brand-cream/30 disabled:opacity-50"
           >
-            <Power className="size-3.5" /> {isDisabled ? "Activar" : "Desactivar"}
+            <Power className="size-3.5" /> {isDisabled ? "Quitar ban" : "Banear"}
           </button>
           {user.id !== me?.id ? (
             <button
@@ -245,6 +286,72 @@ function AdminUserDetail() {
           ) : null}
         </div>
       </header>
+
+      {/* Confirmación de ban con UI propia (nada de window.confirm). */}
+      <Dialog open={banConfirmOpen} onOpenChange={setBanConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>¿Banear a {user.fullName}?</DialogTitle>
+            <DialogDescription>
+              Pierde acceso inmediato a toda la plataforma (web y API) y no
+              podrá iniciar sesión. Puedes quitarle el ban cuando quieras.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              onClick={() => setBanConfirmOpen(false)}
+              className="rounded-full border border-brand-line bg-white px-4 py-2 text-sm font-semibold text-brand-ink"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => void onToggleActive()}
+              className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Sí, banear
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Resultado del reset de clave: correo enviado + link visible. */}
+      <Dialog open={!!resetInfo} onOpenChange={(o) => { if (!o) { setResetInfo(null); setLinkCopied(false); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Recuperación de contraseña</DialogTitle>
+            <DialogDescription>
+              {resetInfo?.link
+                ? "Le enviamos el correo de recuperación. Si lo necesitas, este es el link directo:"
+                : "Le enviamos el correo de recuperación a su email."}
+            </DialogDescription>
+          </DialogHeader>
+          {resetInfo?.link ? (
+            <div className="flex items-center gap-2">
+              <input
+                readOnly
+                value={resetInfo.link}
+                onFocus={(e) => e.currentTarget.select()}
+                className="w-full rounded-xl border border-brand-line bg-brand-cream/30 px-3 py-2 text-xs text-brand-ink"
+              />
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(resetInfo.link!);
+                    setLinkCopied(true);
+                    setTimeout(() => setLinkCopied(false), 2000);
+                  } catch {
+                    toast.error("No se pudo copiar");
+                  }
+                }}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand-ink px-3 py-2 text-xs font-semibold text-white"
+              >
+                {linkCopied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                {linkCopied ? "Copiado" : "Copiar"}
+              </button>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <nav className="flex flex-wrap gap-2 border-b border-brand-line">
         {TABS.filter((t) => t.show).map((t) => (
@@ -396,7 +503,25 @@ function AdminUserDetail() {
       ) : null}
 
       {tab === "classes" ? (
-        <Card title={`Clases (${classes.length})`}>
+        <Card title={isTeacher ? "Clases de sus estudiantes" : "Clases"}>
+          {/* Totales reales (todas las clases, no solo las listadas) */}
+          <div className="mb-4 flex flex-wrap gap-2">
+            {[
+              ["validated", "Tomadas", "bg-emerald-50 text-emerald-700 border-emerald-200"],
+              ["no_show", "No tomadas", "bg-orange-50 text-orange-700 border-orange-200"],
+              ["scheduled", "Programadas", "bg-brand-cream/60 text-brand-ink/70 border-brand-line"],
+              ["rescheduled", "Reprogramadas", "bg-yellow-50 text-yellow-700 border-yellow-200"],
+              ["cancelled", "Canceladas", "bg-red-50 text-red-700 border-red-200"],
+            ].map(([key, label, cls]) => (
+              <span key={key} className={`rounded-full border px-3 py-1 text-xs font-semibold ${cls}`}>
+                {label}: {classTotals?.[key] ?? 0}
+              </span>
+            ))}
+          </div>
+          <p className="mb-3 text-xs text-brand-ink/50">
+            Tomada y No tomada cuentan para la nómina del profesor. Cambiar el estado
+            aquí ajusta la nómina del período correspondiente.
+          </p>
           {classes.length === 0 ? (
             <p className="text-sm text-brand-ink/55">Sin clases registradas.</p>
           ) : (
@@ -409,16 +534,25 @@ function AdminUserDetail() {
                 )
                 .slice(0, 30)
                 .map((c: ClassSession) => (
-                  <li key={c.id} className="flex items-center justify-between py-2 text-sm">
+                  <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                     <div>
                       <div className="font-medium text-brand-ink">{c.topic ?? "Clase"}</div>
                       <div className="text-xs text-brand-ink/55">
                         {new Date(c.startsAt).toLocaleString("es-CO")} • {c.durationMin} min
                       </div>
                     </div>
-                    <span className="rounded-full bg-brand-cream px-2 py-0.5 text-[10px] font-semibold capitalize">
-                      {c.status}
-                    </span>
+                    {/* Ajuste manual: se refleja en nómina y métricas */}
+                    <select
+                      value={c.status}
+                      onChange={(e) => void onSetClassStatus(c.id, e.target.value as any)}
+                      className="rounded-full border border-brand-line bg-white px-2.5 py-1 text-xs font-semibold capitalize text-brand-ink"
+                    >
+                      <option value="scheduled">Programada</option>
+                      <option value="validated">Tomada</option>
+                      <option value="no_show">No tomada</option>
+                      <option value="rescheduled" disabled>Reprogramada</option>
+                      <option value="cancelled">Cancelada</option>
+                    </select>
                   </li>
                 ))}
             </ul>
@@ -451,13 +585,22 @@ function AdminUserDetail() {
             <p className="text-xs text-brand-ink/55">
               Estas respuestas son privadas. El profesor no las puede ver.
             </p>
-            <button
-              type="button"
-              onClick={onResetNps}
-              className="rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink/75 transition hover:-translate-y-0.5 hover:bg-brand-cream/40"
-            >
-              Reiniciar encuesta
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onRequestNps}
+                className="rounded-full bg-brand-ink px-3 py-1.5 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5"
+              >
+                Solicitar encuesta ahora
+              </button>
+              <button
+                type="button"
+                onClick={onResetNps}
+                className="rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink/75 transition hover:-translate-y-0.5 hover:bg-brand-cream/40"
+              >
+                Reiniciar encuesta
+              </button>
+            </div>
           </div>
           {surveys.length === 0 ? (
             <p className="text-sm text-brand-ink/55">Aún no ha respondido encuestas.</p>

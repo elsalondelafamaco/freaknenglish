@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/co
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { RolesGuard } from '../../common/guards/roles.guard'
+import { ActiveSubscriptionGuard } from '../../common/guards/active-subscription.guard'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator'
 import { SchedulingService, ScheduleBlock } from './scheduling.service'
@@ -9,7 +10,9 @@ import { SlotsService, SlotRef, ScheduleConfig } from './slots.service'
 
 @ApiTags('scheduling')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+// ActiveSubscriptionGuard: el calendario/horarios de estudiante exige sub
+// activa (la selección de horario del checkout usa public/schedule, no esto).
+@UseGuards(JwtAuthGuard, RolesGuard, ActiveSubscriptionGuard)
 @Controller()
 export class SchedulingController {
   constructor(private svc: SchedulingService, private slots: SlotsService) {}

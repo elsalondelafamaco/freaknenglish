@@ -44,7 +44,10 @@ import { Route as AuthenticatedAdminSurveysRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminSiteRouteImport } from './routes/_authenticated/admin.site'
 import { Route as AuthenticatedAdminScheduleRouteImport } from './routes/_authenticated/admin.schedule'
 import { Route as AuthenticatedAdminPayrollRouteImport } from './routes/_authenticated/admin.payroll'
+import { Route as AuthenticatedAdminNotificationsRouteImport } from './routes/_authenticated/admin.notifications'
 import { Route as AuthenticatedAdminContentRouteImport } from './routes/_authenticated/admin.content'
+import { Route as AuthenticatedAdminCleanupRouteImport } from './routes/_authenticated/admin.cleanup'
+import { Route as AuthenticatedAdminCartsRouteImport } from './routes/_authenticated/admin.carts'
 import { Route as AuthenticatedAdminCalendarRouteImport } from './routes/_authenticated/admin.calendar'
 import { Route as AuthenticatedTeacherStudentsIndexRouteImport } from './routes/_authenticated/teacher.students.index'
 import { Route as AuthenticatedAppLearningIndexRouteImport } from './routes/_authenticated/app.learning.index'
@@ -246,12 +249,29 @@ const AuthenticatedAdminPayrollRoute =
     path: '/payroll',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminNotificationsRoute =
+  AuthenticatedAdminNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminContentRoute =
   AuthenticatedAdminContentRouteImport.update({
     id: '/content',
     path: '/content',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminCleanupRoute =
+  AuthenticatedAdminCleanupRouteImport.update({
+    id: '/cleanup',
+    path: '/cleanup',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminCartsRoute = AuthenticatedAdminCartsRouteImport.update({
+  id: '/carts',
+  path: '/carts',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const AuthenticatedAdminCalendarRoute =
   AuthenticatedAdminCalendarRouteImport.update({
     id: '/calendar',
@@ -329,7 +349,10 @@ export interface FileRoutesByFullPath {
   '/checkout/return': typeof CheckoutReturnRoute
   '/checkout/': typeof CheckoutIndexRoute
   '/admin/calendar': typeof AuthenticatedAdminCalendarRoute
+  '/admin/carts': typeof AuthenticatedAdminCartsRoute
+  '/admin/cleanup': typeof AuthenticatedAdminCleanupRoute
   '/admin/content': typeof AuthenticatedAdminContentRoute
+  '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/admin/schedule': typeof AuthenticatedAdminScheduleRoute
   '/admin/site': typeof AuthenticatedAdminSiteRoute
@@ -373,7 +396,10 @@ export interface FileRoutesByTo {
   '/checkout/return': typeof CheckoutReturnRoute
   '/checkout': typeof CheckoutIndexRoute
   '/admin/calendar': typeof AuthenticatedAdminCalendarRoute
+  '/admin/carts': typeof AuthenticatedAdminCartsRoute
+  '/admin/cleanup': typeof AuthenticatedAdminCleanupRoute
   '/admin/content': typeof AuthenticatedAdminContentRoute
+  '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/admin/schedule': typeof AuthenticatedAdminScheduleRoute
   '/admin/site': typeof AuthenticatedAdminSiteRoute
@@ -421,7 +447,10 @@ export interface FileRoutesById {
   '/checkout/return': typeof CheckoutReturnRoute
   '/checkout/': typeof CheckoutIndexRoute
   '/_authenticated/admin/calendar': typeof AuthenticatedAdminCalendarRoute
+  '/_authenticated/admin/carts': typeof AuthenticatedAdminCartsRoute
+  '/_authenticated/admin/cleanup': typeof AuthenticatedAdminCleanupRoute
   '/_authenticated/admin/content': typeof AuthenticatedAdminContentRoute
+  '/_authenticated/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/_authenticated/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/_authenticated/admin/schedule': typeof AuthenticatedAdminScheduleRoute
   '/_authenticated/admin/site': typeof AuthenticatedAdminSiteRoute
@@ -470,7 +499,10 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/checkout/'
     | '/admin/calendar'
+    | '/admin/carts'
+    | '/admin/cleanup'
     | '/admin/content'
+    | '/admin/notifications'
     | '/admin/payroll'
     | '/admin/schedule'
     | '/admin/site'
@@ -514,7 +546,10 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/checkout'
     | '/admin/calendar'
+    | '/admin/carts'
+    | '/admin/cleanup'
     | '/admin/content'
+    | '/admin/notifications'
     | '/admin/payroll'
     | '/admin/schedule'
     | '/admin/site'
@@ -561,7 +596,10 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/checkout/'
     | '/_authenticated/admin/calendar'
+    | '/_authenticated/admin/carts'
+    | '/_authenticated/admin/cleanup'
     | '/_authenticated/admin/content'
+    | '/_authenticated/admin/notifications'
     | '/_authenticated/admin/payroll'
     | '/_authenticated/admin/schedule'
     | '/_authenticated/admin/site'
@@ -855,11 +893,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPayrollRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/notifications': {
+      id: '/_authenticated/admin/notifications'
+      path: '/notifications'
+      fullPath: '/admin/notifications'
+      preLoaderRoute: typeof AuthenticatedAdminNotificationsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/content': {
       id: '/_authenticated/admin/content'
       path: '/content'
       fullPath: '/admin/content'
       preLoaderRoute: typeof AuthenticatedAdminContentRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/cleanup': {
+      id: '/_authenticated/admin/cleanup'
+      path: '/cleanup'
+      fullPath: '/admin/cleanup'
+      preLoaderRoute: typeof AuthenticatedAdminCleanupRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/carts': {
+      id: '/_authenticated/admin/carts'
+      path: '/carts'
+      fullPath: '/admin/carts'
+      preLoaderRoute: typeof AuthenticatedAdminCartsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/calendar': {
@@ -953,7 +1012,10 @@ const AuthenticatedAdminUsersRouteWithChildren =
 
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminCalendarRoute: typeof AuthenticatedAdminCalendarRoute
+  AuthenticatedAdminCartsRoute: typeof AuthenticatedAdminCartsRoute
+  AuthenticatedAdminCleanupRoute: typeof AuthenticatedAdminCleanupRoute
   AuthenticatedAdminContentRoute: typeof AuthenticatedAdminContentRoute
+  AuthenticatedAdminNotificationsRoute: typeof AuthenticatedAdminNotificationsRoute
   AuthenticatedAdminPayrollRoute: typeof AuthenticatedAdminPayrollRoute
   AuthenticatedAdminScheduleRoute: typeof AuthenticatedAdminScheduleRoute
   AuthenticatedAdminSiteRoute: typeof AuthenticatedAdminSiteRoute
@@ -965,7 +1027,10 @@ interface AuthenticatedAdminRouteChildren {
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminCalendarRoute: AuthenticatedAdminCalendarRoute,
+  AuthenticatedAdminCartsRoute: AuthenticatedAdminCartsRoute,
+  AuthenticatedAdminCleanupRoute: AuthenticatedAdminCleanupRoute,
   AuthenticatedAdminContentRoute: AuthenticatedAdminContentRoute,
+  AuthenticatedAdminNotificationsRoute: AuthenticatedAdminNotificationsRoute,
   AuthenticatedAdminPayrollRoute: AuthenticatedAdminPayrollRoute,
   AuthenticatedAdminScheduleRoute: AuthenticatedAdminScheduleRoute,
   AuthenticatedAdminSiteRoute: AuthenticatedAdminSiteRoute,

@@ -247,7 +247,7 @@ export class AutomationsProcessor extends WorkerHost {
     }
   }
 
-  /** Tarifa por hora (app_settings.payroll.hourlyRateCop → fallback env). */
+  /** Tarifa por CLASE (app_settings.payroll.hourlyRateCop → fallback env). */
   private async hourlyRateCop(): Promise<number> {
     const row = await this.prisma.appSetting
       .findUnique({ where: { key: 'payroll.hourlyRateCop' } })
@@ -268,7 +268,14 @@ export class AutomationsProcessor extends WorkerHost {
     const end = new Date(now.getFullYear(), now.getMonth(), 1)
     const period = start.toISOString().slice(0, 7)
     const classes = await this.prisma.class.findMany({
-      where: { status: 'validated', validatedAt: { gte: start, lt: end }, teacherId: { not: null } },
+      // validated + no_show: la ausencia del estudiante también se paga.
+      where: {
+        teacherId: { not: null },
+        OR: [
+          { status: 'validated', validatedAt: { gte: start, lt: end } },
+          { status: 'no_show', endsAt: { gte: start, lt: end } },
+        ],
+      },
       select: { teacherId: true, startsAt: true, endsAt: true },
     })
     const minutes = new Map<string, number>()
@@ -280,8 +287,9 @@ export class AutomationsProcessor extends WorkerHost {
       counts.set(tid, (counts.get(tid) ?? 0) + 1)
     }
     const rate = await this.hourlyRateCop()
-    for (const [teacherId, mins] of minutes) {
-      const amountCop = Math.round((mins / 60) * rate)
+    for (const [teacherId] of minutes) {
+      // Tarifa por clase completa: clases × tarifa (sin prorratear 50 min).
+      const amountCop = (counts.get(teacherId) ?? 0) * rate
       const existing = await this.prisma.payrollRun.findUnique({
         where: { period_teacherId: { period, teacherId } },
       })

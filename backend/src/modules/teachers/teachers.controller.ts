@@ -31,6 +31,16 @@ export class TeachersController {
     return this.svc.studentDetail(u.id, id, u.role === 'admin')
   }
 
+  /** @endpoint PATCH /api/v1/teacher/students/:id/meeting-url  Body: { url } */
+  @Patch('students/:id/meeting-url')
+  setMeetingUrl(
+    @CurrentUser() u: AuthUser,
+    @Param('id') id: string,
+    @Body() body: { url?: string | null },
+  ) {
+    return this.svc.setStudentMeetingUrl(u.id, id, body?.url ?? null, u.role === 'admin')
+  }
+
   /** @endpoint POST /api/v1/teacher/students/:studentId/notes  (sin requerir clases) */
   @Post('students/:studentId/notes')
   addStudentNote(

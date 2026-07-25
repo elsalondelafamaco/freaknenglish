@@ -67,6 +67,14 @@ function AdminCalendar() {
       </header>
 
       <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() =>
+            setHidden(hidden.size > 0 ? new Set() : new Set(teachers.map((t) => t.id)))
+          }
+          className="inline-flex items-center gap-1.5 rounded-full border border-brand-ink bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-cream/40"
+        >
+          {hidden.size > 0 ? "Seleccionar todos" : "Deseleccionar todos"}
+        </button>
         {teachers.map((t) => {
           const off = hidden.has(t.id);
           return (

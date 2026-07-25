@@ -1140,11 +1140,13 @@
                 
                 let isPerfect = true;
                 let correctSentenceParts = [];
+                let userSentenceParts = [];
 
                 slots.forEach((slot, i) => {
                     const expected = slot.dataset.expected;
                     const val = slot.dataset.val;
                     correctSentenceParts.push(slot.dataset.label);
+                    userSentenceParts.push(slot.textContent.trim());
 
                     if(val === expected) {
                         slot.style.background = '#ccffcc';
@@ -1172,6 +1174,14 @@
                     feedback.className = 'feedback-box error';
                     this.updateScore(1); // Partial credit
                 }
+
+                this.answers.push({
+                    id: 'l2-' + this.l2Index,
+                    question: data.context,
+                    answer: userSentenceParts.join(' '),
+                    correct: isPerfect,
+                    expected: correctSentenceParts.join(' ')
+                });
 
                 btn.innerText = "Next Statement";
                 btn.dataset.action = "next";
@@ -1258,8 +1268,15 @@
             
             fb.innerText = "Awesome! The detective recorded your statement perfectly.";
             fb.className = 'feedback-box success';
-            
+
             this.updateScore(1);
+
+            this.answers.push({
+                id: 'l3-' + this.l3Index,
+                question: currentData.prompt,
+                answer: rawVal,
+                correct: true
+            });
         },
 
         handleL3Next() {
@@ -1290,6 +1307,14 @@
             
             document.getElementById('final-rank').innerText = rank;
             document.getElementById('final-message').innerText = msg;
+
+            FreaknActivity.submit({
+                activityId: 'extra-activity',
+                title: document.title,
+                score: this.score,
+                maxScore: this.maxScore,
+                answers: this.answers
+            });
         }
     };
 

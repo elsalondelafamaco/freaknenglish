@@ -541,7 +541,38 @@
         .flex-center { display: flex; justify-content: center; align-items: center; gap: 10px; }
         .mt-20 { margin-top: 16px; }
         .text-center { text-align: center; }
-        
+
+        @media (max-width: 820px) {
+            body { height: auto; min-height: 100vh; overflow-x: hidden; overflow-y: auto; align-items: flex-start; background-size: 20px 20px; }
+            .slide-container { width: 100%; height: auto; min-height: 100vh; border-radius: 0; border-width: 4px; }
+            .slide { position: static; display: none; opacity: 1; pointer-events: all; transform: none; padding: 1rem 0; }
+            .slide.active { display: flex; }
+
+            .split-screen { flex-direction: column; height: auto; }
+            .split-left, .split-right { padding: 1.5rem 1rem; border-right: none; border-bottom: 6px solid var(--neutral); }
+
+            .title-bree { font-size: 2.1rem; }
+            .split-right .title-bree { font-size: 1.8rem; }
+
+            .activity-card, .gossip-paper { width: 100%; max-width: 100%; }
+            .card-body { padding: 16px; }
+            .gossip-paper { padding: 1rem; }
+            .gossip-paper h3 { font-size: 1.6rem; }
+            .gossip-profiles { flex-direction: column; }
+
+            .scenario-text { font-size: 1.1rem !important; padding: 10px 12px; }
+
+            .dnd-area { flex-wrap: wrap; }
+            .drop-zone { min-width: 45%; }
+
+            .btn-freak { padding: 12px 20px; font-size: 16px; min-height: 44px; }
+            .option-btn { padding: 12px 16px; font-size: 1rem; min-height: 44px; }
+            .word-pill { font-size: 1rem; padding: 8px 12px; }
+
+            .free-text-input { font-size: 16px; }
+
+            #final-score-display { font-size: 3.5rem !important; }
+        }
     </style>
 </head>
 <body>
@@ -716,6 +747,31 @@
 </div>
 
 <script>
+  /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+     Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+  window.FreaknActivity = (function () {
+    function post(type, payload) {
+      try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+      catch (e) {}
+    }
+    return {
+      /** Reporta el resultado de una actividad calificable. */
+      submit: function (r) {
+        post("freakn:activity:result", {
+          activityId: r.activityId,          // id estable dentro del archivo
+          title: r.title || document.title,  // nombre legible
+          score: r.score,                    // puntos obtenidos
+          maxScore: r.maxScore,              // puntaje máximo
+          answers: r.answers || []           // ver formato abajo
+        });
+      },
+      /** Marca la lección como vista/terminada (sin puntaje). */
+      complete: function () { post("freakn:lesson:complete", {}); }
+    };
+  })();
+</script>
+
+<script>
     // --- DATA ---
     const level1Data = [
         { s: "8:00 AM YESTERDAY: Mr. Smith ______ to the bank.", a: "walks", b: "walked", ans: "b", err: "Wake up! The camera says YESTERDAY. You need the '-ed' ending (walked)." },
@@ -866,9 +922,16 @@
         l1Index: 0,
         l2Index: 0,
         l3Index: 0,
+        freaknAnswers: [],
 
         init() {
             this.setupDragAndDrop();
+        },
+
+        recordAnswer(id, question, answer, correct, expected) {
+            const existing = this.freaknAnswers.find(a => a.id === id);
+            const entry = { id, question, answer, correct, expected };
+            if (existing) { Object.assign(existing, entry); } else { this.freaknAnswers.push(entry); }
         },
 
         prevSlide() {
@@ -980,7 +1043,8 @@
             const data = level1Data[this.l1Index];
             const feedback = document.getElementById('l1-feedback');
             
-            if(choice === data[data.ans]) {
+            const isCorrect = choice === data[data.ans];
+            if(isCorrect) {
                 feedback.innerText = "Exactly! You caught the past time marker.";
                 feedback.className = 'feedback-box success';
                 this.updateScore(1);
@@ -988,6 +1052,7 @@
                 feedback.innerText = "Coach: " + data.err;
                 feedback.className = 'feedback-box error';
             }
+            this.recordAnswer('l1-' + this.l1Index, data.s, choice, isCorrect, data[data.ans]);
             document.getElementById('btn-l1-next').classList.remove('hidden');
         },
 
@@ -1100,16 +1165,18 @@
 
                 const feedback = document.getElementById('l2-feedback');
 
+                const givenSentence = Array.from(slots).map(s => s.dataset.val ? s.dataset.label : '___').join(" ");
+                const correctString = correctSentenceParts.join(" ");
                 if(isPerfect) {
                     feedback.innerText = "Report filed! Perfect syntax.";
                     feedback.className = 'feedback-box success';
                     this.updateScore(2); // 2 points per scenario
                 } else {
-                    const correctString = correctSentenceParts.join(" ");
                     feedback.innerHTML = `Coach: Watch the structure! Subject ➔ Verb+ed ➔ Complement ➔ Time.<br>Correct: 👉 <strong>${correctString}</strong>`;
                     feedback.className = 'feedback-box error';
                     this.updateScore(1); // Partial credit
                 }
+                this.recordAnswer('l2-' + this.l2Index, data.context, givenSentence, isPerfect, correctString);
 
                 btn.innerText = "Next Event";
                 btn.dataset.action = "next";
@@ -1190,8 +1257,9 @@
             
             fb.innerText = "Awesome! The log is securely recorded.";
             fb.className = 'feedback-box success';
-            
+
             this.updateScore(1);
+            this.recordAnswer('l3-' + this.l3Index, currentData.prompt, rawVal, true, currentData.verb);
         },
 
         handleL3Next() {
@@ -1222,6 +1290,14 @@
             
             document.getElementById('final-rank').innerText = rank;
             document.getElementById('final-message').innerText = msg;
+
+            FreaknActivity.submit({
+                activityId: "extra-activity",
+                title: document.title,
+                score: this.score,
+                maxScore: this.maxScore,
+                answers: this.freaknAnswers
+            });
         }
     };
 

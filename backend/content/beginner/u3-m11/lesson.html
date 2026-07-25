@@ -544,6 +544,11 @@
                 answeredQuestions[qIndex] = true;
             }
 
+            const q = l1_data[qIndex];
+            const chosenText = selected === 1 ? q.opt1 : q.opt2;
+            const correctText = correct === 1 ? q.opt1 : q.opt2;
+            upsertAnswer('l1-' + qIndex, q.text, chosenText, selected === correct, correctText);
+
             unlockNext(slideIndex);
         }
 
@@ -574,6 +579,10 @@
             scores[`level${levelNum}`] = scores[`level${levelNum}`] - previousPoints + points;
             gradeContainer.dataset.points = points;
 
+            const qData = levelNum === 2 ? l2_data[qIndex] : l3_data[qIndex];
+            const promptText = levelNum === 2 ? qData.sit : qData.prompt;
+            upsertAnswer('l' + levelNum + '-' + qIndex, promptText, inputField.value.trim(), points === 1, qData.exp);
+
             unlockNext(slideIndex);
         }
 
@@ -598,6 +607,13 @@
                 const total = scores.level1 + scores.level2 + scores.level3;
                 document.getElementById('final-score').innerText = total;
                 nav(32);
+                FreaknActivity.submit({
+                    activityId: "lesson-quiz",
+                    title: document.title,
+                    score: total,
+                    maxScore: 30,
+                    answers: freaknAnswers
+                });
             } else {
                 alert("Grade the final item to see the total score!");
             }

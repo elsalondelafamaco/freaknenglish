@@ -95,6 +95,23 @@
             }
             .no-print { display: none !important; }
         }
+
+        /* ============ RESPONSIVE (mobile 360-820px) ============ */
+        @media (max-width: 820px) {
+            body.p-0 { padding: 0; }
+            .survival-guide-container {
+                width: 100%;
+                height: auto;
+                min-height: 0;
+                margin: 12px auto;
+                box-shadow: none;
+            }
+            .survival-guide-container .flex.flex-1 { flex-direction: column; padding: 1rem; gap: 1rem; }
+            .survival-guide-container .w-7\/12,
+            .survival-guide-container .w-5\/12 { width: 100%; }
+            header.flex, .bg-skyblue.flex, .bg-lightbg.flex { padding: 1rem; }
+            h1.font-bree.text-3xl { font-size: 1.5rem; }
+        }
     </style>
 </head>
 <body class="p-0 sm:p-8 space-y-10 text-left">
@@ -306,5 +323,31 @@
 
     </div>
 
+    <script>
+      /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+         Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+      window.FreaknActivity = (function () {
+        function post(type, payload) {
+          try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+          catch (e) {}
+        }
+        return {
+          /** Reporta el resultado de una actividad calificable. */
+          submit: function (r) {
+            post("freakn:activity:result", {
+              activityId: r.activityId,          // id estable dentro del archivo
+              title: r.title || document.title,  // nombre legible
+              score: r.score,                    // puntos obtenidos
+              maxScore: r.maxScore,              // puntaje máximo
+              answers: r.answers || []           // ver formato abajo
+            });
+          },
+          /** Marca la lección como vista/terminada (sin puntaje). */
+          complete: function () { post("freakn:lesson:complete", {}); }
+        };
+      })();
+
+      FreaknActivity.complete();
+    </script>
 </body>
 </html>

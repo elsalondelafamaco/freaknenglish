@@ -81,6 +81,17 @@
             padding: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
+
+        @media (max-width: 820px) {
+            .survival-guide-container { width: 100%; min-height: 0; margin: 0 0 20px 0; }
+            header.bg-charcoal { padding: 1rem; flex-wrap: wrap; gap: 0.75rem; }
+            .bg-lightbg.py-6.px-10 { padding: 1rem; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+            .flex.flex-1.p-10.gap-10 { flex-direction: column; padding: 1rem; gap: 1.5rem; }
+            .flex.flex-1.p-10.gap-10 > .w-7\/12,
+            .flex.flex-1.p-10.gap-10 > .w-5\/12 { width: 100%; }
+            .cheat-sheet-box { padding: 1rem; }
+            .bg-skyblue.p-8 { padding: 1.25rem; flex-direction: column; text-align: center; gap: 1rem; }
+        }
     </style>
 </head>
 <body class="p-0 sm:p-8 space-y-10 text-left">
@@ -295,5 +306,30 @@
 
     </div>
 
+    <script>
+      /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+         Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+      window.FreaknActivity = (function () {
+        function post(type, payload) {
+          try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+          catch (e) {}
+        }
+        return {
+          /** Reporta el resultado de una actividad calificable. */
+          submit: function (r) {
+            post("freakn:activity:result", {
+              activityId: r.activityId,          // id estable dentro del archivo
+              title: r.title || document.title,  // nombre legible
+              score: r.score,                    // puntos obtenidos
+              maxScore: r.maxScore,              // puntaje máximo
+              answers: r.answers || []           // ver formato abajo
+            });
+          },
+          /** Marca la lección como vista/terminada (sin puntaje). */
+          complete: function () { post("freakn:lesson:complete", {}); }
+        };
+      })();
+      FreaknActivity.complete();
+    </script>
 </body>
 </html>

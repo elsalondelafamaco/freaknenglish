@@ -538,7 +538,57 @@
         .flex-center { display: flex; justify-content: center; align-items: center; gap: 10px; }
         .mt-20 { margin-top: 16px; }
         .text-center { text-align: center; }
-        
+
+        @media (max-width: 820px) {
+            body { background-size: 20px 20px; }
+
+            .slide-container {
+                width: 100vw;
+                height: 100vh;
+                height: 100dvh;
+                max-width: 100vw;
+                border-radius: 0;
+                border-width: 3px;
+            }
+
+            /* Each slide scrolls internally instead of overflowing the fixed box */
+            .slide { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0.5rem; }
+
+            .split-screen { flex-direction: column; }
+            .split-left, .split-right {
+                padding: 1.5rem 1rem;
+                border-right: none;
+                flex: none;
+            }
+
+            .title-bree { font-size: 2.1rem; }
+            .split-right .title-bree { font-size: 1.8rem; }
+
+            .activity-card, .activity-card[style] { max-width: 100% !important; width: 100%; }
+            .card-header { padding: 12px; }
+            .card-header h2 { font-size: 1.3rem; }
+            .card-body { padding: 14px 16px; gap: 12px; }
+
+            .gossip-paper { padding: 1rem; box-shadow: 10px 10px 0px var(--primary), 10px 10px 0px 6px var(--neutral); }
+            .gossip-paper h3 { font-size: 1.6rem; }
+            .gossip-profiles { flex-direction: column; gap: 12px; margin-bottom: 16px; }
+
+            .scenario-text { font-size: 1.15rem; padding: 12px; }
+
+            .dnd-area { flex-direction: column; gap: 10px; }
+            .drop-zone { min-height: 80px; }
+
+            .pill-bank { gap: 8px; padding: 12px; }
+            .word-pill { font-size: 1rem; padding: 6px 12px; }
+
+            .btn-freak { padding: 0.75rem 1.25rem; font-size: 1rem; min-height: 44px; box-shadow: 4px 4px 0px var(--neutral); }
+            .option-btn { padding: 0.85rem 1rem; font-size: 1rem; min-height: 44px; }
+            .free-text-input { padding: 0.85rem; font-size: 1rem; min-height: 44px; }
+
+            .score-tracker { top: 10px; right: 10px; font-size: 1rem; padding: 6px 14px; }
+
+            #final-score-display { font-size: 3rem; }
+        }
     </style>
 </head>
 <body>
@@ -878,6 +928,9 @@
         }
     ];
 
+    // --- FREAKN ACTIVITY TRACKING ---
+    var freaknAnswers = [];
+
     // --- GAME ENGINE ---
     const game = {
         slides: ['slide-hook', 'slide-vibe', 'slide-story', 'slide-level1', 'slide-level2', 'slide-level3', 'slide-final'],
@@ -1008,8 +1061,9 @@
 
             const data = level1Data[this.l1Index];
             const feedback = document.getElementById('l1-feedback');
-            
-            if(choice === data.ans) {
+            const isCorrect = choice === data.ans;
+
+            if(isCorrect) {
                 feedback.innerText = "Exactly! Great advice.";
                 feedback.className = 'feedback-box success';
                 this.updateScore(1);
@@ -1017,6 +1071,15 @@
                 feedback.innerText = data.err;
                 feedback.className = 'feedback-box error';
             }
+
+            freaknAnswers.push({
+                id: 'l1-' + (this.l1Index + 1),
+                question: data.s,
+                answer: choice === 'a' ? data.a : data.b,
+                correct: isCorrect,
+                expected: data.ans === 'a' ? data.a : data.b
+            });
+
             document.getElementById('btn-l1-next').classList.remove('hidden');
         },
 
@@ -1142,6 +1205,15 @@
                     this.updateScore(1);
                 }
 
+                const studentAnswer = Array.from(slots).map(s => s.textContent.trim()).join(' ');
+                freaknAnswers.push({
+                    id: 'l2-' + (this.l2Index + 1),
+                    question: data.context,
+                    answer: studentAnswer,
+                    correct: isPerfect,
+                    expected: correctSentenceParts.join(' ')
+                });
+
                 btn.innerText = "Next Recommendation";
                 btn.dataset.action = "next";
             } else {
@@ -1228,8 +1300,16 @@
             
             fb.innerText = "Awesome! The client loves your advice.";
             fb.className = 'feedback-box success';
-            
+
             this.updateScore(1);
+
+            freaknAnswers.push({
+                id: 'l3-' + (this.l3Index + 1),
+                question: currentData.prompt,
+                answer: rawVal,
+                correct: true,
+                expected: null
+            });
         },
 
         handleL3Next() {
@@ -1260,6 +1340,14 @@
             
             document.getElementById('final-rank').innerText = rank;
             document.getElementById('final-message').innerText = msg;
+
+            FreaknActivity.submit({
+                activityId: "extra-activity",
+                title: document.title,
+                score: this.score,
+                maxScore: this.maxScore,
+                answers: freaknAnswers
+            });
         }
     };
 
@@ -1267,6 +1355,31 @@
         game.init();
     };
 
+</script>
+
+<script>
+  /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+     Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+  window.FreaknActivity = (function () {
+    function post(type, payload) {
+      try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+      catch (e) {}
+    }
+    return {
+      /** Reporta el resultado de una actividad calificable. */
+      submit: function (r) {
+        post("freakn:activity:result", {
+          activityId: r.activityId,          // id estable dentro del archivo
+          title: r.title || document.title,  // nombre legible
+          score: r.score,                    // puntos obtenidos
+          maxScore: r.maxScore,              // puntaje máximo
+          answers: r.answers || []           // ver formato abajo
+        });
+      },
+      /** Marca la lección como vista/terminada (sin puntaje). */
+      complete: function () { post("freakn:lesson:complete", {}); }
+    };
+  })();
 </script>
 </body>
 </html>

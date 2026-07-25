@@ -405,14 +405,41 @@
             document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
             const submitBtn = document.querySelector('#interactive-area .btn-freak');
             if(submitBtn) submitBtn.disabled = true;
-            
+
             document.getElementById('btn-next-q').classList.remove('hidden');
+
+            registrarRespuesta('q' + (currentQIndex + 1), q.q, selected, isCorrect, q.answer || null);
         }
 
         function nextQuestion() {
             currentQIndex++;
             loadQuestion();
         }
+    </script>
+
+    <script>
+      /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+         Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+      window.FreaknActivity = (function () {
+        function post(type, payload) {
+          try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+          catch (e) {}
+        }
+        return {
+          /** Reporta el resultado de una actividad calificable. */
+          submit: function (r) {
+            post("freakn:activity:result", {
+              activityId: r.activityId,          // id estable dentro del archivo
+              title: r.title || document.title,  // nombre legible
+              score: r.score,                    // puntos obtenidos
+              maxScore: r.maxScore,              // puntaje máximo
+              answers: r.answers || []           // ver formato abajo
+            });
+          },
+          /** Marca la lección como vista/terminada (sin puntaje). */
+          complete: function () { post("freakn:lesson:complete", {}); }
+        };
+      })();
     </script>
 </body>
 </html>

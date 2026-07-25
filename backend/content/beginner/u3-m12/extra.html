@@ -1306,6 +1306,14 @@
             
             document.getElementById('final-rank').innerText = rank;
             document.getElementById('final-message').innerText = msg;
+
+            FreaknActivity.submit({
+                activityId: "extra-activity",
+                title: document.title,
+                score: this.score,
+                maxScore: this.maxScore,
+                answers: freaknAnswers
+            });
         }
     };
 

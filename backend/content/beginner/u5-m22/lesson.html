@@ -49,6 +49,43 @@
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #30302F; }
         ::-webkit-scrollbar-thumb { background: #E4DF33; }
+
+        @media (max-width: 820px) {
+            body { height: auto; min-height: 100vh; overflow: visible; align-items: flex-start; }
+            #app-container { width: 100%; height: auto; min-height: 100vh; box-shadow: none; }
+            #slide-mount { flex-direction: column; height: auto; min-height: 100vh; }
+
+            #app-container [class~="h-full"] { height: auto; }
+            #app-container [class~="p-12"] { padding: 1rem; }
+            #app-container [class~="p-16"] { padding: 1rem; }
+            #app-container [class~="p-8"] { padding: 1rem; }
+            #app-container [class~="px-10"] { padding-left: 1rem; padding-right: 1rem; }
+            #app-container [class~="px-12"] { padding-left: 1rem; padding-right: 1rem; }
+
+            #app-container [class~="text-[110px]"] { font-size: 2.4rem; }
+            #app-container [class~="text-8xl"] { font-size: 2.4rem; }
+            #app-container [class~="text-7xl"] { font-size: 2rem; }
+            #app-container [class~="text-4xl"] { font-size: 1.5rem; }
+            #app-container [class~="text-3xl"] { font-size: 1.3rem; }
+            #app-container [class~="text-2xl"] { font-size: 1.15rem; }
+
+            #app-container [class~="w-[45%]"],
+            #app-container [class~="w-[55%]"],
+            #app-container [class~="w-1/2"] { width: 100%; }
+
+            #app-container [class~="pb-20"] { flex-direction: column; overflow-y: auto; }
+            #app-container [class~="grid-cols-3"] { grid-template-columns: 1fr; }
+            #app-container [class~="w-[380px]"] { width: 100%; max-width: 340px; }
+            #app-container [class~="w-[500px]"] { width: 100%; }
+            #app-container [class~="gap-12"] { gap: 1.25rem; }
+            #app-container [class~="flex"][class~="gap-6"][class~="mb-6"] { flex-direction: column; }
+
+            #app-container [class~="bottom-6"],
+            #app-container [class~="bottom-8"],
+            #app-container [class~="bottom-12"] { position: static; margin-top: 1rem; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
+
+            #app-container .btn-freak { min-height: 44px; font-size: 16px; padding: 0.75rem 1.25rem; }
+        }
     </style>
 </head>
 <body>
@@ -346,8 +383,10 @@
         let currentSlide = 0;
         let score = 0;
         let answeredQuestions = new Set();
-        let selectedAnswers = {}; 
+        let selectedAnswers = {};
         let isGradingState = false;
+        let freaknAnswers = [];
+        let freaknSubmitted = false;
 
         const appContainer = document.getElementById('slide-mount');
 
@@ -636,6 +675,17 @@
                 else if (percentage >= 70) message = "SOLID WORK. You survived the streets.";
                 else message = "WE NEED TO TALK. Time to review the basics.";
 
+                if (!freaknSubmitted) {
+                    freaknSubmitted = true;
+                    FreaknActivity.submit({
+                        activityId: "lesson-quiz",
+                        title: document.title,
+                        score: score,
+                        maxScore: 30,
+                        answers: freaknAnswers
+                    });
+                }
+
                 appContainer.innerHTML = `
                     <div class="w-full flex flex-col justify-center items-center text-center p-12 bg-freakYellow text-freakDark relative h-full">
                         <h1 class="title-freak text-8xl mb-4">LESSON COMPLETE</h1>
@@ -654,14 +704,23 @@
 
         window.handleAnswer = function(optIndex) {
             const data = lessonData[currentSlide];
-            if (answeredQuestions.has(currentSlide)) return; 
-            
+            if (answeredQuestions.has(currentSlide)) return;
+
             selectedAnswers[currentSlide] = optIndex;
             answeredQuestions.add(currentSlide);
-            
-            if (optIndex === data.correct) score++;
-            
-            renderSlide(); 
+
+            const isCorrect = optIndex === data.correct;
+            if (isCorrect) score++;
+
+            freaknAnswers.push({
+                id: 'q' + data.qNum,
+                question: data.question || data.incoming,
+                answer: data.options[optIndex],
+                correct: isCorrect,
+                expected: data.options[data.correct]
+            });
+
+            renderSlide();
         }
 
         window.submitWriting = function() {
@@ -680,7 +739,17 @@
             isGradingState = false;
             answeredQuestions.add(currentSlide);
             if (isCorrect) score++;
-            nav(1); 
+
+            const data = lessonData[currentSlide];
+            freaknAnswers.push({
+                id: 'q' + data.qNum,
+                question: data.prompt,
+                answer: selectedAnswers[currentSlide],
+                correct: isCorrect,
+                expected: data.acceptable
+            });
+
+            nav(1);
         }
 
         window.nav = function(dir) {
@@ -702,6 +771,31 @@
         });
 
         renderSlide();
+    </script>
+
+    <script>
+      /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+         Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+      window.FreaknActivity = (function () {
+        function post(type, payload) {
+          try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+          catch (e) {}
+        }
+        return {
+          /** Reporta el resultado de una actividad calificable. */
+          submit: function (r) {
+            post("freakn:activity:result", {
+              activityId: r.activityId,          // id estable dentro del archivo
+              title: r.title || document.title,  // nombre legible
+              score: r.score,                    // puntos obtenidos
+              maxScore: r.maxScore,              // puntaje máximo
+              answers: r.answers || []           // ver formato abajo
+            });
+          },
+          /** Marca la lección como vista/terminada (sin puntaje). */
+          complete: function () { post("freakn:lesson:complete", {}); }
+        };
+      })();
     </script>
 </body>
 </html>

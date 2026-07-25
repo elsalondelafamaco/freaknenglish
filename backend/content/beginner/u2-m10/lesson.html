@@ -607,8 +607,10 @@
     }
 
     function checkL1(optIndex, isCorrect) {
-        const expl = l1Data[l1Index].expl;
+        const data = l1Data[l1Index];
+        const expl = data.expl;
         const btns = document.querySelectorAll('.option-btn');
+        registrarRespuesta('l1-' + l1Index, data.q, data.opts[optIndex], isCorrect, data.opts[data.correct]);
         if(isCorrect) {
             score++;
             updateScore();
@@ -658,7 +660,9 @@
         input.addEventListener('keyup', function(e) {
             if(e.key === 'Enter') {
                 const val = input.value.toLowerCase().trim().replace("?", ""); // remove accidental question marks
-                if(data.a.includes(val)) {
+                const isCorrect = data.a.includes(val);
+                registrarRespuesta('l2-' + l2Index, data.q, val, isCorrect, data.a[0]);
+                if(isCorrect) {
                     score++;
                     updateScore();
                     showFeedback(true);
@@ -703,15 +707,18 @@
 
     function finishLesson() {
         const answers = document.querySelectorAll('.l3-ans');
-        answers.forEach(ans => {
-            const text = ans.value.trim().toLowerCase();
-            
-            // For A2: A valid answer must be a full sentence (length), contain a question mark, 
+        answers.forEach((ans, i) => {
+            const raw = ans.value.trim();
+            const text = raw.toLowerCase();
+
+            // For A2: A valid answer must be a full sentence (length), contain a question mark,
             // and have a comma (separating the tag).
             const hasQuestionMark = text.includes("?");
             const hasComma = text.includes(",");
-            
-            if(text.length > 10 && hasQuestionMark && hasComma) {
+            const isCorrect = text.length > 10 && hasQuestionMark && hasComma;
+
+            registrarRespuesta('l3-' + i, q3[i], raw, isCorrect, 'Full sentence + comma + question tag');
+            if(isCorrect) {
                 score++;
             }
         });
@@ -722,6 +729,14 @@
         if(score > 25) msg = "MASTER OF RUMORS! 🔥";
         document.getElementById('final-msg').innerText = msg;
         nav(8); // Ends on slide 8
+
+        FreaknActivity.submit({
+            activityId: 'lesson-quiz',
+            title: document.title,
+            score: score,
+            maxScore: freaknAnswers.length,
+            answers: freaknAnswers
+        });
     }
 
     // Initialize

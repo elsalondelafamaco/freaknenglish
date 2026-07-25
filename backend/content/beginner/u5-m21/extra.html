@@ -538,13 +538,65 @@
         .flex-center { display: flex; justify-content: center; align-items: center; gap: 10px; }
         .mt-20 { margin-top: 16px; }
         .text-center { text-align: center; }
-        
+
+        /* ============ RESPONSIVE (mobile 360-820px) ============ */
+        @media (max-width: 820px) {
+            body { height: auto; min-height: 100vh; overflow-y: auto; overflow-x: hidden; align-items: flex-start; }
+            .slide-container { width: 100%; height: auto; min-height: 100vh; box-shadow: none; }
+            .slide { display: none; position: static; opacity: 1; pointer-events: all; transform: none; padding: 1rem; }
+            .slide.active { display: flex; }
+            .split-screen { flex-direction: column; }
+            .split-left, .split-right { padding: 1.5rem; }
+            .title-bree { font-size: 2.25rem; }
+            .split-right .title-bree { font-size: 1.75rem; }
+            .activity-card { width: 100%; }
+            .card-body { padding: 1rem; }
+            .card-header h2 { font-size: 1.4rem; }
+            .dnd-area { flex-direction: column; }
+            .gossip-profiles { flex-direction: column; }
+            .gossip-paper { padding: 1rem; }
+            .gossip-paper h3 { font-size: 1.75rem; }
+            #l1-options { flex-direction: column; }
+            .flex-center { flex-wrap: wrap; }
+            #final-score-display { font-size: 3rem !important; }
+            #slide-final .skewed-block { padding: 12px 20px !important; font-size: 1.25rem !important; transform: skew(-10deg) !important; }
+            .btn-freak, .option-btn { min-height: 44px; font-size: 16px; }
+            .free-text-input { font-size: 16px; }
+            .word-pill { font-size: 1rem; padding: 8px 12px; }
+            .scenario-text { font-size: 1.2rem; }
+        }
+
     </style>
 </head>
 <body>
 
+<script>
+  /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+     Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+  window.FreaknActivity = (function () {
+    function post(type, payload) {
+      try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+      catch (e) {}
+    }
+    return {
+      /** Reporta el resultado de una actividad calificable. */
+      submit: function (r) {
+        post("freakn:activity:result", {
+          activityId: r.activityId,          // id estable dentro del archivo
+          title: r.title || document.title,  // nombre legible
+          score: r.score,                    // puntos obtenidos
+          maxScore: r.maxScore,              // puntaje máximo
+          answers: r.answers || []           // ver formato abajo
+        });
+      },
+      /** Marca la lección como vista/terminada (sin puntaje). */
+      complete: function () { post("freakn:lesson:complete", {}); }
+    };
+  })();
+</script>
+
 <div class="slide-container">
-    
+
     <!-- UI Overlay -->
     <div class="progress-bar-container" id="progressBarContainer">
         <div class="progress-bar" id="progressBar"></div>
@@ -888,7 +940,8 @@
         currentSlideIdx: 0,
         score: 0,
         maxScore: 30,
-        
+        freaknAnswers: [],
+
         l1Index: 0,
         l2Index: 0,
         l3Index: 0,
@@ -1014,8 +1067,9 @@
 
             const data = level1Data[this.l1Index];
             const feedback = document.getElementById('l1-feedback');
-            
-            if(choice === data.ans) {
+
+            const isCorrect = choice === data.ans;
+            if(isCorrect) {
                 feedback.innerText = "Exactly! Great observation.";
                 feedback.className = 'feedback-box success';
                 this.updateScore(1);
@@ -1023,6 +1077,13 @@
                 feedback.innerText = data.err;
                 feedback.className = 'feedback-box error';
             }
+            this.freaknAnswers.push({
+                id: 'l1-' + (this.l1Index + 1),
+                question: data.s,
+                answer: choice === 'a' ? data.a : data.b,
+                correct: isCorrect,
+                expected: data.ans === 'a' ? data.a : data.b
+            });
             document.getElementById('btn-l1-next').classList.remove('hidden');
         },
 
@@ -1114,11 +1175,13 @@
                 
                 let isPerfect = true;
                 let correctSentenceParts = [];
+                let userSentenceParts = [];
 
                 slots.forEach((slot, i) => {
                     const expected = slot.dataset.expected;
                     const val = slot.dataset.val;
                     correctSentenceParts.push(slot.dataset.label);
+                    userSentenceParts.push(slot.textContent.trim() || slot.dataset.label);
 
                     if(val === expected) {
                         slot.style.background = '#ccffcc';
@@ -1145,6 +1208,14 @@
                     feedback.className = 'feedback-box error';
                     this.updateScore(1);
                 }
+
+                this.freaknAnswers.push({
+                    id: 'l2-' + (this.l2Index + 1),
+                    question: data.context,
+                    answer: userSentenceParts.join(' '),
+                    correct: isPerfect,
+                    expected: correctSentenceParts.join(' ')
+                });
 
                 btn.innerText = "Next Profile";
                 btn.dataset.action = "next";
@@ -1246,10 +1317,17 @@
             document.getElementById('l3-input').disabled = true;
             document.getElementById('btn-l3-submit').classList.add('hidden');
             document.getElementById('btn-l3-next').classList.remove('hidden');
-            
+
             fb.innerText = "Awesome! The sketch artist got the details.";
             fb.className = 'feedback-box success';
-            
+
+            this.freaknAnswers.push({
+                id: 'l3-' + (this.l3Index + 1),
+                question: currentData.prompt,
+                answer: rawVal,
+                correct: true
+            });
+
             this.updateScore(1);
         },
 
@@ -1281,6 +1359,14 @@
             
             document.getElementById('final-rank').innerText = rank;
             document.getElementById('final-message').innerText = msg;
+
+            FreaknActivity.submit({
+                activityId: "extra-activity",
+                title: document.title,
+                score: this.score,
+                maxScore: this.maxScore,
+                answers: this.freaknAnswers
+            });
         }
     };
 

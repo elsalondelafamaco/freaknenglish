@@ -55,7 +55,7 @@ function AuthenticatedLayout() {
 
   // Estudiantes: consultamos su suscripción real para decidir gating.
   const isStudent = !!user?.roles.includes("student");
-  const { data: mySub } = useQuery({
+  const { data: mySub, isPending: subPending } = useQuery({
     queryKey: ["me", "subscription"],
     queryFn: () => subscriptionsApi.mine(),
     enabled: isStudent && isAuthenticated,
@@ -92,7 +92,10 @@ function AuthenticatedLayout() {
       else if (pathname.startsWith("/teacher") && !isTeacher && !isAdmin) target = "/app";
       else if (pathname.startsWith("/app") && !roleIsStudent) target = isAdmin ? "/admin" : "/teacher";
 
-      // Onboarding gate para estudiantes.
+      // Onboarding gate para estudiantes. OJO: hay que esperar a que la query
+      // de suscripción RESUELVA — decidir con mySub=undefined expulsaba al
+      // dashboard a estudiantes con plan activo (race al cargar rutas hondas).
+      if (!target && roleIsStudent && subPending) return;
       if (!target && roleIsStudent && !pathname.startsWith("/onboarding")) {
         const missingProfile = !user.phone || !user.documentNumber;
         const hasActiveSub = !!mySub && (mySub as any).status === "active";
@@ -114,7 +117,7 @@ function AuthenticatedLayout() {
       }
       setChecked(true);
     }
-  }, [isAuthenticated, loading, navigate, user, pathname, mySub, backendDown]);
+  }, [isAuthenticated, loading, navigate, user, pathname, mySub, subPending, backendDown]);
 
   // Cuenta baneada: pantalla de bloqueo total, sin acceso a nada del portal.
   if (banned) {

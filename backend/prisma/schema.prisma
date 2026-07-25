@@ -88,6 +88,7 @@ model User {
   notes            ClassNote[]
   progress         LessonProgress[]
   attempts         CheckpointAttempt[]
+  activityResults  ActivityResult[]
   surveys          SatisfactionSurvey[]
   notifications    Notification[]
   refreshTokens    RefreshToken[]
@@ -349,6 +350,7 @@ model Lesson {
   module   Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   progress LessonProgress[]
   attachments LessonAttachment[]
+  activityResults ActivityResult[]
 
   @@index([moduleId, position])
   @@map("lessons")
@@ -387,6 +389,34 @@ model LessonProgress {
 
   @@unique([userId, lessonId])
   @@map("lesson_progress")
+}
+
+/// Resultado de una actividad interactiva dentro de una lección HTML.
+/// Las lecciones estandarizadas reportan vía el bridge `FreaknActivity.submit()`
+/// (postMessage → LessonViewer → API). Una fila por (user, lesson, activity),
+/// re-intentos actualizan la fila (se guarda el último intento + contador).
+model ActivityResult {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  lessonId   String   @map("lesson_id")
+  /// Id estable de la actividad dentro del HTML (p.ej. "quiz", "matching-1").
+  activityId String   @map("activity_id")
+  /// Título legible de la actividad (lo reporta el HTML).
+  title      String?
+  score      Int?     // puntos obtenidos
+  maxScore   Int?     @map("max_score")
+  /// Respuestas estandarizadas: [{ id, question, answer, correct?, expected? }]
+  answers    Json     @default("[]")
+  attempts   Int      @default(1)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId, activityId])
+  @@index([lessonId])
+  @@map("activity_results")
 }
 
 model Checkpoint {

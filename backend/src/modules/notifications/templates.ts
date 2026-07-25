@@ -102,8 +102,18 @@ export const templates = {
   reminder_1h: () =>
     wrap('Tu clase comienza en 1 hora', `<p>¡Prepárate! Entra 5 minutos antes.</p>${cta(`${env.PUBLIC_SITE_URL}/app`, 'Ir a mi clase')}`),
 
-  class_rescheduled: (v: { startsAt: string }) =>
-    wrap('Tu clase fue reprogramada', `<p>Nueva fecha: <b>${fmtDate(v.startsAt)}</b>.</p>${cta(`${env.PUBLIC_SITE_URL}/app/calendar`, 'Ver calendario')}`),
+  // Acepta `startsAt` (ISO) o `newDate` (texto ya formateado) — distintos
+  // callers usan uno u otro; antes esto producía "Invalid Date" en el correo.
+  class_rescheduled: (v: { startsAt?: string; newDate?: string; fullName?: string }) => {
+    const when = v.newDate ?? (v.startsAt ? fmtDate(v.startsAt) : '')
+    return wrap(
+      'Tu clase fue reprogramada',
+      `<p>${v.fullName ? `Hola ${String(v.fullName).split(' ')[0]}, tu` : 'Tu'} clase cambió de horario.</p>
+       ${when ? `<p>Nueva fecha: <b>${when}</b>.</p>` : '<p>Revisa tu calendario para ver el nuevo horario.</p>'}
+       ${cta(`${env.PUBLIC_SITE_URL}/app/calendar`, 'Ver calendario')}`,
+      { preheader: when ? `Nueva fecha: ${when}` : 'Revisa tu nuevo horario' },
+    )
+  },
 
   class_cancelled: (v: { reason?: string }) =>
     wrap('Tu clase fue cancelada', `<p>${v.reason ? `Motivo: ${v.reason}` : 'La clase fue cancelada.'}</p>${cta(`${env.PUBLIC_SITE_URL}/app/calendar`, 'Reagendar')}`),

@@ -43,6 +43,59 @@ export class LearningService {
     })
   }
 
+  // ─── Resultados de actividades (bridge FreaknActivity) ───────────────
+
+  /**
+   * Guarda el resultado de una actividad interactiva. Un registro por
+   * (user, lesson, activity); re-intentos actualizan y suman `attempts`.
+   */
+  async saveActivityResult(
+    userId: string,
+    lessonId: string,
+    body: { activityId: string; title?: string; score?: number; maxScore?: number; answers?: unknown[] },
+  ) {
+    const activityId = String(body.activityId ?? '').trim()
+    if (!activityId) throw new Error('activityId requerido')
+    const data = {
+      title: body.title ?? undefined,
+      score: typeof body.score === 'number' ? Math.round(body.score) : null,
+      maxScore: typeof body.maxScore === 'number' ? Math.round(body.maxScore) : null,
+      answers: (Array.isArray(body.answers) ? body.answers : []) as any,
+    }
+    return this.prisma.activityResult.upsert({
+      where: { userId_lessonId_activityId: { userId, lessonId, activityId } },
+      update: { ...data, attempts: { increment: 1 } },
+      create: { userId, lessonId, activityId, ...data },
+    })
+  }
+
+  /** Resultados del propio estudiante (para pintar estado en el viewer). */
+  myActivityResults(userId: string, lessonId?: string) {
+    return this.prisma.activityResult.findMany({
+      where: { userId, ...(lessonId ? { lessonId } : {}) },
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true, lessonId: true, activityId: true, title: true,
+        score: true, maxScore: true, attempts: true, updatedAt: true,
+      },
+    })
+  }
+
+  /**
+   * Resultados de un estudiante con contexto (lección + módulo) — lo usan el
+   * admin (todos) y el profesor (sus estudiantes; la autorización la valida
+   * el caller).
+   */
+  activityResultsOfStudent(studentId: string) {
+    return this.prisma.activityResult.findMany({
+      where: { userId: studentId },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        lesson: { select: { id: true, title: true, module: { select: { id: true, title: true, level: true } } } },
+      },
+    })
+  }
+
   /**
    * Devuelve el checkpoint SIN correctIndex en las preguntas: exponer la
    * respuesta correcta permitiria hacer trampa. La calificacion es server-side

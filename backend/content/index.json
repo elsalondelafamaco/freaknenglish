@@ -1,0 +1,22 @@
+{
+  "$comment": "Manifiesto del contenido versionado. ContentSyncService lo aplica al boot (upsert idempotente). Los módulos de beginner del Drive se agregan aquí al procesarlos con scripts/process-lesson.mjs.",
+  "modules": [
+    {
+      "id": "beg-00-welcome",
+      "level": "beginner",
+      "title": "Welcome · Demo del formato estándar",
+      "description": "Módulo de ejemplo del pipeline de contenido: lección HTML responsive con actividad que reporta resultados a la plataforma (bridge FreaknActivity). Se reemplaza por el contenido real de Drive.",
+      "position": 0,
+      "lessons": [
+        {
+          "id": "beg-00-welcome-lesson",
+          "title": "Lesson 0 · Greetings básicos",
+          "position": 1,
+          "durationMin": 10,
+          "kind": "html",
+          "file": "beginner/00-welcome/lesson.html"
+        }
+      ]
+    }
+  ]
+}

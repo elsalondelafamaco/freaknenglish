@@ -233,6 +233,30 @@ export class TeachersService {
   }
 
   /**
+   * Resultados de actividades de aprendizaje del estudiante (bridge
+   * FreaknActivity). Profesor: solo sus estudiantes; admin: cualquiera.
+   */
+  async studentActivityResults(teacherId: string, studentId: string, isAdmin = false) {
+    if (!isAdmin) {
+      const rel = await this.prisma.user.findFirst({
+        where: {
+          id: studentId,
+          OR: [{ assignedTeacherId: teacherId }, { classesAsStudent: { some: { teacherId } } }],
+        },
+        select: { id: true },
+      })
+      if (!rel) throw new ForbiddenException('No autorizado sobre este estudiante')
+    }
+    return this.prisma.activityResult.findMany({
+      where: { userId: studentId },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        lesson: { select: { id: true, title: true, module: { select: { id: true, title: true, level: true } } } },
+      },
+    })
+  }
+
+  /**
    * Link de Meet/Zoom del estudiante (lo fija su profesor). El estudiante lo
    * usa en "Entrar a clase" y el profe lo ve en sus próximas clases.
    */

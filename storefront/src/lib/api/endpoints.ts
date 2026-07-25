@@ -245,12 +245,39 @@ export const learningApi = {
     apiGet<(Checkpoint & { moduleId: string; passingScore: number }) | null>("/learning/level-checkpoint", { level }),
   saveLessonProgress: (lessonId: string, secondsWatched: number, completed: boolean) =>
     apiPost("/learning/progress", { lessonId, secondsWatched, completed }),
+  // Resultados de actividades interactivas (bridge FreaknActivity)
+  saveActivityResult: (lessonId: string, body: ActivityResultInput) =>
+    apiPost<ActivityResultRow>(`/learning/lessons/${lessonId}/activity-result`, body),
+  myActivityResults: (lessonId?: string) =>
+    apiGet<ActivityResultRow[]>("/learning/my/activity-results", lessonId ? { lessonId } : undefined),
   checkpoint: (id: string) => apiGet<Checkpoint>(`/learning/checkpoints/${id}`),
   submitCheckpoint: (id: string, answers: Record<string, number>) =>
     apiPost<CheckpointAttempt>(`/learning/checkpoints/${id}/submit`, { answers }),
 };
 
 // ─── Teachers ──────────────────────────────────────────────────────────
+// ─── Actividades de lecciones (formato estándar FreaknActivity) ────────
+export type ActivityAnswer = { id: string; question?: string; answer?: unknown; correct?: boolean; expected?: unknown };
+export type ActivityResultInput = {
+  activityId: string;
+  title?: string;
+  score?: number;
+  maxScore?: number;
+  answers?: ActivityAnswer[];
+};
+export type ActivityResultRow = {
+  id: string;
+  lessonId: string;
+  activityId: string;
+  title: string | null;
+  score: number | null;
+  maxScore: number | null;
+  attempts: number;
+  updatedAt: string;
+  answers?: ActivityAnswer[];
+  lesson?: { id: string; title: string; module: { id: string; title: string; level: string } };
+};
+
 export const teachersApi = {
   students: () => apiGet<any[]>("/teacher/students"),
   studentDetail: (id: string) => apiGet<any>(`/teacher/students/${id}`),
@@ -262,6 +289,8 @@ export const teachersApi = {
     apiPost<any>(`/teacher/students/${studentId}/notes`, { notes }),
   setMeetingUrl: (studentId: string, url: string | null) =>
     apiPatch<{ id: string; meetingUrl: string | null }>(`/teacher/students/${studentId}/meeting-url`, { url }),
+  studentActivityResults: (studentId: string) =>
+    apiGet<ActivityResultRow[]>(`/teacher/students/${studentId}/activity-results`),
   pinNote: (noteId: string, pinned: boolean) =>
     apiPatch<any>(`/teacher/notes/${noteId}/pin`, { pinned }),
   calendar: (from: string, to: string) =>

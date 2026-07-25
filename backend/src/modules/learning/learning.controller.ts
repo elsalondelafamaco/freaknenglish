@@ -30,6 +30,25 @@ export class LearningController {
   @Get('modules/:id')
   module(@Param('id') id: string) { return this.svc.module(id) }
 
+  /**
+   * @endpoint POST /api/v1/learning/lessons/:lessonId/activity-result
+   * Guarda el resultado reportado por el bridge FreaknActivity de la lección.
+   */
+  @Post('lessons/:lessonId/activity-result')
+  saveActivityResult(
+    @CurrentUser() u: AuthUser,
+    @Param('lessonId') lessonId: string,
+    @Body() body: { activityId: string; title?: string; score?: number; maxScore?: number; answers?: unknown[] },
+  ) {
+    return this.svc.saveActivityResult(u.id, lessonId, body)
+  }
+
+  /** @endpoint GET /api/v1/learning/my/activity-results?lessonId= */
+  @Get('my/activity-results')
+  myActivityResults(@CurrentUser() u: AuthUser, @Query('lessonId') lessonId?: string) {
+    return this.svc.myActivityResults(u.id, lessonId || undefined)
+  }
+
   /** @endpoint GET /api/v1/learning/progress  (current user, all levels) */
   @Get('progress')
   getProgress(@CurrentUser() u: AuthUser) { return this.svc.userProgress(u.id) }

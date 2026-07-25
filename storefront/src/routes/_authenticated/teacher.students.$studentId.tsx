@@ -178,7 +178,96 @@ function TeacherStudentDetail() {
           </div>
         </aside>
       </section>
+
+      <ActivityResultsSection studentId={studentId} />
     </div>
+  );
+}
+
+/**
+ * Resultados de actividades de aprendizaje (bridge FreaknActivity) — el
+ * profesor ve cómo le fue a su estudiante en cada lección interactiva.
+ */
+export function ActivityResultsSection({ studentId }: { studentId: string }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const q = useQuery({
+    queryKey: ["activity-results", studentId],
+    queryFn: () => teachersApi.studentActivityResults(studentId),
+  });
+  const rows = q.data ?? [];
+
+  return (
+    <section>
+      <h2 className="text-lg font-semibold text-brand-ink">Actividades de aprendizaje</h2>
+      <p className="mt-0.5 text-xs text-brand-ink/55">
+        Respuestas y resultados de las actividades interactivas de las lecciones.
+      </p>
+      <div className="mt-3 overflow-hidden rounded-2xl border border-brand-line bg-white">
+        {q.isLoading ? (
+          <p className="p-5 text-sm text-brand-ink/55">Cargando…</p>
+        ) : rows.length === 0 ? (
+          <p className="p-5 text-sm text-brand-ink/55">Aún no ha completado actividades.</p>
+        ) : (
+          <ul className="divide-y divide-brand-line/70">
+            {rows.map((r) => {
+              const pct = r.score != null && r.maxScore ? Math.round((r.score / r.maxScore) * 100) : null;
+              const open = expanded === r.id;
+              return (
+                <li key={r.id}>
+                  <button
+                    onClick={() => setExpanded(open ? null : r.id)}
+                    className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-3 text-left text-sm transition hover:bg-brand-cream/30"
+                  >
+                    <div>
+                      <div className="font-semibold text-brand-ink">{r.title ?? r.activityId}</div>
+                      <div className="text-xs text-brand-ink/55">
+                        {r.lesson?.module?.title ? `${r.lesson.module.title} · ` : ""}
+                        {r.lesson?.title ?? r.lessonId}
+                        {" · "}
+                        {new Date(r.updatedAt).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}
+                        {r.attempts > 1 ? ` · ${r.attempts} intentos` : ""}
+                      </div>
+                    </div>
+                    {pct != null ? (
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+                          pct >= 80 ? "bg-emerald-100 text-emerald-800" : pct >= 50 ? "bg-amber-100 text-amber-900" : "bg-red-100 text-red-700"
+                        }`}
+                      >
+                        {r.score}/{r.maxScore} · {pct}%
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-brand-cream px-2.5 py-1 text-xs font-semibold text-brand-ink/70">Completada</span>
+                    )}
+                  </button>
+                  {open && Array.isArray(r.answers) && r.answers.length > 0 ? (
+                    <div className="border-t border-brand-line/60 bg-brand-cream/20 px-4 py-3">
+                      <ul className="space-y-2 text-sm">
+                        {r.answers.map((a: any, i: number) => (
+                          <li key={a.id ?? i} className="rounded-xl bg-white p-2.5">
+                            {a.question ? <div className="text-xs text-brand-ink/60">{a.question}</div> : null}
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                              <span className="font-medium text-brand-ink">{String(a.answer ?? "—")}</span>
+                              {a.correct === true ? (
+                                <span className="text-xs font-semibold text-emerald-600">✓ correcta</span>
+                              ) : a.correct === false ? (
+                                <span className="text-xs font-semibold text-red-600">
+                                  ✗ incorrecta{a.expected != null ? ` (era: ${String(a.expected)})` : ""}
+                                </span>
+                              ) : null}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </section>
   );
 }
 

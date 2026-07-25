@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { AlertTriangle, ExternalLink, XCircle } from "lucide-react";
+import { AlertTriangle, CalendarOff, ExternalLink, Plus, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { classesApi, scheduleApi, teachersApi } from "@/lib/api/endpoints";
 
@@ -19,6 +19,66 @@ type Selected = {
   meetingUrl: string | null;
   student: { id: string; fullName: string; paymentActive: boolean; meetingUrl?: string | null };
 };
+
+/** Registrar ausencia por rango de fechas (vacaciones, cita médica, etc.). */
+function AbsenceDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const [startsAt, setStartsAt] = useState("");
+  const [endsAt, setEndsAt] = useState("");
+  const [reason, setReason] = useState("Vacaciones");
+  const createM = useMutation({
+    mutationFn: () => teachersApi.createAbsence(new Date(startsAt).toISOString(), new Date(endsAt).toISOString(), reason),
+    onSuccess: (r) => {
+      const n = r.affected?.length ?? 0;
+      toast.success(n > 0
+        ? `Ausencia registrada — ${n} clase(s) canceladas; estudiantes y admin notificados.`
+        : "Ausencia registrada (sin clases afectadas en ese rango).");
+      onDone();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo registrar la ausencia"),
+  });
+  const valid = startsAt && endsAt && new Date(endsAt) > new Date(startsAt);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/40 px-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-md rounded-3xl border border-brand-line bg-white p-6" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-bold text-brand-ink">Registrar ausencia</h3>
+        <p className="mt-1 text-sm text-brand-ink/65">
+          Indica el rango en el que no estarás disponible. Las clases dentro del rango se
+          cancelan y se avisa a tus estudiantes y al admin.
+        </p>
+        <div className="mt-4 grid gap-3">
+          <label className="text-xs font-semibold text-brand-ink/70">
+            Desde
+            <input type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none" />
+          </label>
+          <label className="text-xs font-semibold text-brand-ink/70">
+            Hasta
+            <input type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none" />
+          </label>
+          <label className="text-xs font-semibold text-brand-ink/70">
+            Motivo
+            <select value={reason} onChange={(e) => setReason(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm">
+              {["Vacaciones", "Cita médica", "Enfermedad", "Otro"].map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button onClick={onClose} className="rounded-full px-4 py-2 text-sm font-medium text-brand-ink/70 hover:bg-brand-cream/40">Cancelar</button>
+          <button
+            disabled={!valid || createM.isPending}
+            onClick={() => createM.mutate()}
+            className="rounded-full bg-brand-ink px-5 py-2 text-sm font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-50"
+          >
+            {createM.isPending ? "Guardando…" : "Registrar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /** ISO → valor para <input type="datetime-local"> en hora local. */
 function toLocalInput(iso: string): string {
@@ -49,6 +109,9 @@ function TeacherCalendar() {
     queryFn: () => teachersApi.calendar(range!.from, range!.to),
     enabled: !!range,
   });
+  // Ausencias (capa informativa integrada al calendario).
+  const absQ = useQuery({ queryKey: ["teacher", "absences"], queryFn: () => teachersApi.absences() });
+  const [absOpen, setAbsOpen] = useState(false);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["teacher", "calendar"] });
   const moveM = useMutation({
@@ -70,6 +133,15 @@ function TeacherCalendar() {
     mutationFn: (id: string) => classesApi.noShow(id),
     onSuccess: () => { toast.success("Marcada como no tomada"); setSelected(null); invalidate(); },
     onError: (e: any) => toast.error(e?.message ?? "No se pudo marcar"),
+  });
+  const invalidateAbs = () => {
+    qc.invalidateQueries({ queryKey: ["teacher", "absences"] });
+    qc.invalidateQueries({ queryKey: ["teacher", "calendar"] });
+  };
+  const delAbsM = useMutation({
+    mutationFn: (id: string) => teachersApi.deleteAbsence(id),
+    onSuccess: () => { toast.success("Ausencia eliminada; las clases del rango vuelven a quedar programadas."); invalidateAbs(); },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo eliminar"),
   });
 
   const events = useMemo(() => {
@@ -113,6 +185,9 @@ function TeacherCalendar() {
               <span className="inline-block size-2.5 rounded-full" style={{ background: STATUS_COLOR[st] }} /> {label}
             </span>
           ))}
+          <span className="inline-flex items-center gap-1">
+            <span className="inline-block size-2.5 rounded-full bg-[#fca5a5]" /> Ausencia
+          </span>
         </div>
       </header>
 
@@ -168,6 +243,71 @@ function TeacherCalendar() {
         />
         </div>
       </div>
+
+      {/* Ausencias: informativo, integrado al calendario (franja roja). */}
+      <section className="rounded-3xl border border-brand-line bg-white p-5 shadow-soft">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-base font-bold text-brand-ink">
+              <CalendarOff className="size-4" /> Mis ausencias
+            </h2>
+            <p className="mt-0.5 text-xs text-brand-ink/55">
+              Se ven como franja roja en tu calendario. Al registrar una, las clases del
+              rango se cancelan, tus estudiantes reciben aviso y el admin coordina la reposición.
+            </p>
+          </div>
+          <button
+            onClick={() => setAbsOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5"
+          >
+            <Plus className="size-3.5" /> Registrar ausencia
+          </button>
+        </div>
+        {(absQ.data ?? []).length === 0 ? (
+          <p className="mt-3 text-sm text-brand-ink/55">No tienes ausencias registradas.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-brand-line/60">
+            {(absQ.data ?? []).map((a: any) => {
+              const past = new Date(a.endsAt).getTime() < Date.now();
+              return (
+                <li key={a.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                  <div>
+                    <span className="font-semibold capitalize text-brand-ink">
+                      {new Date(a.startsAt).toLocaleString("es-CO", { weekday: "long", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <span className="text-brand-ink/55">
+                      {" — "}
+                      {new Date(a.endsAt).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <span className="ml-2 rounded-full bg-brand-cream/70 px-2 py-0.5 text-[11px] text-brand-ink/60">
+                      {a.reason ?? "Sin motivo"}
+                    </span>
+                  </div>
+                  {!past ? (
+                    <button
+                      onClick={() => delAbsM.mutate(a.id)}
+                      disabled={delAbsM.isPending}
+                      className="inline-flex items-center gap-1 rounded-full border border-brand-line px-3 py-1.5 text-[11px] font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                    >
+                      <Trash2 className="size-3" /> Eliminar
+                    </button>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {absOpen ? (
+        <AbsenceDialog
+          onClose={() => setAbsOpen(false)}
+          onDone={() => {
+            setAbsOpen(false);
+            invalidateAbs();
+          }}
+        />
+      ) : null}
 
       {/* Modal: ¿solo esta semana o siempre? (AC-17) */}
       {pendingMove ? (

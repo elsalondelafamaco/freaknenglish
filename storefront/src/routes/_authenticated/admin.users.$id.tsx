@@ -30,6 +30,7 @@ import type {
 import { getPlan, formatCop } from "@/lib/domain/plans";
 type PaymentIntent = Record<string, any>;
 import { adminApi, classesApi } from "@/lib/api/endpoints";
+import { ActivityResultsSection } from "./teacher.students.$studentId";
 import { setAccessToken } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
@@ -561,22 +562,28 @@ function AdminUserDetail() {
       ) : null}
 
       {tab === "learning" && isStudent ? (
-        <Card title={`Lecciones completadas (${progress.length})`}>
-          {progress.length === 0 ? (
-            <p className="text-sm text-brand-ink/55">El estudiante no ha completado lecciones.</p>
-          ) : (
-            <ul className="grid gap-1 text-sm md:grid-cols-2">
-              {progress.map((p: { lessonId: string; completedAt: string }) => (
-                <li key={p.lessonId} className="text-brand-ink/70">
-                  <span className="font-mono text-xs text-brand-ink/40">{p.lessonId}</span>{" "}
-                  <span className="text-brand-ink/55">
-                    — {new Date(p.completedAt).toLocaleDateString("es-CO")}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        <>
+          <Card title={`Lecciones completadas (${progress.length})`}>
+            {progress.length === 0 ? (
+              <p className="text-sm text-brand-ink/55">El estudiante no ha completado lecciones.</p>
+            ) : (
+              <ul className="grid gap-1 text-sm md:grid-cols-2">
+                {progress.map((p: { lessonId: string; completedAt: string }) => (
+                  <li key={p.lessonId} className="text-brand-ink/70">
+                    <span className="font-mono text-xs text-brand-ink/40">{p.lessonId}</span>{" "}
+                    <span className="text-brand-ink/55">
+                      — {new Date(p.completedAt).toLocaleDateString("es-CO")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          {/* Respuestas y resultados de actividades interactivas (todas, admin) */}
+          <div className="mt-4">
+            <ActivityResultsSection studentId={user.id} />
+          </div>
+        </>
       ) : null}
 
       {tab === "nps" && isStudent ? (

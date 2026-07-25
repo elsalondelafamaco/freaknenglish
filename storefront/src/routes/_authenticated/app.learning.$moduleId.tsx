@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle2, Circle, Download, FileText, FileCode, PlayCircle, Presentation } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle, Download, FileText, FileCode, PlayCircle, Presentation, Trophy } from "lucide-react";
+import { toast } from "sonner";
 import { learningApi } from "@/lib/api/endpoints";
 
 export const Route = createFileRoute("/_authenticated/app/learning/$moduleId")({
@@ -123,10 +124,59 @@ function ModuleDetail() {
 
 function LessonViewer({ lesson }: { lesson: any }) {
   const url = mediaUrl(lesson);
+  const qc = useQueryClient();
+
+  // Bridge FreaknActivity: las lecciones HTML estandarizadas reportan sus
+  // resultados por postMessage; aquí se guardan en la plataforma.
+  useEffect(() => {
+    if (lesson.kind !== "html") return;
+    const onMessage = async (e: MessageEvent) => {
+      const data = e.data;
+      if (!data || data.source !== "freakn-lesson") return;
+      if (data.type === "freakn:activity:result" && data.payload?.activityId) {
+        try {
+          await learningApi.saveActivityResult(lesson.id, data.payload);
+          qc.invalidateQueries({ queryKey: ["learning", "activity-results"] });
+          const p = data.payload;
+          toast.success(
+            typeof p.score === "number" && typeof p.maxScore === "number"
+              ? `Resultado guardado: ${p.score}/${p.maxScore} 🎉`
+              : "¡Actividad completada y guardada!",
+          );
+        } catch {
+          toast.error("No pudimos guardar tu resultado. Revisa tu conexión.");
+        }
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [lesson.id, lesson.kind, qc]);
+
+  // Resultados previos del estudiante en esta lección.
+  const resultsQ = useQuery({
+    queryKey: ["learning", "activity-results", lesson.id],
+    queryFn: () => learningApi.myActivityResults(lesson.id),
+    enabled: lesson.kind === "html",
+  });
+
   if (lesson.kind === "html") {
     return (
-      <div className="h-[72vh] w-full overflow-hidden rounded-2xl border border-brand-line bg-white">
-        <iframe title={lesson.title} srcDoc={lesson.contentHtml ?? url ?? ""} className="h-full w-full bg-white" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin" />
+      <div className="flex flex-col gap-3">
+        <div className="h-[72vh] w-full overflow-hidden rounded-2xl border border-brand-line bg-white">
+          <iframe title={lesson.title} srcDoc={lesson.contentHtml ?? url ?? ""} className="h-full w-full bg-white" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin" />
+        </div>
+        {(resultsQ.data ?? []).length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {resultsQ.data!.map((r) => (
+              <span key={r.id} className="inline-flex items-center gap-1.5 rounded-full bg-brand-yellow/50 px-3 py-1.5 text-xs font-semibold text-brand-ink">
+                <Trophy className="size-3.5" />
+                {r.title ?? r.activityId}
+                {r.score != null && r.maxScore != null ? `: ${r.score}/${r.maxScore}` : " ✓"}
+                {r.attempts > 1 ? ` · ${r.attempts} intentos` : ""}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
     );
   }

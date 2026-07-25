@@ -32,7 +32,6 @@ import { Route as CheckoutSchedulePlanIdRouteImport } from './routes/checkout.sc
 import { Route as AuthenticatedTeacherScheduleRouteImport } from './routes/_authenticated/teacher.schedule'
 import { Route as AuthenticatedTeacherCalendarRouteImport } from './routes/_authenticated/teacher.calendar'
 import { Route as AuthenticatedTeacherAvailabilityRouteImport } from './routes/_authenticated/teacher.availability'
-import { Route as AuthenticatedTeacherAbsencesRouteImport } from './routes/_authenticated/teacher.absences'
 import { Route as AuthenticatedOnboardingScheduleRouteImport } from './routes/_authenticated/onboarding.schedule'
 import { Route as AuthenticatedOnboardingProfileRouteImport } from './routes/_authenticated/onboarding.profile'
 import { Route as AuthenticatedBoardsBoardIdRouteImport } from './routes/_authenticated/boards.$boardId'
@@ -177,12 +176,6 @@ const AuthenticatedTeacherAvailabilityRoute =
   AuthenticatedTeacherAvailabilityRouteImport.update({
     id: '/availability',
     path: '/availability',
-    getParentRoute: () => AuthenticatedTeacherRoute,
-  } as any)
-const AuthenticatedTeacherAbsencesRoute =
-  AuthenticatedTeacherAbsencesRouteImport.update({
-    id: '/absences',
-    path: '/absences',
     getParentRoute: () => AuthenticatedTeacherRoute,
   } as any)
 const AuthenticatedOnboardingScheduleRoute =
@@ -364,7 +357,6 @@ export interface FileRoutesByFullPath {
   '/boards/$boardId': typeof AuthenticatedBoardsBoardIdRouteWithChildren
   '/onboarding/profile': typeof AuthenticatedOnboardingProfileRoute
   '/onboarding/schedule': typeof AuthenticatedOnboardingScheduleRoute
-  '/teacher/absences': typeof AuthenticatedTeacherAbsencesRoute
   '/teacher/availability': typeof AuthenticatedTeacherAvailabilityRoute
   '/teacher/calendar': typeof AuthenticatedTeacherCalendarRoute
   '/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
@@ -410,7 +402,6 @@ export interface FileRoutesByTo {
   '/boards/$boardId': typeof AuthenticatedBoardsBoardIdRouteWithChildren
   '/onboarding/profile': typeof AuthenticatedOnboardingProfileRoute
   '/onboarding/schedule': typeof AuthenticatedOnboardingScheduleRoute
-  '/teacher/absences': typeof AuthenticatedTeacherAbsencesRoute
   '/teacher/availability': typeof AuthenticatedTeacherAvailabilityRoute
   '/teacher/calendar': typeof AuthenticatedTeacherCalendarRoute
   '/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
@@ -462,7 +453,6 @@ export interface FileRoutesById {
   '/_authenticated/boards/$boardId': typeof AuthenticatedBoardsBoardIdRouteWithChildren
   '/_authenticated/onboarding/profile': typeof AuthenticatedOnboardingProfileRoute
   '/_authenticated/onboarding/schedule': typeof AuthenticatedOnboardingScheduleRoute
-  '/_authenticated/teacher/absences': typeof AuthenticatedTeacherAbsencesRoute
   '/_authenticated/teacher/availability': typeof AuthenticatedTeacherAvailabilityRoute
   '/_authenticated/teacher/calendar': typeof AuthenticatedTeacherCalendarRoute
   '/_authenticated/teacher/schedule': typeof AuthenticatedTeacherScheduleRoute
@@ -514,7 +504,6 @@ export interface FileRouteTypes {
     | '/boards/$boardId'
     | '/onboarding/profile'
     | '/onboarding/schedule'
-    | '/teacher/absences'
     | '/teacher/availability'
     | '/teacher/calendar'
     | '/teacher/schedule'
@@ -560,7 +549,6 @@ export interface FileRouteTypes {
     | '/boards/$boardId'
     | '/onboarding/profile'
     | '/onboarding/schedule'
-    | '/teacher/absences'
     | '/teacher/availability'
     | '/teacher/calendar'
     | '/teacher/schedule'
@@ -611,7 +599,6 @@ export interface FileRouteTypes {
     | '/_authenticated/boards/$boardId'
     | '/_authenticated/onboarding/profile'
     | '/_authenticated/onboarding/schedule'
-    | '/_authenticated/teacher/absences'
     | '/_authenticated/teacher/availability'
     | '/_authenticated/teacher/calendar'
     | '/_authenticated/teacher/schedule'
@@ -807,13 +794,6 @@ declare module '@tanstack/react-router' {
       path: '/availability'
       fullPath: '/teacher/availability'
       preLoaderRoute: typeof AuthenticatedTeacherAvailabilityRouteImport
-      parentRoute: typeof AuthenticatedTeacherRoute
-    }
-    '/_authenticated/teacher/absences': {
-      id: '/_authenticated/teacher/absences'
-      path: '/absences'
-      fullPath: '/teacher/absences'
-      preLoaderRoute: typeof AuthenticatedTeacherAbsencesRouteImport
       parentRoute: typeof AuthenticatedTeacherRoute
     }
     '/_authenticated/onboarding/schedule': {
@@ -1068,7 +1048,6 @@ const AuthenticatedAppRouteWithChildren =
   AuthenticatedAppRoute._addFileChildren(AuthenticatedAppRouteChildren)
 
 interface AuthenticatedTeacherRouteChildren {
-  AuthenticatedTeacherAbsencesRoute: typeof AuthenticatedTeacherAbsencesRoute
   AuthenticatedTeacherAvailabilityRoute: typeof AuthenticatedTeacherAvailabilityRoute
   AuthenticatedTeacherCalendarRoute: typeof AuthenticatedTeacherCalendarRoute
   AuthenticatedTeacherScheduleRoute: typeof AuthenticatedTeacherScheduleRoute
@@ -1078,7 +1057,6 @@ interface AuthenticatedTeacherRouteChildren {
 }
 
 const AuthenticatedTeacherRouteChildren: AuthenticatedTeacherRouteChildren = {
-  AuthenticatedTeacherAbsencesRoute: AuthenticatedTeacherAbsencesRoute,
   AuthenticatedTeacherAvailabilityRoute: AuthenticatedTeacherAvailabilityRoute,
   AuthenticatedTeacherCalendarRoute: AuthenticatedTeacherCalendarRoute,
   AuthenticatedTeacherScheduleRoute: AuthenticatedTeacherScheduleRoute,

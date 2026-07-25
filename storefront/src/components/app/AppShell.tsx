@@ -43,7 +43,6 @@ const TEACHER_NAV = [
   { to: "/teacher/students", label: "Estudiantes", tKey: "nav.students", icon: Users, end: false },
   { to: "/boards", label: "Boards", tKey: "nav.boards", icon: LayoutGrid, end: false },
   { to: "/teacher/availability", label: "Disponibilidad", tKey: "nav.availability", icon: Settings, end: false },
-  { to: "/teacher/absences", label: "Ausencias", tKey: "nav.absences", icon: CalendarDays, end: false },
 ] as const;
 
 const ADMIN_NAV = [

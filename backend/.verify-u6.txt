@@ -1,0 +1,35 @@
+· u6-checkpoint/checkpoint.html … ok
+· u6-m26/extra.html … ok
+· u6-m26/guide.html … ok
+· u6-m26/lesson.html … ok
+· u6-m27/extra.html … ok
+· u6-m27/guide.html … ok
+· u6-m27/lesson.html … ok
+· u6-m28/extra.html … ok
+· u6-m28/guide.html … ok
+· u6-m28/lesson.html … ok
+· u6-m29/extra.html … ok
+· u6-m29/guide.html … ok
+· u6-m29/lesson.html … ok
+· u6-m30/extra.html … ok
+· u6-m30/guide.html … ok
+· u6-m30/lesson.html … ok
+
+VALIDACIÓN RUNTIME · 16 archivos | OK 14 | avisos 0 | fallos 2
+
+ ✗ u6-m29/extra.html → DESBORDE horizontal 467/375
+ ✗ u6-m29/guide.html → DESBORDE horizontal 501/375
+   ✓ u6-checkpoint/checkpoint.html → sin desborde · reporta 0/40 [showOutro()]
+   ✓ u6-m26/extra.html → sin desborde · reporta 0/0 [endGame()]
+   ✓ u6-m26/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u6-m26/lesson.html → sin desborde · reporta 0/0 [showOutro()]
+   ✓ u6-m27/extra.html → sin desborde · reporta 0/20 [endGame()]
+   ✓ u6-m27/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u6-m27/lesson.html → sin desborde · reporta 0/30 [showOutro()]
+   ✓ u6-m28/extra.html → sin desborde · reporta 0/20 [endGame()]
+   ✓ u6-m28/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u6-m28/lesson.html → sin desborde · reporta 0/30 [showOutro()]
+   ✓ u6-m29/lesson.html → sin desborde · reporta 0/0 [showOutro()]
+   ✓ u6-m30/extra.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u6-m30/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u6-m30/lesson.html → sin desborde · reporta 0/0 [reportarResultado()]

@@ -196,6 +196,14 @@
                so slide content stays proportional. We only need to stop the
                unscaled layout box from creating a horizontal scrollbar. */
             html, body { overflow-x: hidden; width: 100%; }
+            /* #presentation-area is a flex item of body; without flex-shrink:0
+               it shrinks below its intended 1280px design width on narrow
+               viewports, which throws off the scale()/transform-origin math
+               in resizePresentation() and pushes the (still 1280px-wide)
+               absolutely positioned .slide-container off-center, causing a
+               real horizontal overflow. Keep its box at the design size so
+               the scale transform centers correctly. */
+            #presentation-area { flex-shrink: 0; }
         }
     </style>
 </head>

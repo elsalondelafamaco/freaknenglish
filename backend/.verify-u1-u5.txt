@@ -1,0 +1,175 @@
+· u1-checkpoint/checkpoint.html … ok
+· u1-m01/extra.html … ok
+· u1-m01/guide.html … ok
+· u1-m01/lesson.html … ok
+· u1-m02/extra.html … ok
+· u1-m02/guide.html … ok
+· u1-m02/lesson.html … ok
+· u1-m03/extra.html … ok
+· u1-m03/guide.html … ok
+· u1-m03/lesson.html … ok
+· u1-m04/extra.html … ok
+· u1-m04/guide.html … ok
+· u1-m04/lesson.html … ok
+· u1-m05/extra.html … ok
+· u1-m05/guide.html … ok
+· u1-m05/lesson.html … ok
+
+VALIDACIÓN RUNTIME · 16 archivos | OK 12 | avisos 4 | fallos 0
+
+ ~ u1-m01/extra.html → responsive OK; reporte no disparable desde fuera (scope privado)
+ ~ u1-m02/extra.html → responsive OK; reporte no disparable desde fuera (scope privado)
+ ~ u1-m03/extra.html → responsive OK; reporte no disparable desde fuera (scope privado)
+ ~ u1-m04/extra.html → responsive OK; reporte no disparable desde fuera (scope privado)
+   ✓ u1-checkpoint/checkpoint.html → sin desborde · reporta 0/0 [freaknReportResult()]
+   ✓ u1-m01/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u1-m01/lesson.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u1-m02/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u1-m02/lesson.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u1-m03/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u1-m03/lesson.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u1-m04/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u1-m04/lesson.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u1-m05/extra.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u1-m05/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u1-m05/lesson.html → sin desborde · reporta 0/0 [reportarResultado()]
+· u2-checkpoint/checkpoint.html … ok
+· u2-m06/extra.html … ok
+· u2-m06/guide.html … ok
+· u2-m06/lesson.html … ok
+· u2-m07/extra.html … ok
+· u2-m07/guide.html … ok
+· u2-m07/lesson.html … ok
+· u2-m08/extra.html … ok
+· u2-m08/guide.html … ok
+· u2-m08/lesson.html … ok
+· u2-m09/extra.html … ok
+· u2-m09/guide.html … ok
+· u2-m09/lesson.html … ok
+· u2-m10/extra.html … ok
+· u2-m10/guide.html … ok
+· u2-m10/lesson.html … ok
+
+VALIDACIÓN RUNTIME · 16 archivos | OK 16 | avisos 0 | fallos 0
+
+   ✓ u2-checkpoint/checkpoint.html → sin desborde · reporta 0/40 (6 resp.) [freaknReportResult()]
+   ✓ u2-m06/extra.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u2-m06/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u2-m06/lesson.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u2-m07/extra.html → sin desborde · reporta 0/0 [endGame()]
+   ✓ u2-m07/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u2-m07/lesson.html → sin desborde · reporta 0/10 (10 resp.) [finishLesson()]
+   ✓ u2-m08/extra.html → sin desborde · reporta 0/20 [endGame()]
+   ✓ u2-m08/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u2-m08/lesson.html → sin desborde · reporta 0/30 (10 resp.) [finishLesson()]
+   ✓ u2-m09/extra.html → sin desborde · reporta 0/20 [endGame()]
+   ✓ u2-m09/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u2-m09/lesson.html → sin desborde · reporta 0/30 (10 resp.) [finishLesson()]
+   ✓ u2-m10/extra.html → sin desborde · reporta 0/0 [finishLesson()]
+   ✓ u2-m10/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u2-m10/lesson.html → sin desborde · reporta 0/10 (10 resp.) [finishLesson()]
+· u3-checkpoint/checkpoint.html … ok
+· u3-m11/extra.html … ok
+· u3-m11/guide.html … ok
+· u3-m11/lesson.html … ok
+· u3-m12/extra.html … ok
+· u3-m12/guide.html … ok
+· u3-m12/lesson.html … ok
+· u3-m13/extra.html … ok
+· u3-m13/guide.html … ok
+· u3-m13/lesson.html … ok
+· u3-m14/extra.html … ok
+· u3-m14/guide.html … ok
+· u3-m14/lesson.html … ok
+· u3-m15/extra.html … ok
+· u3-m15/guide.html … ok
+· u3-m15/lesson.html … ok
+
+VALIDACIÓN RUNTIME · 16 archivos | OK 7 | avisos 6 | fallos 3
+
+ ✗ u3-m12/lesson.html → DESBORDE horizontal 501/375
+ ✗ u3-m14/lesson.html → DESBORDE horizontal 1258/375
+ ✗ u3-m15/lesson.html → DESBORDE horizontal 1258/375
+ ~ u3-m11/extra.html → responsive OK; reporte no disparable desde fuera (scope privado)
+ ~ u3-m11/lesson.html → responsive OK; reporte no disparable desde fuera (scope privado)
+ ~ u3-m12/extra.html → responsive OK; reporte no disparable desde fuera (scope privado)
+ ~ u3-m13/extra.html → responsive OK; reporte no disparable desde fuera (scope privado)
+ ~ u3-m14/extra.html → responsive OK; reporte no disparable desde fuera (scope privado)
+ ~ u3-m15/extra.html → responsive OK; reporte no disparable desde fuera (scope privado)
+   ✓ u3-checkpoint/checkpoint.html → sin desborde · reporta 0/0 [freaknReportResult()]
+   ✓ u3-m11/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u3-m12/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u3-m13/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u3-m13/lesson.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u3-m14/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u3-m15/guide.html → sin desborde · reporta complete [complete()]
+· u4-checkpoint/checkpoint.html … ok
+· u4-m16/extra.html … ok
+· u4-m16/guide.html … ok
+· u4-m16/lesson.html … ok
+· u4-m17/extra.html … ok
+· u4-m17/guide.html … ok
+· u4-m17/lesson.html … ok
+· u4-m18/extra.html … ok
+· u4-m18/guide.html … ok
+· u4-m18/lesson.html … ok
+· u4-m19/extra.html … ok
+· u4-m19/guide.html … ok
+· u4-m19/lesson.html … ok
+· u4-m20/extra.html … ok
+· u4-m20/guide.html … ok
+· u4-m20/lesson.html … ok
+
+VALIDACIÓN RUNTIME · 16 archivos | OK 16 | avisos 0 | fallos 0
+
+   ✓ u4-checkpoint/checkpoint.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u4-m16/extra.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u4-m16/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u4-m16/lesson.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u4-m17/extra.html → sin desborde · reporta 0/20 [endGame()]
+   ✓ u4-m17/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u4-m17/lesson.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u4-m18/extra.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u4-m18/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u4-m18/lesson.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u4-m19/extra.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u4-m19/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u4-m19/lesson.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u4-m20/extra.html → sin desborde · reporta 0/10 [reportarResultado()]
+   ✓ u4-m20/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u4-m20/lesson.html → sin desborde · reporta 0/30 [reportarResultado()]
+· u5-checkpoint/checkpoint.html … ok
+· u5-m21/extra.html … ok
+· u5-m21/guide.html … ok
+· u5-m21/lesson.html … ok
+· u5-m22/extra.html … ok
+· u5-m22/guide.html … ok
+· u5-m22/lesson.html … ok
+· u5-m23/extra.html … ok
+· u5-m23/guide.html … ok
+· u5-m23/lesson.html … ok
+· u5-m24/extra.html … ok
+· u5-m24/guide.html … ok
+· u5-m24/lesson.html … ok
+· u5-m25/extra.html … ok
+· u5-m25/guide.html … ok
+· u5-m25/lesson.html … ok
+
+VALIDACIÓN RUNTIME · 16 archivos | OK 8 | avisos 8 | fallos 0
+
+ ~ u5-m21/extra.html → responsive OK; reporte no disparable desde fuera (scope privado)
+ ~ u5-m21/lesson.html → responsive OK; reporte no disparable desde fuera (scope privado)
+ ~ u5-m22/extra.html → responsive OK; reporte no disparable desde fuera (scope privado)
+ ~ u5-m22/lesson.html → responsive OK; reporte no disparable desde fuera (scope privado)
+ ~ u5-m23/extra.html → responsive OK; reporte no disparable desde fuera (scope privado)
+ ~ u5-m23/lesson.html → responsive OK; reporte no disparable desde fuera (scope privado)
+ ~ u5-m24/extra.html → responsive OK; reporte no disparable desde fuera (scope privado)
+ ~ u5-m24/lesson.html → responsive OK; reporte no disparable desde fuera (scope privado)
+   ✓ u5-checkpoint/checkpoint.html → sin desborde · reporta 0/0 [freaknReportResult()]
+   ✓ u5-m21/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u5-m22/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u5-m23/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u5-m24/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u5-m25/extra.html → sin desborde · reporta 0/0 [reportarResultado()]
+   ✓ u5-m25/guide.html → sin desborde · reporta complete [complete()]
+   ✓ u5-m25/lesson.html → sin desborde · reporta 0/0 [reportarResultado()]

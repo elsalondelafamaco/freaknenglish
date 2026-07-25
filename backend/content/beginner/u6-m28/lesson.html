@@ -311,6 +311,71 @@
             transition: width 0.3s ease;
         }
 
+        /* ============ RESPONSIVE (mobile 360-820px) ============ */
+        @media (max-width: 820px) {
+            body { height: auto; min-height: 100vh; overflow-y: auto; align-items: flex-start; }
+
+            #app-container {
+                width: 100%;
+                height: auto;
+                min-height: 100vh;
+                transform: none !important;
+                box-shadow: none;
+            }
+
+            .slide { position: relative; height: auto; min-height: 100vh; }
+
+            .layout-split { flex-direction: column; }
+
+            .split-left, .split-right {
+                width: 100%;
+                height: auto;
+                padding: 1.5rem;
+            }
+
+            .layout-full { padding: 1.5rem; }
+
+            #app-container [class~="text-6xl"] { font-size: 2rem; }
+            #app-container [class~="text-5xl"] { font-size: 1.75rem; }
+            #app-container [class~="text-4xl"] { font-size: 1.5rem; }
+            #app-container [class~="text-3xl"] { font-size: 1.3rem; }
+            #app-container [class~="text-2xl"] { font-size: 1.15rem; }
+
+            .gossip-paper { padding: 1.5rem; font-size: 1.05rem; }
+
+            .options-grid { grid-template-columns: 1fr; gap: 1rem; }
+
+            .question-box { font-size: 1.3rem; padding: 1.25rem; }
+
+            .nav-controls {
+                position: static;
+                margin-top: 1.5rem;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            .nav-controls.left { left: auto; }
+
+            .btn-freak, .option-btn {
+                min-height: 44px;
+                font-size: 16px;
+                padding: 0.9rem 1.5rem;
+            }
+
+            .input-slot { font-size: 1.2rem; min-height: 44px; }
+
+            .progress-bar { top: 1rem; left: 1rem; right: 1rem; }
+
+            #feedback-screen {
+                position: fixed;
+                padding: 1.5rem;
+                overflow-y: auto;
+            }
+            .feedback-title { font-size: 2.2rem; }
+            .feedback-desc { font-size: 1.1rem; margin-bottom: 1.5rem; }
+
+            .game-area { max-width: 100%; }
+        }
+
     </style>
 </head>
 <body>
@@ -460,6 +525,10 @@
     // Scale App Logic - Makes layout unbreakable
     function resizeApp() {
         const app = document.getElementById('app-container');
+        if (window.innerWidth <= 820) {
+            app.style.transform = 'none';
+            return;
+        }
         const scaleX = window.innerWidth / 1280;
         const scaleY = window.innerHeight / 720;
         const scale = Math.min(scaleX, scaleY);
@@ -484,6 +553,7 @@
     let currentQIndex = 0;
     let totalScore = 0;
     let customCallback = null;
+    let freaknAnswers = [];
 
     // Database
     const questions = {
@@ -562,7 +632,7 @@
                 const btn = document.createElement('button');
                 btn.className = 'option-btn';
                 btn.innerText = opt;
-                btn.onclick = () => checkAnswer(opt, data.ans, data.exp);
+                btn.onclick = () => checkAnswer(opt, data.ans, data.exp, data);
                 grid.appendChild(btn);
             });
             ansArea.appendChild(grid);
@@ -579,7 +649,7 @@
             const btn = document.createElement('button');
             btn.className = 'btn-freak w-full text-center mt-4';
             btn.innerHTML = '<span class="btn-freak-inner">SUBMIT ➔</span>';
-            btn.onclick = () => checkAnswer(document.getElementById('user-input').value, data.ans, data.exp);
+            btn.onclick = () => checkAnswer(document.getElementById('user-input').value, data.ans, data.exp, data);
             
             input.addEventListener("keypress", function(event) {
                 if (event.key === "Enter") {
@@ -606,8 +676,16 @@
             btn.className = 'btn-freak w-full text-center mt-4';
             btn.innerHTML = '<span class="btn-freak-inner">SUBMIT ➔</span>';
             btn.onclick = () => {
-                const val = document.getElementById('user-input').value.toLowerCase().trim();
+                const rawVal = document.getElementById('user-input').value;
+                const val = rawVal.toLowerCase().trim();
                 const isCorrect = data.match(val) && val.length > 0;
+                freaknAnswers.push({
+                    id: 'L' + currentLevel + '-Q' + (currentQIndex + 1),
+                    question: data.q,
+                    answer: rawVal,
+                    correct: isCorrect,
+                    expected: data.exp
+                });
                 triggerFeedback(isCorrect, data.exp);
             };
             
@@ -625,10 +703,19 @@
         }
     }
 
-    function checkAnswer(userVal, correctVal, explanation) {
+    function checkAnswer(userVal, correctVal, explanation, qData) {
         const cleanUser = userVal.toLowerCase().trim();
         const cleanCorrect = correctVal.toLowerCase().trim();
         const isCorrect = cleanUser === cleanCorrect;
+        if (qData) {
+            freaknAnswers.push({
+                id: 'L' + currentLevel + '-Q' + (currentQIndex + 1),
+                question: qData.q,
+                answer: userVal,
+                correct: isCorrect,
+                expected: correctVal
+            });
+        }
         triggerFeedback(isCorrect, explanation);
     }
 
@@ -705,8 +792,41 @@
         } else {
             fb.innerHTML = "Titó: '¡Ave María purísima!' You are starving because you don't know what 'there is' means in your own kitchen!";
         }
+
+        FreaknActivity.submit({
+            activityId: "lesson-quiz",
+            title: document.title,
+            score: totalScore,
+            maxScore: 30,
+            answers: freaknAnswers
+        });
     }
 
+</script>
+
+<script>
+  /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+     Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+  window.FreaknActivity = (function () {
+    function post(type, payload) {
+      try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+      catch (e) {}
+    }
+    return {
+      /** Reporta el resultado de una actividad calificable. */
+      submit: function (r) {
+        post("freakn:activity:result", {
+          activityId: r.activityId,          // id estable dentro del archivo
+          title: r.title || document.title,  // nombre legible
+          score: r.score,                    // puntos obtenidos
+          maxScore: r.maxScore,              // puntaje máximo
+          answers: r.answers || []           // ver formato abajo
+        });
+      },
+      /** Marca la lección como vista/terminada (sin puntaje). */
+      complete: function () { post("freakn:lesson:complete", {}); }
+    };
+  })();
 </script>
 </body>
 </html>

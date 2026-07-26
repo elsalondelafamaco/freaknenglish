@@ -95,20 +95,31 @@ function LearningIndex() {
             {group.map((m: any) => {
               const prog = moduleProgress(m);
               const isCheckpoint = /checkpoint/i.test(m.id);
-              return (
-                <Link
-                  key={m.id}
-                  to="/app/learning/$moduleId"
-                  params={{ moduleId: m.id }}
-                  className={`group rounded-3xl border p-6 transition hover:shadow-soft ${
-                    isCheckpoint
-                      ? "border-brand-yellow bg-brand-yellow/10 hover:border-brand-ink/30"
-                      : "border-brand-line bg-white hover:border-brand-ink/30"
-                  }`}
-                >
+              // El backend marca el módulo bloqueado cuando TODAS sus lecciones
+              // quedaron tras un checkpoint pendiente.
+              // Un checkpoint a la espera del profe se comunica distinto que el
+              // contenido bloqueado más atrás: aquí el estudiante SÍ llegó, solo
+              // falta que su profe le abra la puerta.
+              const esperaProfe = !!m.lessons?.some(
+                (l: any) => l.locked && l.lockReason === "espera_desbloqueo",
+              );
+              const locked = !!m.locked && !esperaProfe;
+
+              const card = (
+                <>
                   <div className="flex items-start justify-between">
-                    <div className="text-3xl">{m.coverEmoji ?? (isCheckpoint ? "🏁" : "📘")}</div>
-                    {prog.complete ? (
+                    <div className={`text-3xl ${locked ? "opacity-40 grayscale" : ""}`}>
+                      {m.coverEmoji ?? (isCheckpoint ? "🏁" : "📘")}
+                    </div>
+                    {esperaProfe ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-800">
+                        <Lock className="size-3.5" /> Espera a tu profe
+                      </span>
+                    ) : locked ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-brand-ink/10 px-2.5 py-1 text-[11px] font-medium text-brand-ink/60">
+                        <Lock className="size-3.5" /> Bloqueado
+                      </span>
+                    ) : prog.complete ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-brand-success/15 px-2.5 py-1 text-[11px] font-medium text-brand-success">
                         <CheckCircle2 className="size-3.5" /> Completo
                       </span>
@@ -118,11 +129,43 @@ function LearningIndex() {
                       </span>
                     )}
                   </div>
-                  <h3 className="mt-3 text-lg font-bold text-brand-ink">{m.title}</h3>
-                  <p className="mt-1 text-sm text-brand-ink/65">{m.summary ?? m.description}</p>
+                  <h3 className={`mt-3 text-lg font-bold ${locked ? "text-brand-ink/45" : "text-brand-ink"}`}>
+                    {m.title}
+                  </h3>
+                  {esperaProfe ? (
+                    <p className="mt-1.5 text-xs text-amber-700">
+                      Coméntale en tu próxima clase que quieres presentarlo.
+                    </p>
+                  ) : null}
+                  <p className="mt-1 text-sm text-brand-ink/65">
+                    {esperaProfe
+                      ? "¡Llegaste! Tu profe lo habilita cuando vea que estás listo."
+                      : locked
+                        ? "Completa el checkpoint pendiente para desbloquear este módulo."
+                        : (m.summary ?? m.description)}
+                  </p>
                   <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-brand-cream">
                     <div className="h-full rounded-full bg-brand-ink transition-all" style={{ width: `${prog.pct}%` }} />
                   </div>
+                </>
+              );
+
+              const clase = `group rounded-3xl border p-6 transition ${
+                locked
+                  ? "cursor-not-allowed border-brand-line bg-brand-cream/30 opacity-70"
+                  : isCheckpoint
+                    ? "border-brand-yellow bg-brand-yellow/10 hover:border-brand-ink/30 hover:shadow-soft"
+                    : "border-brand-line bg-white hover:border-brand-ink/30 hover:shadow-soft"
+              }`;
+
+              // Un módulo bloqueado no navega: se queda como tarjeta apagada.
+              return locked ? (
+                <div key={m.id} className={clase} aria-disabled title="Bloqueado por un checkpoint pendiente">
+                  {card}
+                </div>
+              ) : (
+                <Link key={m.id} to="/app/learning/$moduleId" params={{ moduleId: m.id }} className={clase}>
+                  {card}
                 </Link>
               );
             })}

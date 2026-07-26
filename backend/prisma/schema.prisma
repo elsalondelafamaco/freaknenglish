@@ -89,6 +89,8 @@ model User {
   progress         LessonProgress[]
   attempts         CheckpointAttempt[]
   activityResults  ActivityResult[]
+  checkpointUnlocks        CheckpointUnlock[] @relation("CheckpointUnlockStudent")
+  checkpointUnlocksGranted CheckpointUnlock[] @relation("CheckpointUnlockGrantedBy")
   surveys          SatisfactionSurvey[]
   notifications    Notification[]
   refreshTokens    RefreshToken[]
@@ -349,11 +351,17 @@ model Lesson {
   notes         String?
   /// Tipo dominante de la lección (video/pdf/slides/download/html).
   kind          String   @default("video")
+  /// Marca la lección como CHECKPOINT: actúa de compuerta en la secuencia.
+  /// Todo lo que va después (en el módulo y en los módulos siguientes) queda
+  /// bloqueado hasta que el estudiante lo complete, y el checkpoint mismo no
+  /// se abre hasta que un profesor se lo habilite.
+  isCheckpoint  Boolean  @default(false) @map("is_checkpoint")
 
   module   Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   progress LessonProgress[]
   attachments LessonAttachment[]
   activityResults ActivityResult[]
+  unlocks  CheckpointUnlock[]
 
   @@index([moduleId, position])
   @@map("lessons")
@@ -377,6 +385,29 @@ model LessonAttachment {
 
   @@index([lessonId])
   @@map("lesson_attachments")
+}
+
+/// Habilitación de un checkpoint para un estudiante concreto. Sin una fila
+/// aquí, el checkpoint aparece bloqueado: evita que el estudiante avance por
+/// todo el contenido de una sentada sin pasar por su profesor.
+model CheckpointUnlock {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  lessonId     String    @map("lesson_id")
+  /// Profesor o admin que lo habilitó.
+  unlockedById String    @map("unlocked_by_id")
+  note         String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  /// Se llena al revocar (queda el registro histórico).
+  revokedAt    DateTime? @map("revoked_at")
+
+  user       User   @relation("CheckpointUnlockStudent", fields: [userId], references: [id], onDelete: Cascade)
+  unlockedBy User   @relation("CheckpointUnlockGrantedBy", fields: [unlockedById], references: [id], onDelete: Cascade)
+  lesson     Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@map("checkpoint_unlocks")
 }
 
 model LessonProgress {

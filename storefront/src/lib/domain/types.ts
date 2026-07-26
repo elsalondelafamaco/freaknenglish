@@ -112,6 +112,12 @@ export interface Lesson {
   notes?: string;
   /** Archivos adjuntos subidos a MinIO/S3. */
   attachments?: { name: string; url: string; size?: number }[];
+  /** Compuerta: bloquea todo lo que va después hasta completarla. */
+  isCheckpoint?: boolean;
+  /** El backend lo calcula por estudiante; si está bloqueada no llega el HTML. */
+  locked?: boolean;
+  /** `espera_desbloqueo` (falta que el profe lo habilite) | `checkpoint_pendiente`. */
+  lockReason?: "espera_desbloqueo" | "checkpoint_pendiente" | null;
 }
 
 export interface LearningModule {
@@ -124,6 +130,10 @@ export interface LearningModule {
   lessons: Lesson[];
   /** If present, completing all lessons unlocks this checkpoint. */
   checkpointId?: string;
+  /** Módulo entero bloqueado por un checkpoint pendiente más arriba. */
+  locked?: boolean;
+  /** Unidad a la que pertenece dentro del nivel. */
+  unit?: number | null;
 }
 
 export interface LessonProgress {

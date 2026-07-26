@@ -7,5 +7,6 @@ import { NotificationsModule } from '../notifications/notifications.module'
   imports: [NotificationsModule],
   controllers: [LearningController],
   providers: [LearningService, ContentSyncService],
+  exports: [LearningService],
 })
 export class LearningModule {}

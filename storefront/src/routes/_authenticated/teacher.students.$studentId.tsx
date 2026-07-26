@@ -179,6 +179,7 @@ function TeacherStudentDetail() {
         </aside>
       </section>
 
+      <CheckpointGatesSection studentId={studentId} />
       <ActivityResultsSection studentId={studentId} />
       <CheckpointAttemptsSection studentId={studentId} />
     </div>
@@ -262,6 +263,94 @@ export function ActivityResultsSection({ studentId }: { studentId: string }) {
                       </ul>
                     </div>
                   ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Compuertas de checkpoint: el profe decide cuándo su estudiante puede
+ * presentar cada checkpoint. Mientras no lo habilite, el estudiante no ve el
+ * contenido que viene después.
+ */
+export function CheckpointGatesSection({ studentId }: { studentId: string }) {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ["checkpoint-gates", studentId],
+    queryFn: () => teachersApi.checkpointGates(studentId),
+  });
+  const m = useMutation({
+    mutationFn: (v: { lessonId: string; unlock: boolean }) =>
+      teachersApi.setCheckpointGate(studentId, v.lessonId, v.unlock),
+    onSuccess: (_r, v) => {
+      toast.success(
+        v.unlock
+          ? "Checkpoint habilitado — le avisamos al estudiante por correo."
+          : "Checkpoint bloqueado de nuevo.",
+      );
+      qc.invalidateQueries({ queryKey: ["checkpoint-gates", studentId] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo actualizar"),
+  });
+  const rows = q.data ?? [];
+
+  return (
+    <section>
+      <h2 className="text-lg font-semibold text-brand-ink">Checkpoints · habilitación</h2>
+      <p className="mt-0.5 text-xs text-brand-ink/55">
+        Hasta que habilites un checkpoint, tu estudiante no puede presentarlo ni ver el contenido
+        que viene después. Así avanza a tu ritmo y no se come el programa de una sentada.
+      </p>
+      <div className="mt-3 overflow-hidden rounded-2xl border border-brand-line bg-white">
+        {q.isLoading ? (
+          <p className="p-5 text-sm text-brand-ink/55">Cargando…</p>
+        ) : rows.length === 0 ? (
+          <p className="p-5 text-sm text-brand-ink/55">No hay checkpoints configurados en el contenido.</p>
+        ) : (
+          <ul className="divide-y divide-brand-line/70">
+            {rows.map((r) => {
+              const hecho = !!r.completedAt;
+              return (
+                <li key={r.lessonId} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-brand-ink">
+                      {r.unit != null ? `Unidad ${r.unit} · ` : ""}{r.moduleTitle}
+                    </div>
+                    <div className="text-xs text-brand-ink/55">
+                      {hecho ? (
+                        <>Superado el {new Date(r.completedAt!).toLocaleDateString("es-CO", { dateStyle: "medium" })}</>
+                      ) : r.unlocked ? (
+                        <>
+                          Habilitado{r.unlockedAt ? ` el ${new Date(r.unlockedAt).toLocaleDateString("es-CO", { dateStyle: "medium" })}` : ""}
+                          {r.unlockedBy ? ` por ${r.unlockedBy.fullName}` : ""} · aún sin presentar
+                        </>
+                      ) : (
+                        "Bloqueado — el estudiante no ve lo que viene después"
+                      )}
+                    </div>
+                  </div>
+                  {hecho ? (
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">
+                      Superado
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => m.mutate({ lessonId: r.lessonId, unlock: !r.unlocked })}
+                      disabled={m.isPending}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
+                        r.unlocked
+                          ? "border border-brand-line text-brand-ink/70 hover:bg-brand-cream/40"
+                          : "bg-brand-ink text-white hover:bg-brand-ink-soft"
+                      }`}
+                    >
+                      {r.unlocked ? "Bloquear" : "Habilitar"}
+                    </button>
+                  )}
                 </li>
               );
             })}

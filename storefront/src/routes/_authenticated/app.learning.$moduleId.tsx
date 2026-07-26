@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle2, Circle, Download, FileText, FileCode, PlayCircle, Presentation, Trophy } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle, Download, FileText, FileCode, Lock, PlayCircle, Presentation, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { learningApi } from "@/lib/api/endpoints";
 
@@ -40,7 +40,8 @@ function ModuleDetail() {
 
   const lessons: any[] = [...(mod.lessons ?? [])].sort((a, b) => a.position - b.position);
   const doneIds = new Set(progQ.data?.completedLessonIds ?? []);
-  const currentActiveId = activeId || lessons[0]?.id || "";
+  // Arranca en la primera lección accesible (no en una bloqueada).
+  const currentActiveId = activeId || (lessons.find((l) => !l.locked) ?? lessons[0])?.id || "";
   const active = lessons.find((l) => l.id === currentActiveId);
   const total = lessons.length;
   const done = lessons.filter((l) => doneIds.has(l.id)).length;
@@ -76,8 +77,12 @@ function ModuleDetail() {
                   {active.kind} · {active.durationMin ?? 0} min
                 </span>
               </div>
-              <LessonViewer lesson={active} />
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              {active.locked ? (
+                <LockedLesson reason={active.lockReason} isCheckpoint={active.isCheckpoint} />
+              ) : (
+                <LessonViewer lesson={active} />
+              )}
+              <div className={`flex flex-wrap items-center justify-between gap-3 ${active.locked ? "hidden" : ""}`}>
                 <button
                   onClick={() => toggleM.mutate({ lessonId: active.id, completed: !activeDone })}
                   disabled={toggleM.isPending}
@@ -101,16 +106,41 @@ function ModuleDetail() {
         <aside className="rounded-3xl border border-brand-line bg-white p-3">
           <div className="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-brand-ink/55">Lecciones</div>
           <ul className="flex flex-col">
-            {lessons.map((l) => {
+            {lessons.map((l: any) => {
               const Icon = KIND_ICON[l.kind] ?? FileText;
               const isDone = doneIds.has(l.id);
               const isActive = l.id === currentActiveId;
+              const locked = !!l.locked;
               return (
                 <li key={l.id}>
-                  <button onClick={() => setActiveId(l.id)} className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm transition ${isActive ? "bg-brand-cream text-brand-ink" : "text-brand-ink/75 hover:bg-brand-cream/50"}`}>
-                    {isDone ? <CheckCircle2 className="size-4 text-brand-success" /> : <Circle className="size-4 text-brand-ink/35" />}
-                    <Icon className="size-4 text-brand-ink/60" />
+                  <button
+                    onClick={() => !locked && setActiveId(l.id)}
+                    disabled={locked}
+                    title={
+                      locked
+                        ? l.lockReason === "espera_desbloqueo"
+                          ? "Tu profe habilita este checkpoint cuando estés listo"
+                          : "Se desbloquea al completar el checkpoint pendiente"
+                        : undefined
+                    }
+                    className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm transition ${
+                      locked
+                        ? "cursor-not-allowed text-brand-ink/35"
+                        : isActive
+                          ? "bg-brand-cream text-brand-ink"
+                          : "text-brand-ink/75 hover:bg-brand-cream/50"
+                    }`}
+                  >
+                    {locked ? (
+                      <Lock className="size-4 text-brand-ink/30" />
+                    ) : isDone ? (
+                      <CheckCircle2 className="size-4 text-brand-success" />
+                    ) : (
+                      <Circle className="size-4 text-brand-ink/35" />
+                    )}
+                    <Icon className={`size-4 ${locked ? "text-brand-ink/25" : "text-brand-ink/60"}`} />
                     <span className="flex-1 font-medium">{l.title}</span>
+                    {l.isCheckpoint ? <span className="text-[10px]">🏁</span> : null}
                   </button>
                 </li>
               );
@@ -118,6 +148,42 @@ function ModuleDetail() {
           </ul>
         </aside>
       </div>
+    </div>
+  );
+}
+
+/** Pantalla que ve el estudiante cuando la lección está bloqueada. */
+function LockedLesson({ reason, isCheckpoint }: { reason?: string | null; isCheckpoint?: boolean }) {
+  const esperaProfe = reason === "espera_desbloqueo";
+  return (
+    <div className="rounded-2xl border border-brand-line bg-brand-cream/40 p-8 text-center">
+      <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-white shadow-soft">
+        <Lock className="size-6 text-brand-ink/60" />
+      </div>
+      <h3 className="mt-4 text-lg font-bold text-brand-ink">
+        {esperaProfe ? "Tu checkpoint todavía no está habilitado" : "Contenido bloqueado"}
+      </h3>
+      <p className="mx-auto mt-2 max-w-md text-sm text-brand-ink/70">
+        {esperaProfe ? (
+          <>
+            Tu profe lo abre cuando vea que ya estás listo. Es a propósito: el checkpoint mide lo
+            que aprendiste, así que vale la pena llegar con todo repasado. Coméntale en tu próxima
+            clase que quieres presentarlo.
+          </>
+        ) : (
+          <>
+            Antes de seguir tienes que superar el {isCheckpoint ? "checkpoint" : "checkpoint pendiente"}{" "}
+            que quedó atrás. Así nos aseguramos de que avances con las bases firmes y no te saltes
+            temas que vas a necesitar.
+          </>
+        )}
+      </p>
+      <Link
+        to="/app/learning"
+        className="mt-5 inline-block rounded-full bg-brand-ink px-5 py-2 text-sm font-semibold text-white hover:bg-brand-ink-soft"
+      >
+        Volver al catálogo
+      </Link>
     </div>
   );
 }

@@ -268,6 +268,15 @@ export class AdminController {
   @Patch('content/lessons/:id/delete')
   deleteLesson(@Param('id') id: string) { return this.svc.deleteLesson(id) }
 
+  /**
+   * @endpoint PATCH /api/v1/admin/content/modules/:id/lesson-order
+   * Body: { lessonIds: string[] } — nuevo orden (mueve checkpoints de lugar).
+   */
+  @Patch('content/modules/:id/lesson-order')
+  reorderLessons(@Param('id') id: string, @Body() body: { lessonIds: string[] }) {
+    return this.svc.reorderLessons(id, body?.lessonIds ?? [])
+  }
+
   /** @endpoint POST /api/v1/admin/content/checkpoints */
   @Post('content/checkpoints')
   createCheckpoint(@Body() body: { id?: string; moduleId: string; fromLevel: 'beginner' | 'intermediate' | 'advanced'; toLevel: 'beginner' | 'intermediate' | 'advanced'; passingScore?: number; questions?: unknown; settings?: unknown }) {

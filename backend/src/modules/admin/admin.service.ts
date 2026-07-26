@@ -900,6 +900,9 @@ export class AdminService {
       slidesUrl: input.slidesUrl ?? existing?.slidesUrl,
       contentHtml: input.contentHtml ?? existing?.contentHtml,
       notes: input.notes ?? existing?.notes,
+      // Compuerta: bloquea todo lo que va después hasta completarla.
+      isCheckpoint: input.isCheckpoint ?? existing?.isCheckpoint ?? false,
+      ...(input.position != null ? { position: Number(input.position) } : {}),
     }
     if (existing) {
       return this.prisma.lesson.update({ where: { id }, data: data as any })
@@ -914,6 +917,28 @@ export class AdminService {
         ...data,
       } as any,
     })
+  }
+
+  /**
+   * Reordena las lecciones de un módulo según el orden recibido. Sirve para
+   * mover un checkpoint entre lecciones (p. ej. dejarlo tras la 2ª).
+   */
+  async reorderLessons(moduleId: string, lessonIds: string[]) {
+    const lessons = await this.prisma.lesson.findMany({
+      where: { moduleId },
+      select: { id: true },
+    })
+    const validos = new Set(lessons.map((l) => l.id))
+    const orden = lessonIds.filter((id) => validos.has(id))
+    if (orden.length !== lessons.length) {
+      throw new BadRequestException('La lista debe incluir todas las lecciones del módulo')
+    }
+    await this.prisma.$transaction(
+      orden.map((id, i) =>
+        this.prisma.lesson.update({ where: { id }, data: { position: i + 1 } }),
+      ),
+    )
+    return { ok: true, orden }
   }
 
   async deleteLesson(id: string) {

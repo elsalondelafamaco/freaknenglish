@@ -255,6 +255,21 @@ export const learningApi = {
     apiPost<CheckpointSubmitResult>(`/learning/checkpoints/${id}/submit`, { answers }),
 };
 
+/** Estado de una compuerta de checkpoint para un estudiante. */
+export type CheckpointGate = {
+  lessonId: string;
+  title: string;
+  moduleId: string;
+  moduleTitle: string;
+  unit: number | null;
+  level: string;
+  completedAt: string | null;
+  unlocked: boolean;
+  unlockedAt: string | null;
+  unlockedBy: { id: string; fullName: string; email: string } | null;
+  note: string | null;
+};
+
 // ─── Checkpoints v2 ────────────────────────────────────────────────────
 export type CheckpointSettings = {
   allowRetryAfterPass: boolean;
@@ -336,6 +351,11 @@ export const teachersApi = {
     apiPatch<{ id: string; meetingUrl: string | null }>(`/teacher/students/${studentId}/meeting-url`, { url }),
   studentActivityResults: (studentId: string) =>
     apiGet<ActivityResultRow[]>(`/teacher/students/${studentId}/activity-results`),
+  // Compuertas de checkpoint: estado y habilitación por estudiante
+  checkpointGates: (studentId: string) =>
+    apiGet<CheckpointGate[]>(`/teacher/students/${studentId}/checkpoint-gates`),
+  setCheckpointGate: (studentId: string, lessonId: string, unlock: boolean, note?: string) =>
+    apiPost<{ id: string }>(`/teacher/students/${studentId}/checkpoint-gates/${lessonId}`, { unlock, note }),
   studentCheckpointAttempts: (studentId: string) =>
     apiGet<Array<{
       id: string; score: number; passed: boolean; createdAt: string;

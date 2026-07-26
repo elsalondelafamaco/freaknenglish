@@ -30,7 +30,7 @@ import type {
 import { getPlan, formatCop } from "@/lib/domain/plans";
 type PaymentIntent = Record<string, any>;
 import { adminApi, classesApi } from "@/lib/api/endpoints";
-import { ActivityResultsSection, CheckpointAttemptsSection } from "./teacher.students.$studentId";
+import { ActivityResultsSection, CheckpointAttemptsSection, CheckpointGatesSection } from "./teacher.students.$studentId";
 import { setAccessToken } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
@@ -582,6 +582,9 @@ function AdminUserDetail() {
           {/* Respuestas y resultados de actividades interactivas (todas, admin) */}
           <div className="mt-4">
             <ActivityResultsSection studentId={user.id} />
+          </div>
+          <div className="mt-4">
+            <CheckpointGatesSection studentId={user.id} />
           </div>
           <div className="mt-4">
             <CheckpointAttemptsSection studentId={user.id} />

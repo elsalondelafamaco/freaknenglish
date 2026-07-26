@@ -115,6 +115,16 @@ export const templates = {
     )
   },
 
+  checkpoint_unlocked: (v: { fullName?: string; checkpoint?: string }) =>
+    wrap(
+      '¡Tu checkpoint está listo!',
+      `<p>${v.fullName ? `${String(v.fullName).split(' ')[0]}, tu` : 'Tu'} profe habilitó tu checkpoint${v.checkpoint ? `: <b>${v.checkpoint}</b>` : ''}.</p>
+       <p>Es tu momento de demostrar lo que aprendiste. Tómate tu tiempo, respira y dale con toda —
+       al superarlo se desbloquea el siguiente tramo del programa.</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/app/learning`, 'Presentar mi checkpoint')}`,
+      { preheader: 'Tu profe habilitó tu checkpoint' },
+    ),
+
   class_cancelled: (v: { reason?: string }) =>
     wrap('Tu clase fue cancelada', `<p>${v.reason ? `Motivo: ${v.reason}` : 'La clase fue cancelada.'}</p>${cta(`${env.PUBLIC_SITE_URL}/app/calendar`, 'Reagendar')}`),
 

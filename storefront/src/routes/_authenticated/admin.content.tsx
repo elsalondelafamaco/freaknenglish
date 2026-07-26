@@ -20,6 +20,8 @@ interface BELesson {
   slidesUrl?: string | null;
   contentHtml?: string | null;
   notes?: string | null;
+  /** Compuerta: bloquea el contenido posterior hasta superarla. */
+  isCheckpoint?: boolean;
 }
 // Checkpoints v2: pregunta editable de cualquier tipo (ver backend
 // checkpoint-questions.ts). Los campos aplican según `type`.
@@ -474,6 +476,7 @@ function LessonDialog({
   const [slidesUrl, setSlidesUrl] = useState(lesson?.slidesUrl ?? "");
   const [contentHtml, setContentHtml] = useState(lesson?.contentHtml ?? "");
   const [notes, setNotes] = useState(lesson?.notes ?? "");
+  const [isCheckpoint, setIsCheckpoint] = useState<boolean>(!!(lesson as any)?.isCheckpoint);
   const [pending, setPending] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
@@ -491,6 +494,7 @@ function LessonDialog({
         slidesUrl: slidesUrl || null,
         contentHtml: kind === "html" ? contentHtml || null : null,
         notes: notes || null,
+        isCheckpoint,
       };
       if (lesson?.id) await adminApi.updateLesson(lesson.id, body);
       else await adminApi.createLesson(body);
@@ -538,6 +542,27 @@ function LessonDialog({
             />
           </Field>
         </div>
+
+        {/* Compuerta: la posición define desde dónde bloquea. */}
+        <label className={`flex items-start gap-2.5 rounded-xl border p-3 text-sm transition ${
+          isCheckpoint ? "border-brand-yellow bg-brand-yellow/10" : "border-brand-line bg-brand-cream/20"
+        }`}>
+          <input
+            type="checkbox"
+            checked={isCheckpoint}
+            onChange={(e) => setIsCheckpoint(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            <span className="font-semibold text-brand-ink">🏁 Esta lección es un checkpoint</span>
+            <span className="mt-0.5 block text-xs text-brand-ink/65">
+              Actúa como compuerta: todo lo que venga después (en este módulo y en los módulos
+              siguientes) queda bloqueado hasta que el estudiante lo supere. Además no se abre
+              hasta que su profesor se lo habilite. Usa la <b>posición</b> para decidir dónde cae
+              — p. ej. posición 3 lo deja después de las dos primeras lecciones.
+            </span>
+          </span>
+        </label>
         {kind === "video" ? (
           <Field label="URL del video (YouTube embed, etc.)">
             <input value={videoUrl ?? ""} onChange={(e) => setVideoUrl(e.target.value)} className="input" />

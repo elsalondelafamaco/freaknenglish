@@ -2,6 +2,7 @@ import { Injectable, ForbiddenException, NotFoundException, BadRequestException 
 import { PrismaService } from '../../prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { SlotsService } from '../scheduling/slots.service'
+import { LearningService } from '../learning/learning.service'
 
 @Injectable()
 export class TeachersService {
@@ -9,7 +10,21 @@ export class TeachersService {
     private prisma: PrismaService,
     private notifications: NotificationsService,
     private slots: SlotsService,
+    private learning: LearningService,
   ) {}
+
+  /** El profe solo opera sobre sus estudiantes; el admin sobre todos. */
+  private async assertOwnsStudent(teacherId: string, studentId: string, isAdmin = false) {
+    if (isAdmin) return
+    const rel = await this.prisma.user.findFirst({
+      where: {
+        id: studentId,
+        OR: [{ assignedTeacherId: teacherId }, { classesAsStudent: { some: { teacherId } } }],
+      },
+      select: { id: true },
+    })
+    if (!rel) throw new ForbiddenException('No autorizado sobre este estudiante')
+  }
 
   async students(teacherId: string) {
     // Incluye estudiantes explícitamente asignados (aún sin clases) Y
@@ -254,6 +269,25 @@ export class TeachersService {
         lesson: { select: { id: true, title: true, module: { select: { id: true, title: true, level: true } } } },
       },
     })
+  }
+
+  /** Estado de las compuertas de checkpoint de un estudiante. */
+  async checkpointGates(teacherId: string, studentId: string, isAdmin = false) {
+    await this.assertOwnsStudent(teacherId, studentId, isAdmin)
+    return this.learning.checkpointsForStudent(studentId)
+  }
+
+  /** Habilita o revoca un checkpoint para el estudiante. */
+  async setCheckpointGate(
+    teacherId: string,
+    studentId: string,
+    lessonId: string,
+    unlock: boolean,
+    note: string | undefined,
+    isAdmin = false,
+  ) {
+    await this.assertOwnsStudent(teacherId, studentId, isAdmin)
+    return this.learning.setCheckpointUnlock(studentId, lessonId, teacherId, unlock, note)
   }
 
   /** Intentos de checkpoints del estudiante (con corrección detallada). */

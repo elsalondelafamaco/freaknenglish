@@ -30,16 +30,30 @@ export class LearningService {
     level?: 'beginner' | 'intermediate' | 'advanced',
   ) {
     let effective = level
-    if (!effective) {
-      const u = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { englishLevel: true, role: true },
-      })
-      if (u?.role === 'student' && u.englishLevel) {
-        effective = u.englishLevel as 'beginner' | 'intermediate' | 'advanced'
-      }
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { englishLevel: true, role: true },
+    })
+    if (!effective && u?.role === 'student' && u.englishLevel) {
+      effective = u.englishLevel as 'beginner' | 'intermediate' | 'advanced'
     }
-    return this.listModules(effective)
+    const modules = await this.listModules(effective)
+    if (u?.role !== 'student') return modules
+
+    // Anota el bloqueo de cada lección y NO manda el HTML de las bloqueadas.
+    const { state } = await this.gatingFor(userId, effective)
+    return modules.map((m) => {
+      const lessons = m.lessons.map((l) => {
+        const s = state.get(l.id) ?? { locked: false, reason: null, blockedBy: null }
+        return {
+          ...l,
+          contentHtml: s.locked ? null : l.contentHtml,
+          locked: s.locked,
+          lockReason: s.reason,
+        }
+      })
+      return { ...m, lessons, locked: lessons.length > 0 && lessons.every((l) => l.locked) }
+    })
   }
 
   module(id: string) {
@@ -47,6 +61,83 @@ export class LearningService {
       where: { id },
       include: { lessons: { orderBy: { position: 'asc' } }, checkpoints: true },
     })
+  }
+
+  // ─── Compuertas por checkpoint ───────────────────────────────────────
+  //
+  // Regla: el contenido es una secuencia (módulos por posición, lecciones por
+  // posición dentro del módulo). Una lección marcada `isCheckpoint` es una
+  // compuerta:
+  //   · Mientras el estudiante no la complete, TODO lo que va después queda
+  //     bloqueado — el resto del módulo y los módulos siguientes.
+  //   · El checkpoint en sí no se abre hasta que un profesor lo habilite
+  //     (fila en CheckpointUnlock sin revocar), para que nadie se coma el
+  //     programa entero de una sentada.
+
+  /** Estado de bloqueo de cada lección para un estudiante. */
+  private async gatingFor(userId: string, level?: 'beginner' | 'intermediate' | 'advanced') {
+    const [modules, progress, unlocks] = await Promise.all([
+      this.prisma.module.findMany({
+        where: level ? { level } : undefined,
+        orderBy: [{ level: 'asc' }, { position: 'asc' }],
+        include: { lessons: { orderBy: { position: 'asc' } } },
+      }),
+      this.prisma.lessonProgress.findMany({
+        where: { userId, completedAt: { not: null } },
+        select: { lessonId: true },
+      }),
+      this.prisma.checkpointUnlock.findMany({
+        where: { userId, revokedAt: null },
+        select: { lessonId: true },
+      }),
+    ])
+    const completed = new Set(progress.map((p) => p.lessonId))
+    const unlocked = new Set(unlocks.map((u) => u.lessonId))
+
+    /** lessonId → { locked, reason, blockingLessonId } */
+    const state = new Map<string, { locked: boolean; reason: string | null; blockedBy: string | null }>()
+    let gate: { id: string; title: string; moduleTitle: string } | null = null
+
+    for (const m of modules) {
+      for (const l of m.lessons) {
+        if (gate) {
+          // Hay un checkpoint pendiente antes de esta lección.
+          state.set(l.id, { locked: true, reason: 'checkpoint_pendiente', blockedBy: gate.id })
+          continue
+        }
+        if (l.isCheckpoint && !completed.has(l.id)) {
+          // El checkpoint solo se abre si el profe lo habilitó.
+          const abierto = unlocked.has(l.id)
+          state.set(l.id, {
+            locked: !abierto,
+            reason: abierto ? null : 'espera_desbloqueo',
+            blockedBy: null,
+          })
+          gate = { id: l.id, title: l.title, moduleTitle: m.title }
+          continue
+        }
+        state.set(l.id, { locked: false, reason: null, blockedBy: null })
+      }
+    }
+    return { state, gate, completed, unlocked }
+  }
+
+  /** ¿Puede el usuario abrir el contenido de esta lección? */
+  async assertLessonAccess(userId: string, lessonId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { role: true } })
+    if (user?.role !== 'student') return // profes y admin ven todo
+    const { state } = await this.gatingFor(userId)
+    const s = state.get(lessonId)
+    if (s?.locked) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        code: s.reason,
+        message:
+          s.reason === 'espera_desbloqueo'
+            ? 'Este checkpoint todavía no está habilitado. Tu profesor lo abre cuando estés listo.'
+            : 'Completa el checkpoint pendiente para desbloquear el resto del contenido.',
+      })
+    }
   }
 
   // ─── Resultados de actividades (bridge FreaknActivity) ───────────────
@@ -62,6 +153,7 @@ export class LearningService {
   ) {
     const activityId = String(body.activityId ?? '').trim()
     if (!activityId) throw new Error('activityId requerido')
+    await this.assertLessonAccess(userId, lessonId)
     const answers = (Array.isArray(body.answers) ? body.answers : []) as any[]
     const data = {
       title: body.title ?? undefined,
@@ -81,6 +173,91 @@ export class LearningService {
       update: { ...data, ...(isNewRun ? { attempts: { increment: 1 } } : {}) },
       create: { userId, lessonId, activityId, ...data },
     })
+  }
+
+  /**
+   * Checkpoints de un estudiante con su estado, para el panel del profesor:
+   * si ya lo completó, si está habilitado y quién lo habilitó.
+   */
+  async checkpointsForStudent(studentId: string) {
+    const [lessons, progress, unlocks] = await Promise.all([
+      this.prisma.lesson.findMany({
+        where: { isCheckpoint: true },
+        orderBy: [{ module: { position: 'asc' } }, { position: 'asc' }],
+        include: { module: { select: { id: true, title: true, unit: true, level: true, position: true } } },
+      }),
+      this.prisma.lessonProgress.findMany({
+        where: { userId: studentId, completedAt: { not: null } },
+        select: { lessonId: true, completedAt: true },
+      }),
+      this.prisma.checkpointUnlock.findMany({
+        where: { userId: studentId },
+        include: { unlockedBy: { select: { id: true, fullName: true, email: true } } },
+      }),
+    ])
+    const done = new Map(progress.map((p) => [p.lessonId, p.completedAt]))
+    const unlockMap = new Map(unlocks.map((u) => [u.lessonId, u]))
+    return lessons.map((l) => {
+      const u = unlockMap.get(l.id)
+      const abierto = !!u && !u.revokedAt
+      return {
+        lessonId: l.id,
+        title: l.title,
+        moduleId: l.module.id,
+        moduleTitle: l.module.title,
+        unit: l.module.unit,
+        level: l.module.level,
+        completedAt: done.get(l.id) ?? null,
+        unlocked: abierto,
+        unlockedAt: abierto ? u!.createdAt : null,
+        unlockedBy: abierto ? u!.unlockedBy : null,
+        note: u?.note ?? null,
+      }
+    })
+  }
+
+  /** Habilita (o revoca) un checkpoint para un estudiante. */
+  async setCheckpointUnlock(
+    studentId: string,
+    lessonId: string,
+    grantedById: string,
+    unlock: boolean,
+    note?: string,
+  ) {
+    const lesson = await this.prisma.lesson.findUnique({
+      where: { id: lessonId },
+      select: { id: true, isCheckpoint: true, title: true },
+    })
+    if (!lesson) throw new BadRequestException('Lección no encontrada')
+    if (!lesson.isCheckpoint) throw new BadRequestException('Esa lección no es un checkpoint')
+
+    const row = await this.prisma.checkpointUnlock.upsert({
+      where: { userId_lessonId: { userId: studentId, lessonId } },
+      update: { revokedAt: unlock ? null : new Date(), unlockedById: grantedById, note: note ?? null },
+      create: { userId: studentId, lessonId, unlockedById: grantedById, note: note ?? null },
+    })
+
+    if (unlock) {
+      const student = await this.prisma.user.findUnique({
+        where: { id: studentId },
+        select: { email: true, fullName: true },
+      })
+      if (student) {
+        await this.notifications.enqueue({
+          userId: studentId,
+          toEmail: student.email,
+          template: 'checkpoint_unlocked',
+          subject: '¡Tu checkpoint ya está habilitado!',
+          dedupeKey: `cp-unlock:${studentId}:${lessonId}:${row.createdAt.toISOString()}`,
+          vars: { fullName: student.fullName, checkpoint: lesson.title },
+          type: 'learning',
+          title: 'Checkpoint habilitado',
+          body: `Ya puedes presentar: ${lesson.title}.`,
+          linkUrl: '/app/learning',
+        })
+      }
+    }
+    return row
   }
 
   /** Resultados del propio estudiante (para pintar estado en el viewer). */
@@ -198,7 +375,9 @@ export class LearningService {
     return this.checkpoint(cp.id, userId)
   }
 
-  upsertProgress(userId: string, lessonId: string, secondsWatched: number, completed: boolean) {
+  async upsertProgress(userId: string, lessonId: string, secondsWatched: number, completed: boolean) {
+    // No se puede marcar progreso sobre contenido bloqueado.
+    await this.assertLessonAccess(userId, lessonId)
     return this.prisma.lessonProgress.upsert({
       where: { userId_lessonId: { userId, lessonId } },
       update: { secondsWatched, completedAt: completed ? new Date() : null },

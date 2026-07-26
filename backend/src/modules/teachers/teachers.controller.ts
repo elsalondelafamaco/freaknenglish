@@ -37,6 +37,26 @@ export class TeachersController {
     return this.svc.studentActivityResults(u.id, id, u.role === 'admin')
   }
 
+  /** @endpoint GET /api/v1/teacher/students/:id/checkpoint-gates  (estado de compuertas) */
+  @Get('students/:id/checkpoint-gates')
+  checkpointGates(@CurrentUser() u: AuthUser, @Param('id') id: string) {
+    return this.svc.checkpointGates(u.id, id, u.role === 'admin')
+  }
+
+  /**
+   * @endpoint POST /api/v1/teacher/students/:id/checkpoint-gates/:lessonId
+   * Body: { unlock: boolean, note?: string } — habilita o revoca el checkpoint.
+   */
+  @Post('students/:id/checkpoint-gates/:lessonId')
+  setCheckpointGate(
+    @CurrentUser() u: AuthUser,
+    @Param('id') id: string,
+    @Param('lessonId') lessonId: string,
+    @Body() body: { unlock: boolean; note?: string },
+  ) {
+    return this.svc.setCheckpointGate(u.id, id, lessonId, !!body?.unlock, body?.note, u.role === 'admin')
+  }
+
   /** @endpoint GET /api/v1/teacher/students/:id/checkpoint-attempts */
   @Get('students/:id/checkpoint-attempts')
   studentCheckpointAttempts(@CurrentUser() u: AuthUser, @Param('id') id: string) {

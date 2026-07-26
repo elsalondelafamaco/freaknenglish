@@ -34,8 +34,10 @@ dist-ssr
 # Perfiles y cachés de Chrome que crean los scripts de validación (cualquier paquete)
 .chrome-verify/
 .chrome-debug/
+.chrome-shot/
 **/.chrome-verify/
 **/.chrome-debug/
+**/.chrome-shot/
 # Salidas de las corridas de validación de contenido
 .verify*.txt
 **/.verify*.txt

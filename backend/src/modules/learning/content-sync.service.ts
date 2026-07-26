@@ -42,7 +42,12 @@ export class ContentSyncService implements OnModuleInit {
   async sync() {
     const dir = this.contentDir()
     if (!dir) {
-      this.log.log('sin carpeta content/ — nada que sincronizar')
+      // En producción esto significa que la imagen se armó sin `COPY content`:
+      // la plataforma arranca SIN contenido. Se grita para que se note en logs.
+      this.log.error(
+        'NO se encontró content/index.json — la plataforma arranca SIN contenido de aprendizaje. ' +
+          `Revisa que el Dockerfile copie la carpeta content/ (cwd=${process.cwd()}).`,
+      )
       return { modules: 0, lessons: 0 }
     }
     const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'index.json'), 'utf8')) as {

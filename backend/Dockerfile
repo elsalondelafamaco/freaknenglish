@@ -34,6 +34,15 @@ COPY --from=builder /app/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+# Contenido de aprendizaje (index.json + HTML). ContentSyncService lo lee al
+# arrancar para sembrar módulos y lecciones: sin esta copia, producción queda
+# SIN contenido. Se verifica abajo para que el build falle en vez de desplegar
+# una imagen muda.
+COPY content ./content
+
+RUN test -f content/index.json \
+ && echo "### CONTENT-CHECK ### módulos:" \
+ && node -e "const m=require('./content/index.json').modules;const l=m.reduce((s,x)=>s+x.lessons.length,0);if(!m.length)throw new Error('index.json sin módulos');console.log(m.length,'módulos /',l,'lecciones')"
 
 EXPOSE 3000
 ENTRYPOINT ["/sbin/tini", "--"]

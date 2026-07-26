@@ -127,6 +127,20 @@
             background: linear-gradient(transparent, rgba(0,0,0,0.8));
             z-index: 10;
         }
+
+        @media (max-width: 820px) {
+            .slide-container .p-10 { padding: 1.25rem; }
+            h1.text-6xl { font-size: 2.5rem; }
+            .gossip-paper { padding: 1.25rem; font-size: 1.05rem; }
+            .flex.gap-4.justify-center { flex-wrap: wrap; }
+            .bottom-nav { padding: 1rem; flex-wrap: wrap; gap: 0.75rem; justify-content: center; text-align: center; position: static; background: none; }
+            .slide-container { min-height: 100vh; height: auto; padding-bottom: 1rem; }
+            .btn-freak { padding: 0.85rem 1.25rem; font-size: 16px; min-height: 44px; }
+            .option-btn { font-size: 16px; min-height: 44px; }
+            #game-content { padding: 1rem; }
+            #game-content .bg-gray-800.p-4 { padding: 0.85rem; font-size: 1rem; }
+            .w-full.bg-black.p-4 { flex-wrap: wrap; gap: 0.5rem; }
+        }
     </style>
 </head>
 <body>
@@ -262,6 +276,46 @@
     </div>
 
     <script>
+      /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+         Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+      window.FreaknActivity = (function () {
+        function post(type, payload) {
+          try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+          catch (e) {}
+        }
+        return {
+          /** Reporta el resultado de una actividad calificable. */
+          submit: function (r) {
+            post("freakn:activity:result", {
+              activityId: r.activityId,          // id estable dentro del archivo
+              title: r.title || document.title,  // nombre legible
+              score: r.score,                    // puntos obtenidos
+              maxScore: r.maxScore,              // puntaje máximo
+              answers: r.answers || []           // ver formato abajo
+            });
+          },
+          /** Marca la lección como vista/terminada (sin puntaje). */
+          complete: function () { post("freakn:lesson:complete", {}); }
+        };
+      })();
+    </script>
+
+    <script>
+        var freaknAnswers = [];
+        function registrarRespuesta(id, pregunta, respuesta, acerto, esperada) {
+            if (freaknAnswers.some(function (a) { return a.id === id; })) return; // 1er intento
+            freaknAnswers.push({ id: id, question: pregunta, answer: respuesta, correct: acerto, expected: esperada });
+        }
+        function reportarResultado() {
+            FreaknActivity.submit({
+                activityId: "lesson-quiz",
+                title: document.title,
+                score: freaknAnswers.filter(function (a) { return a.correct; }).length,
+                maxScore: freaknAnswers.length,
+                answers: freaknAnswers
+            });
+        }
+
         // NAVIGATION SYSTEM
         let currentSlide = 0;
 
@@ -275,6 +329,8 @@
         function checkVibe(action) {
             const fb = document.getElementById('vibe-feedback');
             fb.classList.remove('hidden', 'text-sky-400', 'text-red-400');
+            const isCorrect = action === 'kill';
+            registrarRespuesta('vibe-1', 'If a tree falls on someone during a storm and they die, what happened?', action === 'kill' ? 'The tree killed them.' : 'The tree murdered them.', isCorrect, 'The tree killed them.');
             if(action === 'kill') {
                 fb.innerHTML = "THAT'S FREAKN' RIGHT! 🔥 A tree doesn't plan a crime, so it's a kill (accident), not a murder.";
                 fb.classList.add('text-sky-400');
@@ -288,6 +344,8 @@
         function checkStory(answer) {
             const fb = document.getElementById('story-feedback');
             fb.classList.remove('hidden', 'text-sky-400', 'text-red-400');
+            const isCorrect = answer === 'correct';
+            registrarRespuesta('story-1', 'Why does Gelmy believe it was a planned murder, and not just a robbery?', isCorrect ? 'Because of the weapon used and the previous fight.' : 'Because the killer used a gun to shoot him.', isCorrect, 'Because of the weapon used and the previous fight.');
             if(answer === 'correct') {
                 fb.innerHTML = "SPOT ON! 🔥 He wasn't shot. He was hit with a rolling pin during a fight.";
                 fb.classList.add('text-sky-400');
@@ -455,6 +513,7 @@
                         document.getElementById('game-slide').classList.remove('active');
                         document.getElementById('slide-final').classList.add('active');
                         document.getElementById('final-score').innerText = score;
+                        reportarResultado();
                     }
                 } else {
                     loadQuestion();
@@ -468,14 +527,17 @@
             if(currentLevel === 1) {
                 isCorrect = (currentSelection === window.currentL1Correct);
                 fbMsg = isCorrect ? "EVIDENCE ACCEPTED! 🔥" : `OBJECTION! ❌ The correct word is '${window.currentL1Correct}'.`;
-            } 
+                registrarRespuesta('l1-q' + (currentQ + 1), L1_Data[currentQ].quote, currentSelection, isCorrect, window.currentL1Correct);
+            }
             else if(currentLevel === 2) {
                 isCorrect = (currentSelection === L2_Data[currentQ].correct);
                 fbMsg = isCorrect ? "LOGIC CONFIRMED! 🔥" : `FLAWED LOGIC! ❌ The natural response is "${L2_Data[currentQ].correct}".`;
+                registrarRespuesta('l2-q' + (currentQ + 1), L2_Data[currentQ].quote, currentSelection, isCorrect, L2_Data[currentQ].correct);
             }
             else if(currentLevel === 3) {
-                isCorrect = true; 
+                isCorrect = true;
                 fbMsg = "REPORT FILED! 🔥 👉 Detective, prepare to defend this statement to the Chief (Teacher).";
+                registrarRespuesta('l3-q' + (currentQ + 1), L3_Data[currentQ], document.getElementById('l3-input').value.trim(), true, undefined);
             }
 
             isAnswered = true;

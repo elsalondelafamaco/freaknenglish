@@ -192,18 +192,26 @@
         }
 
         @media (max-width: 820px) {
-            /* The deck scales as a unit via #presentation-area's transform,
-               so slide content stays proportional. We only need to stop the
-               unscaled layout box from creating a horizontal scrollbar. */
+            /* The deck scales as a unit via #presentation-area's transform.
+               On narrow viewports, #presentation-area (a flex item of body)
+               either shrinks below its 1280px design width -- which throws
+               off the scale()/transform-origin math and pushes the still
+               1280px-wide absolutely positioned .slide-container off-center
+               -- or, if kept at 1280px, overflows body's flex box before the
+               transform is applied, which still counts toward scrollWidth.
+               Taking it out of flow with fixed positioning and centering it
+               with margins sidesteps both: the 1280x720 box is centered on
+               the viewport pre-transform, then resizePresentation()'s
+               scale() shrinks that exact centered box to fit, so nothing
+               ever spills past the viewport edge. */
             html, body { overflow-x: hidden; width: 100%; }
-            /* #presentation-area is a flex item of body; without flex-shrink:0
-               it shrinks below its intended 1280px design width on narrow
-               viewports, which throws off the scale()/transform-origin math
-               in resizePresentation() and pushes the (still 1280px-wide)
-               absolutely positioned .slide-container off-center, causing a
-               real horizontal overflow. Keep its box at the design size so
-               the scale transform centers correctly. */
-            #presentation-area { flex-shrink: 0; }
+            #presentation-area {
+                position: fixed;
+                left: 50%;
+                top: 50%;
+                margin-left: -640px;
+                margin-top: -360px;
+            }
         }
     </style>
 </head>

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Lesson 40 | Real World Challenges</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
@@ -126,6 +126,35 @@
             align-items: center;
             background: linear-gradient(transparent, rgba(0,0,0,0.8));
             z-index: 10;
+        }
+
+        @media (max-width: 820px) {
+            /* Layouts de dos columnas se apilan */
+            #slide-0 { flex-direction: column; }
+            #slide-2 > .flex-1 { flex-direction: column; }
+
+            /* Paddings grandes de deck -> compactos */
+            .slide-container .p-10 { padding: 1.5rem 1rem; }
+            #game-content.p-6 { padding: 1rem; }
+            .gossip-paper { padding: 1.5rem; }
+
+            /* Tipografías gigantes -> legibles */
+            #slide-0 h1 { font-size: 2.75rem; }
+            #slide-1 h2, #slide-2 h2 { font-size: 1.75rem; }
+            #slide-final h1 { font-size: 2.75rem; }
+            #game-content .text-2xl { font-size: 1.35rem; }
+
+            /* Grillas y filas de opciones se apilan / envuelven */
+            #slide-1 .grid { grid-template-columns: 1fr; }
+            #slide-1 .flex.gap-4 { flex-wrap: wrap; }
+
+            /* Botones: alto mínimo táctil y sin zoom en iOS */
+            .btn-freak, .option-btn { min-height: 44px; font-size: 16px; }
+            .btn-freak { padding: 0.85rem 1.25rem; }
+
+            /* Barra inferior y barra del juego caben o envuelven */
+            .bottom-nav { padding: 1rem; flex-wrap: wrap; row-gap: 0.75rem; }
+            #game-slide > div.flex.justify-between { flex-wrap: wrap; row-gap: 0.5rem; }
         }
     </style>
 </head>
@@ -254,6 +283,46 @@
     </div>
 
     <script>
+        /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+           Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+        window.FreaknActivity = (function () {
+            function post(type, payload) {
+                try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+                catch (e) {}
+            }
+            return {
+                /** Reporta el resultado de una actividad calificable. */
+                submit: function (r) {
+                    post("freakn:activity:result", {
+                        activityId: r.activityId,          // id estable dentro del archivo
+                        title: r.title || document.title,  // nombre legible
+                        score: r.score,                    // puntos obtenidos
+                        maxScore: r.maxScore,              // puntaje máximo
+                        answers: r.answers || []           // ver formato abajo
+                    });
+                },
+                /** Marca la lección como vista/terminada (sin puntaje). */
+                complete: function () { post("freakn:lesson:complete", {}); }
+            };
+        })();
+
+        // FREAKN ANSWER TRACKING
+        var freaknAnswers = [];
+        function registrarRespuesta(id, pregunta, respuesta, acerto, esperada) {
+            if (freaknAnswers.some(function (a) { return a.id === id; })) return; // 1er intento
+            freaknAnswers.push({ id: id, question: pregunta, answer: respuesta,
+                                 correct: acerto, expected: esperada });
+        }
+        function reportarResultado() {
+            FreaknActivity.submit({
+                activityId: "lesson-quiz",
+                title: document.title,
+                score: score,
+                maxScore: 30,
+                answers: freaknAnswers
+            });
+        }
+
         // NAVIGATION SYSTEM
         let currentSlide = 0;
 
@@ -271,6 +340,7 @@
                 fb.innerHTML = "THAT'S FREAKN' RIGHT! 🔥 Giving an idea to solve a problem is a suggestion.";
                 fb.classList.add('text-sky-400');
                 document.getElementById('vibe-next').classList.remove('hidden');
+                registrarRespuesta('vibe', 'If someone says "Let\'s call a taxi instead of walking", what are they doing?', 'They are suggesting.', true, 'They are suggesting.');
             } else {
                 fb.innerHTML = "WAKE UP! ❌ They aren't saying 'no', they are giving a new idea.";
                 fb.classList.add('text-red-400');
@@ -284,6 +354,7 @@
                 fb.innerHTML = "SPOT ON! 🔥 Gelmy's heels are way more important than Titó's pride.";
                 fb.classList.add('text-sky-400');
                 document.getElementById('story-next').classList.remove('hidden');
+                registrarRespuesta('story', "Why does Gelmy refuse Titó's idea?", "Because she doesn't want to ruin her shoes.", true, "Because she doesn't want to ruin her shoes.");
             } else {
                 fb.innerHTML = "OOPS! NOT QUITE ❌ Read Gelmy's dialogue again. It's about fashion.";
                 fb.classList.add('text-red-400');
@@ -443,6 +514,7 @@
                         document.getElementById('game-slide').classList.remove('active');
                         document.getElementById('slide-final').classList.add('active');
                         document.getElementById('final-score').innerText = score;
+                        reportarResultado();
                     }
                 } else {
                     loadQuestion();
@@ -452,18 +524,26 @@
 
             let isCorrect = true; // For discussions, all thoughtful answers are correct!
             let fbMsg = "";
+            let qText = "", aText = "";
 
             if(currentLevel === 1) {
                 fbMsg = "GREAT STRATEGY! 🔥 👉 Teacher: Challenge their solution. Would it really work?";
-            } 
+                qText = L1_Data[currentQ];
+                aText = document.getElementById('l1-input').value.trim();
+            }
             else if(currentLevel === 2) {
                 fbMsg = "INTERESTING CHOICE! 🔥 👉 Teacher: Ask them WHY they chose that!";
+                qText = L2_Data[currentQ].dilemma;
+                aText = currentSelection;
             }
             else if(currentLevel === 3) {
                 fbMsg = "DEEP THOUGHTS! 🔥 👉 Teacher: Discuss this dilemma further.";
+                qText = L3_Data[currentQ];
+                aText = document.getElementById('l3-input').value.trim();
             }
 
             isAnswered = true;
+            registrarRespuesta(`l${currentLevel}-${currentQ}`, qText, aText, isCorrect, null);
             if(isCorrect) {
                 score++;
                 document.getElementById('score-display').innerText = score;

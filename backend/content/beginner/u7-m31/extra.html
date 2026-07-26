@@ -538,13 +538,36 @@
         .flex-center { display: flex; justify-content: center; align-items: center; gap: 10px; }
         .mt-20 { margin-top: 16px; }
         .text-center { text-align: center; }
-        
+
+        /* ============ RESPONSIVE (mobile 360-820px) ============ */
+        @media (max-width: 820px) {
+            body { height: auto; min-height: 100vh; overflow-y: auto; overflow-x: hidden; align-items: flex-start; }
+            .slide-container { width: 100%; height: auto; min-height: 100vh; border-radius: 0; box-shadow: none; }
+            .slide { position: static; display: none; height: auto; min-height: 100vh; padding: 16px 0; box-sizing: border-box; }
+            .slide.active { display: flex; }
+            .split-screen { flex-direction: column; width: 100%; height: auto; }
+            .split-left, .split-right { padding: 24px 16px; width: 100%; border-right: none; }
+            .title-bree { font-size: 2rem; }
+            .split-right .title-bree { font-size: 1.75rem; }
+            .activity-card, .gossip-paper { width: 100%; max-width: 100%; }
+            .gossip-paper { padding: 16px; transform: none; }
+            .gossip-profiles { flex-direction: column; }
+            .dnd-area { flex-direction: column; }
+            .drop-zone { width: 100%; }
+            .card-body { padding: 16px; }
+            .card-header h2 { font-size: 1.4rem; }
+            .scenario-text { font-size: 1.2rem; padding: 10px 12px; }
+            .score-tracker { top: 8px; right: 8px; font-size: 1rem; padding: 6px 12px; }
+            .btn-freak { min-height: 44px; font-size: 16px; padding: 10px 18px; }
+            .option-btn { min-height: 44px; font-size: 16px; padding: 10px 14px; }
+            #final-score-display { font-size: 2.5rem !important; }
+        }
     </style>
 </head>
 <body>
 
 <div class="slide-container">
-    
+
     <!-- UI Overlay -->
     <div class="progress-bar-container" id="progressBarContainer">
         <div class="progress-bar" id="progressBar"></div>
@@ -728,6 +751,31 @@
 </div>
 
 <script>
+  /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+     Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+  window.FreaknActivity = (function () {
+    function post(type, payload) {
+      try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+      catch (e) {}
+    }
+    return {
+      /** Reporta el resultado de una actividad calificable. */
+      submit: function (r) {
+        post("freakn:activity:result", {
+          activityId: r.activityId,          // id estable dentro del archivo
+          title: r.title || document.title,  // nombre legible
+          score: r.score,                    // puntos obtenidos
+          maxScore: r.maxScore,              // puntaje máximo
+          answers: r.answers || []           // ver formato abajo
+        });
+      },
+      /** Marca la lección como vista/terminada (sin puntaje). */
+      complete: function () { post("freakn:lesson:complete", {}); }
+    };
+  })();
+</script>
+
+<script>
     // --- DATA ---
     const level1Data = [
         { s: "Patient: I have a small headache.", a: "You should drink some water.", b: "You must drink some water.", ans: "a", err: "Wake up! 'Must' is an aggressive order! For a small headache, just give advice: SHOULD." },
@@ -879,7 +927,8 @@
         currentSlideIdx: 0,
         score: 0,
         maxScore: 30,
-        
+        answers: [],
+
         l1Index: 0,
         l2Index: 0,
         l3Index: 0,
@@ -1004,7 +1053,8 @@
             const data = level1Data[this.l1Index];
             const feedback = document.getElementById('l1-feedback');
             
-            if(choice === data.ans) {
+            const isCorrect = choice === data.ans;
+            if(isCorrect) {
                 feedback.innerText = "Exactly! Great decision.";
                 feedback.className = 'feedback-box success';
                 this.updateScore(1);
@@ -1012,6 +1062,13 @@
                 feedback.innerText = data.err;
                 feedback.className = 'feedback-box error';
             }
+            this.answers.push({
+                id: 'l1-' + (this.l1Index + 1),
+                question: data.s,
+                answer: data[choice],
+                correct: isCorrect,
+                expected: data[data.ans]
+            });
             document.getElementById('btn-l1-next').classList.remove('hidden');
         },
 
@@ -1103,11 +1160,14 @@
                 
                 let isPerfect = true;
                 let correctSentenceParts = [];
+                let userSentenceParts = [];
 
                 slots.forEach((slot, i) => {
                     const expected = slot.dataset.expected;
                     const val = slot.dataset.val;
                     correctSentenceParts.push(slot.dataset.label);
+                    const userPill = data.pills.find(p => p.id === val);
+                    userSentenceParts.push(userPill ? userPill.text : val);
 
                     if(val === expected) {
                         slot.style.background = '#ccffcc';
@@ -1134,6 +1194,14 @@
                     feedback.className = 'feedback-box error';
                     this.updateScore(1); // Partial credit
                 }
+
+                this.answers.push({
+                    id: 'l2-' + (this.l2Index + 1),
+                    question: data.context,
+                    answer: userSentenceParts.join(" "),
+                    correct: isPerfect,
+                    expected: correctSentenceParts.join(" ")
+                });
 
                 btn.innerText = "Next Patient";
                 btn.dataset.action = "next";
@@ -1204,11 +1272,20 @@
             document.getElementById('l3-input').disabled = true;
             document.getElementById('btn-l3-submit').classList.add('hidden');
             document.getElementById('btn-l3-next').classList.remove('hidden');
-            
+
             fb.innerText = "Awesome! Perfect grammar advice.";
             fb.className = 'feedback-box success';
-            
+
             this.updateScore(1);
+
+            const hintMatch = currentData.prompt.match(/\(Hint:\s*(.*?)\)/);
+            this.answers.push({
+                id: 'l3-' + (this.l3Index + 1),
+                question: currentData.prompt,
+                answer: rawVal,
+                correct: true,
+                expected: hintMatch ? hintMatch[1] : ''
+            });
         },
 
         handleL3Next() {
@@ -1239,6 +1316,14 @@
             
             document.getElementById('final-rank').innerText = rank;
             document.getElementById('final-message').innerText = msg;
+
+            FreaknActivity.submit({
+                activityId: "extra-activity",
+                title: document.title,
+                score: this.score,
+                maxScore: this.maxScore,
+                answers: this.answers
+            });
         }
     };
 

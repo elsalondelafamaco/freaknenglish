@@ -54,6 +54,36 @@
             background-size: 30px 30px;
             background-color: #1a1a1a;
         }
+
+        @media (max-width: 820px) {
+            body { overflow-y: auto; overflow-x: hidden; height: auto; min-height: 100vh; }
+            #app-container { width: 100%; height: auto; min-height: 100vh; box-shadow: none; }
+            #slide-mount { height: auto; min-height: 100vh; flex-direction: column; }
+            #slide-mount > .h-full { height: auto; min-height: 100vh; }
+            .w-1\/2 { width: 100%; }
+            .grid-cols-3 { grid-template-columns: 1fr; }
+            .grid-cols-2 { grid-template-columns: 1fr; }
+            .title-freak.text-\[110px\] { font-size: 2.5rem; }
+            .text-7xl { font-size: 2rem; }
+            .text-6xl { font-size: 1.75rem; }
+            .text-\[100px\] { font-size: 2.5rem; }
+            .text-\[60px\] { font-size: 1.75rem; }
+            .text-\[50px\] { font-size: 1.5rem; }
+            .text-\[40px\] { font-size: 1.25rem; }
+            .text-\[38px\] { font-size: 1.15rem; }
+            .text-\[32px\] { font-size: 1.15rem; }
+            .text-3xl { font-size: 1.25rem; }
+            .p-16, .p-12, .p-20 { padding: 1rem; }
+            .px-12 { padding-left: 1rem; padding-right: 1rem; }
+            .pb-24, .pb-20 { padding-bottom: 5.5rem; }
+            .gap-6, .gap-8, .gap-10 { gap: 1rem; }
+            .absolute.bottom-6, .absolute.bottom-8, .absolute.bottom-20 { position: static; margin-top: 1rem; }
+            .absolute.bottom-6.w-full, .absolute.bottom-8.right-12, .absolute.bottom-8.left-12 { flex-wrap: wrap; justify-content: center; }
+            .w-\[450px\] { width: 100%; max-width: 450px; margin: 0 auto; }
+            .mr-8.shrink-0 { margin-right: 0; margin-bottom: 1rem; }
+            .btn-freak { min-height: 44px; font-size: 16px; padding: 0.75rem 1.25rem; }
+            #diagnose-input { font-size: 16px; }
+        }
     </style>
 </head>
 <body>
@@ -61,9 +91,34 @@
     <div id="app-container">
         <!-- Global Score overlay -->
         <div id="global-score" class="absolute top-8 right-8 text-freakYellow font-mont font-black text-4xl z-50 hidden">SCORE: 0/30</div>
-        
+
         <div id="slide-mount" class="w-full h-full flex slide-enter"></div>
     </div>
+
+    <script>
+      /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+         Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+      window.FreaknActivity = (function () {
+        function post(type, payload) {
+          try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+          catch (e) {}
+        }
+        return {
+          /** Reporta el resultado de una actividad calificable. */
+          submit: function (r) {
+            post("freakn:activity:result", {
+              activityId: r.activityId,          // id estable dentro del archivo
+              title: r.title || document.title,  // nombre legible
+              score: r.score,                    // puntos obtenidos
+              maxScore: r.maxScore,              // puntaje máximo
+              answers: r.answers || []           // ver formato abajo
+            });
+          },
+          /** Marca la lección como vista/terminada (sin puntaje). */
+          complete: function () { post("freakn:lesson:complete", {}); }
+        };
+      })();
+    </script>
 
     <script>
         const lessonData = [
@@ -134,11 +189,38 @@
         let currentSlide = 0;
         let score = 0;
         let answeredQuestions = new Set();
-        let selectedAnswers = {}; 
+        let selectedAnswers = {};
         let isGradingState = false;
+        let writeGrades = {}; // Level 3 self-grade results, keyed by slide index
 
         const appContainer = document.getElementById('slide-mount');
         const scoreDisplay = document.getElementById('global-score');
+
+        function buildFreaknAnswers() {
+            const answers = [];
+            lessonData.forEach(function (item, i) {
+                if (!answeredQuestions.has(i)) return;
+                if (item.qType === 'recognize' || item.qType === 'gps') {
+                    const sel = selectedAnswers[i];
+                    answers.push({
+                        id: 'q' + item.qNum,
+                        question: item.qType === 'recognize' ? item.q : item.context,
+                        answer: item.options[sel],
+                        correct: sel === item.correct,
+                        expected: item.options[item.correct]
+                    });
+                } else if (item.qType === 'chat') {
+                    answers.push({
+                        id: 'q' + item.qNum,
+                        question: item.prompt,
+                        answer: selectedAnswers[i],
+                        correct: !!writeGrades[i],
+                        expected: item.acceptable
+                    });
+                }
+            });
+            return answers;
+        }
 
         function renderSlide() {
             const data = lessonData[currentSlide];
@@ -500,6 +582,14 @@
                         </div>
                     </div>
                 `;
+
+                FreaknActivity.submit({
+                    activityId: "lesson-quiz",
+                    title: document.title,
+                    score: score,
+                    maxScore: 30,
+                    answers: buildFreaknAnswers()
+                });
             }
         }
 
@@ -530,8 +620,9 @@
         window.selfGrade = function(isCorrect) {
             isGradingState = false;
             answeredQuestions.add(currentSlide);
+            writeGrades[currentSlide] = isCorrect;
             if (isCorrect) score++;
-            nav(1); 
+            nav(1);
         }
 
         window.nav = function(dir) {

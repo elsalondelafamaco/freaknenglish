@@ -538,7 +538,28 @@
         .flex-center { display: flex; justify-content: center; align-items: center; gap: 10px; }
         .mt-20 { margin-top: 16px; }
         .text-center { text-align: center; }
-        
+
+        /* ============ RESPONSIVE (mobile 360-820px) ============ */
+        @media (max-width: 820px) {
+            body { overflow-y: auto; overflow-x: hidden; height: auto; min-height: 100vh; padding: 1rem 0; }
+            .slide-container { width: 100%; min-height: auto; height: auto; border-radius: 8px; overflow-y: auto; }
+            .slide { position: relative; opacity: 1; pointer-events: all; transform: none; display: none; padding: 1rem; }
+            .slide.active { display: flex; }
+            .split-screen { flex-direction: column; height: auto; }
+            .split-left, .split-right { padding: 1.5rem; border-right: none; }
+            .activity-card, .gossip-paper { max-width: 100%; width: 100%; }
+            .title-bree { font-size: 2.25rem; }
+            .split-right .title-bree { font-size: 1.75rem; }
+            .gossip-profiles { flex-direction: column; }
+            .dnd-area { flex-direction: column; }
+            .card-body { padding: 1rem; }
+            .gossip-paper { padding: 1.25rem; }
+            .gossip-paper h3 { font-size: 1.5rem; }
+            #final-score-display { font-size: 3rem; }
+            .btn-freak { min-height: 44px; font-size: 16px; }
+            .free-text-input, .option-btn { font-size: 16px; }
+            .score-tracker { top: 10px; right: 10px; padding: 6px 12px; font-size: 1rem; }
+        }
     </style>
 </head>
 <body>
@@ -731,6 +752,31 @@
 </div>
 
 <script>
+  /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+     Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+  window.FreaknActivity = (function () {
+    function post(type, payload) {
+      try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+      catch (e) {}
+    }
+    return {
+      /** Reporta el resultado de una actividad calificable. */
+      submit: function (r) {
+        post("freakn:activity:result", {
+          activityId: r.activityId,          // id estable dentro del archivo
+          title: r.title || document.title,  // nombre legible
+          score: r.score,                    // puntos obtenidos
+          maxScore: r.maxScore,              // puntaje máximo
+          answers: r.answers || []           // ver formato abajo
+        });
+      },
+      /** Marca la lección como vista/terminada (sin puntaje). */
+      complete: function () { post("freakn:lesson:complete", {}); }
+    };
+  })();
+</script>
+
+<script>
     // --- DATA ---
     const level1Data = [
         { s: "If I won the lottery, I ______ a Ferrari.", a: "will buy", b: "would buy", ans: "b", err: "BZZT! 'Will' is for real future plans. This is a dream! Use WOULD." },
@@ -901,9 +947,15 @@
         l1Index: 0,
         l2Index: 0,
         l3Index: 0,
+        freaknAnswers: [],
 
         init() {
             this.setupDragAndDrop();
+        },
+
+        recordAnswer(id, question, answer, correct, expected) {
+            if (this.freaknAnswers.some((a) => a.id === id)) return;
+            this.freaknAnswers.push({ id, question, answer, correct, expected });
         },
 
         prevSlide() {
@@ -1020,7 +1072,8 @@
             const data = level1Data[this.l1Index];
             const feedback = document.getElementById('l1-feedback');
             
-            if(choice === data.ans) {
+            const isCorrect = choice === data.ans;
+            if(isCorrect) {
                 feedback.innerText = "Access granted! Correct grammar.";
                 feedback.className = 'feedback-box success';
                 this.updateScore(1);
@@ -1028,6 +1081,7 @@
                 feedback.innerText = "Coach: " + data.err;
                 feedback.className = 'feedback-box error';
             }
+            this.recordAnswer('l1-' + (this.l1Index + 1), data.s, data[choice], isCorrect, data[data.ans]);
             document.getElementById('btn-l1-next').classList.remove('hidden');
         },
 
@@ -1119,11 +1173,13 @@
                 
                 let isPerfect = true;
                 let correctSentenceParts = [];
+                let userSentenceParts = [];
 
                 slots.forEach((slot, i) => {
                     const expected = slot.dataset.expected || "";
                     const val = slot.dataset.val || (slot.dataset.pillId ? slot.dataset.pillId.replace('l2-pill-', '') : undefined);
                     correctSentenceParts.push(slot.dataset.label);
+                    userSentenceParts.push(slot.textContent.trim());
 
                     if(val && expected.split(',').includes(val)) {
                         slot.style.background = '#ccffcc';
@@ -1151,6 +1207,8 @@
                     feedback.className = 'feedback-box error';
                     this.updateScore(1); // Partial credit
                 }
+
+                this.recordAnswer('l2-' + (this.l2Index + 1), data.context, userSentenceParts.join(' '), isPerfect, correctSentenceParts.join(' '));
 
                 btn.innerText = "Next Plan";
                 btn.dataset.action = "next";
@@ -1230,7 +1288,8 @@
             
             fb.innerText = "Awesome! The ATM accepts your dream.";
             fb.className = 'feedback-box success';
-            
+
+            this.recordAnswer('l3-' + (this.l3Index + 1), currentData.prompt, rawVal, true, undefined);
             this.updateScore(1);
         },
 
@@ -1262,6 +1321,14 @@
             
             document.getElementById('final-rank').innerText = rank;
             document.getElementById('final-message').innerText = msg;
+
+            FreaknActivity.submit({
+                activityId: "extra-activity",
+                title: document.title,
+                score: this.score,
+                maxScore: this.maxScore,
+                answers: this.freaknAnswers
+            });
         }
     };
 

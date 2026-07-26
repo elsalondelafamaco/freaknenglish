@@ -127,6 +127,28 @@
             background: linear-gradient(transparent, rgba(0,0,0,0.8));
             z-index: 10;
         }
+
+        @media (max-width: 820px) {
+            body [class~="p-10"] { padding: 1.25rem; }
+            body [class~="gap-10"] { gap: 1.5rem; }
+            body [class~="text-6xl"] { font-size: 2.25rem; }
+            body [class~="text-8xl"] { font-size: 2.5rem; }
+            body [class~="text-5xl"] { font-size: 1.6rem; }
+            body [class~="text-4xl"] { font-size: 1.5rem; }
+            body [class~="text-3xl"] { font-size: 1.3rem; }
+            body [class~="text-2xl"] { font-size: 1.15rem; }
+            body [class~="max-w-md"] { max-width: 100%; }
+            body [class~="max-w-4xl"] { max-width: 100%; }
+            body [class~="max-w-6xl"] { max-width: 100%; }
+
+            .bottom-nav { padding: 1rem; flex-wrap: wrap; gap: 0.75rem; justify-content: center; }
+            .gossip-paper { padding: 1.25rem; box-shadow: 6px 6px 0px #93E5FF; }
+            .btn-freak { min-height: 44px; font-size: 16px; padding: 0.85rem 1.5rem; }
+            .option-btn { min-height: 44px; font-size: 16px; }
+            .input-freak { font-size: 16px; }
+
+            #game-slide > div.flex.justify-between { flex-wrap: wrap; row-gap: 0.5rem; padding: 0.75rem; }
+        }
     </style>
 </head>
 <body>
@@ -269,6 +291,10 @@
         function checkVibe(action) {
             const fb = document.getElementById('vibe-feedback');
             fb.classList.remove('hidden', 'text-sky-400', 'text-red-400');
+            const isCorrect = action === 'action';
+            if(!freaknAnswers.some(a => a.id === 'vibe-1')) {
+                freaknAnswers.push({ id: 'vibe-1', question: 'Which layer of the story is "I heard a loud crash."?', answer: action, correct: isCorrect, expected: 'action' });
+            }
             if(action === 'action') {
                 fb.innerHTML = "THAT'S FREAKN' RIGHT! 🔥 A sudden event is 'The Action'. It interrupts the peace.";
                 fb.classList.add('text-sky-400');
@@ -282,6 +308,10 @@
         function checkStory(answer) {
             const fb = document.getElementById('story-feedback');
             fb.classList.remove('hidden', 'text-sky-400', 'text-red-400');
+            const isCorrect = answer === 'correct';
+            if(!freaknAnswers.some(a => a.id === 'story-1')) {
+                freaknAnswers.push({ id: 'story-1', question: 'Why was Don Arturo so incredibly angry?', answer: answer, correct: isCorrect, expected: 'correct' });
+            }
             if(answer === 'correct') {
                 fb.innerHTML = "SPOT ON! 🔥 The secret past ('she had sold it') caused the present anger.";
                 fb.classList.add('text-sky-400');
@@ -298,6 +328,7 @@
         let currentQ = 0;
         let currentSelection = null;
         let isAnswered = false;
+        let freaknAnswers = [];
 
         // LEVEL DATA
         const L1_Data = [
@@ -446,6 +477,13 @@
                         document.getElementById('game-slide').classList.remove('active');
                         document.getElementById('slide-final').classList.add('active');
                         document.getElementById('final-score').innerText = score;
+                        FreaknActivity.submit({
+                            activityId: "lesson-quiz",
+                            title: document.title,
+                            score: score,
+                            maxScore: 30,
+                            answers: freaknAnswers
+                        });
                     }
                 } else {
                     loadQuestion();
@@ -481,13 +519,49 @@
                 document.getElementById('score-display').innerText = score;
             }
 
+            const qId = 'l' + currentLevel + '-q' + (currentQ + 1);
+            let qText, ansText, expText;
+            if(currentLevel === 1) {
+                qText = L1_Data[currentQ].text; ansText = currentSelection; expText = L1_Data[currentQ].correct;
+            } else if(currentLevel === 2) {
+                qText = L2_Data[currentQ].quote || L2_Data[currentQ].text; ansText = currentSelection; expText = L2_Data[currentQ].correct;
+            } else {
+                qText = L3_Data[currentQ]; ansText = document.getElementById('l3-input').value.trim(); expText = undefined;
+            }
+            freaknAnswers.push({ id: qId, question: qText, answer: ansText, correct: isCorrect, expected: expText });
+
             const fb = document.getElementById('game-feedback');
             fb.innerHTML = fbMsg;
             fb.className = `feedback-pop w-full text-center mt-6 ${isCorrect ? 'correct' : 'wrong'}`;
 
             btn.innerHTML = "<span>Next Step ➔</span>";
-            btn.style.background = "#93E5FF"; 
+            btn.style.background = "#93E5FF";
         }
+    </script>
+
+    <script>
+      /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+         Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+      window.FreaknActivity = (function () {
+        function post(type, payload) {
+          try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+          catch (e) {}
+        }
+        return {
+          /** Reporta el resultado de una actividad calificable. */
+          submit: function (r) {
+            post("freakn:activity:result", {
+              activityId: r.activityId,          // id estable dentro del archivo
+              title: r.title || document.title,  // nombre legible
+              score: r.score,                    // puntos obtenidos
+              maxScore: r.maxScore,              // puntaje máximo
+              answers: r.answers || []           // ver formato abajo
+            });
+          },
+          /** Marca la lección como vista/terminada (sin puntaje). */
+          complete: function () { post("freakn:lesson:complete", {}); }
+        };
+      })();
     </script>
 </body>
 </html>

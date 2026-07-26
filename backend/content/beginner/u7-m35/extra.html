@@ -547,7 +547,37 @@
         .flex-center { display: flex; justify-content: center; align-items: center; gap: 10px; }
         .mt-20 { margin-top: 16px; }
         .text-center { text-align: center; }
-        
+
+        @media (max-width: 820px) {
+            body { height: auto; min-height: 100vh; align-items: flex-start; overflow-y: auto; overflow-x: hidden; }
+            .slide-container { width: 100vw; height: auto; min-height: 100vh; border-radius: 0; }
+            .slide { position: relative; top: auto; left: auto; width: 100%; height: auto; min-height: 100vh; opacity: 1; pointer-events: none; transform: none; display: none; }
+            .slide.active { display: flex; pointer-events: all; }
+
+            .split-screen { flex-direction: column; height: auto; }
+            .split-left, .split-right { padding: 1.5rem 1.25rem; }
+
+            .title-bree { font-size: 2.25rem; }
+            .split-right .title-bree { font-size: 1.9rem; }
+
+            .activity-card { max-width: 100% !important; }
+            .card-body { padding: 1rem; }
+            .card-header { padding: 12px; }
+
+            .dnd-area { flex-direction: column; }
+            #vibe-dnd-area .drop-zone { width: 100% !important; }
+
+            .gossip-paper { padding: 1rem; max-width: 100%; }
+            .gossip-profiles { flex-direction: column; }
+
+            .scenario-text { font-size: 1.15rem !important; }
+
+            #final-score-display { font-size: 3rem !important; }
+            .skewed-block:has(#final-rank) { font-size: 1.1rem !important; padding: 10px 16px !important; transform: skew(-10deg) !important; }
+
+            .btn-freak { min-height: 44px; font-size: 16px; }
+        }
+
     </style>
 </head>
 <body>
@@ -732,6 +762,42 @@
 </div>
 
 <script>
+    /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+       Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+    window.FreaknActivity = (function () {
+        function post(type, payload) {
+            try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+            catch (e) {}
+        }
+        return {
+            submit: function (r) {
+                post("freakn:activity:result", {
+                    activityId: r.activityId,
+                    title: r.title || document.title,
+                    score: r.score,
+                    maxScore: r.maxScore,
+                    answers: r.answers || []
+                });
+            },
+            complete: function () { post("freakn:lesson:complete", {}); }
+        };
+    })();
+
+    let freaknAnswers = [];
+    function registrarRespuesta(id, pregunta, respuesta, acerto, esperada) {
+        if (freaknAnswers.some(function (a) { return a.id === id; })) return; // 1er intento
+        freaknAnswers.push({ id: id, question: pregunta, answer: respuesta, correct: acerto, expected: esperada });
+    }
+    function reportarResultado() {
+        FreaknActivity.submit({
+            activityId: "extra-activity",
+            title: document.title,
+            score: game.score,
+            maxScore: game.maxScore,
+            answers: freaknAnswers
+        });
+    }
+
     // --- DATA ---
     const level1Data = [
         { s: "The Starry Night ______ by Van Gogh.", a: "painted", b: "was painted", c: "is paint", ans: "b", err: "Wake up! The painting didn't paint itself! It WAS painted. Don't forget the 'To Be' verb!" },
@@ -1021,6 +1087,7 @@
                 feedback.innerText = "Coach: " + data.err;
                 feedback.className = 'feedback-box error';
             }
+            registrarRespuesta('l1-' + this.l1Index, data.s, data[choice], choice === data.ans, data[data.ans]);
             document.getElementById('btn-l1-next').classList.remove('hidden');
         },
 
@@ -1131,6 +1198,9 @@
                     }
                 });
 
+                const userSentence = Array.from(slots).map(function (s) { return s.textContent.trim(); }).join(' ');
+                registrarRespuesta('l2-' + this.l2Index, data.context, userSentence, isPerfect, correctSentenceParts.join(' '));
+
                 const feedback = document.getElementById('l2-feedback');
 
                 if(isPerfect) {
@@ -1230,7 +1300,8 @@
             
             fb.innerText = "Awesome! The plaque is ready for the museum.";
             fb.className = 'feedback-box success';
-            
+
+            registrarRespuesta('l3-' + this.l3Index, currentData.prompt, rawVal, true, undefined);
             this.updateScore(1);
         },
 
@@ -1241,6 +1312,7 @@
 
         // --- FINAL ---
         finishGame() {
+            reportarResultado();
             this.nextSlide();
             document.getElementById('progressBarContainer').style.display = 'none';
             document.getElementById('scoreTracker').style.display = 'none';

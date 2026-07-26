@@ -81,6 +81,59 @@
             padding: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
+
+        @media (max-width: 820px) {
+            body { padding: 0; }
+
+            .survival-guide-container {
+                width: 100%;
+                height: auto;
+                min-height: auto;
+                overflow: visible;
+                margin: 0 auto 1rem;
+            }
+
+            .survival-guide-container header.px-8 {
+                padding: 1rem;
+            }
+
+            .survival-guide-container .bg-lightbg.py-6.px-10 {
+                padding: 1rem;
+                flex-direction: column;
+                text-align: center;
+                gap: 1rem;
+            }
+
+            .survival-guide-container .flex.flex-1.p-10.gap-10 {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 1.5rem;
+            }
+
+            .survival-guide-container .w-7\/12,
+            .survival-guide-container .w-5\/12 {
+                width: 100%;
+            }
+
+            .survival-guide-container .cheat-sheet-box {
+                padding: 1rem;
+            }
+
+            .survival-guide-container h1.font-bree.text-3xl {
+                font-size: 1.5rem;
+            }
+
+            .survival-guide-container .bg-skyblue.p-8 {
+                flex-direction: column;
+                padding: 1rem;
+                text-align: center;
+                gap: 1rem;
+            }
+
+            .survival-guide-container .golden-nugget-card {
+                padding: 1rem;
+            }
+        }
     </style>
 </head>
 <body class="p-0 sm:p-8 space-y-10 text-left">
@@ -295,5 +348,33 @@
 
     </div>
 
+    <script>
+      /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+         Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+      window.FreaknActivity = (function () {
+        function post(type, payload) {
+          try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+          catch (e) {}
+        }
+        return {
+          /** Reporta el resultado de una actividad calificable. */
+          submit: function (r) {
+            post("freakn:activity:result", {
+              activityId: r.activityId,          // id estable dentro del archivo
+              title: r.title || document.title,  // nombre legible
+              score: r.score,                    // puntos obtenidos
+              maxScore: r.maxScore,              // puntaje máximo
+              answers: r.answers || []           // ver formato abajo
+            });
+          },
+          /** Marca la lección como vista/terminada (sin puntaje). */
+          complete: function () { post("freakn:lesson:complete", {}); }
+        };
+      })();
+
+      // guide.html no tiene ejercicios ni navegación: se marca como
+      // completada apenas el estudiante la abre.
+      window.addEventListener('load', function () { FreaknActivity.complete(); });
+    </script>
 </body>
 </html>

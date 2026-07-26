@@ -127,6 +127,36 @@
             background: linear-gradient(transparent, rgba(0,0,0,0.8));
             z-index: 10;
         }
+
+        /* ============ RESPONSIVE (mobile 360-820px) ============ */
+        @media (max-width: 820px) {
+            .slide-container [class*="p-10"] { padding: 1rem; }
+
+            #slide-0 h1.text-6xl { font-size: 2.5rem; }
+            #slide-0 .skewed-block { padding: 0.4rem 1rem; }
+            #slide-0 .skewed-block .text-2xl { font-size: 1rem; }
+            #slide-0 p.text-2xl { font-size: 1.1rem; }
+
+            #slide-2 .flex-1.p-10 { flex-direction: column; gap: 1.5rem; }
+            #slide-2 .w-full.lg\:w-1\/2 { width: 100%; }
+            .gossip-paper { padding: 1.25rem; box-shadow: 6px 6px 0px #E4DF33; }
+
+            #slide-1 .flex.gap-4.justify-center { flex-wrap: wrap; gap: 0.75rem; }
+
+            .bottom-nav { padding: 1rem; flex-wrap: wrap; gap: 0.75rem; justify-content: center; }
+            .bottom-nav button { font-size: 0.9rem; }
+
+            .btn-freak { padding: 0.85rem 1.5rem; font-size: 1rem; min-height: 44px; }
+            .option-btn { padding: 0.85rem; font-size: 0.95rem; min-height: 44px; }
+            .input-freak { font-size: 1.15rem; }
+
+            #game-slide > .w-full.bg-black { flex-wrap: wrap; gap: 0.5rem; padding: 0.75rem 1rem; }
+            #game-content { padding: 1rem; }
+            #game-content .flex.gap-4.w-full.justify-center { flex-wrap: wrap; }
+            #game-content .option-btn.flex-1.max-w-xs { flex: 1 1 100%; max-width: 100%; }
+
+            #slide-final h1.text-6xl { font-size: 2.5rem; }
+        }
     </style>
 </head>
 <body>
@@ -251,6 +281,22 @@
     </div>
 
     <script>
+        // Freakn Activity tracking (lesson-quiz)
+        var freaknAnswers = [];
+        function registrarRespuesta(id, pregunta, respuesta, acerto, esperada) {
+            if (freaknAnswers.some(function (a) { return a.id === id; })) return; // 1er intento
+            freaknAnswers.push({ id: id, question: pregunta, answer: respuesta, correct: acerto, expected: esperada });
+        }
+        function reportarResultado() {
+            FreaknActivity.submit({
+                activityId: "lesson-quiz",
+                title: document.title,
+                score: freaknAnswers.filter(function (a) { return a.correct; }).length,
+                maxScore: freaknAnswers.length,
+                answers: freaknAnswers
+            });
+        }
+
         // NAVIGATION SYSTEM
         let currentSlide = 0;
 
@@ -449,6 +495,7 @@
                         document.getElementById('game-slide').classList.remove('active');
                         document.getElementById('slide-final').classList.add('active');
                         document.getElementById('final-score').innerText = score;
+                        reportarResultado();
                     }
                 } else {
                     loadQuestion();
@@ -463,17 +510,20 @@
                 if(!currentSelection) return;
                 isCorrect = (currentSelection === window.currentL1Correct);
                 fbMsg = isCorrect ? "THAT'S FREAKN' RIGHT! 🔥" : "OOPS! NOT QUITE ❌ Read the vibe again.";
-            } 
+                registrarRespuesta('l1-q' + (currentQ + 1), L1_Data[currentQ].quote, currentSelection, isCorrect, window.currentL1Correct);
+            }
             else if(currentLevel === 2) {
                 if(!currentSelection) return;
                 isCorrect = (currentSelection === L2_Data[currentQ].correct);
                 fbMsg = isCorrect ? "SPOT ON! 🔥" : `WAKE UP! ❌ It must be '${L2_Data[currentQ].correct}'.`;
+                registrarRespuesta('l2-q' + (currentQ + 1), L2_Data[currentQ].text, currentSelection, isCorrect, L2_Data[currentQ].correct);
             }
             else if(currentLevel === 3) {
                 const val = document.getElementById('l3-input').value.trim();
                 if(val.length < 5) return;
-                isCorrect = true; 
+                isCorrect = true;
                 fbMsg = "YES! WE LOVE THAT! 🔥 👉 Teacher: Celebrate this answer with the student.";
+                registrarRespuesta('l3-q' + (currentQ + 1), L3_Data[currentQ], val, true, null);
             }
 
             isAnswered = true;
@@ -487,8 +537,33 @@
             fb.className = `feedback-pop w-full text-center mt-6 ${isCorrect ? 'correct' : 'wrong'}`;
 
             btn.innerHTML = "<span>Next Step ➔</span>";
-            btn.style.background = "#E4DF33"; 
+            btn.style.background = "#E4DF33";
         }
+    </script>
+
+    <script>
+      /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+         Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+      window.FreaknActivity = (function () {
+        function post(type, payload) {
+          try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+          catch (e) {}
+        }
+        return {
+          /** Reporta el resultado de una actividad calificable. */
+          submit: function (r) {
+            post("freakn:activity:result", {
+              activityId: r.activityId,          // id estable dentro del archivo
+              title: r.title || document.title,  // nombre legible
+              score: r.score,                    // puntos obtenidos
+              maxScore: r.maxScore,              // puntaje máximo
+              answers: r.answers || []           // ver formato abajo
+            });
+          },
+          /** Marca la lección como vista/terminada (sin puntaje). */
+          complete: function () { post("freakn:lesson:complete", {}); }
+        };
+      })();
     </script>
 </body>
 </html>

@@ -213,15 +213,21 @@ async function main() {
   for (const t of targets) {
     process.stdout.write(`· ${t.dir}/${t.file} … `)
     const url = 'file:///' + t.abs.replace(/\\/g, '/')
-    await withTimeout(tab.send('Page.navigate', { url }), 15000)
-    await sleep(1600) // carga + Tailwind CDN
 
-    const info = await withTimeout(tab.eval(`(() => ({
-      scrollWidth: document.body.scrollWidth,
-      clientWidth: document.body.clientWidth,
-      bridge: typeof window.FreaknActivity === 'object',
-      errors: (window.__freaknErrors || []).slice(0, 3),
-    }))()`), 15000)
+    // Si el puente no aparece, casi siempre es que la página aún no terminó de
+    // cargar (Tailwind CDN); se reintenta con más espera antes de darlo por malo.
+    let info = null
+    for (const espera of [1600, 3500, 6000]) {
+      await withTimeout(tab.send('Page.navigate', { url }), 15000)
+      await sleep(espera)
+      info = await withTimeout(tab.eval(`(() => ({
+        scrollWidth: document.body.scrollWidth,
+        clientWidth: document.body.clientWidth,
+        bridge: typeof window.FreaknActivity === 'object',
+        errors: (window.__freaknErrors || []).slice(0, 3),
+      }))()`), 15000)
+      if (info?.bridge) break
+    }
 
     // El reporte se dispara invocando la función que el propio archivo define
     // (determinista). Hacer clics a ciegas rompía el estado del deck y daba

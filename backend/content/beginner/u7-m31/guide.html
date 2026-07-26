@@ -81,6 +81,43 @@
             padding: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
+
+        /* ============ RESPONSIVE (mobile 360-820px) ============ */
+        @media (max-width: 820px) {
+            .survival-guide-container {
+                width: 100%;
+                min-height: auto;
+                margin: 0 auto 20px;
+            }
+            .survival-guide-container > .flex.flex-1 {
+                flex-direction: column;
+                padding: 1rem;
+                gap: 1.25rem;
+            }
+            .w-7\/12, .w-5\/12 {
+                width: 100%;
+            }
+            header.flex.justify-between {
+                padding-left: 1rem;
+                padding-right: 1rem;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            header .text-3xl { font-size: 1.5rem; }
+            .bg-lightbg.py-6.px-10 {
+                padding: 1rem;
+                flex-direction: column;
+                text-align: center;
+                gap: 0.75rem;
+            }
+            .cheat-sheet-box { padding: 1.25rem; }
+            .bg-skyblue.p-8 {
+                padding: 1.25rem;
+                flex-direction: column;
+                text-align: center;
+                gap: 1rem;
+            }
+        }
     </style>
 </head>
 <body class="p-0 sm:p-8 space-y-10 text-left">
@@ -289,6 +326,32 @@
         </footer>
 
     </div>
+
+    <script>
+      /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+         Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+      window.FreaknActivity = (function () {
+        function post(type, payload) {
+          try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+          catch (e) {}
+        }
+        return {
+          /** Reporta el resultado de una actividad calificable. */
+          submit: function (r) {
+            post("freakn:activity:result", {
+              activityId: r.activityId,          // id estable dentro del archivo
+              title: r.title || document.title,  // nombre legible
+              score: r.score,                    // puntos obtenidos
+              maxScore: r.maxScore,              // puntaje máximo
+              answers: r.answers || []           // ver formato abajo
+            });
+          },
+          /** Marca la lección como vista/terminada (sin puntaje). */
+          complete: function () { post("freakn:lesson:complete", {}); }
+        };
+      })();
+      FreaknActivity.complete();
+    </script>
 
 </body>
 </html>

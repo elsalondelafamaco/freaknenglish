@@ -191,16 +191,35 @@
             margin-top: 20px;
         }
 
+        /* ============ RESPONSIVE (mobile 360-820px) ============ */
         @media (max-width: 820px) {
-            .slide-container { flex-direction: column; overflow-y: auto; }
-            .split-left, .split-right { width: 100%; height: auto; padding: 1rem; }
-            .title-massive { font-size: 48px; }
+            body { height: auto; min-height: 100vh; overflow-x: hidden; overflow-y: auto; align-items: flex-start; }
+            #presentation-area { width: 100%; height: auto; transform: none !important; }
+            .slide-container { position: static; width: 100%; height: auto; min-height: 100vh; box-shadow: none; }
+            #slide-1.active { flex-direction: column; }
+
+            .split-left, .split-right { width: 100%; height: auto; padding: 1.5rem 1rem; }
+            .title-massive { font-size: 2.75rem; }
+            .slide-container [class*="text-5xl"] { font-size: 1.75rem; }
+            .slide-container [class*="text-4xl"] { font-size: 1.4rem; }
+            .slide-container [class*="text-3xl"] { font-size: 1.2rem; }
+            .slide-container [class*="p-10"] { padding: 1rem; }
+            .slide-container [class*="p-8"] { padding: 1rem; }
+            .slide-container [class*="px-10"] { padding-left: 1rem; padding-right: 1rem; }
+            .slide-container [class*="max-w-4xl"], .slide-container [class*="max-w-3xl"], .slide-container [class*="max-w-2xl"] { max-width: 100%; }
+            .slide-container [class*="w-3/4"] { width: 100%; }
+
             .skewed-block span { font-size: 16px; }
             .btn-freak { min-height: 44px; font-size: 16px; padding: 12px 18px; }
             .option-btn { min-height: 44px; font-size: 16px; padding: 12px 18px; }
+            .option-btn.w-64 { width: 100%; max-width: 320px; }
             .grade-btn { min-height: 44px; font-size: 16px; padding: 10px 14px; }
             .freak-input { font-size: 16px; }
-            .slide-container.flex-col.p-8 { padding: 1rem; }
+
+            [id^="l1-opts-"] { flex-wrap: wrap; }
+            [id^="l2-grade-"] { flex-wrap: wrap; gap: 0.75rem; }
+            [id^="l2-grade-"] > div { width: 100%; }
+            [id^="l3-grade-"] { flex-wrap: wrap; }
         }
     </style>
 </head>

@@ -5,3 +5,9 @@ dist
 *.log
 coverage
 .DS_Store
+
+# Perfiles de Chrome que crean los scripts de validación (verify-html-runtime)
+.chrome-verify/
+.chrome-debug/
+# Salidas de las corridas de validación
+.verify*.txt

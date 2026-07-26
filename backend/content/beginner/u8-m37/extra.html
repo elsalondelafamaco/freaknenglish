@@ -61,6 +61,23 @@
         .feedback { font-size: 1.5rem; font-weight: 900; text-transform: uppercase; display: flex; flex-direction: column; justify-content: center; }
         .score-hud { position: absolute; top: 2.5rem; right: 3rem; font-size: 1.5rem; font-weight: 900; color: var(--accent); z-index: 50; text-align: right; }
         .absolute-nav-bar { position: absolute; bottom: 2rem; left: 3rem; right: 3rem; display: flex; justify-content: space-between; align-items: center; height: 100px; }
+
+        @media (max-width: 820px) {
+            body { height: auto; min-height: 100vh; overflow-y: auto; overflow-x: hidden; padding: 0; }
+            .slide-container { width: 100vw; height: auto; min-height: 100vh; overflow: visible; box-shadow: none; }
+            .split-layout { flex-direction: column; }
+            .split-left, .split-right { width: 100%; padding: 1.5rem; border-left: none !important; }
+            h1.text-6xl { font-size: 2.25rem !important; }
+            h2.text-4xl { font-size: 1.5rem !important; }
+            .score-hud { position: static; text-align: center; margin-bottom: 0.5rem; font-size: 1.1rem; }
+            .absolute-nav-bar { position: static; height: auto; padding: 1rem 0 0; flex-wrap: wrap; gap: 0.75rem; }
+            .btn-freak { font-size: 1rem; padding: 0.85rem 1.5rem; min-height: 44px; }
+            .eq-btn { padding: 0.6rem 1rem; font-size: 1rem; min-height: 44px; }
+            .eq-display { min-width: 0; width: 100%; font-size: 1.5rem; padding: 1rem; letter-spacing: 1px; }
+            .written-input { font-size: 16px; padding: 0.85rem; }
+            #slide-2 > div.p-8, #slide-4 > div.p-8 { padding: 1rem; padding-top: 4.5rem; }
+            .flex.justify-between.items-start.w-full.max-w-5xl.mx-auto.gap-4 { flex-wrap: wrap; gap: 0.75rem; }
+        }
     </style>
 </head>
 <body>
@@ -210,9 +227,36 @@
     </div>
 
     <script>
+        /* FREAKN ACTIVITY API v1 — puente con la plataforma.
+           Si el HTML se abre fuera de la app, no hace nada (no rompe). */
+        window.FreaknActivity = (function () {
+            function post(type, payload) {
+                try { parent.postMessage({ source: "freakn-lesson", type: type, payload: payload }, "*"); }
+                catch (e) {}
+            }
+            return {
+                submit: function (r) {
+                    post("freakn:activity:result", {
+                        activityId: r.activityId,
+                        title: r.title || document.title,
+                        score: r.score,
+                        maxScore: r.maxScore,
+                        answers: r.answers || []
+                    });
+                },
+                complete: function () { post("freakn:lesson:complete", {}); }
+            };
+        })();
+
         let currentScore = 0;
         let currentL1Index = 0;
         let currentL2Index = 0;
+        let freaknAnswers = [];
+
+        function registrarRespuesta(id, pregunta, respuesta, acerto, esperada) {
+            if (freaknAnswers.some(function (a) { return a.id === id; })) return;
+            freaknAnswers.push({ id: id, question: pregunta, answer: respuesta, correct: acerto, expected: esperada });
+        }
 
         let eqSelections = { polarity: null, aux: null, subject: null };
 
@@ -361,6 +405,7 @@
             const builtString = `${eqSelections.polarity} ${eqSelections.aux} ${eqSelections.subject}`;
             
             let isCorrect = (cleanStr(builtString) === cleanStr(q.target));
+            registrarRespuesta(`l1-q${currentL1Index}`, q.q, builtString, isCorrect, q.target);
 
             const p = document.getElementById('out-polarity');
             const a = document.getElementById('out-aux');
@@ -432,7 +477,8 @@
             const cleanUser = cleanStr(userInputRaw);
             
             let isCorrect = q.answers.some(ans => cleanStr(ans) === cleanUser);
-            
+            registrarRespuesta(`l2-q${currentL2Index}`, q.q, userInputRaw.trim(), isCorrect, q.displayAnswer);
+
             const feedback = document.getElementById('game-feedback-2');
             
             if (isCorrect) {
@@ -481,6 +527,14 @@
                 document.getElementById('final-title').style.color = "#30302F";
             }
             nav(5);
+
+            FreaknActivity.submit({
+                activityId: "extra-activity",
+                title: document.title,
+                score: currentScore,
+                maxScore: freaknAnswers.length,
+                answers: freaknAnswers
+            });
         }
     </script>
 </body>

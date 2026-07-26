@@ -64,6 +64,7 @@ export class ContentSyncService implements OnModuleInit {
           position: number
           durationMin?: number
           kind?: string
+          isCheckpoint?: boolean
           file: string
         }>
       }>
@@ -98,6 +99,7 @@ export class ContentSyncService implements OnModuleInit {
           position: l.position,
           durationMin: l.durationMin ?? 25,
           kind: l.kind ?? 'html',
+          isCheckpoint: l.isCheckpoint ?? false,
           contentHtml,
         }
         await this.prisma.lesson.upsert({

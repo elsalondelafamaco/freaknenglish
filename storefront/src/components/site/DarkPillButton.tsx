@@ -15,8 +15,12 @@ const sizes = {
   lg: "h-12 px-6 text-[15px]",
 };
 
+// En claro es la píldora negra de la marca. En oscuro, un gris sobre fondo
+// oscuro se lee como botón deshabilitado, así que el CTA principal pasa al
+// amarillo de marca con texto oscuro: destaca y sigue siendo Freakn.
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-full bg-brand-ink text-white font-semibold transition-all hover:bg-brand-ink-soft active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ink focus-visible:ring-offset-2";
+  "inline-flex items-center justify-center gap-2 rounded-full bg-brand-ink text-white font-semibold transition-all hover:bg-brand-ink-soft active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ink focus-visible:ring-offset-2 " +
+  "dark:bg-brand-yellow dark:text-brand-ink dark:hover:brightness-110";
 
 export function DarkPillLink({
   to,

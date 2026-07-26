@@ -32,6 +32,22 @@ export class AuthService {
         role: 'student',
       },
     })
+    // Bienvenida de "cuenta creada, falta elegir plan". Comparte el namespace
+    // de dedupe `welcome:<userId>` con la bienvenida post-pago: quien se
+    // registra y luego paga recibe UNA sola bienvenida (esta), y del pago le
+    // llega el correo de pago confirmado, no una segunda bienvenida.
+    await this.notifications.enqueue({
+      userId: user.id,
+      toEmail: user.email,
+      template: 'welcome_signup',
+      subject: `¡Tu cuenta en ${env.BRAND_NAME} está lista!`,
+      dedupeKey: `welcome:${user.id}`,
+      vars: { fullName: user.fullName },
+      type: 'system',
+      title: '¡Bienvenido!',
+      body: 'Elige tu plan para empezar tus clases.',
+      linkUrl: '/#precios',
+    })
     return this.issueTokens(user)
   }
 

@@ -66,6 +66,41 @@ const fmtDate = (iso: string) =>
   new Date(iso).toLocaleString('es-CO', { dateStyle: 'full', timeStyle: 'short' })
 
 export const templates = {
+  /**
+   * Registro SIN plan (formulario de signup). El objetivo del correo es que
+   * vuelva y elija plan: no promete clases que todavía no tiene.
+   */
+  welcome_signup: (v: { fullName: string }) =>
+    wrap(
+      `¡Hola ${String(v.fullName ?? '').split(' ')[0] || ''}! Tu cuenta ya está creada 👋`,
+      `<p>Bienvenido a ${env.BRAND_NAME}. Ya tienes cuenta, y falta un solo paso para empezar a hablar inglés: <b>elegir tu plan y tu horario</b>.</p>
+       <p>Así funciona:</p>
+       <p style="margin:4px 0">1️⃣ &nbsp;Eliges el plan que se ajusta a tu ritmo</p>
+       <p style="margin:4px 0">2️⃣ &nbsp;Escoges los horarios fijos que te sirven cada semana</p>
+       <p style="margin:4px 0">3️⃣ &nbsp;Te asignamos tu profe y arrancas tus clases 1 a 1 en vivo</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/#precios`, 'Elegir mi plan')}
+       <p style="font-size:13px;color:#888;margin-top:16px">¿Dudas antes de decidir? Respóndenos este correo o escríbenos por WhatsApp — te ayudamos a escoger. 💛</p>`,
+      { preheader: 'Solo falta elegir tu plan y tu horario' },
+    ),
+
+  /**
+   * Registro CON plan (viene del checkout, ya pagó). Aquí sí se le da la
+   * bienvenida completa y se le dice qué sigue con sus clases.
+   */
+  welcome_plan: (v: { fullName: string; planName?: string; schedule?: string }) =>
+    wrap(
+      `¡Bienvenido a ${env.BRAND_NAME}, ${String(v.fullName ?? '').split(' ')[0] || ''}! 🎉`,
+      `<p>Tu pago quedó confirmado${v.planName ? ` y tu <b>${v.planName}</b> ya está activo` : ' y tu plan ya está activo'}. Desde hoy no memorizas inglés: <b>lo hablas</b>.</p>
+       ${v.schedule ? `<p>Tu horario: <b>${v.schedule}</b></p>` : ''}
+       <p>Esto es lo que sigue:</p>
+       <p style="margin:4px 0">🧑‍🏫 &nbsp;Te asignamos tu profe y te avisamos por correo</p>
+       <p style="margin:4px 0">📅 &nbsp;Tus clases aparecen en tu calendario</p>
+       <p style="margin:4px 0">📚 &nbsp;Mientras tanto, ya puedes entrar a tus módulos</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/app`, 'Entrar a mi portal')}
+       <p style="font-size:13px;color:#888;margin-top:16px">Tip: llega a tu primera clase con ganas de hablar, aunque te equivoques. Así es como se aprende. 💛</p>`,
+      { preheader: 'Tu plan está activo — esto es lo que sigue' },
+    ),
+
   welcome: (v: { fullName: string }) =>
     wrap(
       `¡Bienvenido a ${env.BRAND_NAME}, ${v.fullName}! 🎉`,

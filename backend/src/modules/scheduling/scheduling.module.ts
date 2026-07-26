@@ -5,9 +5,10 @@ import { SchedulingService } from './scheduling.service'
 import { SlotsService } from './slots.service'
 import { NotificationsModule } from '../notifications/notifications.module'
 import { BoardModule } from '../board/board.module'
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module'
 
 @Module({
-  imports: [NotificationsModule, BoardModule],
+  imports: [NotificationsModule, BoardModule, SubscriptionsModule],
   controllers: [SchedulingController, PublicScheduleController],
   providers: [SchedulingService, SlotsService],
   exports: [SchedulingService, SlotsService],

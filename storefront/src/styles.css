@@ -162,10 +162,14 @@
      El flip principal es semántico: `brand-ink` pasa a ser texto CLARO y
      `brand-cream` una superficie cálida oscura. Los casos donde brand-ink
      se usa como FONDO (botones CTA) se corrigen con overrides abajo. */
-  --brand-cream: oklch(0.22 0.02 95);
-  --brand-cream-soft: oklch(0.19 0.015 95);
+  /* Ojo con el croma en oscuro: el amarillo (hue ~95) con croma alto y
+     luminosidad baja NO se lee como "crema oscuro", se lee como MARRÓN. Las
+     superficies van casi neutras, con una pizca de calidez apenas perceptible;
+     el amarillo saturado se reserva para acentos pequeños y textos. */
+  --brand-cream: oklch(0.215 0.006 95);
+  --brand-cream-soft: oklch(0.185 0.004 95);
   --brand-yellow: oklch(0.85 0.16 100);
-  --brand-yellow-soft: oklch(0.35 0.05 100);
+  --brand-yellow-soft: oklch(0.245 0.012 95);
   --brand-ink: oklch(0.93 0 0);
   --brand-ink-soft: oklch(0.82 0 0);
   --brand-muted: oklch(0.68 0 0);
@@ -175,6 +179,14 @@
 
   color-scheme: dark;
 }
+
+/* Los overrides de dark van DENTRO de `@layer utilities` a propósito: si se
+   dejan sin capa, ganan sobre cualquier utilidad de Tailwind por las reglas
+   del cascade (lo no-capado vence a lo capado), y entonces un `dark:bg-...`
+   puesto a mano en un componente no tendría forma de imponerse. Dentro de la
+   capa manda la especificidad: estas reglas (0,1,0) pisan a `.bg-white`, pero
+   un `dark:algo` (0,2,0) las pisa a ellas. */
+@layer utilities {
 
 /* ── Dark mode: overrides quirúrgicos ─────────────────────────────────
    La UI usa utilidades quemadas (bg-white, bg-brand-ink + text-white).
@@ -195,6 +207,50 @@
 /* Chips/badges amarillos: el texto interno debe seguir oscuro sobre amarillo. */
 .dark :where(.bg-brand-yellow, [class*="bg-brand-yellow/"]) { color: oklch(0.15 0 0); }
 .dark :where(.bg-brand-yellow, [class*="bg-brand-yellow/"]) :where([class*="text-brand-ink"]) { color: oklch(0.15 0 0); }
+
+/* ── Amarillos en oscuro: legibilidad ────────────────────────────────
+   `brand-yellow-soft` se usa como SUPERFICIE grande (cards de precios,
+   banners del dashboard, cabeceras). En claro es un amarillo pálido; en
+   oscuro un amarillo pálido deslumbra y el texto oscuro encima desaparece.
+   Se convierte en una superficie ámbar oscura con texto claro. */
+.dark :where(.bg-brand-yellow-soft, [class*="bg-brand-yellow-soft/"]) {
+  background-color: oklch(0.245 0.012 95); /* casi neutro: evita el marrón */
+  color: oklch(0.95 0.01 95);
+}
+.dark :where(.bg-brand-yellow-soft, [class*="bg-brand-yellow-soft/"]) :where([class*="text-brand-ink"]) {
+  color: oklch(0.95 0.02 95);
+}
+
+/* Avisos con la paleta ámbar literal de Tailwind (banners de vencimiento,
+   "espera a tu profe", error de plataforma): en oscuro el fondo claro es un
+   parche que encandila. Se invierte a fondo oscuro con texto ámbar claro. */
+.dark :where([class*="bg-amber-50"], [class*="bg-amber-100"]) {
+  background-color: oklch(0.25 0.02 85); /* aviso, no barro */
+  border-color: oklch(0.4 0.05 85);
+}
+.dark :where([class*="bg-amber-50"], [class*="bg-amber-100"]) :where([class*="text-amber-"]),
+.dark :where([class*="text-amber-700"], [class*="text-amber-800"], [class*="text-amber-900"]) {
+  color: oklch(0.87 0.11 85);
+}
+
+/* Resaltado tipo marcador del titular: el fondo amarillo sigue siendo claro
+   en oscuro, así que el texto encima DEBE ser oscuro. Sin esto, `--brand-ink`
+   (que en oscuro es claro) dejaba "Real" en blanco sobre amarillo. */
+.dark .marker-highlight { color: oklch(0.15 0 0); }
+
+/* El amarillo de marca sobre fondo oscuro deslumbra a tamaño grande: se baja
+   un punto la luminosidad solo para superficies amplias de la home. */
+.dark .marker-highlight::before { background: oklch(0.82 0.15 100); }
+
+/* Cabeceras de tabla: `bg-brand-cream/40` sobre superficie oscura quedaba
+   casi invisible. Se les da un escalón de contraste propio. */
+.dark :where(thead) :where([class*="bg-brand-cream"]),
+.dark :where(thead th) {
+  background-color: oklch(0.24 0 0);
+  color: oklch(0.78 0 0);
+}
+
+} /* @layer utilities — fin de los overrides de dark */
 
 /* Footer/nav oscuros que ya eran bg-brand-ink con texto blanco fijo: ok con
    el remap de arriba. Inputs nativos y scrollbars usan color-scheme: dark. */

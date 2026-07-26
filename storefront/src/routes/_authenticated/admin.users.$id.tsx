@@ -438,9 +438,16 @@ function AdminUserDetail() {
                   {sub.startedAt ? new Date(sub.startedAt).toLocaleDateString("es-CO") : "—"}
                 </Row>
                 <Row k="Activa hasta">
-                  {sub.currentPeriodEnd
-                    ? new Date(sub.currentPeriodEnd).toLocaleDateString("es-CO")
-                    : "—"}
+                  {sub.currentPeriodEnd ? (
+                    new Date(sub.currentPeriodEnd).toLocaleDateString("es-CO")
+                  ) : sub.status === "active" ? (
+                    // El mes no arranca hasta que tenga profesor asignado.
+                    <span className="text-amber-700 dark:text-amber-300">
+                      En espera de profesor — el mes aún no empieza a correr
+                    </span>
+                  ) : (
+                    "—"
+                  )}
                 </Row>
                 <Row k="Ref. Wompi">{sub.wompiReference ?? "—"}</Row>
               </dl>

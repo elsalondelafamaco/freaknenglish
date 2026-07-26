@@ -93,6 +93,11 @@ for (const dir of dirs) {
         position: 1,
         durationMin: 30,
         kind: 'html',
+        // Compuerta: bloquea todo lo que sigue hasta que el estudiante lo
+        // supere, y no se abre hasta que su profe lo habilite. Va en el
+        // manifiesto (no en una migración) para que se aplique en cada boot,
+        // también en producción, que usa `prisma db push` sin correr SQL.
+        isCheckpoint: true,
         file: `beginner/${dir}/checkpoint.html`,
       }],
     })

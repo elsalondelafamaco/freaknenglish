@@ -60,10 +60,12 @@ async function bootstrap() {
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' })
   app.use(cookieParser())
   // Orden importa: raw primero (marca req._body y json lo respeta después).
-  app.use(
-    '/api/v1/public/wompi/webhook',
-    express.raw({ type: 'application/json', limit: '1mb' }),
-  )
+  // Ambas rutas apuntan al mismo handler: `public/wompi/webhook` es la
+  // canónica y `checkout/wompi/webhook` es el alias histórico que quedó
+  // configurado en el panel de Wompi. Las dos necesitan el body crudo.
+  for (const ruta of ['/api/v1/public/wompi/webhook', '/api/v1/checkout/wompi/webhook']) {
+    app.use(ruta, express.raw({ type: 'application/json', limit: '1mb' }))
+  }
   app.use(express.json({ limit: '5mb' }))
   app.use(express.urlencoded({ extended: true, limit: '5mb' }))
   app.enableCors({

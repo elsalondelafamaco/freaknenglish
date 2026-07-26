@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { BoardService } from '../board/board.service'
 import { SlotsService, SlotRef } from './slots.service'
+import { SubscriptionsService } from '../subscriptions/subscriptions.service'
 
 /**
  * Bloques semanales de horario del estudiante.
@@ -32,6 +33,7 @@ export class SchedulingService {
     private notifications: NotificationsService,
     private boards: BoardService,
     private slots: SlotsService,
+    private subscriptions: SubscriptionsService,
   ) {}
 
   /** Horario semanal legible ("lunes 7:00, miércoles 7:00") para los correos. */
@@ -53,6 +55,11 @@ export class SchedulingService {
       this.scheduleSummary(studentId),
     ])
     if (!student || !teacher) return
+    // El mes del estudiante no corre mientras espera profesor. Aquí ya lo
+    // tiene, así que se arranca el período si estaba pendiente. Va en este
+    // punto porque TODAS las asignaciones (onboarding, manual, reasignación y
+    // compra) pasan por aquí; es idempotente si el reloj ya estaba andando.
+    await this.subscriptions.startPeriodOnTeacherAssigned(student.id)
     await this.notifications.enqueue({
       userId: student.id,
       toEmail: student.email,

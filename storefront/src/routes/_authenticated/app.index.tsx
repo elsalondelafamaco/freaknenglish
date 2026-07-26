@@ -127,6 +127,10 @@ function DashboardPage() {
             Tu cupo está garantizado. Nuestro equipo te contacta en menos de 24&nbsp;h hábiles para
             coordinar tu profesor y el inicio de tus clases. Mientras tanto, puedes avanzar en tus módulos.
           </p>
+          <p className="mt-2 max-w-xl text-sm font-medium text-brand-ink">
+            Tranquilo: tu mes empieza a contar el día que te asignemos profe, no antes. No pierdes
+            ni un día de clase por la espera.
+          </p>
         </section>
       ) : null}
 

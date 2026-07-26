@@ -184,6 +184,7 @@
           "position": 1,
           "durationMin": 30,
           "kind": "html",
+          "isCheckpoint": true,
           "file": "beginner/u1-checkpoint/checkpoint.html"
         }
       ],
@@ -372,6 +373,7 @@
           "position": 1,
           "durationMin": 30,
           "kind": "html",
+          "isCheckpoint": true,
           "file": "beginner/u2-checkpoint/checkpoint.html"
         }
       ],
@@ -560,6 +562,7 @@
           "position": 1,
           "durationMin": 30,
           "kind": "html",
+          "isCheckpoint": true,
           "file": "beginner/u3-checkpoint/checkpoint.html"
         }
       ],
@@ -748,6 +751,7 @@
           "position": 1,
           "durationMin": 30,
           "kind": "html",
+          "isCheckpoint": true,
           "file": "beginner/u4-checkpoint/checkpoint.html"
         }
       ],
@@ -936,6 +940,7 @@
           "position": 1,
           "durationMin": 30,
           "kind": "html",
+          "isCheckpoint": true,
           "file": "beginner/u5-checkpoint/checkpoint.html"
         }
       ],
@@ -1124,6 +1129,7 @@
           "position": 1,
           "durationMin": 30,
           "kind": "html",
+          "isCheckpoint": true,
           "file": "beginner/u6-checkpoint/checkpoint.html"
         }
       ],
@@ -1312,6 +1318,7 @@
           "position": 1,
           "durationMin": 30,
           "kind": "html",
+          "isCheckpoint": true,
           "file": "beginner/u7-checkpoint/checkpoint.html"
         }
       ],
@@ -1544,6 +1551,7 @@
           "position": 1,
           "durationMin": 30,
           "kind": "html",
+          "isCheckpoint": true,
           "file": "beginner/u8-checkpoint/checkpoint.html"
         }
       ],

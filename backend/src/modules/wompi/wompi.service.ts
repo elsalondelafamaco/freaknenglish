@@ -229,10 +229,12 @@ export class WompiService {
       await this.notifications.enqueue({
         userId,
         toEmail: intent.customerEmail,
-        template: 'welcome',
-        subject: '¡Bienvenido a Freakn!',
+        template: 'welcome_plan',
+        subject: '¡Bienvenido a Freakn! Tu plan está activo',
+        // Mismo namespace que la bienvenida de registro: si el usuario ya se
+        // había registrado antes de pagar, NO recibe una segunda bienvenida.
         dedupeKey: `welcome:${userId}`,
-        vars: { fullName: intent.customerName },
+        vars: { fullName: intent.customerName, planName: plan?.name },
         type: 'system',
         title: '¡Bienvenido!',
         body: 'Tu cuenta está lista.',

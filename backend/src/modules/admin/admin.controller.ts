@@ -90,9 +90,9 @@ export class AdminController {
 
   /**
    * @endpoint POST /api/v1/admin/users
-   * Crea un usuario (estudiante o profesor) sin suscripción asociada.
+   * Crea un usuario (estudiante, profesor o administrador) sin suscripción.
    * Envía email transaccional con link para configurar contraseña.
-   * Body: { email, fullName, role: 'student'|'teacher', level? }
+   * Body: { email, fullName, role: 'student'|'teacher'|'admin', level? }
    */
   @Post('users')
   createUser(
@@ -100,7 +100,7 @@ export class AdminController {
     body: {
       email: string
       fullName: string
-      role: 'student' | 'teacher'
+      role: 'student' | 'teacher' | 'admin'
       level?: 'beginner' | 'intermediate' | 'advanced'
       plan?: { planId: string; endDate: string }
     },

@@ -179,6 +179,7 @@ function TeacherStudentDetail() {
         </aside>
       </section>
 
+      <LessonPlanSection studentId={studentId} />
       <CheckpointGatesSection studentId={studentId} />
       <ActivityResultsSection studentId={studentId} />
       <CheckpointAttemptsSection studentId={studentId} />
@@ -262,6 +263,115 @@ export function ActivityResultsSection({ studentId }: { studentId: string }) {
                         ))}
                       </ul>
                     </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Plan de contenido: todo nace bloqueado y el profe va abriendo lección por
+ * lección (o el módulo entero) a medida que avanza con su estudiante.
+ */
+export function LessonPlanSection({ studentId }: { studentId: string }) {
+  const qc = useQueryClient();
+  const [abierto, setAbierto] = useState<string | null>(null);
+  const q = useQuery({
+    queryKey: ["lesson-plan", studentId],
+    queryFn: () => teachersApi.lessonPlan(studentId),
+  });
+  const m = useMutation({
+    mutationFn: (v: { lessonIds: string[]; unlock: boolean }) =>
+      teachersApi.setLessonUnlocks(studentId, v.lessonIds, v.unlock),
+    onSuccess: (r, v) => {
+      toast.success(
+        v.unlock
+          ? `${r.afectadas} lección(es) habilitada(s)`
+          : `${r.afectadas} lección(es) bloqueada(s)`,
+      );
+      qc.invalidateQueries({ queryKey: ["lesson-plan", studentId] });
+      qc.invalidateQueries({ queryKey: ["checkpoint-gates", studentId] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo actualizar"),
+  });
+  const mods = q.data ?? [];
+  const totalAbiertas = mods.reduce((s, x) => s + x.lessons.filter((l) => l.unlocked).length, 0);
+  const total = mods.reduce((s, x) => s + x.lessons.length, 0);
+
+  return (
+    <section>
+      <h2 className="text-lg font-semibold text-brand-ink">Contenido habilitado</h2>
+      <p className="mt-0.5 text-xs text-brand-ink/55">
+        Todo el programa arranca bloqueado. Ve abriendo lo que corresponda a medida que avanzas en
+        clase — así el estudiante no se adelanta ni se pierde. {totalAbiertas} de {total} habilitadas.
+      </p>
+      <div className="mt-3 overflow-hidden rounded-2xl border border-brand-line bg-white">
+        {q.isLoading ? (
+          <p className="p-5 text-sm text-brand-ink/55">Cargando…</p>
+        ) : mods.length === 0 ? (
+          <p className="p-5 text-sm text-brand-ink/55">No hay contenido publicado todavía.</p>
+        ) : (
+          <ul className="divide-y divide-brand-line/70">
+            {mods.map((mod) => {
+              const abiertas = mod.lessons.filter((l) => l.unlocked).length;
+              const todas = mod.lessons.length;
+              const open = abierto === mod.moduleId;
+              const ids = mod.lessons.map((l) => l.lessonId);
+              return (
+                <li key={mod.moduleId}>
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                    <button
+                      onClick={() => setAbierto(open ? null : mod.moduleId)}
+                      className="flex-1 text-left text-sm"
+                    >
+                      <span className="font-semibold text-brand-ink">
+                        {mod.unit != null ? `U${mod.unit} · ` : ""}{mod.title}
+                      </span>
+                      <span className="ml-2 text-xs text-brand-ink/55">
+                        {abiertas}/{todas} habilitadas
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => m.mutate({ lessonIds: ids, unlock: abiertas < todas })}
+                      disabled={m.isPending}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
+                        abiertas < todas
+                          ? "bg-brand-ink text-white hover:bg-brand-ink-soft"
+                          : "border border-brand-line text-brand-ink/70 hover:bg-brand-cream/40"
+                      }`}
+                    >
+                      {abiertas < todas ? "Habilitar módulo" : "Bloquear módulo"}
+                    </button>
+                  </div>
+                  {open ? (
+                    <ul className="border-t border-brand-line/60 bg-brand-cream/20 px-4 py-2">
+                      {mod.lessons.map((l) => (
+                        <li key={l.lessonId} className="flex items-center justify-between gap-3 py-1.5 text-sm">
+                          <span className={l.completedAt ? "text-brand-ink/50 line-through" : "text-brand-ink"}>
+                            {l.isCheckpoint ? "🏁 " : ""}{l.title}
+                            {l.completedAt ? (
+                              <span className="ml-1.5 text-[11px] text-emerald-700">completada</span>
+                            ) : null}
+                          </span>
+                          <button
+                            onClick={() => m.mutate({ lessonIds: [l.lessonId], unlock: !l.unlocked })}
+                            disabled={m.isPending}
+                            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition disabled:opacity-50 ${
+                              l.unlocked
+                                ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                                : "border border-brand-line text-brand-ink/60 hover:bg-white"
+                            }`}
+                          >
+                            {l.unlocked ? "Habilitada" : "Bloqueada"}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                   ) : null}
                 </li>
               );

@@ -255,6 +255,22 @@ export const learningApi = {
     apiPost<CheckpointSubmitResult>(`/learning/checkpoints/${id}/submit`, { answers }),
 };
 
+/** Módulo con el estado de cada lección para un estudiante concreto. */
+export type StudentLessonPlan = {
+  moduleId: string;
+  title: string;
+  unit: number | null;
+  level: string;
+  lessons: Array<{
+    lessonId: string;
+    title: string;
+    isCheckpoint: boolean;
+    unlocked: boolean;
+    unlockedAt: string | null;
+    completedAt: string | null;
+  }>;
+};
+
 /** Estado de una compuerta de checkpoint para un estudiante. */
 export type CheckpointGate = {
   lessonId: string;
@@ -351,6 +367,11 @@ export const teachersApi = {
     apiPatch<{ id: string; meetingUrl: string | null }>(`/teacher/students/${studentId}/meeting-url`, { url }),
   studentActivityResults: (studentId: string) =>
     apiGet<ActivityResultRow[]>(`/teacher/students/${studentId}/activity-results`),
+  // Plan de contenido: qué lecciones tiene habilitadas el estudiante
+  lessonPlan: (studentId: string) =>
+    apiGet<StudentLessonPlan[]>(`/teacher/students/${studentId}/lesson-plan`),
+  setLessonUnlocks: (studentId: string, lessonIds: string[], unlock: boolean) =>
+    apiPost<{ ok: boolean; afectadas: number }>(`/teacher/students/${studentId}/lesson-unlocks`, { lessonIds, unlock }),
   // Compuertas de checkpoint: estado y habilitación por estudiante
   checkpointGates: (studentId: string) =>
     apiGet<CheckpointGate[]>(`/teacher/students/${studentId}/checkpoint-gates`),
@@ -512,7 +533,7 @@ export const adminApi = {
   createUser: (body: {
     email: string;
     fullName: string;
-    role: "student" | "teacher";
+    role: "student" | "teacher" | "admin";
     level?: "beginner" | "intermediate" | "advanced";
     /** Empalme: activa el plan manualmente (pagos por fuera de Wompi). */
     plan?: { planId: string; endDate: string };

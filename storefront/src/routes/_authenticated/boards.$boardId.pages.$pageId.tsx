@@ -138,7 +138,9 @@ function BoardPage() {
           <StatusPill status={status} />
         </div>
       </div>
-      <div className="board-print-area relative">
+      {/* `board-paper` mantiene la hoja en claro aunque la app esté en oscuro
+          (ver styles.css): lo que ve el profe es lo mismo que ve el estudiante. */}
+      <div className="board-print-area board-paper relative rounded-2xl bg-white p-4">
         <EditorContent editor={editor} />
         <DrawLayer key={pageId} doc={provider.doc} authorId={user.id} enabled={drawMode} onToggle={setDrawMode} />
       </div>

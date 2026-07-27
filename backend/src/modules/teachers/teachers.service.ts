@@ -290,6 +290,24 @@ export class TeachersService {
     return this.learning.setCheckpointUnlock(studentId, lessonId, teacherId, unlock, note)
   }
 
+  /** Plan de contenido del estudiante: qué tiene habilitado y qué completó. */
+  async lessonPlan(teacherId: string, studentId: string, isAdmin = false) {
+    await this.assertOwnsStudent(teacherId, studentId, isAdmin)
+    return this.learning.lessonPlanForStudent(studentId)
+  }
+
+  /** Habilita o revoca lecciones en lote para el estudiante. */
+  async setLessonUnlocks(
+    teacherId: string,
+    studentId: string,
+    lessonIds: string[],
+    unlock: boolean,
+    isAdmin = false,
+  ) {
+    await this.assertOwnsStudent(teacherId, studentId, isAdmin)
+    return this.learning.setLessonUnlocks(studentId, lessonIds, teacherId, unlock)
+  }
+
   /** Intentos de checkpoints del estudiante (con corrección detallada). */
   async studentCheckpointAttempts(teacherId: string, studentId: string, isAdmin = false) {
     if (!isAdmin) {

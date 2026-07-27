@@ -261,16 +261,20 @@ export const templates = {
       { preheader: 'Enlace para restablecer tu contraseña' },
     ),
 
-  account_invite: (v: { fullName: string; link: string; role?: 'student' | 'teacher'; planName?: string; planEndsAt?: string }) => {
+  account_invite: (v: { fullName: string; link: string; role?: 'student' | 'teacher' | 'admin'; planName?: string; planEndsAt?: string }) => {
     const firstName = v.fullName.split(' ')[0] || v.fullName
     const isTeacher = v.role === 'teacher'
+    const isAdmin = v.role === 'admin'
     const planBlock = v.planName
       ? `<div style="background:${env.BRAND_COLOR};border-radius:16px;padding:14px 18px;margin:18px 0">
            <p style="margin:0;font-size:14px"><b>Tu plan ya está activo</b> ✅</p>
            <p style="margin:4px 0 0;font-size:14px;color:#444">${v.planName}${v.planEndsAt ? ` · vigente hasta el <b>${new Date(v.planEndsAt).toLocaleDateString('es-CO', { dateStyle: 'long' })}</b>` : ''}. No tienes que pagar nada por ahora.</p>
          </div>`
       : ''
-    const intro = isTeacher
+    const intro = isAdmin
+      ? `<p>Hola ${firstName}, te damos acceso de administrador en ${env.BRAND_NAME}. 🔑</p>
+         <p>Desde el panel gestionas estudiantes y profesores, planes y pagos, la nómina, el contenido de las clases y la configuración del sitio. Cuida bien tu contraseña: esta cuenta ve y edita todo.</p>`
+      : isTeacher
       ? `<p>Hola ${firstName}, ¡bienvenido al equipo de ${env.BRAND_NAME}! 🎉</p>
          <p>Te invitamos a tu portal de profesor: ahí gestionas tu disponibilidad, ves tu calendario de clases 1 a 1 y llevas el progreso de tus estudiantes.</p>`
       : `<p>Hola ${firstName}, ¡qué alegría tenerte en ${env.BRAND_NAME}! 🎉</p>

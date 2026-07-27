@@ -57,6 +57,25 @@ export class TeachersController {
     return this.svc.setCheckpointGate(u.id, id, lessonId, !!body?.unlock, body?.note, u.role === 'admin')
   }
 
+  /** @endpoint GET /api/v1/teacher/students/:id/lesson-plan  (qué tiene habilitado) */
+  @Get('students/:id/lesson-plan')
+  lessonPlan(@CurrentUser() u: AuthUser, @Param('id') id: string) {
+    return this.svc.lessonPlan(u.id, id, u.role === 'admin')
+  }
+
+  /**
+   * @endpoint POST /api/v1/teacher/students/:id/lesson-unlocks
+   * Body: { lessonIds: string[], unlock: boolean } — habilita/revoca en lote.
+   */
+  @Post('students/:id/lesson-unlocks')
+  setLessonUnlocks(
+    @CurrentUser() u: AuthUser,
+    @Param('id') id: string,
+    @Body() body: { lessonIds: string[]; unlock: boolean },
+  ) {
+    return this.svc.setLessonUnlocks(u.id, id, body?.lessonIds ?? [], !!body?.unlock, u.role === 'admin')
+  }
+
   /** @endpoint GET /api/v1/teacher/students/:id/checkpoint-attempts */
   @Get('students/:id/checkpoint-attempts')
   studentCheckpointAttempts(@CurrentUser() u: AuthUser, @Param('id') id: string) {

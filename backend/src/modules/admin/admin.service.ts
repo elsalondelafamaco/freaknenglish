@@ -556,7 +556,7 @@ export class AdminService {
   async createUser(input: {
     email: string
     fullName: string
-    role: 'student' | 'teacher'
+    role: 'student' | 'teacher' | 'admin'
     level?: 'beginner' | 'intermediate' | 'advanced'
     // Empalme: estudiantes que ya pagaron por fuera de Wompi. Si viene, la
     // suscripción queda activa desde ya y vence en `endDate`.

@@ -100,23 +100,27 @@ export class LearningService {
 
     for (const m of modules) {
       for (const l of m.lessons) {
+        // Regla 1 — TODO nace bloqueado. El estudiante solo ve lo que su
+        // profesor le fue habilitando (o lo que ya completó antes).
+        const habilitada = unlocked.has(l.id) || completed.has(l.id)
+
+        // Regla 2 — un checkpoint sin superar tapa todo lo que viene después,
+        // aunque el profe lo hubiera habilitado: no se saltan bases.
         if (gate) {
-          // Hay un checkpoint pendiente antes de esta lección.
           state.set(l.id, { locked: true, reason: 'checkpoint_pendiente', blockedBy: gate.id })
+          if (l.isCheckpoint && !completed.has(l.id)) continue
           continue
         }
+
+        state.set(l.id, {
+          locked: !habilitada,
+          reason: habilitada ? null : 'espera_desbloqueo',
+          blockedBy: null,
+        })
+
         if (l.isCheckpoint && !completed.has(l.id)) {
-          // El checkpoint solo se abre si el profe lo habilitó.
-          const abierto = unlocked.has(l.id)
-          state.set(l.id, {
-            locked: !abierto,
-            reason: abierto ? null : 'espera_desbloqueo',
-            blockedBy: null,
-          })
           gate = { id: l.id, title: l.title, moduleTitle: m.title }
-          continue
         }
-        state.set(l.id, { locked: false, reason: null, blockedBy: null })
       }
     }
     return { state, gate, completed, unlocked }
@@ -216,7 +220,70 @@ export class LearningService {
     })
   }
 
-  /** Habilita (o revoca) un checkpoint para un estudiante. */
+  /**
+   * Plan de contenido de un estudiante: todos los módulos con sus lecciones y
+   * el estado de cada una (habilitada, completada, es checkpoint). Es lo que
+   * el profesor usa para ir abriendo el programa a su ritmo.
+   */
+  async lessonPlanForStudent(studentId: string) {
+    const [modules, progress, unlocks] = await Promise.all([
+      this.prisma.module.findMany({
+        orderBy: [{ level: 'asc' }, { position: 'asc' }],
+        include: { lessons: { orderBy: { position: 'asc' } } },
+      }),
+      this.prisma.lessonProgress.findMany({
+        where: { userId: studentId, completedAt: { not: null } },
+        select: { lessonId: true, completedAt: true },
+      }),
+      this.prisma.checkpointUnlock.findMany({
+        where: { userId: studentId, revokedAt: null },
+        select: { lessonId: true, createdAt: true },
+      }),
+    ])
+    const done = new Map(progress.map((p) => [p.lessonId, p.completedAt]))
+    const open = new Map(unlocks.map((u) => [u.lessonId, u.createdAt]))
+    return modules.map((m) => ({
+      moduleId: m.id,
+      title: m.title,
+      unit: m.unit,
+      level: m.level,
+      lessons: m.lessons.map((l) => ({
+        lessonId: l.id,
+        title: l.title,
+        isCheckpoint: l.isCheckpoint,
+        unlocked: open.has(l.id),
+        unlockedAt: open.get(l.id) ?? null,
+        completedAt: done.get(l.id) ?? null,
+      })),
+    }))
+  }
+
+  /** Habilita (o revoca) VARIAS lecciones de un tirón (p. ej. un módulo entero). */
+  async setLessonUnlocks(
+    studentId: string,
+    lessonIds: string[],
+    grantedById: string,
+    unlock: boolean,
+  ) {
+    const validas = await this.prisma.lesson.findMany({
+      where: { id: { in: lessonIds } },
+      select: { id: true },
+    })
+    for (const l of validas) {
+      await this.prisma.checkpointUnlock.upsert({
+        where: { userId_lessonId: { userId: studentId, lessonId: l.id } },
+        update: { revokedAt: unlock ? null : new Date(), unlockedById: grantedById },
+        create: { userId: studentId, lessonId: l.id, unlockedById: grantedById },
+      })
+    }
+    return { ok: true, afectadas: validas.length }
+  }
+
+  /**
+   * Habilita (o revoca) una lección para un estudiante. Sirve para cualquier
+   * lección; en los checkpoints además dispara el correo de aviso, porque para
+   * el estudiante es el hito que estaba esperando.
+   */
   async setCheckpointUnlock(
     studentId: string,
     lessonId: string,
@@ -229,7 +296,6 @@ export class LearningService {
       select: { id: true, isCheckpoint: true, title: true },
     })
     if (!lesson) throw new BadRequestException('Lección no encontrada')
-    if (!lesson.isCheckpoint) throw new BadRequestException('Esa lección no es un checkpoint')
 
     const row = await this.prisma.checkpointUnlock.upsert({
       where: { userId_lessonId: { userId: studentId, lessonId } },
@@ -237,7 +303,9 @@ export class LearningService {
       create: { userId: studentId, lessonId, unlockedById: grantedById, note: note ?? null },
     })
 
-    if (unlock) {
+    // Solo se avisa por correo en los checkpoints: habilitar lecciones
+    // sueltas es rutina de clase y llenaría la bandeja del estudiante.
+    if (unlock && lesson.isCheckpoint) {
       const student = await this.prisma.user.findUnique({
         where: { id: studentId },
         select: { email: true, fullName: true },

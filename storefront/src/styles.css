@@ -250,6 +250,24 @@
   color: oklch(0.78 0 0);
 }
 
+/* ── El lienzo del board NUNCA va en oscuro ──────────────────────────
+   Es una hoja de trabajo compartida (texto, tablas, imágenes pegadas y
+   trazos con colores fijos). Invertirla rompe la legibilidad y hace que lo
+   que ve el profe no sea lo que ve el estudiante. La UI de alrededor
+   (sidebar, barra de herramientas, diálogos) sí sigue el tema. */
+.dark .board-paper,
+.dark .board-paper :where(.bg-white, [class*="bg-white/"], [class*="bg-brand-cream"]) {
+  background-color: #fff;
+  color: oklch(0.15 0 0);
+}
+.dark .board-paper :where([class*="text-brand-ink"], .prose, .ProseMirror) {
+  color: oklch(0.15 0 0);
+}
+.dark .board-paper :where([class*="border-brand-line"]) { border-color: oklch(0.92 0 0); }
+/* Tablas y citas dentro del documento, que traen sus propios fondos. */
+.dark .board-paper :where(th) { background-color: oklch(0.96 0.03 95); color: oklch(0.15 0 0); }
+.dark .board-paper :where(td, blockquote, pre, code) { color: oklch(0.15 0 0); }
+
 } /* @layer utilities — fin de los overrides de dark */
 
 /* Footer/nav oscuros que ya eran bg-brand-ink con texto blanco fijo: ok con

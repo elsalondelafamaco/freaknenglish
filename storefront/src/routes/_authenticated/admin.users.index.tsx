@@ -90,7 +90,7 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [userRole, setUserRole] = useState<"student" | "teacher">("student");
+  const [userRole, setUserRole] = useState<"student" | "teacher" | "admin">("student");
   const [level, setLevel] = useState<Level>("beginner");
   // Empalme: estudiantes que ya pagaron por fuera de Wompi.
   const [withPlan, setWithPlan] = useState(false);
@@ -133,12 +133,18 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
         </p>
 
         <div className="mt-4 flex gap-2">
-          {(["student", "teacher"] as const).map((r) => (
+          {(["student", "teacher", "admin"] as const).map((r) => (
             <button key={r} type="button" onClick={() => setUserRole(r)} className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium capitalize ${userRole === r ? "border-brand-ink bg-brand-ink text-white" : "border-brand-line text-brand-ink/70 hover:bg-brand-cream/30"}`}>
-              {r === "student" ? "Estudiante" : "Profesor"}
+              {r === "student" ? "Estudiante" : r === "teacher" ? "Profesor" : "Administrador"}
             </button>
           ))}
         </div>
+        {userRole === "admin" ? (
+          <p className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            Un administrador ve y edita <b>todo</b>: usuarios, pagos, nómina y contenido. Invita
+            solo a gente del equipo en la que confíes.
+          </p>
+        ) : null}
 
         <label className="mt-4 block text-xs font-semibold text-brand-ink/70">
           Nombre completo

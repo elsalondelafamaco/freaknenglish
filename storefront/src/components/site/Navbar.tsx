@@ -7,6 +7,7 @@ import { settingsApi } from "@/lib/api/endpoints";
 import { Logo } from "./Logo";
 import { DarkPillLink } from "./DarkPillButton";
 import { ThemeToggle } from "@/components/app/ThemeToggle";
+import { WhatsAppIcon } from "./WhatsAppIcon";
 
 const NAV = [
   { label: "¿Cómo Funciona?", href: "#como-funciona" },
@@ -43,7 +44,13 @@ export function Navbar() {
         <div className="hidden lg:flex items-center gap-6">
           <span className="text-[13px] text-brand-ink/70">
             ¿Alguna Duda?{" "}
-            <a href={waHref} target="_blank" rel="noreferrer" className="font-medium text-brand-ink hover:underline">
+            <a
+              href={waHref}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 font-medium text-brand-ink hover:underline"
+            >
+              <WhatsAppIcon className="size-3.5 text-[#25D366]" />
               Escríbenos
             </a>
           </span>

@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'
+import { Throttle } from '@nestjs/throttler'
 import { ApiTags } from '@nestjs/swagger'
 import type { Request, Response } from 'express'
 import { AuthService } from './auth.service'
@@ -12,6 +13,9 @@ export class AuthController {
   constructor(private auth: AuthService) {}
 
   /** @endpoint POST /api/v1/auth/signup */
+  // Cada registro dispara un correo de bienvenida: 5/min por IP evita que un
+  // bot cree cuentas en masa y queme la cuota de envíos.
+  @Throttle({ auth: { ttl: 60_000, limit: 5 } })
   @Post('signup')
   async signup(@Body() dto: SignupDto, @Res({ passthrough: true }) res: Response) {
     const tokens = await this.auth.signup(dto)
@@ -20,6 +24,8 @@ export class AuthController {
   }
 
   /** @endpoint POST /api/v1/auth/login */
+  // Fuerza bruta: 5 intentos por minuto por IP.
+  @Throttle({ auth: { ttl: 60_000, limit: 5 } })
   @Post('login')
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const { accessToken, refreshToken, user } = await this.auth.login(dto.email, dto.password)
@@ -44,7 +50,13 @@ export class AuthController {
     return { ok: true }
   }
 
-  /** @endpoint POST /api/v1/auth/forgot */
+  /**
+   * @endpoint POST /api/v1/auth/forgot
+   * Además del límite por IP, el servicio limita por CORREO (ver
+   * auth.service): sin eso, rotando IPs se puede inundar el buzón de una
+   * persona y quemar la cuota de envíos.
+   */
+  @Throttle({ auth: { ttl: 60_000, limit: 3 } })
   @Post('forgot')
   async forgot(@Body() dto: ForgotPasswordDto) {
     await this.auth.forgotPassword(dto.email)
@@ -52,6 +64,8 @@ export class AuthController {
   }
 
   /** @endpoint POST /api/v1/auth/reset */
+  // Evita que se prueben tokens de restablecimiento a lo bruto.
+  @Throttle({ auth: { ttl: 60_000, limit: 10 } })
   @Post('reset')
   async reset(@Body() dto: ResetPasswordDto) {
     await this.auth.resetPassword(dto.token, dto.password)

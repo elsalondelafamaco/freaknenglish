@@ -1,4 +1,5 @@
 import { Controller, Headers, Logger, Post, Req } from '@nestjs/common'
+import { SkipThrottle } from '@nestjs/throttler'
 import { ApiTags } from '@nestjs/swagger'
 import type { Request } from 'express'
 import { WompiService } from './wompi.service'
@@ -9,6 +10,10 @@ import { WompiService } from './wompi.service'
 //   · checkout/wompi/webhook → alias que quedó configurado en el panel de Wompi
 // Así el evento entra por cualquiera de los dos y no se pierde un pago por una
 // URL desactualizada. El body crudo de ambas rutas se registra en main.ts.
+// Sin rate limit: los reintentos legítimos de Wompi ante un pico de pagos no
+// pueden rebotar contra el límite global. La autenticidad ya la garantiza la
+// firma HMAC del evento, y el tamaño del body está acotado en el handler.
+@SkipThrottle()
 @Controller(['public/wompi', 'checkout/wompi'])
 export class WompiController {
   private readonly log = new Logger(WompiController.name)

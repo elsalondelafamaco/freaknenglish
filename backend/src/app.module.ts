@@ -39,7 +39,17 @@ import { ExchangeModule } from './modules/exchange/exchange.module'
       },
     }),
     ScheduleModule.forRoot(),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
+    // Límites por IP en tres escalones. El `default` aplica a toda la API;
+    // los otros dos se piden explícitamente con @Throttle en los endpoints
+    // sensibles (login, registro, recuperación de clave, checkout).
+    ThrottlerModule.forRoot([
+      { name: 'default', ttl: 60_000, limit: 100 },
+      // Anti-ráfaga: frena scripts que martillan un endpoint.
+      { name: 'burst', ttl: 10_000, limit: 20 },
+      // Autenticación y correo: pocos intentos por minuto. Protege contra
+      // fuerza bruta de contraseñas y contra quemar la cuota de Resend.
+      { name: 'auth', ttl: 60_000, limit: 5 },
+    ]),
     PrismaModule,
     AuthModule,
     UsersModule,

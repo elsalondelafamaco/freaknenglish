@@ -1,4 +1,7 @@
 import * as fs from 'node:fs'
+// Solo tipos: se borra al compilar, no altera el orden real de imports que
+// vigilan las trazas de arranque de abajo.
+import type { NextFunction, Request, Response } from 'express'
 
 // Railway envía stdout/stderr a un pipe ASÍNCRONO: si el proceso muere o se
 // cuelga en la carga de módulos, ese buffer se descarta y no vemos nada. Por eso
@@ -68,6 +71,26 @@ async function bootstrap() {
   }
   app.use(express.json({ limit: '5mb' }))
   app.use(express.urlencoded({ extended: true, limit: '5mb' }))
+
+  // Cabeceras de seguridad. Es una API JSON (no sirve HTML), así que se
+  // aplican las que aportan aquí, sin arrastrar una dependencia extra:
+  //  · nosniff        — impide que el navegador adivine el tipo de contenido
+  //  · DENY en frames — la API no debe embeberse en un iframe (clickjacking)
+  //  · no-referrer    — no filtra URLs internas al navegar hacia afuera
+  //  · HSTS           — solo en producción (en local rompería http://)
+  //  · sin X-Powered-By — deja de anunciar que corre Express
+  app.use((_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.setHeader('X-Frame-Options', 'DENY')
+    res.setHeader('Referrer-Policy', 'no-referrer')
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-site')
+    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+    if (env.NODE_ENV === 'production') {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+    }
+    next()
+  })
+  app.getHttpAdapter().getInstance().disable('x-powered-by')
   app.enableCors({
     origin: env.CORS_ORIGINS.split(',').map((s) => s.trim()),
     credentials: true,

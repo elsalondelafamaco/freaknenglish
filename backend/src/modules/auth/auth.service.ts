@@ -110,6 +110,21 @@ export class AuthService {
   async forgotPassword(email: string): Promise<string | null> {
     const user = await this.prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } })
     if (!user) return null
+
+    // Tope POR CUENTA, no solo por IP: rotando IPs se podría inundar el buzón
+    // de una persona y agotar la cuota de envíos. Máximo 3 solicitudes por
+    // hora y 8 al día para el mismo usuario. Se responde igual (silencioso)
+    // para no revelar si el correo existe ni si está limitado.
+    const [ultimaHora, ultimoDia] = await Promise.all([
+      this.prisma.passwordReset.count({
+        where: { userId: user.id, createdAt: { gt: new Date(Date.now() - 60 * 60 * 1000) } },
+      }),
+      this.prisma.passwordReset.count({
+        where: { userId: user.id, createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+      }),
+    ])
+    if (ultimaHora >= 3 || ultimoDia >= 8) return null
+
     const token = crypto.randomBytes(32).toString('hex')
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
     await this.prisma.passwordReset.create({

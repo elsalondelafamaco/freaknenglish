@@ -1,5 +1,6 @@
 import { Body, Controller, Get, NotFoundException, Post, Query } from '@nestjs/common'
 import { ApiTags } from '@nestjs/swagger'
+import { Throttle } from '@nestjs/throttler'
 import { IsArray, IsEmail, IsOptional, IsString, MinLength } from 'class-validator'
 import { CheckoutService } from './checkout.service'
 import { WompiService } from '../wompi/wompi.service'
@@ -20,7 +21,12 @@ class CreateIntentDto {
 @Controller('checkout')
 export class CheckoutController {
   constructor(private svc: CheckoutService, private prisma: PrismaService, private wompi: WompiService) {}
-  /** @endpoint POST /api/v1/checkout/intents (public) */
+  /**
+   * @endpoint POST /api/v1/checkout/intents (public)
+   * Endpoint público que crea registros y puede crear usuarios: se limita para
+   * que nadie llene la base de intentos basura desde un script.
+   */
+  @Throttle({ burst: { ttl: 60_000, limit: 10 } })
   @Post('intents')
   create(@Body() dto: CreateIntentDto) { return this.svc.createIntent(dto) }
 

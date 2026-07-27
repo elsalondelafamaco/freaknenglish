@@ -111,6 +111,18 @@ export class SchedulingService {
    * Convierte (weekday, hour local Bogotá, semanas de offset) en el instante
    * real (UTC) de la clase.
    */
+  /** Medianoche de mañana en hora Bogotá, como instante UTC. */
+  private startOfTomorrowBogota(): Date {
+    const nowLocal = new Date(Date.now() - BOGOTA_OFFSET_MS)
+    const wallMs = Date.UTC(
+      nowLocal.getUTCFullYear(),
+      nowLocal.getUTCMonth(),
+      nowLocal.getUTCDate() + 1,
+      0, 0, 0,
+    )
+    return new Date(wallMs + BOGOTA_OFFSET_MS)
+  }
+
   private buildClassInstant(weekday: number, hour: number, weekOffset: number): Date {
     const nowLocal = new Date(Date.now() - BOGOTA_OFFSET_MS) // leer campos UTC como hora Bogotá
     const y = nowLocal.getUTCFullYear()
@@ -150,13 +162,16 @@ export class SchedulingService {
     const classroom = await this.boards.ensureClassroom(user.assignedTeacherId, studentId)
     const meetingUrl = `/boards/${classroom.id}`
 
-    const now = new Date()
+    // Las clases arrancan a partir de MAÑANA, nunca el mismo día en que el
+    // estudiante compra o elige horario: nadie alcanza a prepararse (ni el
+    // profe ni el estudiante) para una clase que empieza en un par de horas.
+    const noNantesDe = this.startOfTomorrowBogota()
     let created = 0
     for (const b of blocks) {
       if (typeof b?.weekday !== 'number' || typeof b?.hour !== 'number') continue
       for (let w = 0; w < GENERATION_WEEKS; w++) {
         const startsAt = this.buildClassInstant(b.weekday, b.hour, w)
-        if (startsAt.getTime() <= now.getTime()) continue
+        if (startsAt.getTime() < noNantesDe.getTime()) continue
         const exists = await this.prisma.class.findFirst({
           where: { studentId, startsAt },
           select: { id: true },

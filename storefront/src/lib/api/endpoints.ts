@@ -255,6 +255,25 @@ export const learningApi = {
     apiPost<CheckpointSubmitResult>(`/learning/checkpoints/${id}/submit`, { answers }),
 };
 
+/** Corrida de nómina de un profesor en un período. */
+export type PayrollRun = {
+  id: string;
+  period: string;
+  teacherId: string;
+  classes: number;
+  rateCop: number;
+  /** Calculado: clases × tarifa (sin el ajuste). */
+  amountCop: number;
+  adjustmentCop: number;
+  adjustmentNote: string | null;
+  status: "pending" | "paid";
+  paidMethod: "wompi" | "manual" | null;
+  payoutRef: string | null;
+  payoutError: string | null;
+  paidAt: string | null;
+  teacher: { id: string; fullName: string; email: string } | null;
+};
+
 /** Módulo con el estado de cada lección para un estudiante concreto. */
 export type StudentLessonPlan = {
   moduleId: string;
@@ -515,6 +534,21 @@ export const adminApi = {
     >("/admin/payroll", { period }),
   payrollCsv: (period: string) =>
     apiGet<string>(`/admin/payroll/export.csv`, { period }),
+  // Nómina · corridas persistidas (generar → ajustar → pagar)
+  payrollRuns: (period: string) => apiGet<PayrollRun[]>("/admin/payroll/runs", { period }),
+  generatePayroll: (period: string) => apiPost<PayrollRun[]>(`/admin/payroll/generate?period=${period}`, {}),
+  payPayrollRun: (id: string) =>
+    apiPost<PayrollRun & { dispersed: boolean; reference?: string; error?: string }>(
+      `/admin/payroll/runs/${id}/pay`, {},
+    ),
+  adjustPayrollRun: (id: string, adjustmentCop: number, note: string) =>
+    apiPatch<PayrollRun>(`/admin/payroll/runs/${id}/adjust`, { adjustmentCop, note }),
+  payAllPayroll: (period: string) =>
+    apiPost<{ periodo: string; intentados: number; pagados: number; fallidos: number; totalCop: number }>(
+      `/admin/payroll/pay-all?period=${period}`, {},
+    ),
+  setPayoutAccount: (teacherId: string, body: { bankCode?: string; accountType?: string; accountNumber?: string } | null) =>
+    apiPatch<{ id: string }>(`/admin/teachers/${teacherId}/payout-account`, body),
   payrollSettings: () => apiGet<{ hourlyRateCop: number }>("/admin/settings/payroll"),
   setPayrollSettings: (hourlyRateCop: number) =>
     apiPatch<{ hourlyRateCop: number }>("/admin/settings/payroll", { hourlyRateCop }),

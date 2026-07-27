@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Download, Save } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminApi } from "@/lib/api/endpoints";
+import { PayrollPayments } from "@/components/app/PayrollPayments";
 import { toast } from "sonner";
 
 const formatCop = (n: number) =>
@@ -179,6 +180,8 @@ function AdminPayroll() {
         </table>
         </div>
       </div>
+
+      <PayrollPayments period={monthKey} />
     </div>
   );
 }

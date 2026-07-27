@@ -89,6 +89,10 @@ model User {
   progress         LessonProgress[]
   attempts         CheckpointAttempt[]
   activityResults  ActivityResult[]
+  /// Datos bancarios del profesor para la dispersión de nómina:
+  /// { bankCode, accountType: 'SAVINGS'|'CHECKING', accountNumber }.
+  /// Sin esto, el pago se registra como manual en vez de dispersarse.
+  payoutAccount            Json?              @map("payout_account")
   checkpointUnlocks        CheckpointUnlock[] @relation("CheckpointUnlockStudent")
   checkpointUnlocksGranted CheckpointUnlock[] @relation("CheckpointUnlockGrantedBy")
   surveys          SatisfactionSurvey[]
@@ -549,8 +553,19 @@ model PayrollRun {
   teacherId String   @map("teacher_id")
   classes   Int
   rateCop   Int      @map("rate_cop")
+  /// Calculado: clases × tarifa. No incluye el ajuste.
   amountCop Int      @map("amount_cop")
+  /// Ajuste manual sobre el valor final (positivo bonifica, negativo descuenta).
+  adjustmentCop  Int     @default(0) @map("adjustment_cop")
+  /// Por qué se ajustó. Obligatorio en la UI para que quede el rastro.
+  adjustmentNote String? @map("adjustment_note")
   status    String   @default("pending") // pending | paid
+  /// Cómo se pagó: `wompi` (dispersión) o `manual` (registrado por el admin).
+  paidMethod String? @map("paid_method")
+  /// Referencia de la transferencia (id de Wompi o nota del admin).
+  payoutRef  String? @map("payout_ref")
+  /// Si la dispersión falló, aquí queda el motivo; el pago igual se registra.
+  payoutError String? @map("payout_error")
   paidAt    DateTime? @map("paid_at")
   createdAt DateTime @default(now()) @map("created_at")
 

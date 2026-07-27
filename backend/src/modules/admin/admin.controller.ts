@@ -54,6 +54,39 @@ export class AdminController {
   @Post('payroll/runs/:id/pay')
   payPayrollRun(@Param('id') id: string) { return this.svc.payPayrollRun(id) }
 
+  /**
+   * @endpoint PATCH /api/v1/admin/payroll/runs/:id/adjust
+   * Body: { adjustmentCop: number, note: string } — bono (+) o descuento (−)
+   * sobre el valor final. La nota es obligatoria para poder auditarlo.
+   */
+  @Patch('payroll/runs/:id/adjust')
+  adjustPayrollRun(
+    @Param('id') id: string,
+    @Body() body: { adjustmentCop: number; note: string },
+  ) {
+    return this.svc.adjustPayrollRun(id, body?.adjustmentCop ?? 0, body?.note ?? '')
+  }
+
+  /**
+   * @endpoint POST /api/v1/admin/payroll/pay-all?period=YYYY-MM
+   * Paga todas las pendientes del período. Cada pago es independiente: si uno
+   * falla, se registra su error y el lote continúa.
+   */
+  @Post('payroll/pay-all')
+  payAllPayroll(@Query('period') period: string) { return this.svc.payAllPayrollRuns(period) }
+
+  /**
+   * @endpoint PATCH /api/v1/admin/teachers/:id/payout-account
+   * Datos bancarios del profesor para la dispersión.
+   */
+  @Patch('teachers/:id/payout-account')
+  setPayoutAccount(
+    @Param('id') id: string,
+    @Body() body: { bankCode?: string; accountType?: string; accountNumber?: string } | null,
+  ) {
+    return this.svc.setTeacherPayoutAccount(id, body)
+  }
+
   /** @endpoint GET /api/v1/admin/content  (CMS read-only: modules + lessons) */
   @Get('content')
   content() { return this.svc.content() }

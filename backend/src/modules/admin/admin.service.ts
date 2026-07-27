@@ -411,14 +411,101 @@ export class AdminService {
    * registrado por el admin. Decisión de producto: dispersión automática vía
    * Wompi PERO disparada tras la aprobación/revisión del admin, nunca sola.
    */
+  /**
+   * Ajuste manual sobre el valor final de una corrida (bono, descuento,
+   * corrección). Positivo suma, negativo resta. Exige nota: el ajuste sin
+   * explicación es imposible de auditar tres meses después.
+   */
+  async adjustPayrollRun(id: string, adjustmentCop: number, note: string) {
+    const run = await this.prisma.payrollRun.findUnique({ where: { id } })
+    if (!run) throw new NotFoundException('Payroll run not found')
+    if (run.status === 'paid') {
+      throw new BadRequestException('No se puede ajustar una nómina ya pagada')
+    }
+    if (!note?.trim()) throw new BadRequestException('El ajuste necesita una nota que lo explique')
+    const monto = Math.round(Number(adjustmentCop) || 0)
+    if (run.amountCop + monto < 0) {
+      throw new BadRequestException('El ajuste dejaría el pago en negativo')
+    }
+    return this.prisma.payrollRun.update({
+      where: { id },
+      data: { adjustmentCop: monto, adjustmentNote: note.trim() },
+    })
+  }
+
+  /** Datos bancarios del profesor para dispersar su nómina. */
+  async setTeacherPayoutAccount(
+    teacherId: string,
+    cuenta: { bankCode?: string; accountType?: string; accountNumber?: string } | null,
+  ) {
+    const limpia =
+      cuenta && cuenta.accountNumber && cuenta.bankCode
+        ? {
+            bankCode: String(cuenta.bankCode).trim(),
+            accountType: cuenta.accountType === 'CHECKING' ? 'CHECKING' : 'SAVINGS',
+            accountNumber: String(cuenta.accountNumber).trim(),
+          }
+        : null
+    const user = await this.prisma.user.update({
+      where: { id: teacherId },
+      data: { payoutAccount: (limpia ?? Prisma.DbNull) as any },
+      select: { id: true, payoutAccount: true },
+    })
+    return user
+  }
+
+  /** Total a pagar de una corrida: lo calculado más el ajuste manual. */
+  private totalAPagar(run: { amountCop: number; adjustmentCop?: number | null }) {
+    return run.amountCop + (run.adjustmentCop ?? 0)
+  }
+
+  /**
+   * Paga TODAS las corridas pendientes del período, una por una. Cada pago es
+   * independiente: si la dispersión de un profesor falla, ese queda registrado
+   * con su error y el resto sigue — no se aborta el lote entero por uno.
+   */
+  async payAllPayrollRuns(period: string) {
+    const pendientes = await this.prisma.payrollRun.findMany({
+      where: { period, status: 'pending' },
+    })
+    const resultados = []
+    for (const run of pendientes) {
+      try {
+        const r = await this.payPayrollRun(run.id)
+        resultados.push({ id: run.id, teacherId: run.teacherId, ok: true, dispersed: (r as any).dispersed })
+      } catch (e) {
+        this.log.error(`[nomina] falló el pago de ${run.id}: ${(e as Error).message}`)
+        resultados.push({ id: run.id, teacherId: run.teacherId, ok: false, error: (e as Error).message })
+      }
+    }
+    return {
+      periodo: period,
+      intentados: pendientes.length,
+      pagados: resultados.filter((r) => r.ok).length,
+      fallidos: resultados.filter((r) => !r.ok).length,
+      totalCop: pendientes.reduce((s, r) => s + this.totalAPagar(r), 0),
+      resultados,
+    }
+  }
+
   async payPayrollRun(id: string) {
     const run = await this.prisma.payrollRun.findUnique({ where: { id } })
     if (!run) throw new NotFoundException('Payroll run not found')
     if (run.status === 'paid') return run
-    const payout = await this.dispersePayrollRun(run)
+    const total = this.totalAPagar(run)
+    const payout = await this.dispersePayrollRun({ ...run, amountCop: total })
+    // El pago SIEMPRE queda registrado en la plataforma, dispersara o no:
+    // la nómina es la fuente de verdad y Wompi es solo el medio. Si la
+    // dispersión falla, se guarda el motivo para reintentarla o pagarla a mano.
     const updated = await this.prisma.payrollRun.update({
       where: { id },
-      data: { status: 'paid', paidAt: new Date() },
+      data: {
+        status: 'paid',
+        paidAt: new Date(),
+        paidMethod: payout.dispersed ? 'wompi' : 'manual',
+        payoutRef: payout.reference ?? null,
+        payoutError: payout.error ?? null,
+      },
     })
     // Comprobante al profesor con el detalle del pago y sus clases.
     const teacher = await this.prisma.user.findUnique({
@@ -437,7 +524,9 @@ export class AdminService {
           period: run.period,
           classes: run.classes,
           rateCop: run.rateCop,
-          amountCop: run.amountCop,
+          amountCop: total,
+          adjustmentCop: run.adjustmentCop ?? 0,
+          adjustmentNote: run.adjustmentNote ?? undefined,
         },
         type: 'payment',
         title: 'Pago de nómina aprobado',
@@ -445,22 +534,86 @@ export class AdminService {
         linkUrl: '/teacher',
       }).catch((e) => this.log.error(`payroll_paid email failed: ${(e as Error).message}`))
     }
-    return { ...updated, dispersed: payout.dispersed, reference: payout.reference }
+    return { ...updated, dispersed: payout.dispersed, reference: payout.reference, error: payout.error }
   }
 
   /**
-   * Andamiaje de dispersión Wompi (Payouts). Deshabilitado por defecto
-   * (`WOMPI_PAYOUTS_ENABLED=false`) porque exige KYC/contrato de dispersión.
-   * Cuando se habilite, implementar aquí la transferencia real por profesor.
+   * Dispersión a terceros vía Wompi. Es OPCIONAL a propósito:
+   *   · `WOMPI_PAYOUTS_ENABLED=false` (default) → el pago se registra como
+   *     manual y no se llama a nadie. Sirve para operar sin comisiones de
+   *     dispersión, transfiriendo por fuera.
+   *   · `true` → se intenta la transferencia. Si falla (red, credenciales,
+   *     datos bancarios incompletos), NO se rompe la nómina: el pago queda
+   *     igualmente registrado como manual con el motivo del fallo, para
+   *     reintentarlo o hacerlo por fuera. Nunca se pierde el registro.
+   *
+   * El profesor necesita sus datos bancarios cargados; sin ellos se degrada a
+   * manual con ese motivo, en vez de fallar de forma opaca.
    */
-  private async dispersePayrollRun(run: { id: string; teacherId: string; amountCop: number }) {
+  private async dispersePayrollRun(run: {
+    id: string
+    teacherId: string
+    amountCop: number
+    period: string
+  }): Promise<{ dispersed: boolean; reference?: string; error?: string }> {
     if (!env.WOMPI_PAYOUTS_ENABLED) {
-      return { dispersed: false as const, reference: undefined as string | undefined }
+      return { dispersed: false, reference: undefined }
     }
-    // TODO(payouts): integrar Wompi Payouts/dispersión (requiere KYC + cuenta
-    // del profesor). Por ahora solo se registra la intención.
-    this.log.warn(`[payouts-pending] run ${run.id} teacher ${run.teacherId} amount ${run.amountCop}`)
-    return { dispersed: false as const, reference: undefined as string | undefined }
+    const teacher = await this.prisma.user.findUnique({
+      where: { id: run.teacherId },
+      select: { fullName: true, email: true, documentNumber: true, payoutAccount: true },
+    })
+    const cuenta = (teacher?.payoutAccount ?? null) as {
+      bankCode?: string
+      accountType?: string
+      accountNumber?: string
+    } | null
+    if (!cuenta?.accountNumber || !cuenta?.bankCode) {
+      const motivo = 'el profesor no tiene datos bancarios cargados'
+      this.log.warn(`[payouts] ${run.id}: ${motivo} — se registra como pago manual`)
+      return { dispersed: false, error: motivo }
+    }
+
+    try {
+      const referencia = `payroll-${run.period}-${run.teacherId}`.slice(0, 60)
+      const apiUrl =
+        env.WOMPI_ENV === 'production'
+          ? 'https://production.wompi.co/v1'
+          : 'https://sandbox.wompi.co/v1'
+      const res = await fetch(`${apiUrl}/payouts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${env.WOMPI_PRIVATE_KEY}`,
+        },
+        body: JSON.stringify({
+          amount_in_cents: run.amountCop * 100,
+          currency: 'COP',
+          reference: referencia,
+          beneficiary: {
+            full_name: teacher?.fullName,
+            document_number: teacher?.documentNumber,
+            email: teacher?.email,
+            bank_code: cuenta.bankCode,
+            account_type: cuenta.accountType ?? 'SAVINGS',
+            account_number: cuenta.accountNumber,
+          },
+        }),
+      })
+      const cuerpo: any = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        const motivo = `Wompi respondió ${res.status}: ${JSON.stringify(cuerpo).slice(0, 300)}`
+        this.log.error(`[payouts] ${run.id} falló — ${motivo}`)
+        return { dispersed: false, error: motivo }
+      }
+      const ref = cuerpo?.data?.id ?? referencia
+      this.log.log(`[payouts] ${run.id} dispersado OK ref=${ref}`)
+      return { dispersed: true, reference: String(ref) }
+    } catch (e) {
+      const motivo = `no se pudo contactar a Wompi: ${(e as Error).message}`
+      this.log.error(`[payouts] ${run.id} — ${motivo}`)
+      return { dispersed: false, error: motivo }
+    }
   }
 
   content() {

@@ -45,24 +45,34 @@ function BoardPage() {
   const [peers, setPeers] = useState<any[]>([]);
   const [drawMode, setDrawMode] = useState(false);
 
-  const provider = useMemo(() => {
-    if (!user) return null;
+  // El provider se crea y se destruye en el MISMO efecto. Antes se creaba en
+  // un useMemo y se destruía en el cleanup de un efecto aparte: al desmontar y
+  // remontar (React 18 lo hace en desarrollo, y basta un re-render del router
+  // para provocarlo), el cleanup ejecutaba `destroy()` sobre el provider
+  // memoizado —quitando los listeners del Y.Doc y del socket— pero el efecto
+  // se volvía a suscribir solo a estado/presencia. Resultado: la página se veía
+  // "En vivo" mientras NADA entraba ni salía; ni el texto ni los trazos
+  // generaban una sola operación en el servidor.
+  const [provider, setProvider] = useState<BoardPageProvider | null>(null);
+  useEffect(() => {
+    if (!user) return;
     const p = createPageProvider(pageId, {
       id: user.id,
       name: user.fullName ?? user.email,
       color: colorFor(user.id),
     });
     providerRef.current = p;
-    return p;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const off1 = p.onStatus(setStatus);
+    const off2 = p.onPresence(setPeers);
+    setProvider(p);
+    return () => {
+      off1();
+      off2();
+      p.destroy();
+      providerRef.current = null;
+      setProvider((actual) => (actual === p ? null : actual));
+    };
   }, [pageId, user?.id]);
-
-  useEffect(() => {
-    if (!provider) return;
-    const off1 = provider.onStatus(setStatus);
-    const off2 = provider.onPresence(setPeers);
-    return () => { off1(); off2(); provider.destroy(); };
-  }, [provider]);
 
   const editor = useEditor(
     {

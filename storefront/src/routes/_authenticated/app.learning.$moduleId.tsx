@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, Circle, Download, FileText, FileCode, Lock, PlayCircle, Presentation, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { learningApi } from "@/lib/api/endpoints";
+import { prepararHtmlLeccion, urlDeMedios } from "@/lib/learning/lessonHtml";
 
 export const Route = createFileRoute("/_authenticated/app/learning/$moduleId")({
   head: ({ params }) => ({ meta: [{ title: `Módulo ${params.moduleId} — FreaknEnglish` }] }),
@@ -17,7 +18,7 @@ const KIND_ICON: Record<string, typeof PlayCircle> = {
   download: Download,
   html: FileCode,
 };
-const mediaUrl = (l: any) => l.videoUrl || l.slidesUrl || l.pdfUrl || l.url || "";
+const mediaUrl = urlDeMedios;
 
 function ModuleDetail() {
   const { moduleId } = Route.useParams();
@@ -146,25 +147,6 @@ function ModuleDetail() {
   );
 }
 
-/**
- * Prepara el HTML de la lección antes de montarlo en el iframe.
- *
- * Las 111 lecciones traen `<script src="https://cdn.tailwindcss.com">`. Ese CDN
- * a veces no carga (bloqueado por red corporativa, DNS, o simplemente lento):
- * la lección tarda muchísimo y, cuando el script no llega, los slides se rompen
- * porque pierden TODO su CSS. Se reemplaza por una copia servida desde nuestro
- * propio dominio: mismo script, sin depender de terceros y con carga inmediata.
- *
- * Se hace aquí, al renderizar, y NO editando los HTML: así funciona igual para
- * el contenido que ya existe y para cualquier lección futura que use el CDN.
- * El iframe usa `srcDoc`, cuyo documento no tiene URL base, por eso la ruta
- * debe ser absoluta.
- */
-function prepararHtmlLeccion(html: string): string {
-  if (!html) return html;
-  const origen = typeof window !== "undefined" ? window.location.origin : "";
-  return html.replaceAll("https://cdn.tailwindcss.com", `${origen}/vendor/tailwind-cdn.js`);
-}
 
 /**
  * Pantalla que ve el estudiante cuando la lección está bloqueada.

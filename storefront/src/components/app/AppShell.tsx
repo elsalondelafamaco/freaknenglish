@@ -42,6 +42,7 @@ const TEACHER_NAV = [
   { to: "/teacher/calendar", label: "Calendario", tKey: "nav.calendar", icon: CalendarDays, end: false },
   { to: "/teacher/schedule", label: "Agenda", tKey: "nav.schedule", icon: CalendarDays, end: false },
   { to: "/teacher/students", label: "Estudiantes", tKey: "nav.students", icon: Users, end: false },
+  { to: "/teacher/content", label: "Contenido", tKey: "nav.content", icon: Sparkles, end: false },
   { to: "/boards", label: "Boards", tKey: "nav.boards", icon: LayoutGrid, end: false },
   { to: "/teacher/availability", label: "Disponibilidad", tKey: "nav.availability", icon: Settings, end: false },
 ] as const;

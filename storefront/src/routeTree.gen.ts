@@ -50,10 +50,12 @@ import { Route as AuthenticatedAdminCleanupRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminCartsRouteImport } from './routes/_authenticated/admin.carts'
 import { Route as AuthenticatedAdminCalendarRouteImport } from './routes/_authenticated/admin.calendar'
 import { Route as AuthenticatedTeacherStudentsIndexRouteImport } from './routes/_authenticated/teacher.students.index'
+import { Route as AuthenticatedTeacherContentIndexRouteImport } from './routes/_authenticated/teacher.content.index'
 import { Route as AuthenticatedAppLearningIndexRouteImport } from './routes/_authenticated/app.learning.index'
 import { Route as AuthenticatedAdminUsersIndexRouteImport } from './routes/_authenticated/admin.users.index'
 import { Route as AuthenticatedAdminPlansIndexRouteImport } from './routes/_authenticated/admin.plans.index'
 import { Route as AuthenticatedTeacherStudentsStudentIdRouteImport } from './routes/_authenticated/teacher.students.$studentId'
+import { Route as AuthenticatedTeacherContentModuleIdRouteImport } from './routes/_authenticated/teacher.content.$moduleId'
 import { Route as AuthenticatedAppLearningModuleIdRouteImport } from './routes/_authenticated/app.learning.$moduleId'
 import { Route as AuthenticatedAppCheckpointCheckpointIdRouteImport } from './routes/_authenticated/app.checkpoint.$checkpointId'
 import { Route as AuthenticatedAdminUsersIdRouteImport } from './routes/_authenticated/admin.users.$id'
@@ -284,6 +286,12 @@ const AuthenticatedTeacherStudentsIndexRoute =
     path: '/students/',
     getParentRoute: () => AuthenticatedTeacherRoute,
   } as any)
+const AuthenticatedTeacherContentIndexRoute =
+  AuthenticatedTeacherContentIndexRouteImport.update({
+    id: '/content/',
+    path: '/content/',
+    getParentRoute: () => AuthenticatedTeacherRoute,
+  } as any)
 const AuthenticatedAppLearningIndexRoute =
   AuthenticatedAppLearningIndexRouteImport.update({
     id: '/learning/',
@@ -306,6 +314,12 @@ const AuthenticatedTeacherStudentsStudentIdRoute =
   AuthenticatedTeacherStudentsStudentIdRouteImport.update({
     id: '/students/$studentId',
     path: '/students/$studentId',
+    getParentRoute: () => AuthenticatedTeacherRoute,
+  } as any)
+const AuthenticatedTeacherContentModuleIdRoute =
+  AuthenticatedTeacherContentModuleIdRouteImport.update({
+    id: '/content/$moduleId',
+    path: '/content/$moduleId',
     getParentRoute: () => AuthenticatedTeacherRoute,
   } as any)
 const AuthenticatedAppLearningModuleIdRoute =
@@ -376,10 +390,12 @@ export interface FileRoutesByFullPath {
   '/admin/users/$id': typeof AuthenticatedAdminUsersIdRoute
   '/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
+  '/teacher/content/$moduleId': typeof AuthenticatedTeacherContentModuleIdRoute
   '/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
   '/admin/plans/': typeof AuthenticatedAdminPlansIndexRoute
   '/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/app/learning/': typeof AuthenticatedAppLearningIndexRoute
+  '/teacher/content/': typeof AuthenticatedTeacherContentIndexRoute
   '/teacher/students/': typeof AuthenticatedTeacherStudentsIndexRoute
   '/boards/$boardId/pages/$pageId': typeof AuthenticatedBoardsBoardIdPagesPageIdRoute
 }
@@ -422,10 +438,12 @@ export interface FileRoutesByTo {
   '/admin/users/$id': typeof AuthenticatedAdminUsersIdRoute
   '/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
+  '/teacher/content/$moduleId': typeof AuthenticatedTeacherContentModuleIdRoute
   '/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
   '/admin/plans': typeof AuthenticatedAdminPlansIndexRoute
   '/admin/users': typeof AuthenticatedAdminUsersIndexRoute
   '/app/learning': typeof AuthenticatedAppLearningIndexRoute
+  '/teacher/content': typeof AuthenticatedTeacherContentIndexRoute
   '/teacher/students': typeof AuthenticatedTeacherStudentsIndexRoute
   '/boards/$boardId/pages/$pageId': typeof AuthenticatedBoardsBoardIdPagesPageIdRoute
 }
@@ -474,10 +492,12 @@ export interface FileRoutesById {
   '/_authenticated/admin/users/$id': typeof AuthenticatedAdminUsersIdRoute
   '/_authenticated/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/_authenticated/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
+  '/_authenticated/teacher/content/$moduleId': typeof AuthenticatedTeacherContentModuleIdRoute
   '/_authenticated/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
   '/_authenticated/admin/plans/': typeof AuthenticatedAdminPlansIndexRoute
   '/_authenticated/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/_authenticated/app/learning/': typeof AuthenticatedAppLearningIndexRoute
+  '/_authenticated/teacher/content/': typeof AuthenticatedTeacherContentIndexRoute
   '/_authenticated/teacher/students/': typeof AuthenticatedTeacherStudentsIndexRoute
   '/_authenticated/boards/$boardId/pages/$pageId': typeof AuthenticatedBoardsBoardIdPagesPageIdRoute
 }
@@ -526,10 +546,12 @@ export interface FileRouteTypes {
     | '/admin/users/$id'
     | '/app/checkpoint/$checkpointId'
     | '/app/learning/$moduleId'
+    | '/teacher/content/$moduleId'
     | '/teacher/students/$studentId'
     | '/admin/plans/'
     | '/admin/users/'
     | '/app/learning/'
+    | '/teacher/content/'
     | '/teacher/students/'
     | '/boards/$boardId/pages/$pageId'
   fileRoutesByTo: FileRoutesByTo
@@ -572,10 +594,12 @@ export interface FileRouteTypes {
     | '/admin/users/$id'
     | '/app/checkpoint/$checkpointId'
     | '/app/learning/$moduleId'
+    | '/teacher/content/$moduleId'
     | '/teacher/students/$studentId'
     | '/admin/plans'
     | '/admin/users'
     | '/app/learning'
+    | '/teacher/content'
     | '/teacher/students'
     | '/boards/$boardId/pages/$pageId'
   id:
@@ -623,10 +647,12 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/users/$id'
     | '/_authenticated/app/checkpoint/$checkpointId'
     | '/_authenticated/app/learning/$moduleId'
+    | '/_authenticated/teacher/content/$moduleId'
     | '/_authenticated/teacher/students/$studentId'
     | '/_authenticated/admin/plans/'
     | '/_authenticated/admin/users/'
     | '/_authenticated/app/learning/'
+    | '/_authenticated/teacher/content/'
     | '/_authenticated/teacher/students/'
     | '/_authenticated/boards/$boardId/pages/$pageId'
   fileRoutesById: FileRoutesById
@@ -935,6 +961,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTeacherStudentsIndexRouteImport
       parentRoute: typeof AuthenticatedTeacherRoute
     }
+    '/_authenticated/teacher/content/': {
+      id: '/_authenticated/teacher/content/'
+      path: '/content'
+      fullPath: '/teacher/content/'
+      preLoaderRoute: typeof AuthenticatedTeacherContentIndexRouteImport
+      parentRoute: typeof AuthenticatedTeacherRoute
+    }
     '/_authenticated/app/learning/': {
       id: '/_authenticated/app/learning/'
       path: '/learning'
@@ -961,6 +994,13 @@ declare module '@tanstack/react-router' {
       path: '/students/$studentId'
       fullPath: '/teacher/students/$studentId'
       preLoaderRoute: typeof AuthenticatedTeacherStudentsStudentIdRouteImport
+      parentRoute: typeof AuthenticatedTeacherRoute
+    }
+    '/_authenticated/teacher/content/$moduleId': {
+      id: '/_authenticated/teacher/content/$moduleId'
+      path: '/content/$moduleId'
+      fullPath: '/teacher/content/$moduleId'
+      preLoaderRoute: typeof AuthenticatedTeacherContentModuleIdRouteImport
       parentRoute: typeof AuthenticatedTeacherRoute
     }
     '/_authenticated/app/learning/$moduleId': {
@@ -1074,7 +1114,9 @@ interface AuthenticatedTeacherRouteChildren {
   AuthenticatedTeacherCalendarRoute: typeof AuthenticatedTeacherCalendarRoute
   AuthenticatedTeacherScheduleRoute: typeof AuthenticatedTeacherScheduleRoute
   AuthenticatedTeacherIndexRoute: typeof AuthenticatedTeacherIndexRoute
+  AuthenticatedTeacherContentModuleIdRoute: typeof AuthenticatedTeacherContentModuleIdRoute
   AuthenticatedTeacherStudentsStudentIdRoute: typeof AuthenticatedTeacherStudentsStudentIdRoute
+  AuthenticatedTeacherContentIndexRoute: typeof AuthenticatedTeacherContentIndexRoute
   AuthenticatedTeacherStudentsIndexRoute: typeof AuthenticatedTeacherStudentsIndexRoute
 }
 
@@ -1083,8 +1125,11 @@ const AuthenticatedTeacherRouteChildren: AuthenticatedTeacherRouteChildren = {
   AuthenticatedTeacherCalendarRoute: AuthenticatedTeacherCalendarRoute,
   AuthenticatedTeacherScheduleRoute: AuthenticatedTeacherScheduleRoute,
   AuthenticatedTeacherIndexRoute: AuthenticatedTeacherIndexRoute,
+  AuthenticatedTeacherContentModuleIdRoute:
+    AuthenticatedTeacherContentModuleIdRoute,
   AuthenticatedTeacherStudentsStudentIdRoute:
     AuthenticatedTeacherStudentsStudentIdRoute,
+  AuthenticatedTeacherContentIndexRoute: AuthenticatedTeacherContentIndexRoute,
   AuthenticatedTeacherStudentsIndexRoute:
     AuthenticatedTeacherStudentsIndexRoute,
 }

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Pin, PinOff, Video } from "lucide-react";
+import { ArrowLeft, Eye, Pin, PinOff, Video } from "lucide-react";
 import { toast } from "sonner";
 import { teachersApi } from "@/lib/api/endpoints";
 
@@ -336,6 +336,16 @@ export function LessonPlanSection({ studentId }: { studentId: string }) {
                         {abiertas}/{todas} habilitadas
                       </span>
                     </button>
+                    {/* Al visor: los slides completos con el estado de ESTE
+                        estudiante superpuesto, para decidir viendo el material. */}
+                    <Link
+                      to="/teacher/content/$moduleId"
+                      params={{ moduleId: mod.moduleId }}
+                      search={{ studentId } as any}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink/70 transition hover:bg-brand-cream/40"
+                    >
+                      <Eye className="size-3.5" /> Ver contenido
+                    </Link>
                     <button
                       onClick={() => m.mutate({ lessonIds: ids, unlock: abiertas < todas })}
                       disabled={m.isPending}

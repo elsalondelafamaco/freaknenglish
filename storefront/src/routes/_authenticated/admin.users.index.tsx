@@ -151,8 +151,15 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <form onSubmit={(e) => { e.preventDefault(); createM.mutate(); }} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+    // La grilla de horario mide 640px de ancho mínimo y 15 filas de alto, así
+    // que el modal necesita ancho y scroll propio: con `max-w-md` y sin
+    // overflow se salía de la pantalla y no se alcanzaba el botón de enviar.
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4">
+      <form
+        onSubmit={(e) => { e.preventDefault(); createM.mutate(); }}
+        className="mx-auto my-4 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl"
+      >
+        <div className="flex-1 overflow-y-auto p-6">
         <h2 className="text-lg font-semibold text-brand-ink">Invitar usuario</h2>
         <p className="mt-1 text-xs text-brand-ink/60">
           Le llegará un correo de invitación con el link para crear su contraseña y entrar. Sin plan manual, un estudiante se activa solo tras pagar por Wompi.
@@ -301,7 +308,11 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
           </>
         ) : null}
 
-        <div className="mt-5 flex justify-end gap-2">
+        </div>
+
+        {/* Fijo abajo: con el horario abierto el formulario es largo y el
+            botón de enviar quedaba fuera de la vista. */}
+        <div className="flex justify-end gap-2 border-t border-brand-line bg-white px-6 py-4">
           <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-sm font-medium text-brand-ink/70 hover:bg-brand-cream/30">Cancelar</button>
           <button type="submit" disabled={createM.isPending} className="rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white shadow-soft hover:-translate-y-0.5 transition disabled:opacity-60">
             {createM.isPending ? "Enviando…" : "Enviar invitación"}

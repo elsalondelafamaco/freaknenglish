@@ -50,7 +50,7 @@ function LearningIndex() {
       <header>
         <h1 className="text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">Aprendizaje</h1>
         <p className="mt-2 max-w-xl text-[15px] text-brand-ink/65">
-          Módulos curados por nivel. Completa todas las lecciones y supera el checkpoint para desbloquear el siguiente nivel.
+          Módulos curados por nivel. Tu profe va habilitando el contenido a medida que avanzas.
         </p>
       </header>
 
@@ -96,14 +96,11 @@ function LearningIndex() {
               const prog = moduleProgress(m);
               const isCheckpoint = /checkpoint/i.test(m.id);
               // El backend marca el módulo bloqueado cuando TODAS sus lecciones
-              // quedaron tras un checkpoint pendiente.
-              // Un checkpoint a la espera del profe se comunica distinto que el
-              // contenido bloqueado más atrás: aquí el estudiante SÍ llegó, solo
-              // falta que su profe le abra la puerta.
-              const esperaProfe = !!m.lessons?.some(
-                (l: any) => l.locked && l.lockReason === "espera_desbloqueo",
-              );
-              const locked = !!m.locked && !esperaProfe;
+              // lo están. Antes esto se anulaba si alguna lección estaba en
+              // "espera_desbloqueo" — y como TODA lección sin habilitar tiene
+              // ese motivo, ningún módulo se veía bloqueado en el listado
+              // aunque al entrar sí lo estuviera.
+              const locked = !!m.locked;
 
               const card = (
                 <>
@@ -111,11 +108,7 @@ function LearningIndex() {
                     <div className={`text-3xl ${locked ? "opacity-40 grayscale" : ""}`}>
                       {m.coverEmoji ?? (isCheckpoint ? "🏁" : "📘")}
                     </div>
-                    {esperaProfe ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-800">
-                        <Lock className="size-3.5" /> Espera a tu profe
-                      </span>
-                    ) : locked ? (
+                    {locked ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-brand-ink/10 px-2.5 py-1 text-[11px] font-medium text-brand-ink/60">
                         <Lock className="size-3.5" /> Bloqueado
                       </span>
@@ -132,17 +125,12 @@ function LearningIndex() {
                   <h3 className={`mt-3 text-lg font-bold ${locked ? "text-brand-ink/45" : "text-brand-ink"}`}>
                     {m.title}
                   </h3>
-                  {esperaProfe ? (
-                    <p className="mt-1.5 text-xs text-amber-700">
-                      Coméntale en tu próxima clase que quieres presentarlo.
-                    </p>
-                  ) : null}
                   <p className="mt-1 text-sm text-brand-ink/65">
-                    {esperaProfe
-                      ? "¡Llegaste! Tu profe lo habilita cuando vea que estás listo."
-                      : locked
-                        ? "Completa el checkpoint pendiente para desbloquear este módulo."
-                        : (m.summary ?? m.description)}
+                    {/* Genérico a propósito: al estudiante no le sirve saber si
+                        lo frena un checkpoint o una habilitación pendiente. */}
+                    {locked
+                      ? "Tu profe habilita el contenido a medida que avanzas."
+                      : (m.summary ?? m.description)}
                   </p>
                   <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-brand-cream">
                     <div className="h-full rounded-full bg-brand-ink transition-all" style={{ width: `${prog.pct}%` }} />
@@ -160,7 +148,7 @@ function LearningIndex() {
 
               // Un módulo bloqueado no navega: se queda como tarjeta apagada.
               return locked ? (
-                <div key={m.id} className={clase} aria-disabled title="Bloqueado por un checkpoint pendiente">
+                <div key={m.id} className={clase} aria-disabled title="Tu profe habilita el contenido a medida que avanzas">
                   {card}
                 </div>
               ) : (

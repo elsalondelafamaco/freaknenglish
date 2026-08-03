@@ -78,7 +78,7 @@ function ModuleDetail() {
                 </span>
               </div>
               {active.locked ? (
-                <LockedLesson reason={active.lockReason} isCheckpoint={active.isCheckpoint} />
+                <LockedLesson />
               ) : (
                 <LessonViewer lesson={active} />
               )}
@@ -116,13 +116,7 @@ function ModuleDetail() {
                   <button
                     onClick={() => !locked && setActiveId(l.id)}
                     disabled={locked}
-                    title={
-                      locked
-                        ? l.lockReason === "espera_desbloqueo"
-                          ? "Tu profe habilita este checkpoint cuando estés listo"
-                          : "Se desbloquea al completar el checkpoint pendiente"
-                        : undefined
-                    }
+                    title={locked ? "Tu profe habilita el contenido a medida que avanzas" : undefined}
                     className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm transition ${
                       locked
                         ? "cursor-not-allowed text-brand-ink/35"
@@ -172,31 +166,23 @@ function prepararHtmlLeccion(html: string): string {
   return html.replaceAll("https://cdn.tailwindcss.com", `${origen}/vendor/tailwind-cdn.js`);
 }
 
-/** Pantalla que ve el estudiante cuando la lección está bloqueada. */
-function LockedLesson({ reason, isCheckpoint }: { reason?: string | null; isCheckpoint?: boolean }) {
-  const esperaProfe = reason === "espera_desbloqueo";
+/**
+ * Pantalla que ve el estudiante cuando la lección está bloqueada.
+ *
+ * El mensaje es genérico a propósito: el motivo interno (checkpoint pendiente
+ * vs. lección aún no habilitada) es detalle nuestro y no le dice nada útil al
+ * estudiante — la acción es la misma en los dos casos, hablar con su profe.
+ */
+function LockedLesson() {
   return (
     <div className="rounded-2xl border border-brand-line bg-brand-cream/40 p-8 text-center">
       <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-white shadow-soft">
         <Lock className="size-6 text-brand-ink/60" />
       </div>
-      <h3 className="mt-4 text-lg font-bold text-brand-ink">
-        {esperaProfe ? "Tu checkpoint todavía no está habilitado" : "Contenido bloqueado"}
-      </h3>
+      <h3 className="mt-4 text-lg font-bold text-brand-ink">Contenido bloqueado</h3>
       <p className="mx-auto mt-2 max-w-md text-sm text-brand-ink/70">
-        {esperaProfe ? (
-          <>
-            Tu profe lo abre cuando vea que ya estás listo. Es a propósito: el checkpoint mide lo
-            que aprendiste, así que vale la pena llegar con todo repasado. Coméntale en tu próxima
-            clase que quieres presentarlo.
-          </>
-        ) : (
-          <>
-            Antes de seguir tienes que superar el {isCheckpoint ? "checkpoint" : "checkpoint pendiente"}{" "}
-            que quedó atrás. Así nos aseguramos de que avances con las bases firmes y no te saltes
-            temas que vas a necesitar.
-          </>
-        )}
+        Tu profe habilita el contenido a medida que avanzas, para que vayas con las bases firmes.
+        Coméntale en tu próxima clase que quieres seguir.
       </p>
       <Link
         to="/app/learning"

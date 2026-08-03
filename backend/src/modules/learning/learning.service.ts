@@ -44,7 +44,11 @@ export class LearningService {
     const { state } = await this.gatingFor(userId, effective)
     return modules.map((m) => {
       const lessons = m.lessons.map((l) => {
-        const s = state.get(l.id) ?? { locked: false, reason: null, blockedBy: null }
+        // Default BLOQUEADO, igual que en el detalle: si una lección no quedó
+        // en el mapa de compuertas, el listado la daba por abierta mientras el
+        // detalle la daba por cerrada — justo la incoherencia que veía el
+        // estudiante. La regla es "todo nace bloqueado".
+        const s = state.get(l.id) ?? { locked: true, reason: 'espera_desbloqueo', blockedBy: null }
         return {
           ...l,
           contentHtml: s.locked ? null : l.contentHtml,
@@ -157,13 +161,13 @@ export class LearningService {
     const { state } = await this.gatingFor(userId)
     const s = state.get(lessonId)
     if (s?.locked) {
+      // Mensaje genérico: el motivo interno (checkpoint pendiente vs. lección
+      // sin habilitar) va en `code` para nosotros, pero al estudiante se le
+      // dice siempre lo mismo — la acción a tomar es idéntica.
       throw new ForbiddenException({
         statusCode: 403,
         code: s.reason,
-        message:
-          s.reason === 'espera_desbloqueo'
-            ? 'Este checkpoint todavía no está habilitado. Tu profesor lo abre cuando estés listo.'
-            : 'Completa el checkpoint pendiente para desbloquear el resto del contenido.',
+        message: 'Tu profe habilita el contenido a medida que avanzas. Coméntale que quieres seguir.',
       })
     }
   }

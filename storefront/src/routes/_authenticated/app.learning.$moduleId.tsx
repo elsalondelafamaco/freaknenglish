@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle2, Circle, Download, FileText, FileCode, Lock, PlayCircle, Presentation, Trophy } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Circle, Download, FileText, Lock, PlayCircle, Presentation, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { learningApi } from "@/lib/api/endpoints";
 import { prepararHtmlLeccion, urlDeMedios } from "@/lib/learning/lessonHtml";
@@ -16,7 +16,9 @@ const KIND_ICON: Record<string, typeof PlayCircle> = {
   pdf: FileText,
   slides: Presentation,
   download: Download,
-  html: FileCode,
+  // Neutral a propósito: un icono de "archivo de código" delataba que la
+  // lección es un HTML, que es cómo la guardamos, no lo que el alumno ve.
+  html: Presentation,
 };
 const mediaUrl = urlDeMedios;
 
@@ -74,9 +76,13 @@ function ModuleDetail() {
             <>
               <div className="flex items-start justify-between gap-3">
                 <h2 className="text-lg font-bold text-brand-ink">{active.title}</h2>
-                <span className="rounded-full bg-brand-cream px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-brand-ink/65">
-                  {active.kind} · {active.durationMin ?? 0} min
-                </span>
+                {/* Solo la duración: el `kind` (html, pdf, slides…) es cómo
+                    guardamos la lección, no algo que le sirva a quien la ve. */}
+                {active.durationMin ? (
+                  <span className="rounded-full bg-brand-cream px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-brand-ink/65">
+                    {active.durationMin} min
+                  </span>
+                ) : null}
               </div>
               {active.locked ? (
                 <LockedLesson />

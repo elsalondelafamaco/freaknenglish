@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
+import { IS_ACTIVE_TEACHER, IS_TEACHER, hasRole } from '../../common/roles'
 import { NotificationsService } from '../notifications/notifications.service'
 import { BoardService } from '../board/board.service'
 import { SlotsService, SlotRef } from './slots.service'
@@ -242,7 +243,7 @@ export class SchedulingService {
 
     // Buscar profesor que cubra todos los bloques.
     const teachers = await this.prisma.user.findMany({
-      where: { role: 'teacher', disabledAt: null, deletedAt: null },
+      where: IS_ACTIVE_TEACHER,
       include: { availability: true },
     })
     const match = teachers.find((t) =>
@@ -317,7 +318,7 @@ export class SchedulingService {
       orderBy: { startsAt: 'asc' },
     })
     const teachers = await this.prisma.user.findMany({
-      where: { role: 'teacher', deletedAt: null },
+      where: { ...IS_TEACHER, deletedAt: null },
       select: { id: true, fullName: true },
       orderBy: { fullName: 'asc' },
     })
@@ -357,7 +358,7 @@ export class SchedulingService {
 
   async assignRequest(studentId: string, teacherId: string) {
     const t = await this.prisma.user.findUnique({ where: { id: teacherId } })
-    if (!t || t.role !== 'teacher') throw new BadRequestException('Invalid teacher')
+    if (!t || !hasRole(t, 'teacher')) throw new BadRequestException('Invalid teacher')
     const student = await this.prisma.user.findUnique({ where: { id: studentId }, select: { schedulePreferences: true } })
     const blocks = (student?.schedulePreferences as any as ScheduleBlock[] | null) ?? []
     if (blocks.length > 0) {
@@ -416,7 +417,7 @@ export class SchedulingService {
       where: { id: teacherId },
       include: { availability: true },
     })
-    if (!teacher || teacher.role !== 'teacher' || teacher.disabledAt || teacher.deletedAt) return []
+    if (!teacher || !hasRole(teacher, 'teacher') || teacher.disabledAt || teacher.deletedAt) return []
 
     const pending = await this.prisma.user.findMany({
       where: { scheduleAssignmentStatus: 'manual_pending', deletedAt: null },

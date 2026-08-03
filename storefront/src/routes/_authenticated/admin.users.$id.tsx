@@ -754,10 +754,18 @@ function EditUserDialog({
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
+      // El primero por precedencia es el rol PRINCIPAL (define a dónde entra
+      // al loguearse); el resto van como extras. Así un admin puede además
+      // dar clases sin necesitar una segunda cuenta.
+      const principal = (["admin", "teacher", "student"] as const).find((r) => roles.includes(r)) ?? "student";
       await adminApi.updateUser(user.id, {
         fullName,
         phone: phone || undefined,
-        role: (["admin", "teacher", "student"] as const).find((r) => roles.includes(r)) ?? "student",
+        role: principal,
+        // "moderator" es legacy del tipo del cliente y no existe en el backend.
+        extraRoles: (["admin", "teacher", "student"] as const).filter(
+          (r) => r !== principal && roles.includes(r),
+        ),
         englishLevel: roles.includes("student") ? level : null,
       });
       onSaved();

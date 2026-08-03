@@ -3,6 +3,7 @@ import { PassportStrategy } from '@nestjs/passport'
 import { ExtractJwt, Strategy } from 'passport-jwt'
 import { env } from '../../../config/env'
 import { PrismaService } from '../../../prisma/prisma.service'
+import { rolesOf } from '../../../common/roles'
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -22,7 +23,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(payload: { sub: string; email: string; role: string; impersonatorId?: string; actAs?: string }) {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { disabledAt: true, deletedAt: true, role: true },
+      select: { disabledAt: true, deletedAt: true, role: true, extraRoles: true },
     })
     if (!user || user.disabledAt || user.deletedAt) {
       throw new ForbiddenException({
@@ -37,6 +38,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       email: payload.email,
       // Rol desde DB: si el admin cambió el rol, aplica sin esperar re-login.
       role: user.role,
+      // Roles efectivos (principal + extras). El token viejo no los trae, por
+      // eso se derivan aquí y no del payload.
+      roles: rolesOf(user),
       impersonatorId: payload.impersonatorId ?? null,
     }
   }

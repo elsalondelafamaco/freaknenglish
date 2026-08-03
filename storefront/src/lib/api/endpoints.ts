@@ -112,14 +112,20 @@ export const usersApi = {
 
 // ─── Scheduling ────────────────────────────────────────────────────────
 export type SlotRef = { weekday: number; hour: number };
+
+/** Ventana global de horarios que configura el admin. `endHour` es INCLUSIVO. */
+export type ScheduleConfig = {
+  days: number[];
+  startHour: number;
+  endHour: number;
+  maxPerDay: number;
+  durationMin: number;
+};
 export type ScheduleHints = { assignable: boolean; hints: Array<SlotRef & { auto: boolean }> };
 
 export const scheduleApi = {
   grid: () => apiGet<{ grid: Record<string, number>; hours: number[] }>("/schedule/availability-grid"),
-  config: () =>
-    apiGet<{ days: number[]; startHour: number; endHour: number; maxPerDay: number; durationMin: number }>(
-      "/public/schedule/config",
-    ),
+  config: () => apiGet<ScheduleConfig>("/public/schedule/config"),
   availability: (slots: SlotRef[]) =>
     apiPost<ScheduleHints>("/public/schedule/availability", { slots }),
   availabilityMine: (slots: SlotRef[]) =>
@@ -568,9 +574,15 @@ export const adminApi = {
     email: string;
     fullName: string;
     role: "student" | "teacher" | "admin";
+    /** Roles adicionales al principal (p. ej. un admin que también da clases). */
+    extraRoles?: Array<"student" | "teacher" | "admin">;
     level?: "beginner" | "intermediate" | "advanced";
     /** Empalme: activa el plan manualmente (pagos por fuera de Wompi). */
-    plan?: { planId: string; endDate: string };
+    plan?: { planId: string; endDate: string; startDate?: string | null };
+    /** Horario semanal del estudiante (mismas reglas que el checkout). */
+    schedule?: SlotRef[];
+    /** Profesor a asignar de una vez. Requiere `schedule`. */
+    teacherId?: string;
   }) => apiPost<{ user: User; link?: string }>("/admin/users", body),
   setSubscription: (
     id: string,
@@ -581,7 +593,7 @@ export const adminApi = {
       startedAt?: string | null;
     },
   ) => apiPatch<any>(`/admin/users/${id}/subscription`, body),
-  updateUser: (id: string, body: Partial<{ fullName: string; phone: string; role: "student" | "teacher" | "admin"; englishLevel: "beginner" | "intermediate" | "advanced" | null }>) =>
+  updateUser: (id: string, body: Partial<{ fullName: string; phone: string; role: "student" | "teacher" | "admin"; extraRoles: Array<"student" | "teacher" | "admin">; englishLevel: "beginner" | "intermediate" | "advanced" | null }>) =>
     apiPatch<User>(`/admin/users/${id}`, body),
   setUserStatus: (id: string, disabled: boolean) =>
     apiPatch<User>(`/admin/users/${id}/status`, { disabled }),

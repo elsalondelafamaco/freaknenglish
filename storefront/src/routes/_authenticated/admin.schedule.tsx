@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminApi, scheduleApi } from "@/lib/api/endpoints";
+import { rowHasRole } from "@/lib/roles";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -16,7 +17,9 @@ function AdminSchedulePage() {
   const pending = useQuery({ queryKey: ["admin", "schedule", "pending"], queryFn: scheduleApi.adminPending });
   const teachers = useQuery({
     queryKey: ["admin", "users", "teachers"],
-    queryFn: () => adminApi.users().then((rows) => rows.filter((u: any) => u.role === "teacher")),
+    // `rowHasRole` y no `u.role === "teacher"`: un admin que además da clases
+    // también debe aparecer para asignarle estudiantes.
+    queryFn: () => adminApi.users().then((rows) => rows.filter((u: any) => rowHasRole(u, "teacher"))),
   });
 
   const [assigning, setAssigning] = useState<Record<string, string>>({});

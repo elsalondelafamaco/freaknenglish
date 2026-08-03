@@ -37,7 +37,9 @@ export function mapUser(u: any): User {
     phone: u.phone ?? undefined,
     documentNumber: u.documentNumber ?? undefined,
     meetingUrl: u.meetingUrl ?? undefined,
-    roles: [u.role] as AppRole[],
+    // Multi-rol: rol principal + extras. Un admin con `extraRoles: ["teacher"]`
+    // ve además los módulos de profesor, sin necesidad de una segunda cuenta.
+    roles: [...new Set<AppRole>([u.role, ...(u.extraRoles ?? [])])],
     level: (u.englishLevel ?? undefined) as EnglishLevel | undefined,
     onboardedAt: u.emailVerifiedAt ?? undefined,
     assignedTeacherId: u.assignedTeacherId ?? undefined,

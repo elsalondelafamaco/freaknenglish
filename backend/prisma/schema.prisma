@@ -62,6 +62,10 @@ model User {
   phone           String?
   documentNumber  String?       @map("document_number")
   role            AppRole       @default(student)
+  // Roles ADICIONALES al principal. Existe para el caso "un admin también da
+  // clases": se le deja role=admin y extraRoles=[teacher] en vez de duplicar
+  // la cuenta. Los permisos se evalúan siempre sobre role + extraRoles.
+  extraRoles      AppRole[]     @default([]) @map("extra_roles")
   englishLevel    EnglishLevel? @map("english_level")
   avatarUrl       String?       @map("avatar_url")
   googleSub       String?       @unique @map("google_sub")

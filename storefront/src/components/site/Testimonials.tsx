@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Play } from "lucide-react";
 import { useSiteContent } from "@/lib/site-content";
+import { SiteImage } from "./SiteImage";
 import { VideoModal } from "./VideoModal";
 
 const ITEMS = [
@@ -100,10 +101,9 @@ export function Testimonials() {
                   <p className="mt-2 text-[13px] leading-snug text-brand-ink/65">{item.body}</p>
                 </div>
                 <div className="relative aspect-[3/4]">
-                  <img
-                    src={media[item.imageSlot]}
+                  <SiteImage
+                    slot={item.imageSlot}
                     alt={item.name}
-                    loading="lazy"
                     className="absolute inset-0 h-full w-full object-cover"
                   />
                   <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 bg-gradient-to-t from-black/70 via-black/40 to-transparent p-4 text-white">

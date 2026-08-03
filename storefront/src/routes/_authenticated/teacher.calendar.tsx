@@ -202,8 +202,8 @@ function TeacherCalendar() {
           buttonText={{ today: "Hoy" }}
           allDaySlot={false}
           slotDuration="01:00:00"
-          slotMinTime={`${String(cfg?.startHour ?? 7).padStart(2, "0")}:00:00`}
-          slotMaxTime={`${String((cfg?.endHour ?? 18) + 1).padStart(2, "0")}:00:00`}
+          slotMinTime={`${String(cfg?.startHour ?? 6).padStart(2, "0")}:00:00`}
+          slotMaxTime={`${String((cfg?.endHour ?? 20) + 1).padStart(2, "0")}:00:00`}
           hiddenDays={cfg ? [0, 1, 2, 3, 4, 5, 6].filter((d) => !cfg.days.includes(d)) : [0, 6]}
           height="auto"
           nowIndicator

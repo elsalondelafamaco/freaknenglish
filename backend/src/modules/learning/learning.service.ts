@@ -56,11 +56,35 @@ export class LearningService {
     })
   }
 
-  module(id: string) {
-    return this.prisma.module.findUnique({
+  /**
+   * Detalle de un módulo. Aplica las MISMAS compuertas que el catálogo: sin
+   * esto, el listado mostraba los candados pero al abrir el módulo llegaba
+   * todo desbloqueado y con el HTML completo — el estudiante veía contenido
+   * que su profe no le había habilitado.
+   */
+  async module(id: string, userId?: string) {
+    const mod = await this.prisma.module.findUnique({
       where: { id },
       include: { lessons: { orderBy: { position: 'asc' } }, checkpoints: true },
     })
+    if (!mod || !userId) return mod
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    })
+    if (user?.role !== 'student') return mod // profes y admin ven todo
+
+    const { state } = await this.gatingFor(userId)
+    const lessons = mod.lessons.map((l) => {
+      const s = state.get(l.id) ?? { locked: true, reason: 'espera_desbloqueo', blockedBy: null }
+      return {
+        ...l,
+        contentHtml: s.locked ? null : l.contentHtml,
+        locked: s.locked,
+        lockReason: s.reason,
+      }
+    })
+    return { ...mod, lessons, locked: lessons.length > 0 && lessons.every((l) => l.locked) }
   }
 
   // ─── Compuertas por checkpoint ───────────────────────────────────────

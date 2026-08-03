@@ -152,6 +152,26 @@ function ModuleDetail() {
   );
 }
 
+/**
+ * Prepara el HTML de la lección antes de montarlo en el iframe.
+ *
+ * Las 111 lecciones traen `<script src="https://cdn.tailwindcss.com">`. Ese CDN
+ * a veces no carga (bloqueado por red corporativa, DNS, o simplemente lento):
+ * la lección tarda muchísimo y, cuando el script no llega, los slides se rompen
+ * porque pierden TODO su CSS. Se reemplaza por una copia servida desde nuestro
+ * propio dominio: mismo script, sin depender de terceros y con carga inmediata.
+ *
+ * Se hace aquí, al renderizar, y NO editando los HTML: así funciona igual para
+ * el contenido que ya existe y para cualquier lección futura que use el CDN.
+ * El iframe usa `srcDoc`, cuyo documento no tiene URL base, por eso la ruta
+ * debe ser absoluta.
+ */
+function prepararHtmlLeccion(html: string): string {
+  if (!html) return html;
+  const origen = typeof window !== "undefined" ? window.location.origin : "";
+  return html.replaceAll("https://cdn.tailwindcss.com", `${origen}/vendor/tailwind-cdn.js`);
+}
+
 /** Pantalla que ve el estudiante cuando la lección está bloqueada. */
 function LockedLesson({ reason, isCheckpoint }: { reason?: string | null; isCheckpoint?: boolean }) {
   const esperaProfe = reason === "espera_desbloqueo";
@@ -229,7 +249,7 @@ function LessonViewer({ lesson }: { lesson: any }) {
     return (
       <div className="flex flex-col gap-3">
         <div className="h-[72vh] w-full overflow-hidden rounded-2xl border border-brand-line bg-white">
-          <iframe title={lesson.title} srcDoc={lesson.contentHtml ?? url ?? ""} className="h-full w-full bg-white" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin" />
+          <iframe title={lesson.title} srcDoc={prepararHtmlLeccion(lesson.contentHtml ?? url ?? "")} className="h-full w-full bg-white" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin" />
         </div>
         {(resultsQ.data ?? []).length > 0 ? (
           <div className="flex flex-wrap gap-2">

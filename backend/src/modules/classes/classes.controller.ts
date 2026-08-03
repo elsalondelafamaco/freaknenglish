@@ -17,7 +17,9 @@ export class ClassesController {
   /** @endpoint GET /api/v1/classes */
   @Get()
   list(@CurrentUser() u: AuthUser) {
-    return u.role === 'teacher' ? this.svc.listForTeacher(u.id) : this.svc.listForStudent(u.id)
+    // `roles` y no `role`: un admin que además da clases debe ver su agenda de
+    // profesor, no la (vacía) de estudiante.
+    return u.roles.includes('teacher') ? this.svc.listForTeacher(u.id) : this.svc.listForStudent(u.id)
   }
 
   /** @endpoint GET /api/v1/classes/upcoming  (student dashboard) */

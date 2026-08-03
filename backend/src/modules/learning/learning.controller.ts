@@ -26,9 +26,9 @@ export class LearningController {
     return this.svc.listModulesForUser(u.id, level)
   }
 
-  /** @endpoint GET /api/v1/learning/modules/:id */
+  /** @endpoint GET /api/v1/learning/modules/:id  (con compuertas del alumno) */
   @Get('modules/:id')
-  module(@Param('id') id: string) { return this.svc.module(id) }
+  module(@CurrentUser() u: AuthUser, @Param('id') id: string) { return this.svc.module(id, u.id) }
 
   /**
    * @endpoint POST /api/v1/learning/lessons/:lessonId/activity-result

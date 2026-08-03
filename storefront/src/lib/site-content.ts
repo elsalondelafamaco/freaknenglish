@@ -125,6 +125,24 @@ function writeCache(v: SiteContentOverrides) {
   }
 }
 
+/**
+ * URL ESTABLE de un slot de media: siempre la misma, servida por nuestro
+ * backend, que redirige al objeto actual en MinIO. Al subir una imagen desde
+ * el admin se reemplaza el objeto detrás y el `<img src>` de la home no
+ * cambia, así que no hay parpadeo ni swap de URL a mitad de carga.
+ * Si el slot no tiene imagen, el backend responde 404 y el `onError` del
+ * componente cae a la imagen del bundle.
+ */
+export function mediaUrl(slot: MediaSlotId | string): string {
+  const base = (import.meta as any).env?.VITE_API_URL ?? "http://localhost:3000/api/v1";
+  return `${base}/public/settings/media/${slot}`;
+}
+
+/** Imagen del bundle para un slot (respaldo cuando la remota falla). */
+export function mediaFallback(slot: MediaSlotId | string): string | undefined {
+  return DEFAULT_MEDIA[slot];
+}
+
 export function mergeSiteContent(overrides: SiteContentOverrides | null | undefined): SiteContent {
   if (!overrides) return DEFAULT_SITE_CONTENT;
   return {

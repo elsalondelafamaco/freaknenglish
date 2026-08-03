@@ -125,7 +125,7 @@ export class AdminController {
    * @endpoint POST /api/v1/admin/users
    * Crea un usuario (estudiante, profesor o administrador) sin suscripción.
    * Envía email transaccional con link para configurar contraseña.
-   * Body: { email, fullName, role: 'student'|'teacher'|'admin', level? }
+   * Body: { email, fullName, role, extraRoles?, level?, plan?, schedule?, teacherId? }
    */
   @Post('users')
   createUser(
@@ -134,8 +134,11 @@ export class AdminController {
       email: string
       fullName: string
       role: 'student' | 'teacher' | 'admin'
+      extraRoles?: Array<'student' | 'teacher' | 'admin'>
       level?: 'beginner' | 'intermediate' | 'advanced'
-      plan?: { planId: string; endDate: string }
+      plan?: { planId: string; endDate: string; startDate?: string | null }
+      schedule?: Array<{ weekday: number; hour: number }>
+      teacherId?: string
     },
   ) {
     return this.svc.createUser(body)
@@ -199,12 +202,18 @@ export class AdminController {
 
   /**
    * @endpoint PATCH /api/v1/admin/users/:id
-   * Edita campos básicos (fullName, phone, role, englishLevel).
+   * Edita campos básicos (fullName, phone, role, extraRoles, englishLevel).
    */
   @Patch('users/:id')
   updateUser(
     @Param('id') id: string,
-    @Body() body: { fullName?: string; phone?: string; role?: 'student' | 'teacher' | 'admin'; englishLevel?: 'beginner' | 'intermediate' | 'advanced' | null },
+    @Body() body: {
+      fullName?: string
+      phone?: string
+      role?: 'student' | 'teacher' | 'admin'
+      extraRoles?: Array<'student' | 'teacher' | 'admin'>
+      englishLevel?: 'beginner' | 'intermediate' | 'advanced' | null
+    },
   ) {
     return this.svc.updateUser(id, body)
   }

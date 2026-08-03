@@ -107,13 +107,31 @@ export function AppShell({ children }: { children: ReactNode }) {
   });
   const requestsCount = isAdmin ? (pendingRequests?.length ?? 0) : 0;
 
-  const NAV = user?.roles.includes("admin")
-    ? ADMIN_NAV
-    : user?.roles.includes("teacher")
-      ? TEACHER_NAV
-      : studentHasAccess
-        ? STUDENT_NAV
-        : STUDENT_NAV.filter((i) => i.to === "/app" || i.to === "/app/settings");
+  // Multi-rol: el sidebar es la UNIÓN de lo que habilita cada rol, no solo el
+  // principal. Un admin que además da clases ve los módulos de admin Y los de
+  // profesor; sin esto, sus módulos de profe quedaban inalcanzables.
+  const NAV = (() => {
+    const roles = user?.roles ?? [];
+    type NavItem =
+      | (typeof ADMIN_NAV)[number]
+      | (typeof TEACHER_NAV)[number]
+      | (typeof STUDENT_NAV)[number];
+    const secciones: ReadonlyArray<NavItem>[] = [];
+    if (roles.includes("admin")) secciones.push(ADMIN_NAV);
+    if (roles.includes("teacher")) secciones.push(TEACHER_NAV);
+    if (roles.includes("student")) {
+      secciones.push(
+        studentHasAccess
+          ? STUDENT_NAV
+          : STUDENT_NAV.filter((i) => i.to === "/app" || i.to === "/app/settings"),
+      );
+    }
+    if (secciones.length === 0) {
+      return STUDENT_NAV.filter((i) => i.to === "/app" || i.to === "/app/settings");
+    }
+    const vistos = new Set<string>();
+    return secciones.flat().filter((i) => !vistos.has(i.to) && vistos.add(i.to));
+  })();
 
   return (
     <div className="min-h-screen bg-brand-surface">

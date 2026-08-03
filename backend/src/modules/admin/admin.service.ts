@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
-import { Prisma } from '@prisma/client'
+import { AppRole, Prisma } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
+import { IS_TEACHER, hasRole } from '../../common/roles'
 import { InjectQueue } from '@nestjs/bullmq'
 import { Queue } from 'bullmq'
 import { env } from '../../config/env'
@@ -9,6 +10,7 @@ import { randomBytes, randomUUID, createHash } from 'crypto'
 import { StorageService } from '../storage/storage.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { SchedulingService } from '../scheduling/scheduling.service'
+import { SlotsService, SlotRef } from '../scheduling/slots.service'
 import { validateQuestion } from '../learning/checkpoint-questions'
 
 @Injectable()
@@ -27,6 +29,7 @@ export class AdminService {
     private storage: StorageService,
     private notificationsSvc: NotificationsService,
     private schedulingSvc: SchedulingService,
+    private slotsSvc: SlotsService,
   ) {}
 
   private async resolveExistingUserId(idOrAlias: string): Promise<string> {
@@ -102,7 +105,7 @@ export class AdminService {
         select: { score: true, teacherScore: true },
       }),
       this.prisma.user.findMany({
-        where: { role: 'teacher', deletedAt: null },
+        where: { ...IS_TEACHER, deletedAt: null },
         select: { id: true, fullName: true },
       }),
       this.prisma.user.count({ where: { role: 'student', deletedAt: null } }),
@@ -710,19 +713,27 @@ export class AdminService {
     email: string
     fullName: string
     role: 'student' | 'teacher' | 'admin'
+    /** Roles adicionales (p. ej. un admin que también da clases). */
+    extraRoles?: AppRole[]
     level?: 'beginner' | 'intermediate' | 'advanced'
     // Empalme: estudiantes que ya pagaron por fuera de Wompi. Si viene, la
-    // suscripción queda activa desde ya y vence en `endDate`.
-    plan?: { planId: string; endDate: string }
+    // suscripción queda activa desde `startDate` (o ya) y vence en `endDate`.
+    plan?: { planId: string; endDate: string; startDate?: string | null }
+    /** Horario semanal del estudiante, con las mismas reglas del checkout. */
+    schedule?: SlotRef[]
+    /** Profesor a asignar de una vez (requiere `schedule`). */
+    teacherId?: string
   }) {
     const email = input.email.toLowerCase()
     const exists = await this.prisma.user.findUnique({ where: { email } })
     if (exists) throw new Error('User already exists')
+    const extraRoles = (input.extraRoles ?? []).filter((r) => r !== input.role)
     const user = await this.prisma.user.create({
       data: {
         email,
         fullName: input.fullName,
         role: input.role,
+        extraRoles,
         englishLevel: input.level,
         passwordHash: null,
       },
@@ -735,9 +746,31 @@ export class AdminService {
         planId: input.plan.planId,
         status: 'active',
         currentPeriodEnd: input.plan.endDate,
+        startedAt: input.plan.startDate ?? undefined,
       })
       planName = sub.plan.name
       planEndsAt = sub.currentPeriodEnd?.toISOString()
+
+      // Horario + profesor en el mismo paso. Se valida con las MISMAS reglas
+      // que el checkout (cantidad del plan, ventana y máximo por día) para no
+      // dejar entrar por el admin selecciones que la app rechazaría.
+      if (input.schedule?.length) {
+        await this.slotsSvc.validateSelection(input.schedule, sub.plan.daysPerWeek)
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: {
+            schedulePreferences: input.schedule as any,
+            // Sin profesor queda en la cola de asignación manual del admin.
+            scheduleAssignmentStatus: input.teacherId ? undefined : 'manual_pending',
+          },
+        })
+        if (input.teacherId) {
+          // Crea slots, valida cruces con la agenda del profe, notifica a ambos
+          // y materializa las clases. Si el profe está ocupado, lanza y el
+          // usuario queda creado sin asignar (el admin reintenta desde la ficha).
+          await this.schedulingSvc.assignRequest(user.id, input.teacherId)
+        }
+      }
     }
 
     // Invitación: link para configurar contraseña (reusa el flujo de reset,
@@ -836,7 +869,7 @@ export class AdminService {
     if (teacherId) {
       resolvedTeacherId = await this.resolveExistingUserId(teacherId)
       const t = await this.prisma.user.findUnique({ where: { id: resolvedTeacherId } })
-      if (!t || t.role !== 'teacher') throw new Error('Invalid teacher')
+      if (!t || !hasRole(t, 'teacher')) throw new Error('Invalid teacher')
     }
 
     // Migración completa (slots, clases, aula) con validación de cruces.
@@ -881,7 +914,7 @@ export class AdminService {
     })
     if (!user) throw new Error('User not found')
 
-    const isTeacher = user.role === 'teacher'
+    const isTeacher = hasRole(user, 'teacher')
     const isStudent = user.role === 'student'
 
     const [payments, classesAsStudent, classesAsTeacher, surveys, progress, notesByTeacher, notesAboutStudent, assignedStudents] =
@@ -961,10 +994,27 @@ export class AdminService {
 
   async updateUser(
     id: string,
-    data: { fullName?: string; phone?: string; role?: 'student' | 'teacher' | 'admin'; englishLevel?: 'beginner' | 'intermediate' | 'advanced' | null },
+    data: {
+      fullName?: string
+      phone?: string
+      role?: 'student' | 'teacher' | 'admin'
+      /** Roles adicionales: así un admin puede además dar clases. */
+      extraRoles?: AppRole[]
+      englishLevel?: 'beginner' | 'intermediate' | 'advanced' | null
+    },
   ) {
     const resolvedId = await this.resolveExistingUserId(id)
-    return this.prisma.user.update({ where: { id: resolvedId }, data: data as any })
+    const patch: Prisma.UserUpdateInput = { ...(data as any) }
+    if (data.extraRoles) {
+      const current = await this.prisma.user.findUniqueOrThrow({
+        where: { id: resolvedId },
+        select: { role: true },
+      })
+      // El rol principal no se repite en los extras: `rolesOf()` lo suma solo.
+      const role = data.role ?? current.role
+      patch.extraRoles = { set: [...new Set(data.extraRoles)].filter((r) => r !== role) }
+    }
+    return this.prisma.user.update({ where: { id: resolvedId }, data: patch })
   }
 
   async setUserStatus(id: string, disabled: boolean) {
@@ -1250,6 +1300,13 @@ export class AdminService {
    * defaults quemados y hace merge con esto — si la API se cae, la home
    * sigue funcionando con los defaults/último cache.
    */
+  /** URL actual del objeto de un slot de media, o null si no se configuró. */
+  async siteMediaUrl(slot: string): Promise<string | null> {
+    const { media } = await this.siteContent()
+    const url = (media as Record<string, unknown>)[slot]
+    return typeof url === 'string' && url.trim() ? url : null
+  }
+
   async siteContent() {
     const row = await this.prisma.appSetting
       .findUnique({ where: { key: 'site.content' } })
@@ -1353,7 +1410,7 @@ export class AdminService {
     const [students, teachers, subscriptions, classes, payments, notifications, boards, surveys, payrollRuns, slots] =
       await Promise.all([
         this.prisma.user.count({ where: { role: 'student' } }),
-        this.prisma.user.count({ where: { role: 'teacher' } }),
+        this.prisma.user.count({ where: IS_TEACHER }),
         this.prisma.subscription.count(),
         this.prisma.class.count(),
         this.prisma.paymentIntent.count(),

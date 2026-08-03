@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CalendarDays, Monitor, MessageCircle, Play, Zap } from "lucide-react";
 import { useSiteContent } from "@/lib/site-content";
+import { SiteImage } from "./SiteImage";
 import { DarkPillLink } from "./DarkPillButton";
 import { VideoModal } from "./VideoModal";
 
@@ -64,7 +65,6 @@ export function HowItWorks() {
               <StepCard
                 key={s.title}
                 {...s}
-                img={media[s.imageSlot]}
                 videoUrl={media[s.videoSlot]}
                 onPlay={(src) => setVideo({ src, title: s.title })}
               />
@@ -81,7 +81,7 @@ function StepCard({
   icon: Icon,
   title,
   body,
-  img,
+  imageSlot,
   videoUrl,
   badge,
   badgeSub,
@@ -90,7 +90,7 @@ function StepCard({
   icon: (typeof STEPS)[number]["icon"];
   title: string;
   body: string;
-  img: string;
+  imageSlot: string;
   videoUrl?: string;
   badge: string;
   badgeSub: string;
@@ -109,12 +109,7 @@ function StepCard({
       </div>
 
       <div className="relative mt-4 aspect-[4/3] overflow-hidden rounded-2xl">
-        <img
-          src={img}
-          alt={title}
-          loading="lazy"
-          className="h-full w-full object-cover"
-        />
+        <SiteImage slot={imageSlot} alt={title} className="h-full w-full object-cover" />
         {videoUrl ? (
           <button
             type="button"

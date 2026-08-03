@@ -3,7 +3,9 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
-import { adminApi } from "@/lib/api/endpoints";
+import { adminApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
+import { SchedulePickerGrid } from "@/components/schedule/SchedulePickerGrid";
+import { rowHasRole } from "@/lib/roles";
 
 export const Route = createFileRoute("/_authenticated/admin/users/")({
   head: () => ({ meta: [{ title: "CRM — Admin Freakn'" }] }),
@@ -91,14 +93,33 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [userRole, setUserRole] = useState<"student" | "teacher" | "admin">("student");
+  // Un admin puede además dar clases: se crea con role=admin + extraRoles=[teacher].
+  const [alsoTeacher, setAlsoTeacher] = useState(false);
   const [level, setLevel] = useState<Level>("beginner");
   // Empalme: estudiantes que ya pagaron por fuera de Wompi.
   const [withPlan, setWithPlan] = useState(false);
   const [planId, setPlanId] = useState("");
+  const [planStartDate, setPlanStartDate] = useState("");
   const [planEndDate, setPlanEndDate] = useState("");
+  // Horario + profesor en el mismo alta (antes había que hacerlo en 3 pantallas).
+  const [schedule, setSchedule] = useState<SlotRef[]>([]);
+  const [teacherId, setTeacherId] = useState("");
 
   const plansQ = useQuery({ queryKey: ["admin", "plans"], queryFn: () => adminApi.plans(), enabled: userRole === "student" });
-  const plans = (plansQ.data ?? []) as Array<{ id: string; name: string }>;
+  const plans = (plansQ.data ?? []) as Array<{ id: string; name: string; daysPerWeek?: number }>;
+  const cfgQ = useQuery({
+    queryKey: ["schedule", "config"],
+    queryFn: () => scheduleApi.config(),
+    enabled: userRole === "student" && withPlan,
+  });
+  const teachersQ = useQuery({
+    queryKey: ["admin", "users", "teachers"],
+    queryFn: () => adminApi.users().then((rows) => rows.filter((u: any) => rowHasRole(u, "teacher"))),
+    enabled: userRole === "student" && withPlan,
+  });
+  const cfg = cfgQ.data;
+  const need = plans.find((p) => p.id === planId)?.daysPerWeek ?? 0;
+  const scheduleReady = need > 0 && schedule.length === need;
 
   const createM = useMutation({
     mutationFn: () =>
@@ -106,11 +127,16 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
         fullName,
         email,
         role: userRole,
+        extraRoles: userRole === "admin" && alsoTeacher ? ["teacher"] : undefined,
         level: userRole === "student" ? level : undefined,
         plan:
           userRole === "student" && withPlan && planId && planEndDate
-            ? { planId, endDate: planEndDate }
+            ? { planId, endDate: planEndDate, startDate: planStartDate || undefined }
             : undefined,
+        // El horario solo tiene sentido con plan activo; sin profesor el
+        // estudiante queda en la cola de asignación manual.
+        schedule: userRole === "student" && withPlan && scheduleReady ? schedule : undefined,
+        teacherId: userRole === "student" && withPlan && scheduleReady && teacherId ? teacherId : undefined,
       }),
     onSuccess: () => {
       toast.success(
@@ -140,10 +166,25 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
           ))}
         </div>
         {userRole === "admin" ? (
-          <p className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            Un administrador ve y edita <b>todo</b>: usuarios, pagos, nómina y contenido. Invita
-            solo a gente del equipo en la que confíes.
-          </p>
+          <>
+            <p className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              Un administrador ve y edita <b>todo</b>: usuarios, pagos, nómina y contenido. Invita
+              solo a gente del equipo en la que confíes.
+            </p>
+            <label className="mt-2 flex items-start gap-2 rounded-xl border border-brand-line bg-brand-cream/20 p-3">
+              <input
+                type="checkbox"
+                checked={alsoTeacher}
+                onChange={(e) => setAlsoTeacher(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span className="text-xs text-brand-ink/75">
+                <strong className="block text-brand-ink">También dicta clases</strong>
+                Además del panel de admin, tendrá los módulos de profesor y aparecerá en los
+                listados para asignarle estudiantes y liquidarle nómina.
+              </span>
+            </label>
+          </>
         ) : null}
 
         <label className="mt-4 block text-xs font-semibold text-brand-ink/70">
@@ -179,28 +220,83 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
             </label>
 
             {withPlan ? (
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <label className="block text-xs font-semibold text-brand-ink/70">
+              <>
+                <label className="mt-3 block text-xs font-semibold text-brand-ink/70">
                   Plan
-                  <select value={planId} onChange={(e) => setPlanId(e.target.value)} required className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none">
+                  <select
+                    value={planId}
+                    onChange={(e) => { setPlanId(e.target.value); setSchedule([]); }}
+                    required
+                    className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                  >
                     <option value="" disabled>Selecciona…</option>
                     {plans.map((p) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
                 </label>
-                <label className="block text-xs font-semibold text-brand-ink/70">
-                  Activo hasta
-                  <input
-                    type="date"
-                    value={planEndDate}
-                    onChange={(e) => setPlanEndDate(e.target.value)}
-                    required
-                    min={new Date().toISOString().slice(0, 10)}
-                    className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
-                  />
-                </label>
-              </div>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <label className="block text-xs font-semibold text-brand-ink/70">
+                    Inicia el
+                    <input
+                      type="date"
+                      value={planStartDate}
+                      onChange={(e) => setPlanStartDate(e.target.value)}
+                      className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                    />
+                    <span className="mt-1 block font-normal text-[10px] text-brand-ink/55">Vacío = hoy.</span>
+                  </label>
+                  <label className="block text-xs font-semibold text-brand-ink/70">
+                    Activo hasta
+                    <input
+                      type="date"
+                      value={planEndDate}
+                      onChange={(e) => setPlanEndDate(e.target.value)}
+                      required
+                      min={new Date().toISOString().slice(0, 10)}
+                      className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                    />
+                  </label>
+                </div>
+
+                {/* Horario y profesor en el mismo alta. La grilla es la misma
+                    del checkout, así que valida ventana y máximo por día. */}
+                {planId && cfg ? (
+                  <div className="mt-4">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-xs font-semibold text-brand-ink/70">
+                        Horario semanal <span className="font-normal text-brand-ink/50">(opcional)</span>
+                      </span>
+                      <span className="text-xs font-semibold text-brand-ink">
+                        {schedule.length}/{need || "—"}
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <SchedulePickerGrid cfg={cfg} need={need} selected={schedule} onChange={setSchedule} />
+                    </div>
+
+                    <label className="mt-3 block text-xs font-semibold text-brand-ink/70">
+                      Profesor
+                      <select
+                        value={teacherId}
+                        onChange={(e) => setTeacherId(e.target.value)}
+                        disabled={!scheduleReady}
+                        className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none disabled:opacity-50"
+                      >
+                        <option value="">Sin asignar (queda en solicitudes)</option>
+                        {(teachersQ.data ?? []).map((t: any) => (
+                          <option key={t.id} value={t.id}>{t.fullName}</option>
+                        ))}
+                      </select>
+                      <span className="mt-1 block font-normal text-[10px] text-brand-ink/55">
+                        {scheduleReady
+                          ? "Al asignarlo se crean sus clases y les llega el correo a ambos."
+                          : `Completa las ${need || ""} franjas del plan para poder asignar profesor.`}
+                      </span>
+                    </label>
+                  </div>
+                ) : null}
+              </>
             ) : null}
           </>
         ) : null}

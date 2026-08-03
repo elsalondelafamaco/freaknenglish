@@ -1,5 +1,6 @@
 import { Bookmark, Mic, TrendingUp, Video } from "lucide-react";
 import { useSiteContent } from "@/lib/site-content";
+import { SiteImage } from "./SiteImage";
 import { DarkPillLink } from "./DarkPillButton";
 
 const WAVE_HEIGHTS = [
@@ -38,11 +39,10 @@ export function Hero() {
           {/* aspect fijo: cualquier imagen que suba el admin queda cover sin
               desproporcionar el layout */}
           <div className="relative aspect-square overflow-hidden rounded-[28px] shadow-soft">
-            <img
-              src={media["hero-image"]}
+            <SiteImage
+              slot="hero-image"
               alt="Estudiante en clase de inglés en vivo"
-              width={1280}
-              height={1280}
+              loading="eager"
               className="absolute inset-0 h-full w-full object-cover"
             />
           </div>
@@ -112,8 +112,8 @@ export function Hero() {
           {/* Teacher feedback */}
           <div className="absolute -bottom-2 left-2 sm:left-6 w-[210px] rounded-2xl bg-white p-3 shadow-soft">
             <div className="flex items-start gap-2">
-              <img
-                src={media["avatar-teacher"]}
+              <SiteImage
+                slot="avatar-teacher"
                 alt="Teacher"
                 className="size-7 rounded-full object-cover"
               />

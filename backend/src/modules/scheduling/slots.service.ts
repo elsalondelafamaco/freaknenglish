@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
+import { IS_ACTIVE_TEACHER } from '../../common/roles'
 
 export interface SlotRef {
   weekday: number
@@ -16,8 +17,10 @@ export interface ScheduleConfig {
 
 const DEFAULT_CONFIG: ScheduleConfig = {
   days: [1, 2, 3, 4, 5],
-  startHour: 7,
-  endHour: 18,
+  // Jornada real de los profes: primera clase 6:00, última 20:00 (termina
+  // 20:50). `endHour` es INCLUSIVO, por eso 20 y no 21.
+  startHour: 6,
+  endHour: 20,
   maxPerDay: 1,
   durationMin: 50,
 }
@@ -126,7 +129,7 @@ export class SlotsService {
     }
     const [teachers, occupied] = await Promise.all([
       this.prisma.user.findMany({
-        where: { role: 'teacher', disabledAt: null, deletedAt: null },
+        where: IS_ACTIVE_TEACHER,
         include: { availability: true },
       }),
       this.prisma.scheduleSlot.findMany({

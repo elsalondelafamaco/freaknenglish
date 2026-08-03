@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Sparkles, Zap } from "lucide-react";
-import { toast } from "sonner";
 import { Logo } from "@/components/site/Logo";
 import { ActivePlanScreen, useActivePlanGate } from "@/components/site/ActivePlanGate";
 import { plansApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
+import { SchedulePickerGrid } from "@/components/schedule/SchedulePickerGrid";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/checkout/schedule/$planId")({
@@ -13,8 +13,6 @@ export const Route = createFileRoute("/checkout/schedule/$planId")({
   component: SchedulePicker,
 });
 
-const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-const DAY_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 const key = (s: SlotRef) => `${s.weekday}:${s.hour}`;
 export const encodeSlots = (slots: SlotRef[]) => slots.map((s) => `${s.weekday}-${s.hour}`).join(",");
 export const decodeSlots = (raw: string | undefined): SlotRef[] =>
@@ -88,30 +86,10 @@ function SchedulePicker() {
     );
   }
 
-  const days = [...cfg.days].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)); // lunes primero
-  const hours = Array.from({ length: cfg.endHour - cfg.startHour + 1 }, (_, i) => cfg.startHour + i);
   const complete = selected.length === need;
   const assignable = hintsQ.data?.assignable ?? true;
   // Sin franjas automáticas no hay diferencia que explicar: se oculta la leyenda.
   const hasAutoSlots = (hintsQ.data?.hints ?? []).some((h) => h.auto);
-
-  function toggle(slot: SlotRef) {
-    const k = key(slot);
-    if (selected.some((s) => key(s) === k)) {
-      setSelected(selected.filter((s) => key(s) !== k));
-      return;
-    }
-    if (selected.length >= need) {
-      toast.info(`Tu plan incluye ${need} clases por semana. Quita una franja para cambiar.`);
-      return;
-    }
-    const sameDay = selected.filter((s) => s.weekday === slot.weekday).length;
-    if (sameDay >= cfg!.maxPerDay) {
-      toast.info(cfg!.maxPerDay === 1 ? "Solo una clase por día." : `Máximo ${cfg!.maxPerDay} clases por día.`);
-      return;
-    }
-    setSelected([...selected, slot]);
-  }
 
   function continueToPay() {
     if (!complete) return;
@@ -161,21 +139,14 @@ function SchedulePicker() {
           </div>
         ) : null}
 
-        <div className="mt-4 overflow-x-auto rounded-3xl border border-brand-line bg-white p-4 shadow-soft">
-          <div className="min-w-[640px]">
-            <div className="grid" style={{ gridTemplateColumns: `72px repeat(${days.length}, 1fr)` }}>
-              <div />
-              {days.map((d) => (
-                <div key={d} className="pb-2 text-center text-xs font-bold uppercase tracking-wide text-brand-ink/70">
-                  <span className="hidden md:inline">{DAY_NAMES[d]}</span>
-                  <span className="md:hidden">{DAY_SHORT[d]}</span>
-                </div>
-              ))}
-              {hours.map((h) => (
-                <FragmentRow key={h} h={h} days={days} autoMap={autoMap} selected={selected} onToggle={toggle} durationMin={cfg.durationMin} />
-              ))}
-            </div>
-          </div>
+        <div className="mt-4">
+          <SchedulePickerGrid
+            cfg={cfg}
+            need={need}
+            selected={selected}
+            onChange={setSelected}
+            autoMap={autoMap}
+          />
         </div>
 
         {complete && !assignable ? (
@@ -203,44 +174,3 @@ function SchedulePicker() {
   );
 }
 
-function FragmentRow({
-  h, days, autoMap, selected, onToggle, durationMin,
-}: {
-  h: number;
-  days: number[];
-  autoMap: Map<string, boolean>;
-  selected: SlotRef[];
-  onToggle: (s: SlotRef) => void;
-  durationMin: number;
-}) {
-  return (
-    <>
-      <div className="flex items-start justify-end pr-3 pt-2 text-[11px] font-medium text-brand-ink/55">
-        {h}:00
-      </div>
-      {days.map((d) => {
-        const k = `${d}:${h}`;
-        const isSel = selected.some((s) => s.weekday === d && s.hour === h);
-        const isAuto = autoMap.get(k) ?? false;
-        return (
-          <button
-            key={k}
-            onClick={() => onToggle({ weekday: d, hour: h })}
-            title={`${h}:00–${h}:${durationMin}`}
-            className={`m-0.5 flex h-11 items-center justify-center gap-1 rounded-xl border text-[11px] font-semibold transition ${
-              isSel
-                ? "border-brand-ink bg-brand-ink text-white shadow-soft"
-                : isAuto
-                  ? "border-brand-yellow bg-brand-yellow/25 text-brand-ink hover:bg-brand-yellow/50"
-                  : "border-brand-line bg-white text-brand-ink/60 hover:bg-brand-cream/50"
-            }`}
-          >
-            {/* El rayito marca inicio inmediato, pero la hora siempre se ve. */}
-            {!isSel && isAuto ? <Zap className="size-3.5 shrink-0" /> : null}
-            {h}:00
-          </button>
-        );
-      })}
-    </>
-  );
-}

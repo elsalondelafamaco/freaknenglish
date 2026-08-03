@@ -15,7 +15,10 @@ export class RolesGuard implements CanActivate {
     if (!required || required.length === 0) return true
     const { user } = context.switchToHttp().getRequest()
     if (!user) throw new ForbiddenException('No user in request')
-    if (!required.includes(user.role)) {
+    // Multi-rol: basta con tener UNO de los roles requeridos, sea el principal
+    // o uno extra (p. ej. un admin que además da clases entra a /teacher/*).
+    const roles: AppRole[] = user.roles ?? [user.role]
+    if (!required.some((r) => roles.includes(r))) {
       throw new ForbiddenException(`Requires role: ${required.join(' | ')}`)
     }
     return true

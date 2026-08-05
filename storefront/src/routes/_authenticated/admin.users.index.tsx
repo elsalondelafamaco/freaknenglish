@@ -5,7 +5,7 @@ import { Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { adminApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
 import { SchedulePickerGrid } from "@/components/schedule/SchedulePickerGrid";
-import { rowHasRole } from "@/lib/roles";
+import { rolesOfRow, rowHasRole } from "@/lib/roles";
 
 export const Route = createFileRoute("/_authenticated/admin/users/")({
   head: () => ({ meta: [{ title: "CRM — Admin Freakn'" }] }),
@@ -21,7 +21,9 @@ function AdminCRM() {
 
   const usersQ = useQuery({ queryKey: ["admin", "users", q], queryFn: () => adminApi.users(q.trim() || undefined) });
   const rows = (usersQ.data ?? []) as any[];
-  const filtered = rows.filter((u) => (role === "all" ? true : u.role === role));
+  // Filtra por roles EFECTIVOS: un admin que además da clases debe salir tanto
+  // en "admin" como en "teacher".
+  const filtered = rows.filter((u) => (role === "all" ? true : rowHasRole(u, role)));
 
   return (
     <div className="flex flex-col gap-4">
@@ -70,7 +72,11 @@ function AdminCRM() {
                     </Link>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="rounded-full bg-brand-cream px-2 py-0.5 text-[10px] font-semibold capitalize text-brand-ink">{u.role}</span>
+                    {/* Todos los roles, no solo el principal: si no, un admin
+                        que además da clases se veía como simple "admin". */}
+                    {rolesOfRow(u).map((r) => (
+                      <span key={r} className="mr-1 rounded-full bg-brand-cream px-2 py-0.5 text-[10px] font-semibold capitalize text-brand-ink">{r}</span>
+                    ))}
                     {u.disabledAt ? <span className="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">inactivo</span> : null}
                   </td>
                   <td className="px-4 py-3 capitalize text-brand-ink/70">{u.englishLevel ?? "—"}</td>

@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Play } from "lucide-react";
 import { useSiteContent } from "@/lib/site-content";
-import { SiteImage } from "./SiteImage";
+import { MediaThumb } from "./MediaThumb";
 import { VideoModal } from "./VideoModal";
 
 const ITEMS = [
@@ -101,8 +101,9 @@ export function Testimonials() {
                   <p className="mt-2 text-[13px] leading-snug text-brand-ink/65">{item.body}</p>
                 </div>
                 <div className="relative aspect-[3/4]">
-                  <SiteImage
-                    slot={item.imageSlot}
+                  <MediaThumb
+                    imageSlot={item.imageSlot}
+                    videoUrl={videoUrl}
                     alt={item.name}
                     className="absolute inset-0 h-full w-full object-cover"
                   />

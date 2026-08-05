@@ -30,6 +30,7 @@ import type {
 import { getPlan, formatCop } from "@/lib/domain/plans";
 type PaymentIntent = Record<string, any>;
 import { adminApi, classesApi } from "@/lib/api/endpoints";
+import { rolesOfRow } from "@/lib/roles";
 import { ActivityResultsSection, CheckpointAttemptsSection, CheckpointGatesSection, LessonPlanSection } from "./teacher.students.$studentId";
 import { setAccessToken } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -706,6 +707,10 @@ function AdminUserDetail() {
           onSaved={() => {
             setEditing(false);
             bump();
+            // Si el admin se editó a sí mismo, hay que recargar SU sesión: el
+            // sidebar y los guards salen de `user.roles`, así que sin esto
+            // seguiría viendo los módulos del rol que acaba de quitarse.
+            if (me?.id === user.id) void refresh();
           }}
         />
       ) : null}
@@ -987,11 +992,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 // ─── Adapters backend → shape del dominio ─────────────────────────────
 
-function roleToRoles(role: string | undefined): AppRole[] {
-  const r = (role ?? "student") as AppRole;
-  return [r];
-}
-
 function adaptAdminUser(u: any): User {
   return {
     id: u.id,
@@ -999,7 +999,11 @@ function adaptAdminUser(u: any): User {
     fullName: u.fullName,
     avatarUrl: u.avatarUrl ?? undefined,
     phone: u.phone ?? undefined,
-    roles: roleToRoles(u.role),
+    // Rol principal + extras. Antes se ignoraban los extras y el editor
+    // mostraba "teacher" SIN marcar en un admin que sí lo tenía: parecía que
+    // ya estaba quitado, no había nada que desmarcar y el rol seguía vivo en
+    // la base. Los listados de profesores tenían el mismo agujero.
+    roles: rolesOfRow(u),
     level: (u.englishLevel ?? undefined) as EnglishLevel | undefined,
     onboardedAt: u.onboardedAt ?? undefined,
     assignedTeacherId: u.assignedTeacherId ?? undefined,

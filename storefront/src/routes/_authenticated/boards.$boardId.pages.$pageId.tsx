@@ -7,7 +7,7 @@ import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCaret from "@tiptap/extension-collaboration-caret";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
-import Image from "@tiptap/extension-image";
+import { ResizableImage } from "@/components/board/ResizableImage";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle, FontFamily, FontSize } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
@@ -87,7 +87,7 @@ function BoardPage() {
             Highlight.configure({ multicolor: true }),
             TextAlign.configure({ types: ["heading", "paragraph"], alignments: ["left", "center", "right", "justify"] }),
             Link.configure({ openOnClick: false, autolink: true }),
-            Image.configure({ inline: false, allowBase64: false }),
+            ResizableImage.configure({ inline: false, allowBase64: false }),
             TaskList,
             TaskItem.configure({ nested: true }),
             Table.configure({ resizable: true }),

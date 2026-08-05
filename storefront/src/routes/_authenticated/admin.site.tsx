@@ -29,7 +29,7 @@ function AdminSite() {
           contenido por defecto y el sitio nunca se rompe.
         </p>
       </div>
-      <MediaCard overrides={q.data!.media} />
+      <MediaCard overrides={q.data!.media} testimonials={q.data!.testimonials ?? {}} />
       <FaqCard current={q.data!.faqs} />
       <LegalCard legal={q.data!.legal} />
       <SocialCard social={q.data!.social} />
@@ -47,7 +47,13 @@ async function uploadSiteAsset(slot: string, file: File): Promise<string> {
 }
 
 // ─── Media (imágenes y videos de la home) ─────────────────────────────────
-function MediaCard({ overrides }: { overrides: Record<string, string> }) {
+function MediaCard({
+  overrides,
+  testimonials,
+}: {
+  overrides: Record<string, string>;
+  testimonials: Record<string, { name?: string; role?: string }>;
+}) {
   return (
     <section className="rounded-2xl border border-brand-line bg-white p-5">
       <h3 className="text-sm font-semibold text-brand-ink">Imágenes y videos</h3>
@@ -58,7 +64,12 @@ function MediaCard({ overrides }: { overrides: Record<string, string> }) {
       </p>
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         {MEDIA_SLOTS.map((slot) => (
-          <MediaSlotRow key={slot.id} slot={slot} currentUrl={overrides[slot.id]} />
+          <MediaSlotRow
+            key={slot.id}
+            slot={slot}
+            currentUrl={overrides[slot.id]}
+            testimonial={testimonials[slot.id]}
+          />
         ))}
       </div>
     </section>
@@ -68,10 +79,13 @@ function MediaCard({ overrides }: { overrides: Record<string, string> }) {
 function MediaSlotRow({
   slot,
   currentUrl,
+  testimonial,
 }: {
   slot: (typeof MEDIA_SLOTS)[number];
   currentUrl?: string;
+  testimonial?: { name?: string; role?: string };
 }) {
+  const esTestimonio = slot.kind === "image" && slot.id.startsWith("testimonial-");
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -159,7 +173,71 @@ function MediaSlotRow({
             onChange={(e) => onFile(e.target.files?.[0])}
           />
         </div>
+
+        {/* En los testimonios, nombre y rol se editan aquí mismo: es donde el
+            admin sube la foto de esa persona, así no hay que buscarlos en otra
+            pantalla. */}
+        {esTestimonio ? <TestimonioTextos slot={slot.id} actual={testimonial} /> : null}
       </div>
+    </div>
+  );
+}
+
+/** Nombre y subtítulo de un testimonio. Vacío = el texto por defecto de la home. */
+function TestimonioTextos({
+  slot,
+  actual,
+}: {
+  slot: string;
+  actual?: { name?: string; role?: string };
+}) {
+  const qc = useQueryClient();
+  const [name, setName] = useState(actual?.name ?? "");
+  const [role, setRole] = useState(actual?.role ?? "");
+  useEffect(() => {
+    setName(actual?.name ?? "");
+    setRole(actual?.role ?? "");
+  }, [actual?.name, actual?.role]);
+
+  const sucio = (actual?.name ?? "") !== name || (actual?.role ?? "") !== role;
+
+  const guardar = useMutation({
+    mutationFn: () => adminApi.updateSiteContent({ testimonials: { [slot]: { name, role } } }),
+    onSuccess: () => {
+      toast.success("Testimonio actualizado");
+      qc.invalidateQueries({ queryKey: [...QK] });
+      qc.invalidateQueries({ queryKey: ["site-content"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Error"),
+  });
+
+  const input =
+    "w-full rounded-lg border border-brand-line px-2 py-1 text-[11px] focus:border-brand-ink focus:outline-none";
+
+  return (
+    <div className="mt-2 grid gap-1.5 border-t border-brand-line/70 pt-2">
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Nombre (ej. Carlos M.)"
+        className={input}
+      />
+      <input
+        value={role}
+        onChange={(e) => setRole(e.target.value)}
+        placeholder="Subtítulo (ej. Profesional en Marketing)"
+        className={input}
+      />
+      {sucio ? (
+        <button
+          type="button"
+          onClick={() => guardar.mutate()}
+          disabled={guardar.isPending}
+          className="justify-self-start rounded-full bg-brand-ink px-2.5 py-1 text-[11px] font-semibold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
+        >
+          {guardar.isPending ? "Guardando…" : "Guardar textos"}
+        </button>
+      ) : null}
     </div>
   );
 }

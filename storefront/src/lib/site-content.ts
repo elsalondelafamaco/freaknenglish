@@ -96,6 +96,8 @@ export type SiteContent = {
   faqs: SiteFaq[];
   legal: { privacy?: string; terms?: string };
   social: { instagram?: string; facebook?: string };
+  /** slot de imagen → nombre y rol del testimonio, editables desde el admin. */
+  testimonials: Record<string, { name?: string; role?: string }>;
 };
 
 export const DEFAULT_SITE_CONTENT: SiteContent = {
@@ -103,6 +105,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   faqs: DEFAULT_FAQS,
   legal: DEFAULT_LEGAL,
   social: DEFAULT_SOCIAL,
+  testimonials: {},
 };
 
 const CACHE_KEY = "freakn.siteContent.v1";
@@ -150,6 +153,7 @@ export function mergeSiteContent(overrides: SiteContentOverrides | null | undefi
     faqs: overrides.faqs?.length ? overrides.faqs : DEFAULT_FAQS,
     legal: { ...DEFAULT_LEGAL, ...(overrides.legal ?? {}) },
     social: { ...DEFAULT_SOCIAL, ...(overrides.social ?? {}) },
+    testimonials: overrides.testimonials ?? {},
   };
 }
 

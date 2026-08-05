@@ -41,7 +41,7 @@ const ITEMS = [
 
 export function Testimonials() {
   const trackRef = useRef<HTMLDivElement>(null);
-  const { media } = useSiteContent();
+  const { media, testimonials } = useSiteContent();
   const [video, setVideo] = useState<{ src: string; title: string } | null>(null);
 
   const scrollBy = (dir: 1 | -1) => {
@@ -88,6 +88,10 @@ export function Testimonials() {
         >
           {ITEMS.map((item) => {
             const videoUrl = media[item.videoSlot];
+            // Nombre y rol editables desde el admin (misma tarjeta donde se
+            // sube la foto); si no se configuraron, quedan los del bundle.
+            const nombre = testimonials[item.imageSlot]?.name?.trim() || item.name;
+            const rol = testimonials[item.imageSlot]?.role?.trim() || item.role;
             return (
               <article
                 key={item.name}
@@ -104,22 +108,22 @@ export function Testimonials() {
                   <MediaThumb
                     imageSlot={item.imageSlot}
                     videoUrl={videoUrl}
-                    alt={item.name}
+                    alt={nombre}
                     className="absolute inset-0 h-full w-full object-cover"
                   />
                   <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 bg-gradient-to-t from-black/70 via-black/40 to-transparent p-4 text-white">
                     {videoUrl ? (
                       <button
-                        onClick={() => setVideo({ src: videoUrl, title: item.name })}
+                        onClick={() => setVideo({ src: videoUrl, title: nombre })}
                         className="flex size-9 items-center justify-center rounded-full bg-white/90 transition-all duration-200 hover:scale-110 hover:bg-white active:scale-95"
-                        aria-label={`Reproducir testimonio de ${item.name}`}
+                        aria-label={`Reproducir testimonio de ${nombre}`}
                       >
                         <Play className="size-4 translate-x-0.5 fill-brand-ink text-brand-ink" />
                       </button>
                     ) : null}
                     <div>
-                      <div className="text-sm font-semibold">{item.name}</div>
-                      <div className="text-xs opacity-80">{item.role}</div>
+                      <div className="text-sm font-semibold">{nombre}</div>
+                      <div className="text-xs opacity-80">{rol}</div>
                     </div>
                   </div>
                 </div>

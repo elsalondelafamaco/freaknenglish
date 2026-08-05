@@ -1,8 +1,12 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
+import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common'
 import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
+  ListObjectsV2Command,
+  CopyObjectCommand,
+  HeadObjectCommand,
   HeadBucketCommand,
   CreateBucketCommand,
   PutBucketPolicyCommand,
@@ -133,5 +137,88 @@ export class StorageService implements OnModuleInit {
     } catch (err) {
       this.logger.warn(`No se pudo eliminar ${storageKey}: ${(err as Error).message}`)
     }
+  }
+
+  // ─── Explorador de archivos (módulo Storage del admin) ────────────────
+
+  /** URL pública de una clave. Los objetos del bucket son de lectura pública. */
+  publicUrlFor(storageKey: string): string {
+    return `${this.publicBase}/${storageKey}`
+  }
+
+  /**
+   * Lista objetos del bucket, paginado. `prefix` filtra por carpeta
+   * (`site/`, `lessons/`…) y `cursor` es el token de continuación de S3.
+   */
+  async list(opts: { prefix?: string; cursor?: string; limit?: number } = {}): Promise<{
+    items: Array<{ key: string; size: number; lastModified: string | null; url: string }>
+    nextCursor: string | null
+    /** "Carpetas" (prefijos comunes) cuando no se pide una en concreto. */
+    folders: string[]
+  }> {
+    const res = await this.client.send(
+      new ListObjectsV2Command({
+        Bucket: this.bucket,
+        Prefix: opts.prefix || undefined,
+        MaxKeys: Math.min(1000, Math.max(1, opts.limit ?? 200)),
+        ContinuationToken: opts.cursor || undefined,
+      }),
+    )
+    const items = (res.Contents ?? [])
+      // S3 devuelve la propia "carpeta" como objeto de 0 bytes: no es un archivo.
+      .filter((o) => o.Key && !o.Key.endsWith('/'))
+      .map((o) => ({
+        key: o.Key!,
+        size: o.Size ?? 0,
+        lastModified: o.LastModified ? o.LastModified.toISOString() : null,
+        url: this.publicUrlFor(o.Key!),
+      }))
+    // Primer segmento de cada clave = carpeta, para poder filtrar en la UI.
+    const folders = [...new Set(items.map((i) => i.key.split('/')[0]).filter(Boolean))].sort()
+    return { items, nextCursor: res.NextContinuationToken ?? null, folders }
+  }
+
+  /**
+   * Renombra (mueve) un objeto: S3 no tiene rename, así que se copia y se
+   * borra el original. Falla si el destino ya existe, para no pisar archivos
+   * por accidente.
+   */
+  async rename(from: string, to: string): Promise<{ key: string; url: string }> {
+    if (!from || !to) throw new BadRequestException('Origen y destino son obligatorios')
+    if (from === to) return { key: to, url: this.publicUrlFor(to) }
+    let existe = true
+    try {
+      await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: to }))
+    } catch {
+      existe = false
+    }
+    // 400 y no 500: es un choque esperable y el admin necesita leer el motivo.
+    if (existe) throw new BadRequestException(`Ya existe un archivo en "${to}"`)
+
+    await this.client.send(
+      new CopyObjectCommand({
+        Bucket: this.bucket,
+        // CopySource va con el bucket delante y URL-encoded.
+        CopySource: `/${this.bucket}/${encodeURIComponent(from).replace(/%2F/g, '/')}`,
+        Key: to,
+      }),
+    )
+    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: from }))
+    return { key: to, url: this.publicUrlFor(to) }
+  }
+
+  /** Borra varios objetos de un tirón. Devuelve cuántos se eliminaron. */
+  async deleteMany(keys: string[]): Promise<number> {
+    const limpias = keys.filter(Boolean)
+    if (limpias.length === 0) return 0
+    const res = await this.client.send(
+      new DeleteObjectsCommand({
+        Bucket: this.bucket,
+        Delete: { Objects: limpias.map((Key) => ({ Key })), Quiet: true },
+      }),
+    )
+    const errores = res.Errors ?? []
+    for (const e of errores) this.logger.warn(`No se pudo eliminar ${e.Key}: ${e.Message}`)
+    return limpias.length - errores.length
   }
 }

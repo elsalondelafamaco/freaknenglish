@@ -180,11 +180,14 @@ export const settingsApi = {
 
 // ─── Contenido editable del sitio (home) ───────────────────────────────
 export type SiteFaq = { q: string; a: string };
+export type SiteTestimonial = { name?: string; role?: string };
 export type SiteContentOverrides = {
   media: Record<string, string>;
   faqs: SiteFaq[] | null;
   legal: Record<string, string>;
   social: Record<string, string>;
+  /** slot de imagen → nombre y rol del testimonio. */
+  testimonials?: Record<string, SiteTestimonial>;
 };
 
 export const exchangeApi = {
@@ -508,7 +511,21 @@ export const adminApi = {
     faqs?: SiteFaq[] | null;
     legal?: Record<string, string | null>;
     social?: Record<string, string | null>;
+    testimonials?: Record<string, SiteTestimonial | null>;
   }) => apiPatch<SiteContentOverrides>("/admin/settings/site", body),
+  // ─── Explorador de storage (MinIO/S3) ────────────────────────────────
+  storageList: (params: { prefix?: string; cursor?: string } = {}) =>
+    apiGet<{
+      items: Array<{ key: string; size: number; lastModified: string | null; url: string }>;
+      nextCursor: string | null;
+      folders: string[];
+    }>("/admin/storage", params as any),
+  storageSign: (body: { filename: string; contentType?: string; folder?: string }) =>
+    apiPost<{ uploadUrl: string; publicUrl: string; storageKey: string }>("/admin/storage/sign", body),
+  storageRename: (from: string, to: string) =>
+    apiPatch<{ key: string; url: string }>("/admin/storage/rename", { from, to }),
+  storageDelete: (keys: string[]) =>
+    apiPost<{ ok: boolean; eliminados: number }>("/admin/storage/delete", { keys }),
   signSiteUpload: (body: { filename: string; contentType?: string; siteSlot: string }) =>
     apiPost<{ uploadUrl: string; publicUrl: string; storageKey: string }>("/admin/uploads/sign", body),
   updateContact: (body: { whatsappNumber?: string; whatsappMessage?: string }) =>

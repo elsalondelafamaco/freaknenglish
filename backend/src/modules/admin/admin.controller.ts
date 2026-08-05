@@ -387,6 +387,7 @@ export class AdminController {
       faqs?: Array<{ q: string; a: string }> | null
       legal?: Record<string, string | null>
       social?: Record<string, string | null>
+      testimonials?: Record<string, { name?: string; role?: string } | null>
     },
   ) {
     return this.svc.updateSiteContent(body)
@@ -410,6 +411,36 @@ export class AdminController {
   @Post('uploads/sign')
   signUpload(@Body() body: { filename: string; contentType?: string; lessonId?: string; siteSlot?: string }) {
     return this.svc.signUpload(body)
+  }
+
+  // ─── Explorador de storage ──────────────────────────────────────────────
+
+  /** @endpoint GET /api/v1/admin/storage?prefix=&cursor= */
+  @Get('storage')
+  storageList(@Query('prefix') prefix?: string, @Query('cursor') cursor?: string) {
+    return this.svc.storageList({ prefix, cursor })
+  }
+
+  /**
+   * @endpoint POST /api/v1/admin/storage/sign
+   * Body: { filename, contentType?, folder? } — el admin elige la ruta, para
+   * que la URL pública quede legible y se pueda pegar donde haga falta.
+   */
+  @Post('storage/sign')
+  storageSign(@Body() body: { filename: string; contentType?: string; folder?: string }) {
+    return this.svc.storageSignUpload(body)
+  }
+
+  /** @endpoint PATCH /api/v1/admin/storage/rename  Body: { from, to } */
+  @Patch('storage/rename')
+  storageRename(@Body() body: { from: string; to: string }) {
+    return this.svc.storageRename(body?.from, body?.to)
+  }
+
+  /** @endpoint POST /api/v1/admin/storage/delete  Body: { keys: string[] } */
+  @Post('storage/delete')
+  storageDelete(@Body() body: { keys: string[] }) {
+    return this.svc.storageDelete(body?.keys ?? [])
   }
 
   /** @endpoint POST /api/v1/admin/content/lessons/:id/attachments */

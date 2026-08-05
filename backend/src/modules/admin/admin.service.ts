@@ -1317,6 +1317,9 @@ export class AdminService {
       faqs: Array.isArray(v.faqs) ? v.faqs : null,
       legal: v.legal && typeof v.legal === 'object' ? v.legal : {},
       social: v.social && typeof v.social === 'object' ? v.social : {},
+      // Nombre y rol de cada testimonio, por slot de imagen. Vacío = se usan
+      // los que vienen quemados en el bundle de la home.
+      testimonials: v.testimonials && typeof v.testimonials === 'object' ? v.testimonials : {},
     }
   }
 
@@ -1325,6 +1328,8 @@ export class AdminService {
     faqs?: Array<{ q: string; a: string }> | null
     legal?: Record<string, string | null>
     social?: Record<string, string | null>
+    /** slot de imagen → { name, role }. Sin entrada se usa el texto por defecto. */
+    testimonials?: Record<string, { name?: string; role?: string } | null>
   }) {
     const current = await this.siteContent()
     const mergeMap = (base: Record<string, string>, p?: Record<string, string | null>) => {
@@ -1335,11 +1340,23 @@ export class AdminService {
       }
       return out
     }
+    // Los testimonios se mezclan por slot: mandar solo el que cambió no borra
+    // los demás, y un campo vacío vuelve al texto por defecto de la home.
+    const testimonials: Record<string, { name?: string; role?: string }> = {
+      ...((current as any).testimonials ?? {}),
+    }
+    for (const [slot, val] of Object.entries(patch.testimonials ?? {})) {
+      const name = val?.name?.trim()
+      const role = val?.role?.trim()
+      if (!name && !role) delete testimonials[slot]
+      else testimonials[slot] = { ...(name ? { name } : {}), ...(role ? { role } : {}) }
+    }
     const next = {
       media: mergeMap(current.media, patch.media),
       faqs: patch.faqs !== undefined ? patch.faqs : current.faqs,
       legal: mergeMap(current.legal, patch.legal),
       social: mergeMap(current.social, patch.social),
+      testimonials,
     }
     await this.prisma.appSetting.upsert({
       where: { key: 'site.content' },
@@ -1377,6 +1394,40 @@ export class AdminService {
       contentType: body.contentType,
       prefix: body.lessonId ? `lessons/${body.lessonId}` : 'cms/uploads',
     })
+  }
+
+  // ─── Explorador de storage (módulo Storage del admin) ─────────────────
+
+  /** Lista el bucket. `prefix` filtra por carpeta ("audio/", "site/"…). */
+  storageList(opts: { prefix?: string; cursor?: string }) {
+    return this.storage.list(opts)
+  }
+
+  /**
+   * Firma una subida al explorador. A diferencia de `signUpload`, aquí el
+   * admin elige carpeta y nombre: el archivo queda en una ruta predecible
+   * porque la URL se va a pegar a mano en otros lados (audios, por ejemplo).
+   */
+  storageSignUpload(body: { filename: string; contentType?: string; folder?: string }) {
+    const carpeta = (body.folder ?? 'media').toLowerCase().replace(/[^a-z0-9/_-]+/g, '-')
+    const nombre = body.filename.replace(/[^a-zA-Z0-9._-]+/g, '_')
+    return this.storage.signUpload({
+      filename: body.filename,
+      contentType: body.contentType,
+      // Clave exacta: sin uuid, para que la URL sea legible y estable. Si el
+      // nombre se repite, se reemplaza el archivo (el admin ve el listado y
+      // decide) — igual que reemplazar un asset del sitio.
+      fixedKey: `${carpeta.replace(/^\/+|\/+$/g, '')}/${nombre}`,
+    })
+  }
+
+  async storageRename(from: string, to: string) {
+    return this.storage.rename(from, to)
+  }
+
+  async storageDelete(keys: string[]) {
+    const eliminados = await this.storage.deleteMany(keys)
+    return { ok: true, eliminados }
   }
 
   attachLessonFile(

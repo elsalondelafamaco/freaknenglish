@@ -66,6 +66,11 @@ export class SchedulingController {
     return this.svc.assignRequest(id, body.teacherId)
   }
 
+  /** @endpoint GET /api/v1/admin/availability  (todos los profes, para el calendario) */
+  @Roles('admin')
+  @Get('admin/availability')
+  allAvailability() { return this.svc.allTeachersAvailability() }
+
   /** @endpoint GET /api/v1/admin/teachers/:id/availability */
   @Roles('admin')
   @Get('admin/teachers/:id/availability')

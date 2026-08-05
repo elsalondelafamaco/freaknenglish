@@ -12,8 +12,6 @@ const STEPS = [
     body: "Selecciona uno de los horarios que mejor se adapta a tus necesidades.",
     imageSlot: "how-1-image",
     videoSlot: "how-1-video",
-    badge: "Llamada 15 min",
-    badgeSub: "Conoce cómo funciona",
   },
   {
     icon: Monitor,
@@ -92,8 +90,8 @@ function StepCard({
   body: string;
   imageSlot: string;
   videoUrl?: string;
-  badge: string;
-  badgeSub: string;
+  badge?: string;
+  badgeSub?: string;
   onPlay: (src: string) => void;
 }) {
   return (
@@ -121,10 +119,14 @@ function StepCard({
           </button>
         ) : null}
 
-        <div className="absolute bottom-3 left-3 rounded-xl bg-white/95 px-2.5 py-1.5 shadow">
-          <div className="text-[11px] font-semibold text-brand-ink">{badge}</div>
-          <div className="text-[10px] text-brand-ink/60">{badgeSub}</div>
-        </div>
+        {/* Sin badge no se pinta la cajita: quedaba un recuadro blanco vacío
+            sobre la imagen. */}
+        {badge ? (
+          <div className="absolute bottom-3 left-3 rounded-xl bg-white/95 px-2.5 py-1.5 shadow">
+            <div className="text-[11px] font-semibold text-brand-ink">{badge}</div>
+            {badgeSub ? <div className="text-[10px] text-brand-ink/60">{badgeSub}</div> : null}
+          </div>
+        ) : null}
 
         <span className="absolute bottom-3 right-3 flex size-7 items-center justify-center rounded-full bg-brand-yellow">
           <Zap className="size-4 fill-brand-ink text-brand-ink" />

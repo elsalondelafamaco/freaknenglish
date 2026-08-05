@@ -77,3 +77,22 @@ export function formatCop(amount: number): string {
     maximumFractionDigits: 0,
   }).format(amount);
 }
+/**
+ * COP que realmente se le va a cobrar a un plan.
+ *
+ * Es la MISMA regla del backend (`checkout.service.ts`): el precio de venta es
+ * el USD y se convierte con la TRM del día; `priceCop` es solo el respaldo para
+ * planes sin USD. La home mostraba `priceCop` a secas, que quedó viejo, así que
+ * anunciaba un valor distinto al que después salía en el checkout y en el cobro.
+ *
+ * Vive aquí para que landing y checkout no puedan volver a divergir.
+ */
+export function copAcobrar(
+  plan: { priceUsd?: number | null; priceCop: number },
+  trm: number | null | undefined,
+): number {
+  if (plan.priceUsd && plan.priceUsd > 0 && trm && trm > 0) {
+    return Math.round(plan.priceUsd * trm);
+  }
+  return plan.priceCop;
+}

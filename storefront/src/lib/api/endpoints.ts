@@ -144,6 +144,11 @@ export const scheduleApi = {
   adminPending: () => apiGet<any[]>("/admin/schedule/requests"),
   adminAssign: (userId: string, teacherId: string) =>
     apiPost<any>(`/admin/schedule/requests/${userId}/assign`, { teacherId }),
+  /** Disponibilidad de todos los profes, para el calendario global del admin. */
+  adminAllAvailability: () =>
+    apiGet<Array<{ id: string; teacherId: string; weekday: number; startsAt: string; endsAt: string }>>(
+      "/admin/availability",
+    ),
   adminTeacherAvailability: (teacherId: string) =>
     apiGet<Array<{ id: string; weekday: number; startsAt: string; endsAt: string }>>(`/admin/teachers/${teacherId}/availability`),
   adminSetTeacherAvailability: (

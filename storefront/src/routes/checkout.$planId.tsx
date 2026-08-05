@@ -9,6 +9,7 @@ import { ActivePlanScreen, useActivePlanGate } from "@/components/site/ActivePla
 import { LegalLinks } from "@/components/site/LegalLinks";
 import { PhoneInput, validatePhone } from "@/components/app/PhoneInput";
 import { checkoutApi, plansApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
+import { copAcobrar } from "@/lib/domain/plans";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/checkout/$planId")({
@@ -91,7 +92,7 @@ function CheckoutPage() {
     );
   }
 
-  const cop = plan.priceUsd && trm ? Math.round(plan.priceUsd * trm) : plan.priceCop;
+  const cop = copAcobrar(plan, trm);
 
   async function submitForm(e: React.FormEvent) {
     e.preventDefault();

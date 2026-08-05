@@ -2,7 +2,7 @@ import { Check, MessageCircle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { PLANS, formatCop } from "@/lib/domain/plans";
+import { PLANS, copAcobrar, formatCop } from "@/lib/domain/plans";
 import { plansApi } from "@/lib/api/endpoints";
 
 // Fallback de venta si el backend no responde: nunca frenamos una compra.
@@ -66,7 +66,7 @@ export function Pricing() {
         <div className="mt-12 grid gap-6 lg:grid-cols-3 lg:items-center">
           {isPending || !plans
             ? [0, 1, 2].map((i) => <PriceCardSkeleton key={i} />)
-            : plans.map((p) => <PriceCard key={p.id} plan={p} />)}
+            : plans.map((p) => <PriceCard key={p.id} plan={p} trm={trm} />)}
         </div>
       </div>
     </section>
@@ -146,7 +146,7 @@ function PricingWhatsAppFallback() {
   );
 }
 
-function PriceCard({ plan }: { plan: ApiPlan }) {
+function PriceCard({ plan, trm }: { plan: ApiPlan; trm: number | null }) {
   const highlight = plan.highlight;
   const priceLabel = plan.priceUsd ? `$${plan.priceUsd}` : formatCop(plan.priceCop);
   const unitLabel = plan.priceUsd ? "USD" : "COP";
@@ -171,7 +171,10 @@ function PriceCard({ plan }: { plan: ApiPlan }) {
           <span className="text-base font-medium text-brand-ink/60">{unitLabel} / mes</span>
         </div>
         <p className="mt-1 text-xs text-brand-ink/55">
-          Se cobra {formatCop(plan.priceCop)} COP.
+          {/* Mismo cálculo que el checkout y que el cobro real: USD × TRM.
+              Antes se pintaba el priceCop guardado, que estaba viejo y no
+              cuadraba ni con la TRM de arriba ni con lo que salía al pagar. */}
+          Se cobra {formatCop(copAcobrar(plan, trm))} COP.
         </p>
         <Link
           to="/checkout/$planId"

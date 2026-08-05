@@ -108,12 +108,16 @@ function VistaImagen({ node, updateAttributes, selected, editor, deleteNode }: N
 
   // Si otro usuario cambia el ancho mientras arrastramos, gana lo nuestro hasta
   // soltar; al soltar se sincroniza solo. Esto evita saltos raros a mitad del gesto.
+  // La guarda del `if` importa: TipTap monta los NodeViews en portales y los
+  // actualiza dentro del render del editor, así que un `setState` incondicional
+  // aquí disparaba el aviso "Cannot update a component while rendering another".
+  // Con la comprobación, en el caso normal el efecto no hace nada.
   useEffect(() => {
-    if (!selected) {
+    if (!selected && (anchoRef.current !== null || anchoArrastre !== null)) {
       anchoRef.current = null;
       setAnchoArrastre(null);
     }
-  }, [selected]);
+  }, [selected, anchoArrastre]);
 
   const manija =
     "absolute top-1/2 z-10 h-10 w-2.5 -translate-y-1/2 cursor-ew-resize rounded-full border-2 border-white bg-brand-ink shadow";

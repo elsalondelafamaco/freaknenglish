@@ -450,3 +450,11 @@ html {
   .board-print-area { position: absolute !important; left: 0; top: 0; width: 100%; padding: 0; }
   .board-print-area .ProseMirror { min-height: auto !important; }
 }
+
+/* Disponibilidad del profe (eventos de fondo del calendario del admin).
+   FullCalendar les aplica `opacity: .3` de fábrica; encima del alpha del color
+   quedaban prácticamente invisibles. Se anula esa opacidad y el tono lo pone
+   el color del profe, que ya viene con su propio alpha. */
+.freakn-calendar .fc-bg-event {
+  opacity: 1;
+}

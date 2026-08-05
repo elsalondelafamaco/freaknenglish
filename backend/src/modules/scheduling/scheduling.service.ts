@@ -398,6 +398,23 @@ export class SchedulingService {
     return this.prisma.teacherAvailability.findMany({ where: { teacherId }, orderBy: [{ weekday: 'asc' }, { startsAt: 'asc' }] })
   }
 
+  /**
+   * Disponibilidad declarada de TODOS los profesores activos, para pintarla de
+   * fondo en el calendario global del admin. Se devuelve en una sola llamada
+   * porque el calendario la necesita completa: pedir una por profesor serían
+   * N requests cada vez que se cambia de semana.
+   */
+  async allTeachersAvailability() {
+    const profes = await this.prisma.user.findMany({
+      where: IS_ACTIVE_TEACHER,
+      select: { id: true },
+    })
+    return this.prisma.teacherAvailability.findMany({
+      where: { teacherId: { in: profes.map((p) => p.id) } },
+      orderBy: [{ weekday: 'asc' }, { startsAt: 'asc' }],
+    })
+  }
+
   async setTeacherAvailability(teacherId: string, slots: Array<{ weekday: number; startsAt: string; endsAt: string }>) {
     await this.prisma.teacherAvailability.deleteMany({ where: { teacherId } })
     if (slots.length === 0) return []

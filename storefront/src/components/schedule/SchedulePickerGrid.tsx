@@ -61,6 +61,20 @@ export function toggleSlot(
     toast.info(cfg.maxPerDay === 1 ? "Solo una clase por día." : `Máximo ${cfg.maxPerDay} clases por día.`);
     return null;
   }
+  // Clases largas (planes internos, ej. 75 min): ocupan también la(s) hora(s)
+  // siguiente(s), así que no caben al final de la ventana ni pegadas entre sí.
+  const span = Math.max(1, Math.ceil(cfg.durationMin / 60));
+  if (span > 1) {
+    if (slot.hour + span - 1 > cfg.endHour) {
+      toast.info(`Una clase de ${cfg.durationMin} min no cabe empezando a las ${slot.hour}:00 (se sale de la ventana).`);
+      return null;
+    }
+    const tooClose = selected.some((s) => s.weekday === slot.weekday && Math.abs(s.hour - slot.hour) < span);
+    if (tooClose) {
+      toast.info(`Una clase de ${cfg.durationMin} min ocupa también la hora siguiente: separa las franjas del mismo día.`);
+      return null;
+    }
+  }
   return [...selected, slot];
 }
 

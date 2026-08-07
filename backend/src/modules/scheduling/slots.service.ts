@@ -88,23 +88,47 @@ export class SlotsService {
     return this.getConfig()
   }
 
-  /** Valida una selección contra la ventana global y el plan. */
-  async validateSelection(slots: SlotRef[], daysPerWeek: number): Promise<ScheduleConfig> {
+  /**
+   * Valida una selección contra la ventana global y el plan. `durationMin`
+   * (default 50) aplica a planes internos con clases largas: una clase de
+   * 75 min ocupa también la hora siguiente, así que no cabe al final de la
+   * ventana ni pegada a otra franja del mismo día.
+   */
+  async validateSelection(slots: SlotRef[], daysPerWeek: number, durationMin = 50): Promise<ScheduleConfig> {
     const cfg = await this.getConfig()
     if (!Array.isArray(slots) || slots.length !== daysPerWeek) {
       throw new BadRequestException(`Debes seleccionar exactamente ${daysPerWeek} franjas`)
     }
+    // Horas-celda que abarca cada clase (75 min ⇒ 2 celdas).
+    const span = Math.max(1, Math.ceil(durationMin / 60))
     const perDay = new Map<number, number>()
     const seen = new Set<string>()
     for (const s of slots) {
       if (!Number.isInteger(s?.weekday) || !Number.isInteger(s?.hour)) throw new BadRequestException('Franja inválida')
       if (!cfg.days.includes(s.weekday)) throw new BadRequestException('Día fuera de la ventana permitida')
       if (s.hour < cfg.startHour || s.hour > cfg.endHour) throw new BadRequestException('Hora fuera de la ventana permitida')
+      if (s.hour + span - 1 > cfg.endHour) {
+        throw new BadRequestException(
+          `Una clase de ${durationMin} min que empieza a las ${s.hour}:00 se sale de la ventana de horario (última franja ${cfg.endHour}:00)`,
+        )
+      }
       if (seen.has(key(s))) throw new BadRequestException('Franja repetida')
       seen.add(key(s))
       perDay.set(s.weekday, (perDay.get(s.weekday) ?? 0) + 1)
       if ((perDay.get(s.weekday) ?? 0) > cfg.maxPerDay) {
         throw new BadRequestException(`Máximo ${cfg.maxPerDay} clase(s) por día`)
+      }
+    }
+    if (span > 1) {
+      for (const a of slots) {
+        for (const b of slots) {
+          if (a === b || a.weekday !== b.weekday) continue
+          if (Math.abs(a.hour - b.hour) < span) {
+            throw new BadRequestException(
+              `Las franjas del mismo día deben ir separadas: una clase de ${durationMin} min ocupa también la(s) hora(s) siguiente(s)`,
+            )
+          }
+        }
       }
     }
     return cfg
@@ -147,13 +171,23 @@ export class SlotsService {
               }
             : {}),
         },
-        select: { teacherId: true, weekday: true, hour: true },
+        select: {
+          teacherId: true,
+          weekday: true,
+          hour: true,
+          // Un estudiante con clase larga (ej. 75 min) ocupa también la(s)
+          // hora(s) siguiente(s) aunque el slot solo viva en la hora de inicio.
+          student: { select: { classDurationMin: true } },
+        },
       }),
     ])
     const occ = new Map<string, Set<string>>()
     for (const o of occupied) {
       if (!occ.has(o.teacherId)) occ.set(o.teacherId, new Set())
-      occ.get(o.teacherId)!.add(`${o.weekday}:${o.hour}`)
+      const span = Math.max(1, Math.ceil((o.student?.classDurationMin ?? 50) / 60))
+      for (let i = 0; i < span; i++) {
+        occ.get(o.teacherId)!.add(`${o.weekday}:${o.hour + i}`)
+      }
     }
     const free = new Map<string, Set<string>>()
     for (const t of teachers) {

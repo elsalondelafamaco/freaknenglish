@@ -470,10 +470,31 @@ export class TeachersService {
     // clase de más de 60 min ocupa también la(s) franja(s) siguiente(s), así
     // que el chequeo cubre todas las horas que abarca la clase.
     const durMin = Math.max(1, Math.round(durMs > 0 ? durMs / 60_000 : 50))
-    const spanHours = Array.from(
-      { length: Math.max(1, Math.ceil(durMin / 60)) },
-      (_, i) => newParts.hour + i,
-    )
+    const span = Math.max(1, Math.ceil(durMin / 60))
+    if (newParts.hour + span - 1 > cfg.endHour) {
+      throw new BadRequestException(
+        `Una clase de ${durMin} min que empieza a las ${newParts.hour}:00 se sale de la ventana de horario`,
+      )
+    }
+    if (durMin > 60) {
+      // Igual que en el alta admin: la disponibilidad pintada del profe debe
+      // cubrir el intervalo completo (horas seguidas) en el destino.
+      const toMin = (s: string) => {
+        const [h, m] = s.split(':').map(Number)
+        return (h ?? 0) * 60 + (m ?? 0)
+      }
+      const avail = await this.prisma.teacherAvailability.findMany({ where: { teacherId } })
+      const needStart = newParts.hour * 60
+      const covered = avail.some(
+        (r) => r.weekday === newParts.weekday && toMin(r.startsAt) <= needStart && toMin(r.endsAt) >= needStart + durMin,
+      )
+      if (!covered) {
+        throw new BadRequestException(
+          `No tienes disponibilidad continua para una clase de ${durMin} min en ese horario: pinta las horas seguidas en tu disponibilidad primero.`,
+        )
+      }
+    }
+    const spanHours = Array.from({ length: span }, (_, i) => newParts.hour + i)
     const occupied = await this.prisma.scheduleSlot.findFirst({
       where: {
         teacherId,

@@ -60,10 +60,20 @@ export class CheckoutService {
     }
 
     // Selección de horario (SDD-scheduling-v2): validar contra ventana + plan.
+    // Un estudiante interno con clase larga (classDurationMin) que renueva por
+    // aquí valida con SU duración: sus reglas de separación siguen aplicando.
     let assignmentMode: 'auto' | 'manual' | null = null
     const slots = input.slots ?? []
     if (slots.length > 0) {
-      await this.slots.validateSelection(slots, plan.daysPerWeek)
+      let durationMin = 50
+      if (input.userId) {
+        const u = await this.prisma.user.findUnique({
+          where: { id: input.userId },
+          select: { classDurationMin: true },
+        })
+        durationMin = u?.classDurationMin ?? 50
+      }
+      await this.slots.validateSelection(slots, plan.daysPerWeek, durationMin)
     }
 
     const intent = await this.prisma.paymentIntent.create({

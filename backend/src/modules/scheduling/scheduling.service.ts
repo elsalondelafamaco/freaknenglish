@@ -255,8 +255,10 @@ export class SchedulingService {
       throw new BadRequestException('Active subscription required')
     }
     const expected = user.subscription.plan.daysPerWeek
-    // Valida cantidad, ventana global y máximo por día (config admin).
-    await this.slots.validateSelection(blocks, expected)
+    // Valida cantidad, ventana global, máximo por día (config admin) y —para
+    // estudiantes con clase larga— separación y ajuste dentro de la ventana.
+    const durationMin = user.classDurationMin ?? 50
+    await this.slots.validateSelection(blocks, expected, durationMin)
 
     // Buscar profesor que cubra todos los bloques.
     const teachers = await this.prisma.user.findMany({
@@ -270,6 +272,16 @@ export class SchedulingService {
     )
 
     let effectiveMatch = match ?? null
+    if (effectiveMatch) {
+      // El match por hora de inicio no basta para clases largas ni ve las
+      // horas invadidas por otros estudiantes largos: la misma validación
+      // del alta admin decide; si no cabe, degrada a asignación manual.
+      try {
+        await this.assertBlocksFitTeacher(effectiveMatch.id, blocks, durationMin, userId)
+      } catch {
+        effectiveMatch = null
+      }
+    }
     if (effectiveMatch) {
       const holdRelease = await this.prisma.scheduleSlot.deleteMany({ where: { studentId: userId } })
       void holdRelease
@@ -373,26 +385,79 @@ export class SchedulingService {
     })
   }
 
+  /**
+   * Verifica que el profesor pueda recibir estos bloques con la duración
+   * dada. Una clase larga (p. ej. 75 min) ocupa también la(s) celda(s)
+   * siguiente(s), así que: (1) el choque con franjas de otros estudiantes se
+   * revisa sobre TODAS las horas que abarca la clase, y (2) con más de 60 min
+   * la disponibilidad declarada del profe debe cubrir el intervalo completo —
+   * es decir, tener las horas seguidas pintadas (8:00 Y 9:00 para un 8:00–9:15).
+   */
+  private async assertBlocksFitTeacher(
+    teacherId: string,
+    blocks: ScheduleBlock[],
+    durationMin: number,
+    excludeStudentId: string,
+  ) {
+    const span = Math.max(1, Math.ceil(durationMin / 60))
+    const cells: ScheduleBlock[] = blocks.flatMap((b) =>
+      Array.from({ length: span }, (_, i) => ({ weekday: b.weekday, hour: b.hour + i })),
+    )
+    // Franjas ocupadas del profe expandidas según la duración de CADA dueño:
+    // un estudiante largo ya asignado invade la hora siguiente aunque su slot
+    // solo viva en la hora de inicio.
+    const existing = await this.prisma.scheduleSlot.findMany({
+      where: {
+        teacherId,
+        status: { in: ['pending', 'active', 'held'] },
+        NOT: { studentId: excludeStudentId },
+      },
+      select: { weekday: true, hour: true, student: { select: { classDurationMin: true } } },
+    })
+    const occupied = new Set<string>()
+    for (const s of existing) {
+      const ownerSpan = Math.max(1, Math.ceil((s.student?.classDurationMin ?? 50) / 60))
+      for (let i = 0; i < ownerSpan; i++) occupied.add(`${s.weekday}:${s.hour + i}`)
+    }
+    const conflicts = cells.filter((c) => occupied.has(`${c.weekday}:${c.hour}`))
+    if (conflicts.length > 0) {
+      throw new BadRequestException(
+        `El profesor ya tiene ocupadas: ${conflicts
+          .map((c) => `${SchedulingService.DAY_NAMES[c.weekday]} ${c.hour}:00`)
+          .join(', ')} (las clases largas ocupan también la hora siguiente)`,
+      )
+    }
+    if (durationMin > 60) {
+      const toMin = (s: string) => {
+        const [h, m] = s.split(':').map(Number)
+        return (h ?? 0) * 60 + (m ?? 0)
+      }
+      const avail = await this.prisma.teacherAvailability.findMany({ where: { teacherId } })
+      for (const b of blocks) {
+        const needStart = b.hour * 60
+        const needEnd = needStart + durationMin
+        const covered = avail.some(
+          (r) => r.weekday === b.weekday && toMin(r.startsAt) <= needStart && toMin(r.endsAt) >= needEnd,
+        )
+        if (!covered) {
+          throw new BadRequestException(
+            `El profesor no tiene disponibilidad continua para una clase de ${durationMin} min el ${SchedulingService.DAY_NAMES[b.weekday]} a las ${b.hour}:00: necesita tener pintadas las horas seguidas (${b.hour}:00 y ${b.hour + span - 1}:00) en su disponibilidad.`,
+          )
+        }
+      }
+    }
+  }
+
   async assignRequest(studentId: string, teacherId: string) {
     const t = await this.prisma.user.findUnique({ where: { id: teacherId } })
     if (!t || !hasRole(t, 'teacher')) throw new BadRequestException('Invalid teacher')
-    const student = await this.prisma.user.findUnique({ where: { id: studentId }, select: { schedulePreferences: true } })
+    const student = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      select: { schedulePreferences: true, classDurationMin: true },
+    })
     const blocks = (student?.schedulePreferences as any as ScheduleBlock[] | null) ?? []
     if (blocks.length > 0) {
-      const conflicts = await this.prisma.scheduleSlot.findMany({
-        where: {
-          teacherId,
-          status: { in: ['pending', 'active', 'held'] },
-          OR: blocks.map((b) => ({ weekday: b.weekday, hour: b.hour })),
-          NOT: { studentId },
-        },
-        select: { weekday: true, hour: true },
-      })
-      if (conflicts.length > 0) {
-        throw new BadRequestException(
-          `El profesor ya tiene ocupadas: ${conflicts.map((c) => `d${c.weekday} ${c.hour}:00`).join(', ')}`,
-        )
-      }
+      await this.assertBlocksFitTeacher(teacherId, blocks, student?.classDurationMin ?? 50, studentId)
       await this.prisma.scheduleSlot.deleteMany({ where: { studentId } })
       await this.prisma.$transaction(
         blocks.map((b) =>
@@ -455,7 +520,7 @@ export class SchedulingService {
 
     const pending = await this.prisma.user.findMany({
       where: { scheduleAssignmentStatus: 'manual_pending', deletedAt: null },
-      select: { id: true, fullName: true, schedulePreferences: true },
+      select: { id: true, fullName: true, schedulePreferences: true, classDurationMin: true },
     })
 
     const reassigned: Array<{ id: string; fullName: string }> = []
@@ -468,6 +533,13 @@ export class SchedulingService {
         ),
       )
       if (!covers) continue
+      // Estudiantes con clase larga: mismas reglas que el alta admin
+      // (celdas invadidas + disponibilidad continua del profe).
+      try {
+        await this.assertBlocksFitTeacher(teacherId, blocks, s.classDurationMin ?? 50, s.id)
+      } catch {
+        continue // no cabe con este profe: sigue pendiente
+      }
       try {
         await this.prisma.scheduleSlot.deleteMany({ where: { studentId: s.id } })
         await this.prisma.$transaction(
@@ -530,25 +602,20 @@ export class SchedulingService {
       return { unassigned: true, movedSlots: 0, movedClasses: 0 }
     }
 
-    // Horarios cruzados: franjas del estudiante ya ocupadas por el nuevo profe.
+    // Horarios cruzados: franjas del estudiante ya ocupadas por el nuevo
+    // profe, incluyendo las horas que invade una clase larga, y (para >60 min)
+    // que el nuevo profe tenga la disponibilidad continua pintada.
     if (slots.length > 0) {
-      const conflicts = await this.prisma.scheduleSlot.findMany({
-        where: {
-          teacherId: newTeacherId,
-          status: { in: ['pending', 'active', 'held'] },
-          OR: slots.map((b) => ({ weekday: b.weekday, hour: b.hour })),
-          NOT: { studentId },
-        },
-        select: { weekday: true, hour: true },
+      const durStudent = await this.prisma.user.findUnique({
+        where: { id: studentId },
+        select: { classDurationMin: true },
       })
-      if (conflicts.length > 0) {
-        const detail = conflicts
-          .map((c) => `${SchedulingService.DAY_NAMES[c.weekday]} ${c.hour}:00`)
-          .join(', ')
-        throw new BadRequestException(
-          `Horario cruzado: el nuevo profesor ya tiene ocupado ${detail}. Reprograma esas franjas antes de reasignar.`,
-        )
-      }
+      await this.assertBlocksFitTeacher(
+        newTeacherId,
+        slots.map((s) => ({ weekday: s.weekday, hour: s.hour })),
+        durStudent?.classDurationMin ?? 50,
+        studentId,
+      )
       await this.prisma.scheduleSlot.updateMany({
         where: { studentId },
         data: { teacherId: newTeacherId },

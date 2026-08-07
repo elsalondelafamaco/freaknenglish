@@ -139,6 +139,7 @@ export class AdminController {
       plan?: { planId: string; endDate: string; startDate?: string | null }
       schedule?: Array<{ weekday: number; hour: number }>
       teacherId?: string
+      classDurationMin?: number | null
     },
   ) {
     return this.svc.createUser(body)

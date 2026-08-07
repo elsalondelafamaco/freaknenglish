@@ -724,10 +724,18 @@ export class AdminService {
     schedule?: SlotRef[]
     /** Profesor a asignar de una vez (requiere `schedule`). */
     teacherId?: string
+    /** Minutos por clase (planes internos tipo 2×75); vacío = 50. */
+    classDurationMin?: number | null
   }) {
     const email = input.email.toLowerCase()
     const exists = await this.prisma.user.findUnique({ where: { email } })
     if (exists) throw new Error('User already exists')
+    if (input.classDurationMin !== undefined && input.classDurationMin !== null) {
+      const dur = input.classDurationMin
+      if (!Number.isInteger(dur) || dur < 25 || dur > 180) {
+        throw new BadRequestException('La duración debe ser un entero entre 25 y 180 minutos')
+      }
+    }
     const extraRoles = (input.extraRoles ?? []).filter((r) => r !== input.role)
     const user = await this.prisma.user.create({
       data: {
@@ -736,6 +744,7 @@ export class AdminService {
         role: input.role,
         extraRoles,
         englishLevel: input.level,
+        classDurationMin: input.role === 'student' ? (input.classDurationMin ?? null) : null,
         passwordHash: null,
       },
     })
@@ -756,7 +765,7 @@ export class AdminService {
       // que el checkout (cantidad del plan, ventana y máximo por día) para no
       // dejar entrar por el admin selecciones que la app rechazaría.
       if (input.schedule?.length) {
-        await this.slotsSvc.validateSelection(input.schedule, sub.plan.daysPerWeek)
+        await this.slotsSvc.validateSelection(input.schedule, sub.plan.daysPerWeek, input.classDurationMin ?? 50)
         await this.prisma.user.update({
           where: { id: user.id },
           data: {

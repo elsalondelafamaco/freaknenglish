@@ -412,7 +412,9 @@ export class TeachersService {
     if (!c) throw new NotFoundException('Clase no encontrada')
     if (c.teacherId !== teacherId) throw new ForbiddenException('La clase no es tuya')
     if (isNaN(newStartsAt.getTime())) throw new BadRequestException('Fecha inválida')
-    const newEndsAt = new Date(newStartsAt.getTime() + 50 * 60 * 1000)
+    // Conserva la duración real de la clase (puede no ser 50 min).
+    const durMs = c.endsAt.getTime() - c.startsAt.getTime()
+    const newEndsAt = new Date(newStartsAt.getTime() + (durMs > 0 ? durMs : 50 * 60 * 1000))
 
     // AC-20: no soltar sobre otra clase del profe.
     const clash = await this.prisma.class.findFirst({
@@ -464,12 +466,19 @@ export class TeachersService {
     if (newParts.hour < cfg.startHour || newParts.hour > cfg.endHour) {
       throw new BadRequestException('Hora fuera de la ventana permitida')
     }
-    // Franja recurrente destino libre (puede ser del mismo estudiante).
+    // Franja recurrente destino libre (puede ser del mismo estudiante). Una
+    // clase de más de 60 min ocupa también la(s) franja(s) siguiente(s), así
+    // que el chequeo cubre todas las horas que abarca la clase.
+    const durMin = Math.max(1, Math.round(durMs > 0 ? durMs / 60_000 : 50))
+    const spanHours = Array.from(
+      { length: Math.max(1, Math.ceil(durMin / 60)) },
+      (_, i) => newParts.hour + i,
+    )
     const occupied = await this.prisma.scheduleSlot.findFirst({
       where: {
         teacherId,
         weekday: newParts.weekday,
-        hour: newParts.hour,
+        hour: { in: spanHours },
         status: { in: ['pending', 'active', 'held'] },
         NOT: { studentId: c.studentId },
       },
@@ -519,9 +528,27 @@ export class TeachersService {
       )
       const ns = new Date(newWall + TeachersService.BOG_MS)
       if (ns.getTime() <= Date.now()) continue // no mover al pasado (ej. Vie→Lun misma semana)
+      // Cada clase conserva su propia duración (puede no ser 50 min).
+      const fDurMs = f.endsAt.getTime() - f.startsAt.getTime()
+      const ne = new Date(ns.getTime() + (fDurMs > 0 ? fDurMs : 50 * 60 * 1000))
+      // El clash del arrastre solo cubrió la instancia arrastrada: cada semana
+      // se re-chequea contra las demás clases del profe (una clase larga puede
+      // invadir la hora de otro estudiante solo en algunas semanas). Si choca,
+      // esa semana se queda donde estaba en vez de crear una doble-reserva.
+      const weekClash = await this.prisma.class.findFirst({
+        where: {
+          teacherId,
+          id: { not: f.id },
+          status: { in: ['scheduled', 'rescheduled'] },
+          startsAt: { lt: ne },
+          endsAt: { gt: ns },
+        },
+        select: { id: true },
+      })
+      if (weekClash) continue
       await this.prisma.class.update({
         where: { id: f.id },
-        data: { startsAt: ns, endsAt: new Date(ns.getTime() + 50 * 60 * 1000) },
+        data: { startsAt: ns, endsAt: ne },
       })
       moved++
     }

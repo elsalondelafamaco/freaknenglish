@@ -23,6 +23,21 @@ export interface Plan {
 
 export const PLANS: Plan[] = [
   {
+    id: "2-dias",
+    daysPerWeek: 2,
+    name: "2 días por Semana",
+    // Mismo precio que 3 días: mismo tiempo semanal en clases de 75 min.
+    tag: "Clases de 75 minutos",
+    priceDisplay: "$155",
+    priceCop: 620_000,
+    features: [
+      "Clases 1 a 1 en vivo",
+      "Conversación desde el día 1",
+      "Feedback personalizado",
+      "Horarios fijos",
+    ],
+  },
+  {
     id: "3-dias",
     daysPerWeek: 3,
     name: "3 días por Semana",

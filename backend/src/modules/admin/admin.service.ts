@@ -324,8 +324,9 @@ export class AdminService {
       },
       select: { teacherId: true, startsAt: true, endsAt: true },
     })
-    // Tarifa POR CLASE: cada clase validada paga la tarifa completa aunque
-    // dure 50 min. Minutos/horas se reportan solo como dato informativo.
+    // Tarifa por BLOQUE de 50 min, proporcional a la duración real: una clase
+    // de 50 paga la tarifa completa y una de 75 paga 1.5× (mismos pesos por
+    // minuto). Una clase sin duración válida cuenta como un bloque estándar.
     const minutes = new Map<string, number>()
     const counts = new Map<string, number>()
     for (const c of classes) {
@@ -333,7 +334,7 @@ export class AdminService {
       const durMin = Math.max(
         0,
         Math.round((c.endsAt.getTime() - c.startsAt.getTime()) / 60000),
-      ) || 60
+      ) || 50
       minutes.set(tid, (minutes.get(tid) ?? 0) + durMin)
       counts.set(tid, (counts.get(tid) ?? 0) + 1)
     }
@@ -350,7 +351,7 @@ export class AdminService {
         minutes: mins,
         hours: Number((mins / 60).toFixed(2)),
         hourlyRateCop: classRate,
-        amountCop: count * classRate,
+        amountCop: Math.round((mins / 50) * classRate),
       }
     })
   }
@@ -1001,9 +1002,17 @@ export class AdminService {
       /** Roles adicionales: así un admin puede además dar clases. */
       extraRoles?: AppRole[]
       englishLevel?: 'beginner' | 'intermediate' | 'advanced' | null
+      /** Minutos por clase del estudiante; null = estándar (50). */
+      classDurationMin?: number | null
     },
   ) {
     const resolvedId = await this.resolveExistingUserId(id)
+    if (data.classDurationMin !== undefined && data.classDurationMin !== null) {
+      const dur = data.classDurationMin
+      if (!Number.isInteger(dur) || dur < 25 || dur > 180) {
+        throw new BadRequestException('La duración debe ser un entero entre 25 y 180 minutos')
+      }
+    }
     const patch: Prisma.UserUpdateInput = { ...(data as any) }
     if (data.extraRoles) {
       const current = await this.prisma.user.findUniqueOrThrow({
@@ -1013,6 +1022,53 @@ export class AdminService {
       // El rol principal no se repite en los extras: `rolesOf()` lo suma solo.
       const role = data.role ?? current.role
       patch.extraRoles = { set: [...new Set(data.extraRoles)].filter((r) => r !== role) }
+    }
+    // Si cambia la duración, las clases futuras se re-estiran — pero ANTES se
+    // valida que ninguna quede solapada con otra clase del profesor o del
+    // estudiante (una clase de 75 min invade la hora siguiente). Sin este
+    // chequeo quedaban doble-reservas en la base y la generación semanal
+    // dejaba de crear la clase del otro estudiante en silencio.
+    if (data.classDurationMin !== undefined) {
+      const durMs = (data.classDurationMin ?? 50) * 60 * 1000
+      const future = await this.prisma.class.findMany({
+        where: {
+          studentId: resolvedId,
+          status: { in: ['scheduled', 'rescheduled'] },
+          startsAt: { gte: new Date() },
+        },
+        select: { id: true, startsAt: true, teacherId: true },
+      })
+      for (const f of future) {
+        const newEnd = new Date(f.startsAt.getTime() + durMs)
+        const clash = await this.prisma.class.findFirst({
+          where: {
+            id: { not: f.id },
+            status: { in: ['scheduled', 'rescheduled'] },
+            startsAt: { lt: newEnd },
+            endsAt: { gt: f.startsAt },
+            OR: [
+              ...(f.teacherId ? [{ teacherId: f.teacherId }] : []),
+              { studentId: resolvedId },
+            ],
+          },
+          select: { id: true, startsAt: true, studentId: true },
+        })
+        if (clash) {
+          const cuando = new Date(f.startsAt.getTime() - 5 * 60 * 60 * 1000)
+            .toISOString().slice(0, 16).replace('T', ' ')
+          throw new BadRequestException(
+            `Con ${data.classDurationMin ?? 50} min, la clase del ${cuando} (hora Bogotá) quedaría cruzada con otra clase del profesor o del estudiante. Ajusta primero la agenda y vuelve a intentar.`,
+          )
+        }
+      }
+      const updated = await this.prisma.user.update({ where: { id: resolvedId }, data: patch })
+      for (const f of future) {
+        await this.prisma.class.update({
+          where: { id: f.id },
+          data: { endsAt: new Date(f.startsAt.getTime() + durMs) },
+        })
+      }
+      return updated
     }
     return this.prisma.user.update({ where: { id: resolvedId }, data: patch })
   }

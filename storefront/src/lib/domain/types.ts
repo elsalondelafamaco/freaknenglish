@@ -17,7 +17,7 @@ export type SubscriptionStatus =
   | "canceled"
   | "pending";
 
-export type PlanId = "3-dias" | "4-dias" | "5-dias";
+export type PlanId = "2-dias" | "3-dias" | "4-dias" | "5-dias";
 
 export interface User {
   id: string;
@@ -28,6 +28,8 @@ export interface User {
   documentNumber?: string;
   roles: AppRole[];
   level?: EnglishLevel;
+  /** Minutos por clase del estudiante; ausente = estándar (50). */
+  classDurationMin?: number;
   /** Onboarding completado (nivelación + horario inicial). */
   onboardedAt?: string;
   /** Profesor asignado (sólo aplica a estudiantes). */
@@ -84,7 +86,7 @@ export interface ClassSession {
   teacherName: string;
   /** ISO start datetime. */
   startsAt: string;
-  /** Duration in minutes. Always 50 for now. */
+  /** Duration in minutes. Standard is 50; some students have custom durations. */
   durationMin: number;
   status: ClassStatus;
   /** When the student confirmed attendance. */

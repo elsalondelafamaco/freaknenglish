@@ -63,7 +63,12 @@ export function Pricing() {
           ) : null}
         </div>
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-3 lg:items-center">
+        {/* Con 4+ planes activos la grilla pasa a 2×2 en lg y 4 columnas en xl. */}
+        <div
+          className={`mt-12 grid gap-6 lg:items-center ${
+            (plans?.length ?? 3) > 3 ? "sm:grid-cols-2 xl:grid-cols-4" : "lg:grid-cols-3"
+          }`}
+        >
           {isPending || !plans
             ? [0, 1, 2].map((i) => <PriceCardSkeleton key={i} />)
             : plans.map((p) => <PriceCard key={p.id} plan={p} trm={trm} />)}

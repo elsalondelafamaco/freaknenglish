@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { IS_ACTIVE_TEACHER, IS_TEACHER, hasRole } from '../../common/roles'
 import { NotificationsService } from '../notifications/notifications.service'
@@ -29,6 +29,8 @@ function isHourInRange(hour: number, startsAt: string, endsAt: string) {
 
 @Injectable()
 export class SchedulingService {
+  private readonly log = new Logger(SchedulingService.name)
+
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
@@ -167,24 +169,39 @@ export class SchedulingService {
     // estudiante compra o elige horario: nadie alcanza a prepararse (ni el
     // profe ni el estudiante) para una clase que empieza en un par de horas.
     const noNantesDe = this.startOfTomorrowBogota()
+    // Duración por estudiante (ej. 75 min); null = estándar de 50.
+    const durationMin = user.classDurationMin ?? CLASS_DURATION_MIN
     let created = 0
     for (const b of blocks) {
       if (typeof b?.weekday !== 'number' || typeof b?.hour !== 'number') continue
       for (let w = 0; w < GENERATION_WEEKS; w++) {
         const startsAt = this.buildClassInstant(b.weekday, b.hour, w)
         if (startsAt.getTime() < noNantesDe.getTime()) continue
+        const endsAt = new Date(startsAt.getTime() + durationMin * 60 * 1000)
         const exists = await this.prisma.class.findFirst({
           where: { studentId, startsAt },
           select: { id: true },
         })
         if (exists) continue
-        // Evita doble-reserva del profesor en el mismo instante (1-on-1).
+        // Evita doble-reserva del profesor: cualquier clase suya que se cruce
+        // con [startsAt, endsAt) — una clase larga puede invadir la hora siguiente.
         const teacherBusy = await this.prisma.class.findFirst({
-          where: { teacherId: user.assignedTeacherId, startsAt, status: { in: ['scheduled', 'rescheduled', 'validated'] } },
+          where: {
+            teacherId: user.assignedTeacherId,
+            status: { in: ['scheduled', 'rescheduled', 'validated'] },
+            startsAt: { lt: endsAt },
+            endsAt: { gt: startsAt },
+          },
           select: { id: true },
         })
-        if (teacherBusy) continue
-        const endsAt = new Date(startsAt.getTime() + CLASS_DURATION_MIN * 60 * 1000)
+        if (teacherBusy) {
+          // Antes esto era silencioso: un estudiante pago podía quedarse sin
+          // su clase semanal sin que nadie lo viera. Al menos queda rastro.
+          this.log.warn(
+            `Clase NO generada por cruce de agenda: estudiante ${studentId}, profe ${user.assignedTeacherId}, ${startsAt.toISOString()} (${durationMin} min)`,
+          )
+          continue
+        }
         await this.prisma.class.create({
           data: {
             studentId,

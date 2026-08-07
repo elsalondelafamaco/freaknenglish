@@ -43,6 +43,12 @@ const startsSoon = (c: any) => {
   return diff < 15 * 60_000 && diff > -60 * 60_000; // 15 min antes → 1 h después
 };
 
+/** Duración real de la clase en minutos (endsAt − startsAt); 50 si no calcula. */
+const durMin = (c: any) => {
+  const d = Math.round((new Date(c.endsAt).getTime() - new Date(c.startsAt).getTime()) / 60_000);
+  return d > 0 ? d : 50;
+};
+
 type Tab = "upcoming" | "taken" | "all";
 
 function CalendarPage() {
@@ -97,7 +103,7 @@ function CalendarPage() {
               </div>
               <div className="mt-1 text-xl font-bold capitalize">{fmtDate(next.startsAt)}</div>
               <div className="mt-0.5 text-sm text-white/70">
-                50 minutos · {next.teacher?.fullName ?? "tu profe"}
+                {durMin(next)} minutos · {next.teacher?.fullName ?? "tu profe"}
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -175,7 +181,7 @@ function CalendarPage() {
                           <Clock className="size-4 text-brand-ink/50" /> {fmtDate(c.startsAt)}
                         </div>
                         <div className="mt-1 text-xs text-brand-ink/55">
-                          {c.teacher?.fullName ?? "tu profe"} · 50 min
+                          {c.teacher?.fullName ?? "tu profe"} · {durMin(c)} min
                         </div>
                       </div>
                       {c.status === "rescheduled" ? (

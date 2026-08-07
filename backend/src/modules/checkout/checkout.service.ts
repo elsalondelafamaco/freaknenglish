@@ -26,7 +26,9 @@ export class CheckoutService {
     password?: string
   }) {
     const plan = await this.prisma.plan.findUnique({ where: { id: input.planId } })
-    if (!plan) throw new NotFoundException('Plan not found')
+    // Un plan inactivo no existe para el checkout público: el listado ya lo
+    // filtra, pero un POST directo con el planId saltaba ese filtro.
+    if (!plan || !plan.isActive) throw new NotFoundException('Plan not found')
 
     const reference = `FREAKN-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`
     // El precio del plan está en USD; el cobro a Wompi es en COP convertido con

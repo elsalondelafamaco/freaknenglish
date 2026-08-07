@@ -30,6 +30,11 @@ export class BootstrapService implements OnApplicationBootstrap {
 
   private async ensurePlans() {
     const plans = [
+      // 2-dias: mismo precio que 3-dias — es el mismo tiempo semanal (150 min)
+      // repartido en 2 clases de 75 en vez de 3 de 50. Nace INACTIVO: no sale
+      // en la página pública hasta que el admin lo active; sí puede asignarse
+      // a estudiantes desde el panel estando inactivo.
+      { id: '2-dias', name: '2 días / semana', daysPerWeek: 2, priceCop: 280000, priceUsd: 155, isActive: false },
       { id: '3-dias', name: '3 días / semana', daysPerWeek: 3, priceCop: 280000 },
       { id: '4-dias', name: '4 días / semana', daysPerWeek: 4, priceCop: 360000 },
       { id: '5-dias', name: '5 días / semana', daysPerWeek: 5, priceCop: 420000 },

@@ -1001,9 +1001,17 @@ export class AdminService {
       /** Roles adicionales: así un admin puede además dar clases. */
       extraRoles?: AppRole[]
       englishLevel?: 'beginner' | 'intermediate' | 'advanced' | null
+      /** Minutos por clase del estudiante; null = estándar (50). */
+      classDurationMin?: number | null
     },
   ) {
     const resolvedId = await this.resolveExistingUserId(id)
+    if (data.classDurationMin !== undefined && data.classDurationMin !== null) {
+      const dur = data.classDurationMin
+      if (!Number.isInteger(dur) || dur < 25 || dur > 180) {
+        throw new BadRequestException('La duración debe ser un entero entre 25 y 180 minutos')
+      }
+    }
     const patch: Prisma.UserUpdateInput = { ...(data as any) }
     if (data.extraRoles) {
       const current = await this.prisma.user.findUniqueOrThrow({
@@ -1013,6 +1021,53 @@ export class AdminService {
       // El rol principal no se repite en los extras: `rolesOf()` lo suma solo.
       const role = data.role ?? current.role
       patch.extraRoles = { set: [...new Set(data.extraRoles)].filter((r) => r !== role) }
+    }
+    // Si cambia la duración, las clases futuras se re-estiran — pero ANTES se
+    // valida que ninguna quede solapada con otra clase del profesor o del
+    // estudiante (una clase de 75 min invade la hora siguiente). Sin este
+    // chequeo quedaban doble-reservas en la base y la generación semanal
+    // dejaba de crear la clase del otro estudiante en silencio.
+    if (data.classDurationMin !== undefined) {
+      const durMs = (data.classDurationMin ?? 50) * 60 * 1000
+      const future = await this.prisma.class.findMany({
+        where: {
+          studentId: resolvedId,
+          status: { in: ['scheduled', 'rescheduled'] },
+          startsAt: { gte: new Date() },
+        },
+        select: { id: true, startsAt: true, teacherId: true },
+      })
+      for (const f of future) {
+        const newEnd = new Date(f.startsAt.getTime() + durMs)
+        const clash = await this.prisma.class.findFirst({
+          where: {
+            id: { not: f.id },
+            status: { in: ['scheduled', 'rescheduled'] },
+            startsAt: { lt: newEnd },
+            endsAt: { gt: f.startsAt },
+            OR: [
+              ...(f.teacherId ? [{ teacherId: f.teacherId }] : []),
+              { studentId: resolvedId },
+            ],
+          },
+          select: { id: true, startsAt: true, studentId: true },
+        })
+        if (clash) {
+          const cuando = new Date(f.startsAt.getTime() - 5 * 60 * 60 * 1000)
+            .toISOString().slice(0, 16).replace('T', ' ')
+          throw new BadRequestException(
+            `Con ${data.classDurationMin ?? 50} min, la clase del ${cuando} (hora Bogotá) quedaría cruzada con otra clase del profesor o del estudiante. Ajusta primero la agenda y vuelve a intentar.`,
+          )
+        }
+      }
+      const updated = await this.prisma.user.update({ where: { id: resolvedId }, data: patch })
+      for (const f of future) {
+        await this.prisma.class.update({
+          where: { id: f.id },
+          data: { endsAt: new Date(f.startsAt.getTime() + durMs) },
+        })
+      }
+      return updated
     }
     return this.prisma.user.update({ where: { id: resolvedId }, data: patch })
   }

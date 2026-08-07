@@ -30,6 +30,10 @@ export class BootstrapService implements OnApplicationBootstrap {
 
   private async ensurePlans() {
     const plans = [
+      // 2-dias nace INACTIVO: no aparece en la página pública de precios hasta
+      // que el admin revise el precio y lo active. Sí puede asignarse a
+      // estudiantes desde el panel admin estando inactivo.
+      { id: '2-dias', name: '2 días / semana', daysPerWeek: 2, priceCop: 200000, isActive: false },
       { id: '3-dias', name: '3 días / semana', daysPerWeek: 3, priceCop: 280000 },
       { id: '4-dias', name: '4 días / semana', daysPerWeek: 4, priceCop: 360000 },
       { id: '5-dias', name: '5 días / semana', daysPerWeek: 5, priceCop: 420000 },

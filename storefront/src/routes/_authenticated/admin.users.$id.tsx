@@ -750,6 +750,9 @@ function EditUserDialog({
   const [phone, setPhone] = useState(user.phone ?? "");
   const [level, setLevel] = useState<EnglishLevel>(user.level ?? "beginner");
   const [roles, setRoles] = useState<AppRole[]>(user.roles);
+  const [durationMin, setDurationMin] = useState<string>(
+    user.classDurationMin ? String(user.classDurationMin) : "",
+  );
   const [error, setError] = useState<string | null>(null);
 
   function toggleRole(r: AppRole) {
@@ -772,6 +775,12 @@ function EditUserDialog({
           (r) => r !== principal && roles.includes(r),
         ),
         englishLevel: roles.includes("student") ? level : null,
+        // Vacío = volver al estándar de 50 min (null en la base).
+        classDurationMin: roles.includes("student")
+          ? durationMin.trim() === ""
+            ? null
+            : Number(durationMin)
+          : undefined,
       });
       onSaved();
     } catch (err) {
@@ -827,17 +836,35 @@ function EditUserDialog({
             </div>
           </Field>
           {roles.includes("student") ? (
-            <Field label="Nivel">
-              <select
-                value={level}
-                onChange={(e) => setLevel(e.target.value as EnglishLevel)}
-                className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
-              >
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-              </select>
-            </Field>
+            <>
+              <Field label="Nivel">
+                <select
+                  value={level}
+                  onChange={(e) => setLevel(e.target.value as EnglishLevel)}
+                  className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                >
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                </select>
+              </Field>
+              <Field label="Duración de clase (min)">
+                <input
+                  type="number"
+                  min={25}
+                  max={180}
+                  step={5}
+                  value={durationMin}
+                  onChange={(e) => setDurationMin(e.target.value)}
+                  placeholder="50 (estándar)"
+                  className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                />
+                <p className="mt-1 text-[11px] text-brand-ink/50">
+                  Vacío = 50 min. Aplica a las clases futuras ya programadas y a las nuevas.
+                  Una clase larga puede ocupar la hora siguiente del profe: revisa su agenda.
+                </p>
+              </Field>
+            </>
           ) : null}
         </div>
         {error ? (
@@ -1005,6 +1032,7 @@ function adaptAdminUser(u: any): User {
     // la base. Los listados de profesores tenían el mismo agujero.
     roles: rolesOfRow(u),
     level: (u.englishLevel ?? undefined) as EnglishLevel | undefined,
+    classDurationMin: u.classDurationMin ?? undefined,
     onboardedAt: u.onboardedAt ?? undefined,
     assignedTeacherId: u.assignedTeacherId ?? undefined,
     disabledAt: u.disabledAt ?? undefined,
@@ -1034,7 +1062,11 @@ function adaptAdminClass(c: any): ClassSession {
     teacherId: c.teacherId,
     teacherName: c.teacher?.fullName ?? "",
     startsAt: c.startsAt ?? c.scheduledAt ?? new Date().toISOString(),
-    durationMin: c.durationMin ?? 50,
+    // Duración real endsAt − startsAt (hay estudiantes con clases de más de 50).
+    durationMin:
+      c.endsAt && c.startsAt
+        ? Math.max(1, Math.round((new Date(c.endsAt).getTime() - new Date(c.startsAt).getTime()) / 60_000))
+        : (c.durationMin ?? 50),
     status: (c.status ?? "scheduled") as ClassSession["status"],
     studentConfirmedAt: c.studentConfirmedAt ?? undefined,
     teacherValidatedAt: c.teacherValidatedAt ?? undefined,

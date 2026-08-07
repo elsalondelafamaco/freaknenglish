@@ -202,7 +202,8 @@ export class AdminController {
 
   /**
    * @endpoint PATCH /api/v1/admin/users/:id
-   * Edita campos básicos (fullName, phone, role, extraRoles, englishLevel).
+   * Edita campos básicos (fullName, phone, role, extraRoles, englishLevel,
+   * classDurationMin — null vuelve al estándar de 50 min).
    */
   @Patch('users/:id')
   updateUser(
@@ -213,6 +214,7 @@ export class AdminController {
       role?: 'student' | 'teacher' | 'admin'
       extraRoles?: Array<'student' | 'teacher' | 'admin'>
       englishLevel?: 'beginner' | 'intermediate' | 'advanced' | null
+      classDurationMin?: number | null
     },
   ) {
     return this.svc.updateUser(id, body)

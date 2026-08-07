@@ -615,7 +615,7 @@ export const adminApi = {
       startedAt?: string | null;
     },
   ) => apiPatch<any>(`/admin/users/${id}/subscription`, body),
-  updateUser: (id: string, body: Partial<{ fullName: string; phone: string; role: "student" | "teacher" | "admin"; extraRoles: Array<"student" | "teacher" | "admin">; englishLevel: "beginner" | "intermediate" | "advanced" | null }>) =>
+  updateUser: (id: string, body: Partial<{ fullName: string; phone: string; role: "student" | "teacher" | "admin"; extraRoles: Array<"student" | "teacher" | "admin">; englishLevel: "beginner" | "intermediate" | "advanced" | null; classDurationMin: number | null }>) =>
     apiPatch<User>(`/admin/users/${id}`, body),
   setUserStatus: (id: string, disabled: boolean) =>
     apiPatch<User>(`/admin/users/${id}/status`, { disabled }),

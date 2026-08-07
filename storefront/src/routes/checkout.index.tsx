@@ -87,7 +87,7 @@ function CheckoutSelect() {
         {q.isLoading ? (
           <p className="mt-8 text-sm text-brand-ink/60">Cargando planes…</p>
         ) : (
-          <div className="mt-8 grid gap-5 md:grid-cols-3">
+          <div className={`mt-8 grid gap-5 ${plans.length > 3 ? "sm:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-3"}`}>
             {plans.map((plan: any) => {
               const cop = plan.priceUsd && trm ? Math.round(plan.priceUsd * trm) : plan.priceCop;
               return (

@@ -9,6 +9,7 @@ import { ActivePlanScreen, useActivePlanGate } from "@/components/site/ActivePla
 import { LegalLinks } from "@/components/site/LegalLinks";
 import { PhoneInput, validatePhone } from "@/components/app/PhoneInput";
 import { checkoutApi, plansApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
+import { slotTimeRange } from "@/components/schedule/SchedulePickerGrid";
 import { copAcobrar } from "@/lib/domain/plans";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
@@ -48,6 +49,7 @@ function CheckoutPage() {
   const assignable = availQ.data?.assignable ?? true;
 
   const plansQ = useQuery({ queryKey: ["plans"], queryFn: () => plansApi.list() });
+  const cfgQ = useQuery({ queryKey: ["schedule", "config"], queryFn: () => scheduleApi.config() });
   const trm = plansQ.data?.trm?.valueCop ?? 0;
   const plan = useMemo(
     () => (plansQ.data?.plans ?? []).find((p: any) => p.id === planId),
@@ -245,7 +247,7 @@ function CheckoutPage() {
                     .sort((a, b) => ((a.weekday + 6) % 7) - ((b.weekday + 6) % 7) || a.hour - b.hour)
                     .map((sl) => (
                       <li key={`${sl.weekday}-${sl.hour}`}>
-                        {DAY_NAMES[sl.weekday]} · {sl.hour}:00–{sl.hour}:50
+                        {DAY_NAMES[sl.weekday]} · {slotTimeRange(sl.hour, cfgQ.data?.durationMin ?? 50)}
                       </li>
                     ))}
                 </ul>

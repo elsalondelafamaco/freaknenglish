@@ -74,6 +74,8 @@ model User {
   schedulePreferences Json?     @map("schedule_preferences")
   scheduleAssignmentStatus String? @map("schedule_assignment_status")
   assignedTeacherId String?     @map("assigned_teacher_id")
+  // Duración de cada clase del estudiante en minutos. null = estándar (50).
+  classDurationMin Int?         @map("class_duration_min")
   disabledAt      DateTime?     @map("disabled_at")
   deletedAt       DateTime?     @map("deleted_at")
   // Admin pidió la encuesta NPS explícitamente (pending=true hasta responder).

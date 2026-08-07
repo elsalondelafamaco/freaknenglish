@@ -22,6 +22,12 @@ const DAY_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 export const slotKey = (s: SlotRef) => `${s.weekday}:${s.hour}`;
 
+/** "8:00–8:50" o, con duraciones largas, "8:00–9:15" (cruza la hora). */
+export function slotTimeRange(hour: number, durationMin: number): string {
+  const end = hour * 60 + durationMin;
+  return `${hour}:00–${Math.floor(end / 60)}:${String(end % 60).padStart(2, "0")}`;
+}
+
 /** Horas visibles según config. `endHour` es INCLUSIVO (última clase a esa hora). */
 export function hoursFromConfig(cfg: ScheduleConfig): number[] {
   return Array.from({ length: Math.max(0, cfg.endHour - cfg.startHour + 1) }, (_, i) => cfg.startHour + i);
@@ -137,7 +143,7 @@ function HourRow({
             key={k}
             type="button"
             onClick={() => onToggle({ weekday: d, hour: h })}
-            title={`${h}:00–${h}:${durationMin}`}
+            title={slotTimeRange(h, durationMin)}
             className={`m-0.5 flex h-11 items-center justify-center gap-1 rounded-xl border text-[11px] font-semibold transition ${
               isSel
                 ? "border-brand-ink bg-brand-ink text-white shadow-soft"

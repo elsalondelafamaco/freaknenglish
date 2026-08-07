@@ -282,14 +282,15 @@ export class AutomationsProcessor extends WorkerHost {
     const counts = new Map<string, number>()
     for (const c of classes) {
       const tid = c.teacherId!
-      const dur = Math.max(0, Math.round((c.endsAt.getTime() - c.startsAt.getTime()) / 60000)) || 60
+      const dur = Math.max(0, Math.round((c.endsAt.getTime() - c.startsAt.getTime()) / 60000)) || 50
       minutes.set(tid, (minutes.get(tid) ?? 0) + dur)
       counts.set(tid, (counts.get(tid) ?? 0) + 1)
     }
     const rate = await this.hourlyRateCop()
     for (const [teacherId] of minutes) {
-      // Tarifa por clase completa: clases × tarifa (sin prorratear 50 min).
-      const amountCop = (counts.get(teacherId) ?? 0) * rate
+      // Tarifa por bloque de 50 min, proporcional a la duración real (una
+      // clase de 75 min paga 1.5×) — igual que AdminService.payroll.
+      const amountCop = Math.round(((minutes.get(teacherId) ?? 0) / 50) * rate)
       const existing = await this.prisma.payrollRun.findUnique({
         where: { period_teacherId: { period, teacherId } },
       })

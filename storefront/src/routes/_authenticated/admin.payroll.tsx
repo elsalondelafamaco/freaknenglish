@@ -97,7 +97,7 @@ function AdminPayroll() {
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="block text-[11px] font-semibold uppercase tracking-wide text-brand-ink/55">
-              Tarifa por clase (COP)
+              Tarifa por clase de 50 min (COP)
             </label>
             <input
               type="number"
@@ -117,9 +117,9 @@ function AdminPayroll() {
             <Save className="size-3.5" /> Guardar tarifa
           </button>
           <p className="ml-auto text-[11px] text-brand-ink/55">
-            Tarifa vigente: <strong>{formatCop(rateCop)}</strong> por clase (la clase
-            de 50 min paga tarifa completa). Solo se cuentan clases completadas y
-            validadas.
+            Tarifa vigente: <strong>{formatCop(rateCop)}</strong> por bloque de 50 min,
+            proporcional a la duración real (una clase de 75 min paga 1.5×). Solo se
+            cuentan clases completadas y validadas.
           </p>
         </div>
       </div>

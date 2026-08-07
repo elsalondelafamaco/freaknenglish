@@ -324,8 +324,9 @@ export class AdminService {
       },
       select: { teacherId: true, startsAt: true, endsAt: true },
     })
-    // Tarifa POR CLASE: cada clase validada paga la tarifa completa aunque
-    // dure 50 min. Minutos/horas se reportan solo como dato informativo.
+    // Tarifa por BLOQUE de 50 min, proporcional a la duración real: una clase
+    // de 50 paga la tarifa completa y una de 75 paga 1.5× (mismos pesos por
+    // minuto). Una clase sin duración válida cuenta como un bloque estándar.
     const minutes = new Map<string, number>()
     const counts = new Map<string, number>()
     for (const c of classes) {
@@ -333,7 +334,7 @@ export class AdminService {
       const durMin = Math.max(
         0,
         Math.round((c.endsAt.getTime() - c.startsAt.getTime()) / 60000),
-      ) || 60
+      ) || 50
       minutes.set(tid, (minutes.get(tid) ?? 0) + durMin)
       counts.set(tid, (counts.get(tid) ?? 0) + 1)
     }
@@ -350,7 +351,7 @@ export class AdminService {
         minutes: mins,
         hours: Number((mins / 60).toFixed(2)),
         hourlyRateCop: classRate,
-        amountCop: count * classRate,
+        amountCop: Math.round((mins / 50) * classRate),
       }
     })
   }

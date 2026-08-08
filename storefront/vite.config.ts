@@ -5,7 +5,23 @@
 //     error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { loadEnv } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+
+// Proxy opcional del dev server hacia una API remota (p. ej. la de producción)
+// para revisar la home con el contenido real del CMS. Se activa SOLO si defines
+// `VITE_API_PROXY_TARGET` en tu `.env.local`; sin esa variable el
+// comportamiento es idéntico al de siempre.
+//
+// Hace falta porque la API responde `Cross-Origin-Resource-Policy: same-site`:
+// desde `freaknenglish.com` las imágenes cargan, pero desde `localhost` el
+// navegador las bloquea (ERR_BLOCKED_BY_RESPONSE.NotSameSite). Al pasarlas por
+// el proxy quedan en el mismo origen y el bloqueo desaparece.
+const apiProxyTarget = loadEnv(
+  process.env.NODE_ENV ?? "development",
+  process.cwd(),
+  "",
+).VITE_API_PROXY_TARGET;
 
 export default defineConfig({
   tanstackStart: {
@@ -19,6 +35,15 @@ export default defineConfig({
   // build emits a .output/server/index.mjs that opens an HTTP listener on PORT.
   nitro: { preset: "node-server" },
   vite: {
+    ...(apiProxyTarget
+      ? {
+          server: {
+            proxy: {
+              "/api/v1": { target: apiProxyTarget, changeOrigin: true, secure: true },
+            },
+          },
+        }
+      : {}),
     plugins: [
       // D9 · PWA offline básica para el catálogo Learning.
       // Registro guardado desde src/lib/pwa/register.ts (nunca en dev/iframe/preview).

@@ -15,6 +15,7 @@ import { AuthProvider } from "../lib/auth/AuthProvider";
 import { LanguageProvider } from "../lib/i18n";
 import { registerPwa } from "../lib/pwa/register";
 import { THEME_BOOT_SCRIPT } from "../lib/theme";
+import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -170,6 +171,10 @@ function RootComponent() {
         <LanguageProvider>
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <Outlet />
+          {/* Sin este Toaster montado, TODOS los toast.success/error de la app
+              (guardar link de clase, notas, horarios…) se descartaban en
+              silencio: la acción fallaba y el usuario no veía ningún aviso. */}
+          <Toaster richColors closeButton position="top-center" />
         </LanguageProvider>
       </AuthProvider>
     </QueryClientProvider>

@@ -50,21 +50,31 @@ function CheckpointPage() {
   // ── Timer (si el checkpoint tiene límite de tiempo) ──────────────────
   const timeLimitMin = chk?.settings?.timeLimitMin ?? null;
   const startedAt = useRef<number | null>(null);
+  // El envío por tiempo agotado ocurre UNA sola vez. Antes se guardaba con
+  // `submitM.isPending`, pero el intervalo captura el `submitM` del render en
+  // que se creó y ese flag nunca se actualizaba: si el envío fallaba (sin red,
+  // 500), el timer reenviaba cada segundo — quemando los intentos del examen.
+  const autoEnviado = useRef(false);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   useEffect(() => {
     if (!timeLimitMin || result || !chk?.myAttempts?.canAttempt) return;
     if (startedAt.current == null) startedAt.current = Date.now();
+    let iv: ReturnType<typeof setInterval> | null = null;
     const tick = () => {
       const left = Math.max(0, timeLimitMin * 60 - Math.floor((Date.now() - startedAt.current!) / 1000));
       setSecondsLeft(left);
-      if (left === 0 && !submitM.isPending) {
+      if (left === 0 && !autoEnviado.current) {
+        autoEnviado.current = true;
+        if (iv) clearInterval(iv);
         toast.warning("Se acabó el tiempo — enviamos lo que llevabas.");
         submitM.mutate();
       }
     };
     tick();
-    const iv = setInterval(tick, 1000);
-    return () => clearInterval(iv);
+    iv = setInterval(tick, 1000);
+    return () => {
+      if (iv) clearInterval(iv);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLimitMin, result, chk?.myAttempts?.canAttempt]);
 

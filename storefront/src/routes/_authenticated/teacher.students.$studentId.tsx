@@ -87,6 +87,7 @@ function TeacherStudentDetail() {
         </div>
         <p className="mt-1 text-xs text-brand-ink/55">
           Este es el link con el que {student.fullName.split(" ")[0]} entra a todas sus clases contigo.
+          Puedes pegar la invitación completa de Zoom o Meet: extraemos el enlace solo.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <input

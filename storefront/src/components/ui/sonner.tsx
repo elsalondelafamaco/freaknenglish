@@ -7,6 +7,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       className="toaster group"
       toastOptions={{
+        // Radix pone `pointer-events: none` en el body mientras hay un diálogo
+        // modal abierto, y el toast vive fuera de ese portal: sin esto, su
+        // botón de cerrar queda inerte en todos los flujos con modal.
+        style: { pointerEvents: "auto" },
         classNames: {
           toast:
             "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",

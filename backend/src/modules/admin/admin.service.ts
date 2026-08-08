@@ -10,6 +10,7 @@ import { randomBytes, randomUUID, createHash } from 'crypto'
 import { StorageService } from '../storage/storage.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { SchedulingService } from '../scheduling/scheduling.service'
+import { ADMIN_RESET_TTL_MS, INVITE_TTL_MS, resetTtlMs, ttlLabel } from '../../common/password-reset-ttl'
 import { SlotsService, SlotRef } from '../scheduling/slots.service'
 import { validateQuestion } from '../learning/checkpoint-questions'
 
@@ -788,7 +789,7 @@ export class AdminService {
     const token = randomBytes(32).toString('hex')
     const tokenHash = createHash('sha256').update(token).digest('hex')
     await this.prisma.passwordReset.create({
-      data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7) },
+      data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + INVITE_TTL_MS) },
     })
     const link = `${env.PUBLIC_SITE_URL}/reset-password?token=${token}`
     await this.notificationsSvc.enqueue({
@@ -1096,15 +1097,20 @@ export class AdminService {
   }
 
   /**
-   * Genera token de reset (TTL 24h), persiste en `password_resets` y devuelve
-   * el link para que el caller (o un job) envíe el email vía Resend.
+   * Genera token de reset, lo persiste en `password_resets` y devuelve el link
+   * para que el caller (o un job) envíe el email vía Resend.
+   *
+   * El plazo depende de a quién se le manda: si el usuario nunca configuró
+   * contraseña esto es en la práctica un reenvío de su invitación y vale 7
+   * días; si ya tiene contraseña es un restablecimiento y vale 24 h.
    */
   async resetUserPassword(id: string) {
     const resolvedId = await this.resolveExistingUserId(id)
     const user = await this.prisma.user.findUnique({ where: { id: resolvedId } })
     const token = randomBytes(32).toString('hex')
     const tokenHash = createHash('sha256').update(token).digest('hex')
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24)
+    const ttlMs = resetTtlMs(!!user?.passwordHash, ADMIN_RESET_TTL_MS)
+    const expiresAt = new Date(Date.now() + ttlMs)
     await this.prisma.passwordReset.create({ data: { userId: resolvedId, tokenHash, expiresAt } })
     const link = `${env.PUBLIC_SITE_URL}/reset-password?token=${token}`
     if (user) {
@@ -1114,7 +1120,7 @@ export class AdminService {
         template: 'password_reset',
         subject: 'Restablece tu contraseña',
         dedupeKey: `pwreset:${user.id}:${token.slice(0, 12)}`,
-        vars: { link },
+        vars: { link, expiryLabel: ttlLabel(ttlMs) },
         type: 'system',
       })
     }

@@ -5,6 +5,7 @@ import * as crypto from 'crypto'
 import { PrismaService } from '../../prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { env } from '../../config/env'
+import { PASSWORD_RESET_TTL_MS, resetTtlMs, ttlLabel } from '../../common/password-reset-ttl'
 
 /** Token pair returned to the client. */
 export type Tokens = { accessToken: string; refreshToken: string }
@@ -127,8 +128,12 @@ export class AuthService {
 
     const token = crypto.randomBytes(32).toString('hex')
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex')
+    // Quien todavía no tiene contraseña está estrenando la cuenta: este enlace
+    // hace de invitación y dura una semana. Con contraseña ya puesta es un
+    // restablecimiento de verdad y sigue durando una hora.
+    const ttlMs = resetTtlMs(!!user.passwordHash, PASSWORD_RESET_TTL_MS)
     await this.prisma.passwordReset.create({
-      data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
+      data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + ttlMs) },
     })
     const link = `${env.PUBLIC_SITE_URL}/reset-password?token=${token}`
     await this.notifications.enqueue({
@@ -137,7 +142,7 @@ export class AuthService {
       template: 'password_reset',
       subject: 'Restablece tu contraseña',
       dedupeKey: `pwreset:${user.id}:${token.slice(0, 12)}`,
-      vars: { link },
+      vars: { link, expiryLabel: ttlLabel(ttlMs) },
       type: 'system',
     })
     return token

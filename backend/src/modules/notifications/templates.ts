@@ -252,10 +252,16 @@ export const templates = {
     wrap('Tu plan se renueva en 3 días', `<p>Puedes gestionarlo desde tu portal.</p>${cta(`${env.PUBLIC_SITE_URL}/app/settings`, 'Gestionar plan')}`),
 
   // ─── Password / cuentas ─────────────────────────────────────────────
-  password_reset: (v: { link: string }) =>
+  // `expiryLabel` llega del backend con el plazo real ("7 días" para quien aún
+  // no tiene contraseña, "1 hora" para un restablecimiento). Se muestra en vez
+  // de un "vence pronto" que no decía nada y hacía que la gente lo dejara para
+  // después sin saber cuánto margen tenía.
+  password_reset: (v: { link: string; expiryLabel?: string }) =>
     wrap(
       'Restablece tu contraseña',
-      `<p>Recibimos una solicitud para restablecer tu contraseña. El enlace vence pronto por seguridad.</p>
+      `<p>Recibimos una solicitud para restablecer tu contraseña.${
+        v.expiryLabel ? ` El enlace vence en <b>${v.expiryLabel}</b>.` : ' El enlace vence pronto por seguridad.'
+      }</p>
        <p>Si no fuiste tú, ignora este correo.</p>
        ${cta(v.link, 'Crear nueva contraseña')}`,
       { preheader: 'Enlace para restablecer tu contraseña' },

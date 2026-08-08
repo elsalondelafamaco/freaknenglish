@@ -389,9 +389,13 @@ export class SchedulingService {
    * Verifica que el profesor pueda recibir estos bloques con la duración
    * dada. Una clase larga (p. ej. 75 min) ocupa también la(s) celda(s)
    * siguiente(s), así que: (1) el choque con franjas de otros estudiantes se
-   * revisa sobre TODAS las horas que abarca la clase, y (2) con más de 60 min
-   * la disponibilidad declarada del profe debe cubrir el intervalo completo —
-   * es decir, tener las horas seguidas pintadas (8:00 Y 9:00 para un 8:00–9:15).
+   * revisa sobre TODAS las horas que abarca la clase, y (2) la disponibilidad
+   * declarada del profe debe cubrir el intervalo completo de la clase — una de
+   * 50 min necesita esa hora pintada; una de 8:00–9:15, las 8:00 Y las 9:00.
+   *
+   * El punto (2) aplica a cualquier duración a propósito: antes solo corría
+   * para clases de más de 60 min, y por ese hueco el alta manual del admin
+   * dejaba asignar un estudiante a un profe sin esa hora en su grilla.
    */
   private async assertBlocksFitTeacher(
     teacherId: string,
@@ -427,23 +431,27 @@ export class SchedulingService {
           .join(', ')} (las clases largas ocupan también la hora siguiente)`,
       )
     }
-    if (durationMin > 60) {
-      const toMin = (s: string) => {
-        const [h, m] = s.split(':').map(Number)
-        return (h ?? 0) * 60 + (m ?? 0)
-      }
-      const avail = await this.prisma.teacherAvailability.findMany({ where: { teacherId } })
-      for (const b of blocks) {
-        const needStart = b.hour * 60
-        const needEnd = needStart + durationMin
-        const covered = avail.some(
-          (r) => r.weekday === b.weekday && toMin(r.startsAt) <= needStart && toMin(r.endsAt) >= needEnd,
+    const toMin = (s: string) => {
+      const [h, m] = s.split(':').map(Number)
+      return (h ?? 0) * 60 + (m ?? 0)
+    }
+    const avail = await this.prisma.teacherAvailability.findMany({ where: { teacherId } })
+    for (const b of blocks) {
+      const needStart = b.hour * 60
+      const needEnd = needStart + durationMin
+      // `cellsToRanges` del editor fusiona las horas contiguas pintadas en un
+      // solo rango, así que basta con que UNO cubra el intervalo entero.
+      const covered = avail.some(
+        (r) => r.weekday === b.weekday && toMin(r.startsAt) <= needStart && toMin(r.endsAt) >= needEnd,
+      )
+      if (!covered) {
+        const detalle =
+          span > 1
+            ? `necesita tener pintadas las horas seguidas (${b.hour}:00 y ${b.hour + span - 1}:00)`
+            : `necesita tener pintada esa hora`
+        throw new BadRequestException(
+          `El profesor no tiene disponibilidad para una clase de ${durationMin} min el ${SchedulingService.DAY_NAMES[b.weekday]} a las ${b.hour}:00: ${detalle} en su disponibilidad.`,
         )
-        if (!covered) {
-          throw new BadRequestException(
-            `El profesor no tiene disponibilidad continua para una clase de ${durationMin} min el ${SchedulingService.DAY_NAMES[b.weekday]} a las ${b.hour}:00: necesita tener pintadas las horas seguidas (${b.hour}:00 y ${b.hour + span - 1}:00) en su disponibilidad.`,
-          )
-        }
       }
     }
   }

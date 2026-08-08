@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { RolesGuard } from '../../common/guards/roles.guard'
@@ -75,6 +75,25 @@ export class SchedulingController {
   @Roles('admin')
   @Get('admin/schedule/audit')
   scheduleAudit() { return this.svc.auditScheduleFit() }
+
+  /** @endpoint GET /api/v1/admin/users/:id/schedule  (horario vigente, para el editor) */
+  @Roles('admin')
+  @Get('admin/users/:id/schedule')
+  studentSchedule(@Param('id') id: string) { return this.svc.studentSchedule(id) }
+
+  /**
+   * @endpoint PATCH /api/v1/admin/users/:id/schedule
+   * Cambia el horario semanal de un estudiante ya creado y rehace sus clases
+   * futuras. Body: { blocks:[{weekday,hour}], teacherId?: string|null }
+   */
+  @Roles('admin')
+  @Patch('admin/users/:id/schedule')
+  setStudentSchedule(
+    @Param('id') id: string,
+    @Body() body: { blocks: ScheduleBlock[]; teacherId?: string | null },
+  ) {
+    return this.svc.setStudentSchedule(id, body?.blocks ?? [], body?.teacherId)
+  }
 
   /** @endpoint GET /api/v1/admin/teachers/:id/availability */
   @Roles('admin')

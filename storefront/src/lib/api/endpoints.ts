@@ -149,6 +149,25 @@ export const scheduleApi = {
     apiGet<Array<{ id: string; teacherId: string; weekday: number; startsAt: string; endsAt: string }>>(
       "/admin/availability",
     ),
+  /** Horario semanal vigente de un estudiante (para precargar el editor). */
+  adminStudentSchedule: (studentId: string) =>
+    apiGet<{
+      blocks: SlotRef[];
+      durationMin: number;
+      teacherId: string | null;
+      daysPerWeek: number;
+      planName: string | null;
+      subscriptionStatus: string | null;
+    }>(`/admin/users/${studentId}/schedule`),
+  /** Cambia el horario de un estudiante ya creado y rehace sus clases futuras. */
+  adminSetStudentSchedule: (studentId: string, blocks: SlotRef[], teacherId?: string | null) =>
+    apiPatch<{
+      ok: boolean;
+      blocks: SlotRef[];
+      teacherId: string | null;
+      eliminadas: number;
+      creadas: number;
+    }>(`/admin/users/${studentId}/schedule`, teacherId === undefined ? { blocks } : { blocks, teacherId }),
   /** Horarios asignados que no caben en la disponibilidad de su profesor. */
   adminScheduleAudit: () =>
     apiGet<{

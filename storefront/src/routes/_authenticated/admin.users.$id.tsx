@@ -29,7 +29,10 @@ import type {
 } from "@/lib/domain/types";
 import { getPlan, formatCop } from "@/lib/domain/plans";
 type PaymentIntent = Record<string, any>;
-import { adminApi, classesApi } from "@/lib/api/endpoints";
+import { adminApi, classesApi, scheduleApi } from "@/lib/api/endpoints";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { SchedulePickerGrid } from "@/components/schedule/SchedulePickerGrid";
+import type { SlotRef } from "@/lib/api/endpoints";
 import { rolesOfRow } from "@/lib/roles";
 import { ActivityResultsSection, CheckpointAttemptsSection, CheckpointGatesSection, LessonPlanSection } from "./teacher.students.$studentId";
 import { setAccessToken } from "@/lib/api/client";
@@ -40,7 +43,7 @@ export const Route = createFileRoute("/_authenticated/admin/users/$id")({
   component: AdminUserDetail,
 });
 
-type TabId = "overview" | "subscription" | "payments" | "classes" | "learning" | "nps" | "notes" | "students";
+type TabId = "overview" | "subscription" | "schedule" | "payments" | "classes" | "learning" | "nps" | "notes" | "students";
 
 function AdminUserDetail() {
   const { id } = Route.useParams();
@@ -204,6 +207,7 @@ function AdminUserDetail() {
   const TABS: { id: TabId; label: string; show: boolean }[] = [
     { id: "overview", label: "Resumen", show: true },
     { id: "subscription", label: "Suscripción", show: isStudent },
+    { id: "schedule", label: "Horario", show: isStudent },
     { id: "payments", label: "Pagos", show: isStudent },
     { id: "classes", label: "Clases", show: true },
     { id: "learning", label: "Aprendizaje", show: isStudent },
@@ -462,6 +466,8 @@ function AdminUserDetail() {
           <SubscriptionEditor userId={user.id} sub={sub} onSaved={bump} />
         </>
       ) : null}
+
+      {tab === "schedule" && isStudent ? <ScheduleEditor userId={user.id} onSaved={bump} /> : null}
 
       {tab === "payments" && isStudent ? (
         <Card title={`Historial de pagos (${payments.length})`}>
@@ -895,6 +901,130 @@ function EditUserDialog({
  * fuera de Wompi, extensiones, cortesías). El admin puede cambiar plan,
  * estado y fecha de vencimiento en cualquier momento.
  */
+/**
+ * Editor del horario semanal de un estudiante ya creado.
+ *
+ * Antes el horario solo se podía fijar al darlo de alta: para moverle una
+ * franja o pasarlo de 2 a 3 días había que borrarlo y volverlo a crear, y el
+ * admin ni siquiera puede borrar. Subir el plan por su cuenta tampoco servía,
+ * porque las clases seguían siendo las del horario viejo.
+ *
+ * Al guardar, el backend rehace las clases futuras: quita las que ya no
+ * corresponden y crea las que faltan, sin tocar las pasadas ni las validadas.
+ */
+function ScheduleEditor({ userId, onSaved }: { userId: string; onSaved: () => void }) {
+  const qc = useQueryClient();
+  const cfgQ = useQuery({ queryKey: ["schedule", "config"], queryFn: () => scheduleApi.config() });
+  const schQ = useQuery({
+    queryKey: ["admin", "student-schedule", userId],
+    queryFn: () => scheduleApi.adminStudentSchedule(userId),
+  });
+
+  const [selected, setSelected] = useState<SlotRef[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Arranca desde lo guardado; a partir del primer clic manda la selección local.
+  const actual = schQ.data?.blocks ?? [];
+  const sel = selected ?? actual;
+  const need = schQ.data?.daysPerWeek ?? 0;
+  const dirty =
+    selected !== null &&
+    JSON.stringify([...sel].sort((a, b) => a.weekday - b.weekday || a.hour - b.hour)) !==
+      JSON.stringify([...actual].sort((a, b) => a.weekday - b.weekday || a.hour - b.hour));
+
+  const saveM = useMutation({
+    mutationFn: () => scheduleApi.adminSetStudentSchedule(userId, sel),
+    onSuccess: (r) => {
+      setError(null);
+      setSelected(null);
+      qc.invalidateQueries({ queryKey: ["admin", "student-schedule", userId] });
+      qc.invalidateQueries({ queryKey: ["admin", "schedule", "audit"] });
+      toast.success(
+        `Horario actualizado. ${r.creadas} clase(s) creada(s), ${r.eliminadas} eliminada(s).`,
+      );
+      onSaved();
+    },
+    onError: (e: unknown) =>
+      setError(e instanceof Error ? e.message : "No se pudo guardar el horario"),
+  });
+
+  if (cfgQ.isLoading || schQ.isLoading) {
+    return (
+      <Card title="Horario semanal">
+        <p className="text-sm text-brand-ink/55">Cargando…</p>
+      </Card>
+    );
+  }
+  if (!cfgQ.data || !schQ.data) {
+    return (
+      <Card title="Horario semanal">
+        <p className="text-sm text-brand-ink/55">No se pudo cargar.</p>
+      </Card>
+    );
+  }
+  if (need === 0) {
+    return (
+      <Card title="Horario semanal">
+        <p className="text-sm text-brand-ink/55">
+          El estudiante no tiene plan. Asígnale uno en la pestaña Suscripción antes de fijar su
+          horario.
+        </p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card title="Horario semanal">
+      <p className="mb-3 text-sm text-brand-ink/65">
+        Plan <b>{schQ.data.planName ?? "—"}</b> · {need} clase(s) por semana de{" "}
+        <b>{schQ.data.durationMin} min</b>. Al guardar se rehacen las clases futuras: se quitan las
+        que ya no corresponden y se crean las que falten. Las clases pasadas y las validadas no se
+        tocan.
+      </p>
+
+      <SchedulePickerGrid
+        cfg={cfgQ.data}
+        need={need}
+        selected={sel}
+        onChange={(next) => {
+          setSelected(next);
+          setError(null);
+        }}
+      />
+
+      {error ? (
+        <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          {error}
+        </p>
+      ) : null}
+
+      <div className="mt-4 flex items-center gap-3">
+        <button
+          onClick={() => saveM.mutate()}
+          disabled={!dirty || sel.length !== need || saveM.isPending}
+          className="inline-flex h-10 items-center rounded-full bg-brand-ink px-5 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:opacity-50"
+        >
+          {saveM.isPending ? "Guardando…" : "Guardar horario"}
+        </button>
+        {dirty ? (
+          <button
+            onClick={() => {
+              setSelected(null);
+              setError(null);
+            }}
+            className="text-sm text-brand-ink/60 hover:text-brand-ink"
+          >
+            Descartar
+          </button>
+        ) : null}
+        <span className="text-xs text-brand-ink/55">
+          {sel.length}/{need} franjas seleccionadas
+        </span>
+      </div>
+    </Card>
+  );
+}
+
 function SubscriptionEditor({
   userId,
   sub,

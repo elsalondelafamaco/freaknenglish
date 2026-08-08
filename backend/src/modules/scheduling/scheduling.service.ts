@@ -501,6 +501,134 @@ export class SchedulingService {
     }
   }
 
+  /** Horario semanal vigente de un estudiante, para precargar el editor. */
+  async studentSchedule(studentId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      select: {
+        classDurationMin: true,
+        assignedTeacherId: true,
+        schedulePreferences: true,
+        subscription: { select: { status: true, plan: { select: { daysPerWeek: true, name: true } } } },
+      },
+    })
+    if (!user) throw new NotFoundException('Estudiante no encontrado')
+    const slots = await this.prisma.scheduleSlot.findMany({
+      where: { studentId, status: { in: ['pending', 'active', 'held'] } },
+      select: { weekday: true, hour: true },
+      orderBy: [{ weekday: 'asc' }, { hour: 'asc' }],
+    })
+    const blocks: ScheduleBlock[] =
+      slots.length > 0 ? slots : ((user.schedulePreferences as any as ScheduleBlock[] | null) ?? [])
+    return {
+      blocks,
+      durationMin: user.classDurationMin ?? CLASS_DURATION_MIN,
+      teacherId: user.assignedTeacherId,
+      daysPerWeek: user.subscription?.plan?.daysPerWeek ?? blocks.length,
+      planName: user.subscription?.plan?.name ?? null,
+      subscriptionStatus: user.subscription?.status ?? null,
+    }
+  }
+
+  /**
+   * Cambia el horario semanal de un estudiante YA creado y rehace sus clases.
+   *
+   * Hasta ahora no existía: el horario solo se podía fijar al dar de alta, así
+   * que pasar a alguien de 2 días a 3 —o moverle una franja— obligaba a
+   * borrarlo y recrearlo, cosa que el admin tampoco puede hacer. Cambiar el
+   * plan por su cuenta no servía: las clases seguían siendo las viejas.
+   *
+   * Pasa por las mismas validaciones que el alta (ventana, máximo por día,
+   * separación entre franjas largas y disponibilidad del profesor), y después
+   * recalcula: borra las clases futuras que ya no corresponden y genera las que
+   * faltan. No toca las clases pasadas ni las validadas —son historial y
+   * alimentan la nómina—, ni las canceladas.
+   */
+  async setStudentSchedule(studentId: string, blocks: ScheduleBlock[], teacherIdNuevo?: string | null) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      include: { subscription: { include: { plan: true } } },
+    })
+    if (!user) throw new NotFoundException('Estudiante no encontrado')
+    if (!user.subscription?.plan) {
+      throw new BadRequestException('El estudiante no tiene plan: asígnale uno antes de fijar el horario')
+    }
+
+    const durationMin = user.classDurationMin ?? CLASS_DURATION_MIN
+    // Mismas reglas que el checkout y el alta admin: cantidad según el plan,
+    // ventana horaria, máximo por día y separación de las clases largas.
+    await this.slots.validateSelection(blocks, user.subscription.plan.daysPerWeek, durationMin)
+
+    const teacherId = teacherIdNuevo === undefined ? user.assignedTeacherId : teacherIdNuevo
+    if (teacherId) {
+      const t = await this.prisma.user.findUnique({ where: { id: teacherId } })
+      if (!t || !hasRole(t, 'teacher')) throw new BadRequestException('Profesor inválido')
+      // Disponibilidad pintada + horas libres, contando lo que invaden las
+      // clases largas de otros estudiantes.
+      await this.assertBlocksFitTeacher(teacherId, blocks, durationMin, studentId)
+    }
+
+    // Espejo de lectura + franjas semanales.
+    await this.prisma.user.update({
+      where: { id: studentId },
+      data: {
+        schedulePreferences: blocks as any,
+        ...(teacherIdNuevo !== undefined ? { assignedTeacherId: teacherIdNuevo } : {}),
+        ...(teacherId ? { scheduleAssignmentStatus: 'auto' } : {}),
+      },
+    })
+    await this.prisma.scheduleSlot.deleteMany({ where: { studentId } })
+    if (teacherId) {
+      await this.prisma.$transaction(
+        blocks.map((b) =>
+          this.prisma.scheduleSlot.create({
+            data: { teacherId, studentId, weekday: b.weekday, hour: b.hour, status: 'active' },
+          }),
+        ),
+      )
+    }
+
+    const recalculo = await this.recalcularClasesFuturas(studentId, blocks, durationMin)
+    return { ok: true, blocks, teacherId, ...recalculo }
+  }
+
+  /**
+   * Deja las clases futuras en línea con el horario recibido: borra las que ya
+   * no encajan y crea las que falten. Solo toca las `scheduled` a partir de
+   * mañana —lo pasado, lo validado y lo cancelado se conserva—, y compara por
+   * (día de la semana, hora) en horario Bogotá, que es como se define el
+   * horario semanal.
+   */
+  private async recalcularClasesFuturas(
+    studentId: string,
+    blocks: ScheduleBlock[],
+    durationMin: number,
+  ): Promise<{ eliminadas: number; creadas: number }> {
+    const desde = this.startOfTomorrowBogota()
+    const futuras = await this.prisma.class.findMany({
+      where: { studentId, status: 'scheduled', startsAt: { gte: desde } },
+      select: { id: true, startsAt: true },
+    })
+    const permitidas = new Set(blocks.map((b) => `${b.weekday}:${b.hour}`))
+    const sobran = futuras.filter((c) => {
+      const local = new Date(c.startsAt.getTime() - BOGOTA_OFFSET_MS)
+      return !permitidas.has(`${local.getUTCDay()}:${local.getUTCHours()}`)
+    })
+    if (sobran.length > 0) {
+      await this.prisma.class.deleteMany({ where: { id: { in: sobran.map((c) => c.id) } } })
+    }
+    // Si cambió la duración, las que sí encajan pueden tener el fin desfasado.
+    for (const c of futuras) {
+      if (sobran.some((s) => s.id === c.id)) continue
+      await this.prisma.class.update({
+        where: { id: c.id },
+        data: { endsAt: new Date(c.startsAt.getTime() + durationMin * 60 * 1000) },
+      })
+    }
+    const { created } = await this.ensureUpcomingClasses(studentId)
+    return { eliminadas: sobran.length, creadas: created }
+  }
+
   async assignRequest(studentId: string, teacherId: string) {
     const t = await this.prisma.user.findUnique({ where: { id: teacherId } })
     if (!t || !hasRole(t, 'teacher')) throw new BadRequestException('Invalid teacher')

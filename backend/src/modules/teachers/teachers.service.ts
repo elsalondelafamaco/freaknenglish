@@ -349,13 +349,32 @@ export class TeachersService {
       })
       if (!rel) throw new ForbiddenException('No autorizado sobre este estudiante')
     }
-    const clean = (url ?? '').trim()
-    if (clean && !/^https:\/\/.+/i.test(clean)) {
-      throw new BadRequestException('El link debe empezar con https:// (Meet, Zoom, etc.)')
+    // Tope defensivo: una invitación de correo cabe de sobra en 20k y evita
+    // que un cuerpo de 5 MB haga trabajar al regex sobre todo el texto.
+    const raw = (url ?? '').trim().slice(0, 20_000)
+    let clean: string | null = null
+    if (raw) {
+      // Los profes pegan la invitación COMPLETA de Zoom/Meet ("X is inviting
+      // you to a scheduled Zoom meeting… https://us05web.zoom.us/j/…"), no la
+      // URL sola: se extrae el primer enlace https del texto en vez de
+      // rechazar todo. Se limpia la puntuación final que arrastra el correo.
+      // El cuantificador va acotado y el recorte se hace carácter a carácter:
+      // con `[.,;:)\]>]+$` el backtracking era cuadrático sobre una cadena
+      // larga de puntuación y bloqueaba el event loop de toda la API.
+      let found = raw.match(/https:\/\/[^\s<>"']{1,2000}/i)?.[0]
+      while (found && /[.,;:)\]>]/.test(found[found.length - 1]!)) {
+        found = found.slice(0, -1)
+      }
+      if (!found) {
+        throw new BadRequestException(
+          'No encontramos ningún link https:// en lo que pegaste. Pega el enlace de la reunión (o el texto completo de la invitación, nosotros extraemos el link).',
+        )
+      }
+      clean = found
     }
     return this.prisma.user.update({
       where: { id: studentId },
-      data: { meetingUrl: clean || null },
+      data: { meetingUrl: clean },
       select: { id: true, meetingUrl: true },
     })
   }

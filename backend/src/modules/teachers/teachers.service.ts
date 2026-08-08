@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
-import { SlotsService } from '../scheduling/slots.service'
+import { SlotsService, availabilityCovers } from '../scheduling/slots.service'
 import { LearningService } from '../learning/learning.service'
 
 @Injectable()
@@ -476,23 +476,19 @@ export class TeachersService {
         `Una clase de ${durMin} min que empieza a las ${newParts.hour}:00 se sale de la ventana de horario`,
       )
     }
-    if (durMin > 60) {
-      // Igual que en el alta admin: la disponibilidad pintada del profe debe
-      // cubrir el intervalo completo (horas seguidas) en el destino.
-      const toMin = (s: string) => {
-        const [h, m] = s.split(':').map(Number)
-        return (h ?? 0) * 60 + (m ?? 0)
-      }
-      const avail = await this.prisma.teacherAvailability.findMany({ where: { teacherId } })
-      const needStart = newParts.hour * 60
-      const covered = avail.some(
-        (r) => r.weekday === newParts.weekday && toMin(r.startsAt) <= needStart && toMin(r.endsAt) >= needStart + durMin,
+    // Igual que en el alta admin: la disponibilidad pintada del profe debe
+    // cubrir el intervalo completo de la clase en el destino. Aplica a
+    // cualquier duración: antes solo corría con más de 60 min, y por ese hueco
+    // se podía mover una clase de 50 a una hora sin pintar.
+    const avail = await this.prisma.teacherAvailability.findMany({ where: { teacherId } })
+    if (!availabilityCovers(avail, newParts.weekday, newParts.hour, durMin)) {
+      const detalle =
+        span > 1
+          ? `pinta las horas seguidas (${newParts.hour}:00 y ${newParts.hour + span - 1}:00)`
+          : `pinta esa hora`
+      throw new BadRequestException(
+        `No tienes disponibilidad para una clase de ${durMin} min en ese horario: ${detalle} en tu disponibilidad primero.`,
       )
-      if (!covered) {
-        throw new BadRequestException(
-          `No tienes disponibilidad continua para una clase de ${durMin} min en ese horario: pinta las horas seguidas en tu disponibilidad primero.`,
-        )
-      }
     }
     const spanHours = Array.from({ length: span }, (_, i) => newParts.hour + i)
     const occupied = await this.prisma.scheduleSlot.findFirst({

@@ -3,7 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service'
 import { IS_ACTIVE_TEACHER, IS_TEACHER, hasRole } from '../../common/roles'
 import { NotificationsService } from '../notifications/notifications.service'
 import { BoardService } from '../board/board.service'
-import { SlotsService, SlotRef } from './slots.service'
+import { SlotsService, SlotRef, availabilityCovers } from './slots.service'
 import { SubscriptionsService } from '../subscriptions/subscriptions.service'
 
 /**
@@ -398,29 +398,6 @@ export class SchedulingService {
    * dejaba asignar un estudiante a un profe sin esa hora en su grilla.
    */
   /**
-   * ¿La disponibilidad declarada cubre una clase que arranca a `hour` y dura
-   * `durationMin`? El editor de disponibilidad fusiona las horas contiguas
-   * pintadas en un solo rango (`cellsToRanges`), así que basta con que UNO de
-   * los rangos abarque el intervalo entero.
-   */
-  private static availabilityCovers(
-    avail: Array<{ weekday: number; startsAt: string; endsAt: string }>,
-    weekday: number,
-    hour: number,
-    durationMin: number,
-  ): boolean {
-    const toMin = (s: string) => {
-      const [h, m] = s.split(':').map(Number)
-      return (h ?? 0) * 60 + (m ?? 0)
-    }
-    const needStart = hour * 60
-    const needEnd = needStart + durationMin
-    return avail.some(
-      (r) => r.weekday === weekday && toMin(r.startsAt) <= needStart && toMin(r.endsAt) >= needEnd,
-    )
-  }
-
-  /**
    * Horarios ya asignados que NO caben en la disponibilidad de su profesor.
    * Existe para poder auditar sin acceso a la base: la validación nueva impide
    * crear casos así, pero los anteriores siguen ahí y solo se ven cruzando
@@ -448,7 +425,7 @@ export class SchedulingService {
     const problemas = slots
       .filter(
         (s) =>
-          !SchedulingService.availabilityCovers(
+          !availabilityCovers(
             porProfe.get(s.teacher.id) ?? [],
             s.weekday,
             s.hour,
@@ -511,7 +488,7 @@ export class SchedulingService {
     }
     const avail = await this.prisma.teacherAvailability.findMany({ where: { teacherId } })
     for (const b of blocks) {
-      const covered = SchedulingService.availabilityCovers(avail, b.weekday, b.hour, durationMin)
+      const covered = availabilityCovers(avail, b.weekday, b.hour, durationMin)
       if (!covered) {
         const detalle =
           span > 1

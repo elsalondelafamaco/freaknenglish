@@ -30,6 +30,33 @@ const HOLD_BUSINESS_DAYS = 5
 
 const key = (s: SlotRef) => `${s.weekday}:${s.hour}`
 
+/**
+ * ¿La disponibilidad declarada cubre una clase que arranca a `hour` y dura
+ * `durationMin`? El editor fusiona las horas contiguas pintadas en un solo
+ * rango (`cellsToRanges`), así que basta con que UNO abarque el intervalo.
+ *
+ * Vive aquí —y no dentro de un servicio— porque la comprobación la necesitan
+ * tanto la asignación (`SchedulingService`) como el reagendar recurrente
+ * (`TeachersService`). Tenerla duplicada fue justo lo que dejó que las dos se
+ * desincronizaran: una validaba la disponibilidad y la otra no.
+ */
+export function availabilityCovers(
+  avail: Array<{ weekday: number; startsAt: string; endsAt: string }>,
+  weekday: number,
+  hour: number,
+  durationMin: number,
+): boolean {
+  const toMin = (s: string) => {
+    const [h, m] = s.split(':').map(Number)
+    return (h ?? 0) * 60 + (m ?? 0)
+  }
+  const needStart = hour * 60
+  const needEnd = needStart + durationMin
+  return avail.some(
+    (r) => r.weekday === weekday && toMin(r.startsAt) <= needStart && toMin(r.endsAt) >= needEnd,
+  )
+}
+
 /** Suma n días hábiles (L–V, sin festivos — decisión Q1). */
 export function addBusinessDays(from: Date, n: number): Date {
   const d = new Date(from)

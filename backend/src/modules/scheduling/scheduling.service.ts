@@ -18,8 +18,15 @@ export interface ScheduleBlock {
 // Colombia no tiene horario de verano: siempre UTC-5.
 const BOGOTA_OFFSET_MS = 5 * 60 * 60 * 1000
 const CLASS_DURATION_MIN = 50
-// Horizonte de clases generadas por adelantado.
+// Horizonte de clases generadas por adelantado cuando no hay fecha de fin.
 const GENERATION_WEEKS = 4
+/**
+ * Tope duro de semanas a generar de una sola vez, aunque la vigencia sea más
+ * larga. El job diario vuelve a llamar al generador, así que el horizonte se
+ * va extendiendo solo; esto solo evita que una suscripción anual dispare
+ * cientos de inserciones en una sola pasada.
+ */
+const MAX_GENERATION_WEEKS = 16
 
 function isHourInRange(hour: number, startsAt: string, endsAt: string) {
   const s = parseInt(startsAt.split(':')[0] ?? '0', 10)
@@ -168,15 +175,38 @@ export class SchedulingService {
     // Las clases arrancan a partir de MAÑANA, nunca el mismo día en que el
     // estudiante compra o elige horario: nadie alcanza a prepararse (ni el
     // profe ni el estudiante) para una clase que empieza en un par de horas.
-    const noNantesDe = this.startOfTomorrowBogota()
+    // Y nunca antes de que empiece la vigencia: si la suscripción arranca el
+    // 10, no tiene por qué haber clase el 9.
+    const inicioVigencia = user.subscription.startedAt
+    const noNantesDe = new Date(
+      Math.max(this.startOfTomorrowBogota().getTime(), inicioVigencia?.getTime() ?? 0),
+    )
+    // Ni después de que termine: antes se generaban 4 semanas fijas contadas
+    // desde hoy, así que a un plan que vencía el 31 le aparecían clases de
+    // septiembre que nadie había pagado, y uno más largo que 4 semanas se
+    // quedaba corto. Ahora el horizonte lo marca la vigencia.
+    const finVigencia = user.subscription.currentPeriodEnd
+    const topeDuro = noNantesDe.getTime() + MAX_GENERATION_WEEKS * 7 * 24 * 60 * 60 * 1000
+    const noDespuesDe = finVigencia
+      ? Math.min(finVigencia.getTime(), topeDuro)
+      : this.buildClassInstant(0, 0, GENERATION_WEEKS).getTime()
+    // Semanas a recorrer para cubrir la ventana, sin pasarse del tope.
+    const semanas = Math.min(
+      MAX_GENERATION_WEEKS,
+      Math.max(
+        GENERATION_WEEKS,
+        Math.ceil((noDespuesDe - Date.now()) / (7 * 24 * 60 * 60 * 1000)) + 1,
+      ),
+    )
     // Duración por estudiante (ej. 75 min); null = estándar de 50.
     const durationMin = user.classDurationMin ?? CLASS_DURATION_MIN
     let created = 0
     for (const b of blocks) {
       if (typeof b?.weekday !== 'number' || typeof b?.hour !== 'number') continue
-      for (let w = 0; w < GENERATION_WEEKS; w++) {
+      for (let w = 0; w < semanas; w++) {
         const startsAt = this.buildClassInstant(b.weekday, b.hour, w)
         if (startsAt.getTime() < noNantesDe.getTime()) continue
+        if (startsAt.getTime() > noDespuesDe) continue
         const endsAt = new Date(startsAt.getTime() + durationMin * 60 * 1000)
         const exists = await this.prisma.class.findFirst({
           where: { studentId, startsAt },
@@ -609,9 +639,18 @@ export class SchedulingService {
       where: { studentId, status: 'scheduled', startsAt: { gte: desde } },
       select: { id: true, startsAt: true },
     })
+    // La vigencia también decide: una clase que caiga fuera del período pagado
+    // sobra aunque su día y hora sigan estando en el horario.
+    const sub = await this.prisma.subscription.findUnique({
+      where: { userId: studentId },
+      select: { startedAt: true, currentPeriodEnd: true },
+    })
     const permitidas = new Set(blocks.map((b) => `${b.weekday}:${b.hour}`))
     const sobran = futuras.filter((c) => {
-      const local = new Date(c.startsAt.getTime() - BOGOTA_OFFSET_MS)
+      const t = c.startsAt.getTime()
+      if (sub?.startedAt && t < sub.startedAt.getTime()) return true
+      if (sub?.currentPeriodEnd && t > sub.currentPeriodEnd.getTime()) return true
+      const local = new Date(t - BOGOTA_OFFSET_MS)
       return !permitidas.has(`${local.getUTCDay()}:${local.getUTCHours()}`)
     })
     if (sobran.length > 0) {

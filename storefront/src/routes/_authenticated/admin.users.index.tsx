@@ -110,6 +110,8 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
   // Horario + profesor en el mismo alta (antes había que hacerlo en 3 pantallas).
   const [schedule, setSchedule] = useState<SlotRef[]>([]);
   const [teacherId, setTeacherId] = useState("");
+  // Duración por clase (planes internos tipo 2×75). 50 = estándar.
+  const [durationMin, setDurationMin] = useState(50);
 
   const plansQ = useQuery({ queryKey: ["admin", "plans"], queryFn: () => adminApi.plans(), enabled: userRole === "student" });
   const plans = (plansQ.data ?? []) as Array<{ id: string; name: string; daysPerWeek?: number }>;
@@ -143,6 +145,8 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
         // estudiante queda en la cola de asignación manual.
         schedule: userRole === "student" && withPlan && scheduleReady ? schedule : undefined,
         teacherId: userRole === "student" && withPlan && scheduleReady && teacherId ? teacherId : undefined,
+        classDurationMin:
+          userRole === "student" && withPlan && durationMin !== 50 ? durationMin : undefined,
       }),
     onSuccess: () => {
       toast.success(
@@ -238,7 +242,14 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
                   Plan
                   <select
                     value={planId}
-                    onChange={(e) => { setPlanId(e.target.value); setSchedule([]); }}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setPlanId(id);
+                      setSchedule([]);
+                      // El plan interno de 2 días se dicta en clases de 75 min
+                      // (mismo tiempo semanal que 3×50); los demás en 50.
+                      setDurationMin(plans.find((p) => p.id === id)?.daysPerWeek === 2 ? 75 : 50);
+                    }}
                     required
                     className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
                   >
@@ -247,6 +258,25 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
+                </label>
+                <label className="mt-3 block text-xs font-semibold text-brand-ink/70">
+                  Duración de cada clase
+                  <select
+                    value={durationMin}
+                    onChange={(e) => { setDurationMin(Number(e.target.value)); setSchedule([]); }}
+                    className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                  >
+                    <option value={50}>50 minutos (estándar)</option>
+                    <option value={60}>60 minutos</option>
+                    <option value={75}>75 minutos</option>
+                    <option value={90}>90 minutos</option>
+                  </select>
+                  {durationMin > 60 ? (
+                    <span className="mt-1 block font-normal text-[10px] text-brand-ink/55">
+                      La clase ocupa también la hora siguiente: el profesor debe tener las
+                      horas seguidas pintadas en su disponibilidad para poder asignarlo.
+                    </span>
+                  ) : null}
                 </label>
                 <div className="mt-3 grid grid-cols-2 gap-3">
                   <label className="block text-xs font-semibold text-brand-ink/70">
@@ -285,7 +315,14 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
                       </span>
                     </div>
                     <div className="mt-2">
-                      <SchedulePickerGrid cfg={cfg} need={need} selected={schedule} onChange={setSchedule} />
+                      {/* La grilla hereda la duración elegida: tooltips con la
+                          hora fin real y reglas de separación entre franjas. */}
+                      <SchedulePickerGrid
+                        cfg={{ ...cfg, durationMin }}
+                        need={need}
+                        selected={schedule}
+                        onChange={setSchedule}
+                      />
                     </div>
 
                     <label className="mt-3 block text-xs font-semibold text-brand-ink/70">

@@ -605,6 +605,8 @@ export const adminApi = {
     schedule?: SlotRef[];
     /** Profesor a asignar de una vez. Requiere `schedule`. */
     teacherId?: string;
+    /** Minutos por clase (planes internos tipo 2×75); ausente = 50. */
+    classDurationMin?: number;
   }) => apiPost<{ user: User; link?: string }>("/admin/users", body),
   setSubscription: (
     id: string,

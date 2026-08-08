@@ -149,6 +149,23 @@ export const scheduleApi = {
     apiGet<Array<{ id: string; teacherId: string; weekday: number; startsAt: string; endsAt: string }>>(
       "/admin/availability",
     ),
+  /** Horarios asignados que no caben en la disponibilidad de su profesor. */
+  adminScheduleAudit: () =>
+    apiGet<{
+      total: number;
+      sinProblemas: number;
+      problemas: Array<{
+        teacherId: string;
+        teacherName: string;
+        studentId: string | null;
+        studentName: string | null;
+        weekday: number;
+        dayName: string;
+        hour: number;
+        durationMin: number;
+        horasRequeridas: number[];
+      }>;
+    }>("/admin/schedule/audit"),
   adminTeacherAvailability: (teacherId: string) =>
     apiGet<Array<{ id: string; weekday: number; startsAt: string; endsAt: string }>>(`/admin/teachers/${teacherId}/availability`),
   adminSetTeacherAvailability: (

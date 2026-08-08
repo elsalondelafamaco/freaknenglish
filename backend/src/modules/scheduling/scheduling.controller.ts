@@ -71,6 +71,11 @@ export class SchedulingController {
   @Get('admin/availability')
   allAvailability() { return this.svc.allTeachersAvailability() }
 
+  /** @endpoint GET /api/v1/admin/schedule/audit  (horarios que no caben en la disponibilidad del profe) */
+  @Roles('admin')
+  @Get('admin/schedule/audit')
+  scheduleAudit() { return this.svc.auditScheduleFit() }
+
   /** @endpoint GET /api/v1/admin/teachers/:id/availability */
   @Roles('admin')
   @Get('admin/teachers/:id/availability')

@@ -23,6 +23,54 @@ const colorFor = (id: string) => {
 const normalizar = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
+/**
+ * Avisa de los horarios ya asignados que se salen de la disponibilidad de su
+ * profesor. La validación nueva impide crear casos así, pero los anteriores
+ * siguen ahí y sin esto solo se veían consultando la base a mano.
+ */
+function AuditoriaHorarios() {
+  const q = useQuery({
+    queryKey: ["admin", "schedule", "audit"],
+    queryFn: () => scheduleApi.adminScheduleAudit(),
+    staleTime: 5 * 60_000,
+  });
+
+  if (q.isPending || q.isError) return null;
+  const { problemas, total } = q.data;
+
+  if (problemas.length === 0) {
+    return (
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        ✓ Las {total} franjas asignadas caben en la disponibilidad de su profesor.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3">
+      <p className="text-sm font-semibold text-amber-900">
+        {problemas.length} de {total} franjas no caben en la disponibilidad de su profesor
+      </p>
+      <p className="mt-1 text-xs text-amber-900/70">
+        La clase se sale de las horas que el profe tiene pintadas. Corrígelo pintando esas horas en
+        su disponibilidad, o reasignando al estudiante.
+      </p>
+      <ul className="mt-3 flex flex-col gap-1.5">
+        {problemas.map((p, i) => {
+          const horas = p.horasRequeridas.map((h) => `${h}:00`).join(" y ");
+          return (
+            <li key={i} className="text-xs text-amber-950">
+              <span className="font-semibold">{p.studentName ?? "—"}</span> con{" "}
+              <span className="font-semibold">{p.teacherName}</span> · {p.dayName} {p.hour}:00 (
+              {p.durationMin} min) — necesita {horas} pintadas
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 function AdminCalendar() {
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
@@ -109,6 +157,8 @@ function AdminCalendar() {
           = estudiante sin pago activo.
         </p>
       </header>
+
+      <AuditoriaHorarios />
 
       {/* Calendario + panel de profesores. En móvil el panel va debajo. */}
       <div className="grid gap-4 lg:grid-cols-[1fr_260px] lg:items-start">

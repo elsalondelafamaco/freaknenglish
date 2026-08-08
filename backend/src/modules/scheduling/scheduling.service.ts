@@ -397,6 +397,84 @@ export class SchedulingService {
    * para clases de más de 60 min, y por ese hueco el alta manual del admin
    * dejaba asignar un estudiante a un profe sin esa hora en su grilla.
    */
+  /**
+   * ¿La disponibilidad declarada cubre una clase que arranca a `hour` y dura
+   * `durationMin`? El editor de disponibilidad fusiona las horas contiguas
+   * pintadas en un solo rango (`cellsToRanges`), así que basta con que UNO de
+   * los rangos abarque el intervalo entero.
+   */
+  private static availabilityCovers(
+    avail: Array<{ weekday: number; startsAt: string; endsAt: string }>,
+    weekday: number,
+    hour: number,
+    durationMin: number,
+  ): boolean {
+    const toMin = (s: string) => {
+      const [h, m] = s.split(':').map(Number)
+      return (h ?? 0) * 60 + (m ?? 0)
+    }
+    const needStart = hour * 60
+    const needEnd = needStart + durationMin
+    return avail.some(
+      (r) => r.weekday === weekday && toMin(r.startsAt) <= needStart && toMin(r.endsAt) >= needEnd,
+    )
+  }
+
+  /**
+   * Horarios ya asignados que NO caben en la disponibilidad de su profesor.
+   * Existe para poder auditar sin acceso a la base: la validación nueva impide
+   * crear casos así, pero los anteriores siguen ahí y solo se ven cruzando
+   * `schedule_slots` con `teacher_availability`.
+   */
+  async auditScheduleFit() {
+    const slots = await this.prisma.scheduleSlot.findMany({
+      where: { status: { in: ['pending', 'active', 'held'] }, studentId: { not: null } },
+      select: {
+        weekday: true,
+        hour: true,
+        teacher: { select: { id: true, fullName: true } },
+        student: { select: { id: true, fullName: true, classDurationMin: true } },
+      },
+      orderBy: [{ weekday: 'asc' }, { hour: 'asc' }],
+    })
+    const avail = await this.prisma.teacherAvailability.findMany()
+    const porProfe = new Map<string, typeof avail>()
+    for (const a of avail) {
+      const arr = porProfe.get(a.teacherId) ?? []
+      arr.push(a)
+      porProfe.set(a.teacherId, arr)
+    }
+
+    const problemas = slots
+      .filter(
+        (s) =>
+          !SchedulingService.availabilityCovers(
+            porProfe.get(s.teacher.id) ?? [],
+            s.weekday,
+            s.hour,
+            s.student?.classDurationMin ?? 50,
+          ),
+      )
+      .map((s) => {
+        const durationMin = s.student?.classDurationMin ?? 50
+        const span = Math.max(1, Math.ceil(durationMin / 60))
+        return {
+          teacherId: s.teacher.id,
+          teacherName: s.teacher.fullName,
+          studentId: s.student?.id ?? null,
+          studentName: s.student?.fullName ?? null,
+          weekday: s.weekday,
+          dayName: SchedulingService.DAY_NAMES[s.weekday],
+          hour: s.hour,
+          durationMin,
+          // Horas que el profesor necesita tener pintadas para que esto encaje.
+          horasRequeridas: Array.from({ length: span }, (_, i) => s.hour + i),
+        }
+      })
+
+    return { total: slots.length, problemas, sinProblemas: slots.length - problemas.length }
+  }
+
   private async assertBlocksFitTeacher(
     teacherId: string,
     blocks: ScheduleBlock[],
@@ -431,19 +509,9 @@ export class SchedulingService {
           .join(', ')} (las clases largas ocupan también la hora siguiente)`,
       )
     }
-    const toMin = (s: string) => {
-      const [h, m] = s.split(':').map(Number)
-      return (h ?? 0) * 60 + (m ?? 0)
-    }
     const avail = await this.prisma.teacherAvailability.findMany({ where: { teacherId } })
     for (const b of blocks) {
-      const needStart = b.hour * 60
-      const needEnd = needStart + durationMin
-      // `cellsToRanges` del editor fusiona las horas contiguas pintadas en un
-      // solo rango, así que basta con que UNO cubra el intervalo entero.
-      const covered = avail.some(
-        (r) => r.weekday === b.weekday && toMin(r.startsAt) <= needStart && toMin(r.endsAt) >= needEnd,
-      )
+      const covered = SchedulingService.availabilityCovers(avail, b.weekday, b.hour, durationMin)
       if (!covered) {
         const detalle =
           span > 1

@@ -454,6 +454,18 @@ export const teachersApi = {
     apiGet<Array<{ id: string; weekday: number; startsAt: string; endsAt: string }>>(
       "/teacher/availability",
     ),
+  /** Franjas que ya tienen estudiante, con las horas que abarca cada clase. */
+  myOccupiedSlots: () =>
+    apiGet<
+      Array<{
+        weekday: number;
+        hour: number;
+        durationMin: number;
+        studentId: string | null;
+        studentName: string | null;
+        hours: number[];
+      }>
+    >("/teacher/occupied-slots"),
   saveMyAvailability: (slots: Array<{ weekday: number; startsAt: string; endsAt: string }>) =>
     apiPost<{
       availability: Array<{ id: string; weekday: number; startsAt: string; endsAt: string }>;

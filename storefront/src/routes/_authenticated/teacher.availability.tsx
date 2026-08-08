@@ -54,6 +54,12 @@ function AvailabilityEditor() {
   const qc = useQueryClient();
   const cfgQ = useQuery({ queryKey: ["schedule", "config"], queryFn: () => scheduleApi.config() });
   const availQ = useQuery({ queryKey: ["teacher", "availability"], queryFn: () => teachersApi.myAvailability() });
+  // Horas que ya tienen clase: despintar una no desasigna al estudiante, así
+  // que sin este aviso el desajuste queda invisible.
+  const ocupQ = useQuery({
+    queryKey: ["teacher", "occupied-slots"],
+    queryFn: () => teachersApi.myOccupiedSlots(),
+  });
 
   const [cells, setCells] = useState<Set<string>>(new Set());
   const [dirty, setDirty] = useState(false);
@@ -77,6 +83,23 @@ function AvailabilityEditor() {
     },
     onError: (e: any) => toast.error(e?.message ?? "No se pudo guardar"),
   });
+
+  // Clases cuyas horas dejaron de estar pintadas. El estudiante sigue
+  // asignado (quitar disponibilidad no lo mueve), así que el horario queda
+  // fuera de la grilla sin que nada lo señale.
+  const descubiertas = useMemo(() => {
+    const ocupadas = ocupQ.data ?? [];
+    return ocupadas.filter((o) => o.hours.some((h) => !cells.has(cellKey(o.weekday, h))));
+  }, [ocupQ.data, cells]);
+
+  /** Celdas con clase, para marcarlas en la grilla antes de despintarlas. */
+  const conClase = useMemo(() => {
+    const s = new Map<string, string>();
+    for (const o of ocupQ.data ?? []) {
+      for (const h of o.hours) s.set(cellKey(o.weekday, h), o.studentName ?? "clase asignada");
+    }
+    return s;
+  }, [ocupQ.data]);
 
   const cfg = cfgQ.data;
   const days = useMemo(() => (cfg ? [...cfg.days].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)) : []), [cfg]);
@@ -118,6 +141,26 @@ function AvailabilityEditor() {
         </button>
       </header>
 
+      {descubiertas.length > 0 ? (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-semibold text-amber-900">
+            {descubiertas.length} clase(s) tuya(s) quedan fuera de tu disponibilidad
+          </p>
+          <p className="mt-1 text-xs text-amber-900/70">
+            Sigues teniendo estas clases: quitar la hora no reasigna a nadie. Vuelve a pintarla o
+            pide al admin que reagende al estudiante.
+          </p>
+          <ul className="mt-2 flex flex-col gap-1">
+            {descubiertas.map((o, i) => (
+              <li key={i} className="text-xs text-amber-950">
+                <span className="font-semibold">{o.studentName ?? "—"}</span>
+                {` · ${DAY_NAMES[o.weekday]} ${o.hour}:00 (${o.durationMin} min)`}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       <div className="overflow-x-auto rounded-3xl border border-brand-line bg-white p-4 shadow-soft">
         <div className="min-w-[560px] select-none">
           <div className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, 1fr)` }}>
@@ -129,7 +172,15 @@ function AvailabilityEditor() {
               </div>
             ))}
             {hours.map((h) => (
-              <RowCells key={h} h={h} days={days} cells={cells} paintMode={paintMode} onPaint={applyPaint} />
+              <RowCells
+                key={h}
+                h={h}
+                days={days}
+                cells={cells}
+                conClase={conClase}
+                paintMode={paintMode}
+                onPaint={applyPaint}
+              />
             ))}
           </div>
         </div>
@@ -143,11 +194,18 @@ function AvailabilityEditor() {
 }
 
 function RowCells({
-  h, days, cells, paintMode, onPaint,
+  h,
+  days,
+  cells,
+  conClase,
+  paintMode,
+  onPaint,
 }: {
   h: number;
   days: number[];
   cells: Set<string>;
+  /** celda → nombre del estudiante que ocupa esa hora, si lo hay. */
+  conClase: Map<string, string>;
   paintMode: React.MutableRefObject<"add" | "remove" | null>;
   onPaint: (d: number, h: number) => void;
 }) {
@@ -155,7 +213,11 @@ function RowCells({
     <>
       <div className="flex items-center justify-end pr-3 text-[11px] font-medium text-brand-ink/55">{h}:00</div>
       {days.map((d) => {
-        const on = cells.has(cellKey(d, h));
+        const k = cellKey(d, h);
+        const on = cells.has(k);
+        const estudiante = conClase.get(k);
+        // Hora con clase pero sin pintar: el desajuste que hay que ver de una.
+        const descubierta = !!estudiante && !on;
         return (
           <div
             key={`${d}:${h}`}
@@ -167,11 +229,27 @@ function RowCells({
             onMouseEnter={() => {
               if (paintMode.current) onPaint(d, h);
             }}
-            className={`m-0.5 h-10 cursor-pointer rounded-lg border transition ${
-              on ? "border-brand-ink bg-brand-ink/90" : "border-brand-line bg-brand-cream/30 hover:bg-brand-cream/70"
+            className={`relative m-0.5 h-10 cursor-pointer rounded-lg border transition ${
+              descubierta
+                ? "border-amber-500 bg-amber-100"
+                : on
+                  ? "border-brand-ink bg-brand-ink/90"
+                  : "border-brand-line bg-brand-cream/30 hover:bg-brand-cream/70"
             }`}
-            title={`${DAY_NAMES[d]} ${h}:00–${h}:50`}
-          />
+            title={
+              estudiante
+                ? `${DAY_NAMES[d]} ${h}:00 · clase con ${estudiante}${descubierta ? " — sin pintar en tu disponibilidad" : ""}`
+                : `${DAY_NAMES[d]} ${h}:00–${h}:50`
+            }
+          >
+            {estudiante ? (
+              <span
+                className={`absolute right-1 top-1 size-1.5 rounded-full ${
+                  descubierta ? "bg-amber-600" : "bg-white/70"
+                }`}
+              />
+            ) : null}
+          </div>
         );
       })}
     </>

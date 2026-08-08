@@ -125,6 +125,17 @@ export class TeachersController {
   }
 
   /**
+   * @endpoint GET /api/v1/teacher/occupied-slots  (self)
+   * Franjas semanales que el profesor ya tiene con estudiantes, expandidas
+   * según la duración de cada clase. El editor de disponibilidad las marca
+   * para que no se despinte por error una hora que tiene clase.
+   */
+  @Get('occupied-slots')
+  occupiedSlots(@CurrentUser() u: AuthUser) {
+    return this.svc.myOccupiedSlots(u.id)
+  }
+
+  /**
    * @endpoint POST /api/v1/teacher/availability  (self)
    * Body: { slots: [{ weekday, startsAt, endsAt }] }
    * Al guardar, se dispara una re-evaluación de estudiantes en

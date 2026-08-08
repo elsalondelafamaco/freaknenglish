@@ -26,6 +26,41 @@ export class TeachersService {
     if (!rel) throw new ForbiddenException('No autorizado sobre este estudiante')
   }
 
+  /**
+   * Franjas semanales ocupadas por estudiantes, con las horas que realmente
+   * abarca cada clase: una de 75 min que empieza a las 8:00 devuelve [8, 9].
+   * El editor de disponibilidad las usa para avisar antes de despintar una
+   * hora con clase —quitarla no desasigna a nadie, así que el desajuste pasa
+   * inadvertido hasta que alguien cruza el calendario con la grilla a mano.
+   */
+  async myOccupiedSlots(teacherId: string) {
+    const slots = await this.prisma.scheduleSlot.findMany({
+      where: {
+        teacherId,
+        status: { in: ['pending', 'active', 'held'] },
+        studentId: { not: null },
+      },
+      select: {
+        weekday: true,
+        hour: true,
+        student: { select: { id: true, fullName: true, classDurationMin: true } },
+      },
+      orderBy: [{ weekday: 'asc' }, { hour: 'asc' }],
+    })
+    return slots.map((s) => {
+      const durationMin = s.student?.classDurationMin ?? 50
+      const span = Math.max(1, Math.ceil(durationMin / 60))
+      return {
+        weekday: s.weekday,
+        hour: s.hour,
+        durationMin,
+        studentId: s.student?.id ?? null,
+        studentName: s.student?.fullName ?? null,
+        hours: Array.from({ length: span }, (_, i) => s.hour + i),
+      }
+    })
+  }
+
   async students(teacherId: string) {
     // Incluye estudiantes explícitamente asignados (aún sin clases) Y
     // estudiantes con historial de clases con este profesor.

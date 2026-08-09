@@ -125,8 +125,20 @@ export class LearningService {
     /** lessonId → { locked, reason, blockingLessonId } */
     const state = new Map<string, { locked: boolean; reason: string | null; blockedBy: string | null }>()
     let gate: { id: string; title: string; moduleTitle: string } | null = null
+    let nivelDeLaCompuerta: string | null = null
 
     for (const m of modules) {
+      // Regla 3 — un checkpoint sólo tapa DENTRO de su propio nivel. Sin esto,
+      // al recorrer todos los niveles seguidos (beginner → intermediate →
+      // advanced) el primer checkpoint sin completar de Beginner bloqueaba
+      // también todo Intermediate, aunque el profe ya lo hubiera habilitado:
+      // un estudiante que entra directo a Intermediate nunca hizo — ni tiene
+      // por qué hacer — los checkpoints del nivel anterior. Pasar de un nivel
+      // al siguiente es cosa del examen de nivel, no de esta compuerta.
+      if (m.level !== nivelDeLaCompuerta) {
+        nivelDeLaCompuerta = m.level
+        gate = null
+      }
       for (const l of m.lessons) {
         // Regla 1 — TODO nace bloqueado. El estudiante solo ve lo que su
         // profesor le fue habilitando (o lo que ya completó antes).

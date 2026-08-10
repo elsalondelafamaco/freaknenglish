@@ -27,7 +27,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { boardsApi } from "@/lib/api/endpoints";
-import { colorFor, createPageProvider, type BoardPageProvider } from "@/lib/board/yProvider";
+import { colorFor, createPageProvider, type BoardPageProvider, type EstadoGuardado } from "@/lib/board/yProvider";
 import { DrawLayer } from "@/components/board/DrawLayer";
 import { VersionHistory } from "@/components/board/VersionHistory";
 import { htmlToMarkdown, downloadFile } from "@/lib/board/exportPage";
@@ -44,6 +44,7 @@ function BoardPage() {
   const [status, setStatus] = useState<"connecting" | "connected" | "offline">("connecting");
   const [peers, setPeers] = useState<any[]>([]);
   const [drawMode, setDrawMode] = useState(false);
+  const [guardado, setGuardado] = useState<EstadoGuardado>({ pendientes: 0, error: null });
 
   // El provider se crea y se destruye en el MISMO efecto. Antes se creaba en
   // un useMemo y se destruía en el cleanup de un efecto aparte: al desmontar y
@@ -64,15 +65,27 @@ function BoardPage() {
     providerRef.current = p;
     const off1 = p.onStatus(setStatus);
     const off2 = p.onPresence(setPeers);
+    const off3 = p.onSave(setGuardado);
     setProvider(p);
     return () => {
       off1();
       off2();
+      off3();
       p.destroy();
       providerRef.current = null;
       setProvider((actual) => (actual === p ? null : actual));
     };
   }, [pageId, user?.id]);
+
+  // Un cambio que el servidor rechaza no se recupera solo: se avisa una vez,
+  // fuerte, mientras el contenido todavía está en pantalla y se puede copiar.
+  const ultimoAviso = useRef<string | null>(null);
+  useEffect(() => {
+    const msg = guardado.error?.mensaje ?? null;
+    if (!msg || ultimoAviso.current === msg) return;
+    ultimoAviso.current = msg;
+    toast.error(msg, { duration: 15000 });
+  }, [guardado.error]);
 
   const editor = useEditor(
     {
@@ -145,6 +158,7 @@ function BoardPage() {
         <div className="flex items-center gap-2">
           <VersionHistory pageId={pageId} />
           <PresenceDots peers={peers} selfId={user.id} />
+          <SavePill estado={guardado} />
           <StatusPill status={status} />
         </div>
       </div>
@@ -165,6 +179,27 @@ function StatusPill({ status }: { status: "connecting" | "connected" | "offline"
     offline: { c: "bg-red-100 text-red-800", t: "Offline" },
   }[status];
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${cfg.c}`}>{cfg.t}</span>;
+}
+
+/**
+ * "En vivo" sólo dice que hay socket. Esto dice si lo escrito está EN EL
+ * SERVIDOR, que es lo que de verdad importa antes de cambiar de página.
+ */
+function SavePill({ estado }: { estado: EstadoGuardado }) {
+  if (estado.error) {
+    return (
+      <span
+        title={estado.error.mensaje}
+        className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-800"
+      >
+        Sin guardar
+      </span>
+    );
+  }
+  if (estado.pendientes > 0) {
+    return <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Guardando…</span>;
+  }
+  return <span className="rounded-full bg-brand-cream px-2 py-0.5 text-[10px] font-semibold text-brand-ink/60">Guardado</span>;
 }
 
 function PresenceDots({ peers, selfId }: { peers: any[]; selfId: string }) {

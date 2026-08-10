@@ -46,6 +46,19 @@ function bytesToB64(bytes: Uint8Array): string {
   return btoa(s);
 }
 
+/**
+ * Tope de un update Yjs suelto — el mismo que aplica el backend
+ * (MAX_UPDATE_BYTES en board.service.ts). Si se cambia allá, cambiarlo acá.
+ */
+const MAX_UPDATE_BYTES = 2 * 1024 * 1024;
+
+export type EstadoGuardado = {
+  /** Cambios que todavía no confirmó el servidor. 0 = todo a salvo. */
+  pendientes: number;
+  /** Fallo que no se arregla reintentando; hay que avisarle a quien escribe. */
+  error: { tipo: "demasiado_grande" | "rechazado"; mensaje: string } | null;
+};
+
 export interface BoardPageProvider {
   doc: Y.Doc;
   awareness: Awareness;
@@ -53,6 +66,7 @@ export interface BoardPageProvider {
   destroy(): void;
   onStatus(cb: (s: BoardPageProvider["status"]) => void): () => void;
   onPresence(cb: (users: Array<{ id: string; email?: string; role?: string }>) => void): () => void;
+  onSave(cb: (e: EstadoGuardado) => void): () => void;
 }
 
 export function createPageProvider(pageId: string, user: { id: string; name: string; color: string }): BoardPageProvider {
@@ -64,6 +78,7 @@ export function createPageProvider(pageId: string, user: { id: string; name: str
   let status: BoardPageProvider["status"] = "connecting";
   const statusListeners = new Set<(s: BoardPageProvider["status"]) => void>();
   const presenceListeners = new Set<(u: any[]) => void>();
+  const saveListeners = new Set<(e: EstadoGuardado) => void>();
   const setStatus = (s: BoardPageProvider["status"]) => {
     status = s;
     statusListeners.forEach((cb) => cb(s));
@@ -133,23 +148,66 @@ export function createPageProvider(pageId: string, user: { id: string; name: str
   // Local doc → servidor. El socket es el camino rápido; si no está conectado
   // o no confirma (ack) en 3 s, se persiste por REST (idempotente por
   // clientOpId) — el contenido NUNCA se queda solo en memoria.
-  const persistViaRest = (updateB64: string, clientOpId: string) => {
-    boardsApi.appendPageOp(pageId, updateB64, clientOpId).catch(() => {
-      // Reintento único diferido; si vuelve a fallar, el catch-up por REST al
-      // recargar reconstruirá desde la última seq persistida.
-      setTimeout(() => boardsApi.appendPageOp(pageId, updateB64, clientOpId).catch(() => undefined), 4000);
-    });
+  //
+  // Antes, si el REST también fallaba, quedaba UN reintento a los 4 s y después
+  // silencio: el cambio se perdía y nadie se enteraba. El profe seguía viendo
+  // su texto (vive en el Y.Doc del navegador) y lo perdía al cambiar de página.
+  // Ahora se reintenta con espera creciente hasta que entre, y lo único que se
+  // da por perdido —un update por encima del tope del servidor— se avisa.
+  const sinConfirmar = new Set<string>();
+  let errorDeGuardado: EstadoGuardado["error"] = null;
+  const avisarGuardado = () => {
+    const e: EstadoGuardado = { pendientes: sinConfirmar.size, error: errorDeGuardado };
+    saveListeners.forEach((cb) => cb(e));
   };
+  const confirmado = (clientOpId: string) => {
+    sinConfirmar.delete(clientOpId);
+    avisarGuardado();
+  };
+
+  const persistViaRest = (updateB64: string, clientOpId: string, intento = 0) => {
+    boardsApi
+      .appendPageOp(pageId, updateB64, clientOpId)
+      .then(() => confirmado(clientOpId))
+      .catch((e: any) => {
+        // 400 = el servidor no lo va a aceptar por más que insistamos.
+        if (e?.status === 400) {
+          sinConfirmar.delete(clientOpId);
+          errorDeGuardado = {
+            tipo: e?.code === "update_too_large" ? "demasiado_grande" : "rechazado",
+            mensaje: e?.message ?? "El servidor rechazó el cambio.",
+          };
+          avisarGuardado();
+          return;
+        }
+        // Corte de red, 500, servidor reiniciando: 2 s, 4 s, 8 s… hasta 1 min.
+        setTimeout(() => persistViaRest(updateB64, clientOpId, intento + 1), Math.min(60_000, 2000 * 2 ** intento));
+      });
+  };
+
   const docUpdateHandler = (update: Uint8Array, origin: any) => {
     if (origin === "server") return;
     const clientOpId = crypto.randomUUID();
     seenClientOpIds.add(clientOpId);
+    if (update.byteLength > MAX_UPDATE_BYTES) {
+      // Ni lo intentamos: lo importante es que quien está escribiendo lo sepa
+      // ahora y no cuando cambie de página y ya no esté.
+      errorDeGuardado = {
+        tipo: "demasiado_grande",
+        mensaje: `Ese contenido pesa ${Math.round(update.byteLength / 1024)} KB de una sola vez y el máximo por cambio es ${Math.round(MAX_UPDATE_BYTES / 1024)} KB. Pégalo en partes.`,
+      };
+      avisarGuardado();
+      return;
+    }
+    sinConfirmar.add(clientOpId);
+    avisarGuardado();
     const updateB64 = bytesToB64(update);
     if (socket.connected) {
       let acked = false;
       socket.timeout(3000).emit("page:update", { pageId, update: updateB64, clientOpId }, (err: any, res: any) => {
         acked = true;
-        if (err || !res?.ok) persistViaRest(updateB64, clientOpId);
+        if (!err && res?.ok) return confirmado(clientOpId);
+        persistViaRest(updateB64, clientOpId);
       });
       setTimeout(() => { if (!acked) persistViaRest(updateB64, clientOpId); }, 3500);
     } else {
@@ -183,6 +241,11 @@ export function createPageProvider(pageId: string, user: { id: string; name: str
     onPresence(cb) {
       presenceListeners.add(cb);
       return () => presenceListeners.delete(cb);
+    },
+    onSave(cb) {
+      saveListeners.add(cb);
+      cb({ pendientes: sinConfirmar.size, error: errorDeGuardado });
+      return () => saveListeners.delete(cb);
     },
     destroy() {
       try {

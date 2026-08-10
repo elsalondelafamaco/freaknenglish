@@ -27,6 +27,11 @@ export class RedisIoAdapter extends IoAdapter {
   override createIOServer(port: number, options?: ServerOptions) {
     const server = super.createIOServer(port, {
       ...options,
+      // Por defecto Socket.IO corta en 1 MB y CIERRA la conexión cuando un
+      // frame se pasa —no da error, desconecta—. Un update Yjs de 2 MB
+      // (MAX_UPDATE_BYTES) viaja en base64 y ocupa ~2,7 MB, así que sin esto
+      // pegar un documento grande tumbaba el socket en vez de guardarlo.
+      maxHttpBufferSize: 8 * 1024 * 1024,
       cors: {
         origin: env.CORS_ORIGINS.split(',').map((s) => s.trim()),
         credentials: true,

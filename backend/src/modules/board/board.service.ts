@@ -3,6 +3,23 @@ import { PrismaService } from '../../prisma/prisma.service'
 import { StorageService } from '../storage/storage.service'
 import * as Y from 'yjs'
 
+/**
+ * Tope de un update Yjs suelto. Estaba en 256 KB y era la causa de que los
+ * tableros "no guardaran": pegar un documento de clase genera UN solo update
+ * grande (≈1,3× el HTML pegado), el socket lo rechazaba, el respaldo REST
+ * devolvía 400 y el cliente lo tiraba a la basura sin decir nada. El profe
+ * seguía viendo el texto en pantalla —vive en la memoria del navegador— y lo
+ * perdía al cambiar de página.
+ *
+ * 2 MB cubre un documento pegado de ~1,5 MB de HTML. Por encima de eso el
+ * cliente ahora avisa en pantalla en vez de perderlo en silencio.
+ *
+ * Al subirlo hay que mantener alineados: `maxHttpBufferSize` del socket
+ * (redis-io.adapter.ts) y el límite de `express.json` (main.ts), porque el
+ * update viaja en base64 y ocupa 4/3 de esto.
+ */
+export const MAX_UPDATE_BYTES = 2 * 1024 * 1024
+
 @Injectable()
 export class BoardService {
   private readonly SNAPSHOT_EVERY = 50
@@ -282,8 +299,11 @@ export class BoardService {
       where: { id: input.pageId },
       data: { updatedAt: new Date() },
     })
-    // Periodic snapshot: every N ops, collapse into yjsState
-    if (seq % this.SNAPSHOT_EVERY === 0) {
+    // Periodic snapshot: every N ops, collapse into yjsState.
+    // Un update grande (un documento pegado) no espera turno: si se quedara
+    // suelto en la lista de ops, cada carga de la página se lo bajaría entero
+    // junto a los demás. Colapsarlo ya deja la próxima carga en un snapshot.
+    if (seq % this.SNAPSHOT_EVERY === 0 || input.update.length > 256 * 1024) {
       this.snapshotPage(input.pageId).catch(() => undefined)
     }
     return op

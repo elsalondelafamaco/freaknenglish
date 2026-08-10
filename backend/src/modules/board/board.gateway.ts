@@ -10,7 +10,7 @@ import {
 } from '@nestjs/websockets'
 import { JwtService } from '@nestjs/jwt'
 import { Server, Socket } from 'socket.io'
-import { BoardService } from './board.service'
+import { BoardService, MAX_UPDATE_BYTES } from './board.service'
 import { env } from '../../config/env'
 
 /**
@@ -123,8 +123,12 @@ export class BoardGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() body: { pageId: string; update: string; clientOpId: string },
   ) {
     const buffer = Buffer.from(body.update, 'base64')
-    if (buffer.length === 0 || buffer.length > 256 * 1024) {
-      return { ok: false, error: 'invalid update size' }
+    if (buffer.length === 0) return { ok: false, error: 'empty_update' }
+    // `too_large` va aparte de cualquier otro fallo: al cliente le sirve para
+    // saber que reintentar no arregla nada y que hay que avisarle al profe.
+    if (buffer.length > MAX_UPDATE_BYTES) {
+      this.log.warn(`page:update rechazado por tamaño: ${buffer.length} bytes (page ${body.pageId})`)
+      return { ok: false, error: 'too_large', max: MAX_UPDATE_BYTES, size: buffer.length }
     }
     const op = await this.boards.appendPageOp({
       pageId: body.pageId,

@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { ActiveSubscriptionGuard } from '../../common/guards/active-subscription.guard'
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator'
-import { BoardService } from './board.service'
+import { BoardService, MAX_UPDATE_BYTES } from './board.service'
 
 @ApiTags('boards')
 @ApiBearerAuth()
@@ -120,7 +120,15 @@ export class BoardController {
     @Body() body: { update: string; clientOpId: string },
   ) {
     const buf = Buffer.from(body?.update ?? '', 'base64')
-    if (buf.length === 0 || buf.length > 256 * 1024) throw new BadRequestException('invalid update size')
+    if (buf.length === 0) throw new BadRequestException({ code: 'empty_update', message: 'Update vacío' })
+    if (buf.length > MAX_UPDATE_BYTES) {
+      throw new BadRequestException({
+        code: 'update_too_large',
+        message: `El cambio pesa ${Math.round(buf.length / 1024)} KB y el máximo es ${Math.round(MAX_UPDATE_BYTES / 1024)} KB.`,
+        max: MAX_UPDATE_BYTES,
+        size: buf.length,
+      })
+    }
     const op = await this.svc.appendPageOp({ pageId, userId: u.id, update: buf, clientOpId: body.clientOpId })
     return { ok: true, seq: op.seq }
   }

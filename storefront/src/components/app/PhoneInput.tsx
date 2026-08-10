@@ -40,6 +40,13 @@ export const COUNTRIES: Country[] = [
   { code: "AU", name: "Australia", dial: "61", flag: "🇦🇺", min: 9, max: 9 },
 ];
 
+/** Minúsculas y sin tildes: la gente busca "mexico", "peru", "espana". */
+const plano = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
 /** Separa un valor tipo +573001234567 en país + número local. */
 export function parsePhone(value: string | undefined | null): { country: Country; local: string } {
   const v = (value ?? "").replace(/[^\d+]/g, "");
@@ -107,6 +114,22 @@ export function PhoneInput({
   const [query, setQuery] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
 
+  // El país vive acá y no sólo dentro de `value`. Con el número vacío emitimos
+  // "" para que el formulario lo tome como incompleto, y ese "" no puede
+  // cargar ningún prefijo: si el país se dedujera únicamente de `value`,
+  // elegirlo antes de escribir el número lo devolvía siempre a Colombia. Y ése
+  // es justo el orden en que la gente lo usa — primero el indicativo, después
+  // el número — así que de afuera parecía que el selector no dejaba cambiarlo.
+  const [country, setCountry] = useState<Country>(parsed.country);
+
+  // Cuando el número entra ya con prefijo desde afuera (perfil guardado,
+  // checkout precargado) mandamos ése. Comparamos por `dial` y no por `code`
+  // para no pisar la elección entre países que comparten prefijo: US y CA son
+  // los dos +1, y `parsePhone` siempre devuelve el primero.
+  useEffect(() => {
+    if (parsed.local && parsed.country.dial !== country.dial) setCountry(parsed.country);
+  }, [parsed.local, parsed.country, country.dial]);
+
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
@@ -115,10 +138,15 @@ export function PhoneInput({
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
+  const texto = plano(query.trim());
+  const digitos = query.replace(/\D/g, "");
   const filtered = COUNTRIES.filter(
     (c) =>
-      c.name.toLowerCase().includes(query.toLowerCase()) ||
-      c.dial.includes(query.replace(/\D/g, "")),
+      plano(c.name).includes(texto) ||
+      // El prefijo sólo cuenta si escribieron números. Antes iba sin esta
+      // guarda y `dial.includes("")` daba true para todos los países: al
+      // buscar por nombre la lista nunca se filtraba y quedaba entera.
+      (digitos !== "" && c.dial.includes(digitos)),
   );
 
   const emit = (country: Country, local: string) => {
@@ -138,8 +166,8 @@ export function PhoneInput({
           className="flex shrink-0 items-center gap-1.5 border-r border-brand-line bg-brand-cream/40 px-3 py-2.5 text-sm transition hover:bg-brand-cream"
           aria-label="Seleccionar país"
         >
-          <Flag country={parsed.country} />
-          <span className="text-xs font-semibold text-brand-ink/70">+{parsed.country.dial}</span>
+          <Flag country={country} />
+          <span className="text-xs font-semibold text-brand-ink/70">+{country.dial}</span>
           <ChevronDown className="size-3.5 text-brand-ink/50" />
         </button>
         <input
@@ -150,8 +178,8 @@ export function PhoneInput({
           required={required}
           disabled={disabled}
           value={parsed.local}
-          onChange={(e) => emit(parsed.country, e.target.value.replace(/\D/g, "").slice(0, parsed.country.max))}
-          placeholder={"3001234567".slice(0, parsed.country.max)}
+          onChange={(e) => emit(country, e.target.value.replace(/\D/g, "").slice(0, country.max))}
+          placeholder={"3001234567".slice(0, country.max)}
           className="w-full px-3 py-2.5 text-sm text-brand-ink outline-none"
         />
       </div>
@@ -173,10 +201,10 @@ export function PhoneInput({
               <li key={c.code}>
                 <button
                   type="button"
-                  onClick={() => { emit(c, parsed.local); setOpen(false); }}
+                  onClick={() => { setCountry(c); emit(c, parsed.local); setOpen(false); }}
                   className={cn(
                     "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition hover:bg-brand-cream/50",
-                    c.code === parsed.country.code ? "bg-brand-cream/70 font-semibold" : "",
+                    c.code === country.code ? "bg-brand-cream/70 font-semibold" : "",
                   )}
                 >
                   <Flag country={c} />

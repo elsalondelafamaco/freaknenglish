@@ -132,7 +132,13 @@ function BoardLayout() {
         ) : null}
       </aside>
 
-      <section className="min-w-0 flex-1 overflow-auto rounded-2xl border border-brand-line bg-white p-3 md:p-6">
+      {/* `overflow-auto` SOLO en lg, que es donde el contenedor tiene alto fijo
+          (`lg:h-[calc(100vh-8rem)]`) y esta sección scrollea de verdad. Por
+          debajo de lg no hay tope de alto: la sección crecía con el contenido y
+          nunca scrolleaba, pero al tener `overflow-auto` seguía siendo el
+          contenedor de scroll del `sticky` de la barra de herramientas — que
+          por eso no se pegaba, mientras la que scrolleaba era la ventana. */}
+      <section className="min-w-0 flex-1 rounded-2xl border border-brand-line bg-white p-3 md:p-6 lg:overflow-auto">
         <Outlet />
       </section>
     </div>

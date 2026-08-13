@@ -156,7 +156,12 @@ function BoardPage() {
       {/* Sticky: en una página larga había que subir hasta arriba cada vez que
           se quería negrita o insertar algo. `bg-brand-surface` para que el
           texto no se transparente por debajo al hacer scroll. */}
-      <div className="sticky top-0 z-30 -mx-4 flex flex-col gap-2 border-b border-brand-line bg-brand-surface px-4 pb-3 pt-3 md:flex-row md:flex-wrap md:items-center md:justify-between">
+      {/* Sticky respecto a la ventana por debajo de lg y respecto a la sección
+          del board en lg (ver el `lg:overflow-auto` del layout).
+          `top-[61px]` es el alto del topbar móvil del AppShell, que también es
+          sticky: con `top-0` la barra se le metía debajo. En lg ese topbar no
+          existe, así que vuelve a 0. */}
+      <div className="sticky top-[61px] z-20 -mx-4 flex flex-col gap-2 border-b border-brand-line bg-brand-surface px-4 pb-3 pt-3 md:flex-row md:flex-wrap md:items-center md:justify-between lg:top-0 lg:z-30">
         <Toolbar editor={editor} boardId={boardId} />
         <div className="flex items-center gap-2">
           <VersionHistory pageId={pageId} />

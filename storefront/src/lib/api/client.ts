@@ -93,6 +93,19 @@ export async function api<T = unknown>(path: string, opts: ApiOptions = {}): Pro
   };
   let res = await fetch(url, init);
 
+  // 429 = límite de peticiones por IP, no un error de la petición. Abrir una
+  // pantalla del portal dispara 8-15 llamadas de golpe y dos pantallas
+  // seguidas se pasan de la ventana de ráfaga; el resultado eran listas
+  // vacías ("Sin resultados") y, si el 429 caía en /auth/refresh al arrancar,
+  // la app creía que no había sesión y mandaba al login. Esperamos lo que
+  // diga `Retry-After` y reintentamos: la ventana es de segundos.
+  for (let intento = 0; res.status === 429 && intento < 3; intento++) {
+    const cabecera = Number(res.headers.get("Retry-After"));
+    const espera = Number.isFinite(cabecera) && cabecera > 0 ? cabecera * 1000 : 1200 * (intento + 1);
+    await new Promise((r) => setTimeout(r, Math.min(espera, 5000)));
+    res = await fetch(url, init);
+  }
+
   if (res.status === 401 && !skipRefresh && !path.includes("/auth/")) {
     const fresh = await doRefresh();
     if (fresh) {

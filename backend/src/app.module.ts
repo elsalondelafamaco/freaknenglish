@@ -43,9 +43,15 @@ import { ExchangeModule } from './modules/exchange/exchange.module'
     // los otros dos se piden explícitamente con @Throttle en los endpoints
     // sensibles (login, registro, recuperación de clave, checkout).
     ThrottlerModule.forRoot([
-      { name: 'default', ttl: 60_000, limit: 100 },
+      { name: 'default', ttl: 60_000, limit: 300 },
       // Anti-ráfaga: frena scripts que martillan un endpoint.
-      { name: 'burst', ttl: 10_000, limit: 20 },
+      //
+      // Estaba en 20/10s y se lo comía la propia app: abrir una pantalla del
+      // portal dispara 8-15 llamadas y dos pantallas seguidas se pasaban. Se
+      // veía como listas vacías en el CRM y como expulsiones al login. Ojo
+      // con bajarlo: el conteo es POR IP, así que un colegio o una oficina
+      // detrás de la misma red comparten este presupuesto entre todos.
+      { name: 'burst', ttl: 10_000, limit: 60 },
       // Autenticación y correo: pocos intentos por minuto. Protege contra
       // fuerza bruta de contraseñas y contra quemar la cuota de Resend.
       { name: 'auth', ttl: 60_000, limit: 5 },

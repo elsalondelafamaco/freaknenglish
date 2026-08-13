@@ -18,12 +18,18 @@ export class BackendUnavailableError extends Error {
 /**
  * ¿El fallo es del servidor/red (y no un simple "no hay sesión")?
  * - `fetch` que no llega al servidor lanza TypeError.
- * - 5xx = backend con problemas.
- * - 4xx (401/403/…) = sesión inválida — eso NO es "backend caído".
+ * - 401 (y 403 de cuenta bloqueada) = la sesión NO sirve. Sólo eso.
+ * - Todo lo demás —5xx, 429, timeouts— es infraestructura.
+ *
+ * La distinción decide entre "muestra el error" y "expulsa al login". Antes la
+ * regla era `status >= 500`, así que el 429 del limitador de peticiones caía
+ * del lado de "sesión inválida": al arrancar la app `tryRestore` devolvía
+ * null, el usuario quedaba en null y el guard mandaba a iniciar sesión otra
+ * vez. Un límite de tráfico nunca significa que la sesión se acabó.
  */
 export function isBackendUnavailable(e: unknown): boolean {
   if (e instanceof BackendUnavailableError) return true;
-  if (e instanceof ApiError) return e.status >= 500;
+  if (e instanceof ApiError) return e.status !== 401 && e.status !== 403;
   return true;
 }
 

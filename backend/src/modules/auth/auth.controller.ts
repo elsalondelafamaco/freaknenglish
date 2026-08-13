@@ -33,7 +33,15 @@ export class AuthController {
     return { accessToken, user }
   }
 
-  /** @endpoint POST /api/v1/auth/refresh */
+  /**
+   * @endpoint POST /api/v1/auth/refresh
+   *
+   * Presupuesto propio y amplio. Es el salvavidas de la sesión: cada arranque
+   * de la app pasa por aquí, y un 429 justo en ese momento se leía como
+   * "no hay sesión" y mandaba al login. Limitarlo duro no aporta — ya está
+   * protegido por la cookie httpOnly, que el navegador no deja manipular.
+   */
+  @Throttle({ default: { ttl: 60_000, limit: 120 }, burst: { ttl: 10_000, limit: 30 } })
   @Post('refresh')
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const rt = req.cookies?.refresh_token

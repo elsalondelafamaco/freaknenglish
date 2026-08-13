@@ -19,9 +19,12 @@ export class TeachersController {
   @Get('students')
   students(@CurrentUser() u: AuthUser) { return this.svc.students(u.id) }
 
-  /** @endpoint GET /api/v1/teacher/schedule?status=upcoming|past|pending */
+  /** @endpoint GET /api/v1/teacher/schedule?status=upcoming|past|pending|frozen */
   @Get('schedule')
-  schedule(@CurrentUser() u: AuthUser, @Query('status') status?: 'upcoming' | 'past' | 'pending') {
+  schedule(
+    @CurrentUser() u: AuthUser,
+    @Query('status') status?: 'upcoming' | 'past' | 'pending' | 'frozen',
+  ) {
     return this.svc.schedule(u.id, status)
   }
 

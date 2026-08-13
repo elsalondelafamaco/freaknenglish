@@ -25,10 +25,17 @@ export class SchedulingController {
   @Get('schedule/mine')
   mine(@CurrentUser() u: AuthUser) { return this.svc.mySchedule(u.id) }
 
-  /** @endpoint POST /api/v1/schedule/availability  (renovación: ignora los slots propios) */
+  /**
+   * @endpoint POST /api/v1/schedule/availability  (renovación: ignora los slots propios)
+   * Body: { slots, planId? } — sin `planId` se usa el plan de su suscripción,
+   * para no marcar como disponibles profes que no cubren el plan completo.
+   */
   @Post('schedule/availability')
-  availability(@CurrentUser() u: AuthUser, @Body() body: { slots?: SlotRef[] }) {
-    return this.slots.hints(body?.slots ?? [], u.id)
+  async availability(
+    @CurrentUser() u: AuthUser,
+    @Body() body: { slots?: SlotRef[]; planId?: string },
+  ) {
+    return this.slots.hints(body?.slots ?? [], u.id, await this.svc.diasPorSemanaDe(u.id, body?.planId))
   }
 
   /** @endpoint GET /api/v1/admin/settings/schedule */

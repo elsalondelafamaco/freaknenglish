@@ -153,12 +153,19 @@ export class TeachersService {
     return this.prisma.classNote.update({ where: { id: noteId }, data: { pinned } })
   }
 
-  schedule(teacherId: string, status?: 'upcoming' | 'past' | 'pending') {
+  schedule(teacherId: string, status?: 'upcoming' | 'past' | 'pending' | 'frozen') {
     const now = new Date()
     const where: any = { teacherId }
-    if (status === 'upcoming') Object.assign(where, { startsAt: { gte: now }, status: 'scheduled' })
-    else if (status === 'past') Object.assign(where, { startsAt: { lt: now } })
+    // `upcoming` incluye las congeladas: si no, una clase que el profe congeló
+    // desaparecía de su agenda antes incluso de su hora original y se le
+    // olvidaba ponerle fecha.
+    if (status === 'upcoming') {
+      Object.assign(where, { startsAt: { gte: now }, status: { in: ['scheduled', 'pending_reschedule'] } })
+    } else if (status === 'past') Object.assign(where, { startsAt: { lt: now } })
     else if (status === 'pending') Object.assign(where, { status: 'scheduled', startsAt: { lt: now } })
+    // Todas las congeladas, sin importar su hora original: son las que están
+    // esperando fecha nueva.
+    else if (status === 'frozen') Object.assign(where, { status: 'pending_reschedule' })
     return this.prisma.class.findMany({
       where,
       orderBy: { startsAt: status === 'past' ? 'desc' : 'asc' },

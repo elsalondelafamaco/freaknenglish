@@ -148,14 +148,80 @@ export class ClassesService {
    * otra semana) sin tocar el horario recurrente — la siguiente semana se
    * genera normal en su franja de siempre. Profesor (dueño) o admin.
    */
+  /**
+   * Congela una clase: hay que moverla pero todavía no se sabe para cuándo.
+   *
+   * Existe porque el job de auto-validación da por TOMADA cualquier clase
+   * programada cuya hora ya pasó. Sin este estado, el profe que avisaba "hay
+   * que reprogramar" pero aún no tenía fecha veía la clase marcada como dada
+   * —y cobrada— sin haberla dado. Congelada no se auto-valida ni cuenta para
+   * nómina; queda pendiente hasta que se le ponga fecha con `reschedule`.
+   */
+  async freeze(classId: string, actor: { id: string; role: string }, reason?: string) {
+    const c = await this.prisma.class.findUnique({ where: { id: classId } })
+    if (!c) throw new NotFoundException('Class not found')
+    const isOwnerTeacher = c.teacherId === actor.id
+    if (!isOwnerTeacher && actor.role !== 'admin') {
+      throw new ForbiddenException('Solo el profesor de la clase o un admin')
+    }
+    if (!['scheduled', 'rescheduled'].includes(c.status)) {
+      throw new BadRequestException('Solo se pueden congelar clases programadas')
+    }
+    const updated = await this.prisma.class.update({
+      where: { id: classId },
+      data: {
+        status: ClassStatus.pending_reschedule,
+        frozenAt: new Date(),
+        freezeReason: reason?.trim() || null,
+        // Si venía auto-validada por una corrida previa, se limpia.
+        validatedAt: null,
+        autoValidated: false,
+      },
+    })
+    const student = await this.prisma.user.findUnique({ where: { id: c.studentId } })
+    if (student) {
+      await this.notifications.enqueue({
+        userId: student.id,
+        toEmail: student.email,
+        template: 'class_pending_reschedule',
+        subject: 'Tu clase se reprogramará',
+        dedupeKey: `freeze:${classId}:${updated.frozenAt?.toISOString()}`,
+        vars: { reason: reason?.trim() || undefined },
+        type: 'class',
+        title: 'Clase por reprogramar',
+        body: reason?.trim() || 'Tu profe te confirma la nueva fecha muy pronto.',
+        linkUrl: '/app/calendar',
+      })
+    }
+    return updated
+  }
+
+  /** Deshace el congelamiento y devuelve la clase a su horario original. */
+  async unfreeze(classId: string, actor: { id: string; role: string }) {
+    const c = await this.prisma.class.findUnique({ where: { id: classId } })
+    if (!c) throw new NotFoundException('Class not found')
+    if (c.teacherId !== actor.id && actor.role !== 'admin') {
+      throw new ForbiddenException('Solo el profesor de la clase o un admin')
+    }
+    if (c.status !== 'pending_reschedule') {
+      throw new BadRequestException('Esta clase no está congelada')
+    }
+    return this.prisma.class.update({
+      where: { id: classId },
+      data: { status: ClassStatus.scheduled, frozenAt: null, freezeReason: null },
+    })
+  }
+
   async reschedule(classId: string, actor: { id: string; role: string }, newStartsAt: Date, newEndsAt: Date) {
     const c = await this.prisma.class.findUnique({ where: { id: classId } })
     if (!c) throw new NotFoundException('Class not found')
     const isOwnerTeacher = c.teacherId === actor.id
     const isAdmin = actor.role === 'admin'
     if (!isOwnerTeacher && !isAdmin) throw new ForbiddenException('Solo el profesor de la clase o un admin')
-    if (!['scheduled', 'rescheduled'].includes(c.status)) {
-      throw new BadRequestException('Solo se pueden mover clases programadas')
+    // `pending_reschedule` entra aquí: congelar es justo el paso previo a
+    // ponerle fecha, así que este es el camino natural para descongelarla.
+    if (!['scheduled', 'rescheduled', 'pending_reschedule'].includes(c.status)) {
+      throw new BadRequestException('Solo se pueden mover clases programadas o congeladas')
     }
     if (newEndsAt.getTime() <= newStartsAt.getTime()) throw new BadRequestException('Rango inválido')
     // Cruce con otra clase del profesor en el destino.
@@ -174,7 +240,14 @@ export class ClassesService {
     }
     const updated = await this.prisma.class.update({
       where: { id: classId },
-      data: { startsAt: newStartsAt, endsAt: newEndsAt, status: ClassStatus.rescheduled },
+      data: {
+        startsAt: newStartsAt,
+        endsAt: newEndsAt,
+        status: ClassStatus.rescheduled,
+        // Al ponerle fecha deja de estar congelada.
+        frozenAt: null,
+        freezeReason: null,
+      },
     })
     const student = await this.prisma.user.findUnique({ where: { id: c.studentId } })
     if (student) {

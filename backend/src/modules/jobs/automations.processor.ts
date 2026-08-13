@@ -33,6 +33,8 @@ export class AutomationsProcessor extends WorkerHost {
     const now = new Date()
 
     // Auto-tomada (decisión Q2: inmediata al terminar; profe corrige 48 h).
+    // `pending_reschedule` queda FUERA a propósito: es una clase congelada a la
+    // espera de nueva fecha, darla por tomada sería cobrarla sin haberla dado.
     const auto = await this.prisma.class.updateMany({
       where: { status: 'scheduled', endsAt: { lt: now } },
       data: { status: 'validated', autoValidated: true, validatedAt: now },

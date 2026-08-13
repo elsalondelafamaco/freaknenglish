@@ -253,11 +253,54 @@ export class SlotsService {
    * Hints del picker: por franja, ¿algún profe compatible con la selección
    * actual la tiene libre? Solo booleanos — jamás datos de profesores (AC-6).
    */
-  async hints(selection: SlotRef[], excludeStudentId?: string): Promise<{ assignable: boolean; hints: Array<SlotRef & { auto: boolean }> }> {
+  /**
+   * Cuántas franjas del plan puede llegar a cubrir un profe, respetando el
+   * máximo por día. Cuenta las ya elegidas y suma, por cada día de la ventana,
+   * lo que le queda libre sin pasarse de `maxPerDay`.
+   */
+  private capacidadDelProfe(libres: Set<string>, cfg: ScheduleConfig, sel: SlotRef[]): number {
+    const elegidasPorDia = new Map<number, number>()
+    for (const s of sel) elegidasPorDia.set(s.weekday, (elegidasPorDia.get(s.weekday) ?? 0) + 1)
+    const yaElegida = new Set(sel.map(key))
+
+    let total = sel.length
+    for (const d of cfg.days) {
+      const cupo = cfg.maxPerDay - (elegidasPorDia.get(d) ?? 0)
+      if (cupo <= 0) continue
+      let libresEseDia = 0
+      for (let h = cfg.startHour; h <= cfg.endHour; h++) {
+        const k = `${d}:${h}`
+        if (libres.has(k) && !yaElegida.has(k)) libresEseDia++
+      }
+      total += Math.min(cupo, libresEseDia)
+    }
+    return total
+  }
+
+  /**
+   * Marca qué franjas tienen profesor disponible para arrancar de inmediato.
+   *
+   * `daysPerWeek` importa: un profe con solo 2 días libres NO sirve para un
+   * plan de 3, así que sus franjas no deben salir como disponibles. Antes se
+   * marcaban igual y el estudiante elegía dos, se quedaba sin tercera opción
+   * viable y terminaba en asignación manual sin entender por qué.
+   */
+  async hints(
+    selection: SlotRef[],
+    excludeStudentId?: string,
+    daysPerWeek?: number,
+  ): Promise<{ assignable: boolean; hints: Array<SlotRef & { auto: boolean }> }> {
     const cfg = await this.getConfig()
     const free = await this.freeSlotsByTeacher(excludeStudentId)
     const sel = (selection ?? []).filter((s) => Number.isInteger(s?.weekday) && Number.isInteger(s?.hour))
-    const compatible = Array.from(free.entries()).filter(([, set]) => sel.every((s) => set.has(key(s))))
+    // Sin plan conocido, basta con cubrir lo ya elegido (comportamiento previo).
+    const necesita = Number.isFinite(daysPerWeek) && (daysPerWeek as number) > 0 ? (daysPerWeek as number) : 0
+
+    const compatible = Array.from(free.entries()).filter(
+      ([, set]) =>
+        sel.every((s) => set.has(key(s))) &&
+        (necesita === 0 || this.capacidadDelProfe(set, cfg, sel) >= necesita),
+    )
     const union = new Set<string>()
     for (const [, set] of compatible) for (const k of set) union.add(k)
     const hints: Array<SlotRef & { auto: boolean }> = []

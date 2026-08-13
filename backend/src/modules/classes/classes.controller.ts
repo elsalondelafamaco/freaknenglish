@@ -64,6 +64,25 @@ export class ClassesController {
     return this.svc.reschedule(id, u, new Date(body.startsAt), new Date(body.endsAt))
   }
 
+  /**
+   * @endpoint POST /api/v1/classes/:id/freeze  Body: { reason? }
+   * Congela la clase a la espera de nueva fecha: no se auto-valida al pasar la
+   * hora ni entra a nómina. Es para cuando el profe sabe que hay que moverla
+   * pero todavía no tiene el nuevo horario.
+   */
+  @Post(':id/freeze')
+  freeze(@Param('id') id: string, @CurrentUser() u: AuthUser, @Body() body: { reason?: string }) {
+    if (u.role === 'student') throw new ForbiddenException('Coordina el cambio de horario con tu profesor')
+    return this.svc.freeze(id, u, body?.reason)
+  }
+
+  /** @endpoint POST /api/v1/classes/:id/unfreeze  (vuelve a su horario original) */
+  @Post(':id/unfreeze')
+  unfreeze(@Param('id') id: string, @CurrentUser() u: AuthUser) {
+    if (u.role === 'student') throw new ForbiddenException('Coordina el cambio de horario con tu profesor')
+    return this.svc.unfreeze(id, u)
+  }
+
   /** @endpoint POST /api/v1/classes/:id/cancel */
   @Post(':id/cancel')
   cancel(@Param('id') id: string, @CurrentUser() u: AuthUser, @Body() body: { reason?: string }) {

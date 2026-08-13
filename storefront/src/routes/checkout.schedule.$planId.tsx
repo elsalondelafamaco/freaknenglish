@@ -45,8 +45,9 @@ function SchedulePicker() {
   // Hints en vivo según la selección (autenticado ⇒ ignora slots propios: renovación).
   const selKey = selected.map(key).sort().join("|");
   const hintsQ = useQuery({
-    queryKey: ["schedule", "hints", !!user, selKey],
-    queryFn: () => (user ? scheduleApi.availabilityMine(selected) : scheduleApi.availability(selected)),
+    queryKey: ["schedule", "hints", !!user, planId, selKey],
+    queryFn: () =>
+      user ? scheduleApi.availabilityMine(selected, planId) : scheduleApi.availability(selected, planId),
     enabled: !!cfg,
     placeholderData: (prev) => prev,
   });
@@ -130,7 +131,7 @@ function SchedulePicker() {
           <div className="mt-3 flex items-center gap-4 text-xs text-brand-ink/60">
             <span className="inline-flex items-center gap-1.5">
               <span className="inline-flex size-4 items-center justify-center rounded bg-brand-yellow/70"><Zap className="size-3 text-brand-ink" /></span>
-              Inicio inmediato tras el pago
+              Disponibilidad inmediata
             </span>
             <span className="inline-flex items-center gap-1.5">
               <span className="inline-block size-4 rounded border border-brand-line bg-white" />

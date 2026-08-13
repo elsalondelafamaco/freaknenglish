@@ -45,6 +45,10 @@ enum ClassStatus {
   no_show
   cancelled
   rescheduled
+  // Congelada: el profe sabe que hay que mover la clase pero todavía no tiene
+  // la nueva fecha. NO se auto-valida al pasar la hora ni cuenta para nómina;
+  // se queda esperando a que se defina el nuevo horario.
+  pending_reschedule
 }
 
 enum NotificationStatus {
@@ -245,6 +249,9 @@ model Class {
   autoValidated Boolean @default(false) @map("auto_validated")
   cancelledAt  DateTime?   @map("cancelled_at")
   cancelReason String?     @map("cancel_reason")
+  // Congelamiento a la espera de nueva fecha (status `pending_reschedule`).
+  frozenAt     DateTime?   @map("frozen_at")
+  freezeReason String?     @map("freeze_reason")
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
 

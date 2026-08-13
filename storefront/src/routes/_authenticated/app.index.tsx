@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, CheckCircle2, ExternalLink, Sparkles, TrendingUp, Video } from "lucide-react";
+import { CalendarDays, CheckCircle2, ExternalLink, LayoutGrid, Sparkles, TrendingUp, Video } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { classesApi, learningApi, subscriptionsApi } from "@/lib/api/endpoints";
@@ -20,6 +20,8 @@ const daysLeeftOk = (d: number | null) => d != null && d <= 5 && d >= 0;
 
 function DashboardPage() {
   const { user } = useAuth();
+  // Link de Meet/Zoom que el profe asignó al estudiante (NO es el board).
+  const meetUrl = (user as any)?.meetingUrl as string | undefined;
   const qc = useQueryClient();
   const subQ = useQuery({ queryKey: ["me", "subscription"], queryFn: () => subscriptionsApi.mine(), staleTime: 0 });
   const firstName = user?.fullName.split(" ")[0] ?? "estudiante";
@@ -151,10 +153,24 @@ function DashboardPage() {
               <p className="mt-1 text-sm text-brand-ink/75">{fmtWhen(today.startsAt)} · {today.teacher?.fullName ?? "tu profe"}</p>
             </div>
             <div className="flex flex-col gap-2 md:items-end">
-              {today.meetingUrl ? (
-                <a href={today.meetingUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-brand-ink px-6 text-sm font-semibold text-white hover:bg-brand-ink-soft">
+              {/* OJO con los dos campos: `user.meetingUrl` es el Meet/Zoom que
+                  configura el profe, y `class.meetingUrl` es el board del aula
+                  (`/boards/<id>`). Aquí se usaba el segundo con la etiqueta del
+                  primero, así que "Entrar a la clase" abría el board. Mismo
+                  criterio que el calendario. */}
+              {meetUrl ? (
+                <a href={meetUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-brand-ink px-6 text-sm font-semibold text-white hover:bg-brand-ink-soft">
                   Entrar a la clase <ExternalLink className="size-4" />
                 </a>
+              ) : (
+                <span className="rounded-full bg-white/70 px-4 py-2 text-xs text-brand-ink/70">
+                  Tu profe aún no configura el link de la clase
+                </span>
+              )}
+              {today.meetingUrl ? (
+                <Link to={today.meetingUrl as never} className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-brand-ink/20 bg-white px-5 text-sm font-semibold text-brand-ink hover:bg-white/80">
+                  <LayoutGrid className="size-4" /> Ver board
+                </Link>
               ) : null}
               <button onClick={() => confirmM.mutate(today.id)} disabled={confirmM.isPending} className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-brand-ink/20 bg-white px-5 text-sm font-semibold text-brand-ink hover:bg-white/80 disabled:opacity-60">
                 <CheckCircle2 className="size-4" /> Sí, tomé mi clase hoy

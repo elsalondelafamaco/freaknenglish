@@ -126,10 +126,11 @@ export type ScheduleHints = { assignable: boolean; hints: Array<SlotRef & { auto
 export const scheduleApi = {
   grid: () => apiGet<{ grid: Record<string, number>; hours: number[] }>("/schedule/availability-grid"),
   config: () => apiGet<ScheduleConfig>("/public/schedule/config"),
-  availability: (slots: SlotRef[]) =>
-    apiPost<ScheduleHints>("/public/schedule/availability", { slots }),
-  availabilityMine: (slots: SlotRef[]) =>
-    apiPost<ScheduleHints>("/schedule/availability", { slots }),
+  /** `planId`: sin él no se puede saber si un profe cubre el plan completo. */
+  availability: (slots: SlotRef[], planId?: string) =>
+    apiPost<ScheduleHints>("/public/schedule/availability", { slots, planId }),
+  availabilityMine: (slots: SlotRef[], planId?: string) =>
+    apiPost<ScheduleHints>("/schedule/availability", { slots, planId }),
   mine: () => apiGet<{
     schedulePreferences: Array<{ weekday: number; hour: number }> | null;
     scheduleAssignmentStatus: "auto_assigned" | "manual_pending" | null;
@@ -271,6 +272,10 @@ export const classesApi = {
   noShow: (id: string) => apiPost<ClassSession>(`/classes/${id}/no-show`),
   reschedule: (id: string, startsAt: string, endsAt: string) =>
     apiPost<ClassSession>(`/classes/${id}/reschedule`, { startsAt, endsAt }),
+  /** Congela la clase: no se auto-valida ni entra a nómina hasta tener fecha. */
+  freeze: (id: string, reason?: string) =>
+    apiPost<ClassSession>(`/classes/${id}/freeze`, { reason }),
+  unfreeze: (id: string) => apiPost<ClassSession>(`/classes/${id}/unfreeze`),
   cancel: (id: string, reason?: string) => apiPost<ClassSession>(`/classes/${id}/cancel`, { reason }),
   /** Estudiante reporta un problema con una clase dictada → avisa a admins. */
   report: (id: string, note: string) => apiPost<{ ok: boolean }>(`/classes/${id}/report`, { note }),
@@ -426,7 +431,7 @@ export type ActivityResultRow = {
 export const teachersApi = {
   students: () => apiGet<any[]>("/teacher/students"),
   studentDetail: (id: string) => apiGet<any>(`/teacher/students/${id}`),
-  schedule: (status?: "upcoming" | "past" | "pending") =>
+  schedule: (status?: "upcoming" | "past" | "pending" | "frozen") =>
     apiGet<ClassSession[]>("/teacher/schedule", status ? { status } : undefined),
   addNote: (classId: string, notes: string) =>
     apiPost<any>(`/teacher/classes/${classId}/notes`, { notes }),

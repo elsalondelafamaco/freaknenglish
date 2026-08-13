@@ -696,6 +696,23 @@ export class SchedulingService {
     return updated
   }
 
+  /**
+   * Clases por semana que aplica para este usuario: el plan que venga por
+   * parámetro (checkout de un plan nuevo) o, si no, el de su suscripción
+   * (renovación / cambio de horario). `undefined` si no hay ninguno.
+   */
+  async diasPorSemanaDe(userId: string, planId?: string): Promise<number | undefined> {
+    if (planId) {
+      const plan = await this.prisma.plan.findUnique({ where: { id: planId }, select: { daysPerWeek: true } })
+      if (plan) return plan.daysPerWeek
+    }
+    const sub = await this.prisma.subscription.findUnique({
+      where: { userId },
+      select: { plan: { select: { daysPerWeek: true } } },
+    })
+    return sub?.plan?.daysPerWeek
+  }
+
   async getTeacherAvailability(teacherId: string) {
     return this.prisma.teacherAvailability.findMany({ where: { teacherId }, orderBy: [{ weekday: 'asc' }, { startsAt: 'asc' }] })
   }

@@ -150,6 +150,20 @@ export const templates = {
     )
   },
 
+  // Clase congelada: se avisa que hay que moverla aunque todavía no haya fecha.
+  // Sin este correo el estudiante veía la clase desaparecer de su horario sin
+  // ninguna explicación.
+  class_pending_reschedule: (v: { fullName?: string; reason?: string }) =>
+    wrap(
+      'Tu clase se va a reprogramar',
+      `<p>${v.fullName ? `Hola ${String(v.fullName).split(' ')[0]}, tu` : 'Tu'} profe necesita mover una de tus clases.</p>
+       ${v.reason ? `<p>Motivo: <b>${v.reason}</b></p>` : ''}
+       <p>Todavía no hay fecha nueva: tu profe te confirma el horario muy pronto.
+       <b>No pierdes la clase</b> — queda guardada hasta que se reprograme.</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/app/calendar`, 'Ver mi calendario')}`,
+      { preheader: 'Tu profe te confirma la nueva fecha muy pronto' },
+    ),
+
   checkpoint_unlocked: (v: { fullName?: string; checkpoint?: string }) =>
     wrap(
       '¡Tu checkpoint está listo!',

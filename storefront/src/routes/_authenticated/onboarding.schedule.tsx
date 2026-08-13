@@ -90,7 +90,7 @@ function OnboardingSchedule() {
             <span className="inline-flex size-4 items-center justify-center rounded bg-brand-yellow/70">
               <Zap className="size-3 text-brand-ink" />
             </span>
-            Inicio inmediato
+            Disponibilidad inmediata
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="inline-block size-4 rounded border border-brand-line bg-white" />

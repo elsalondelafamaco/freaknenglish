@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Snowflake } from "lucide-react";
 import { toast } from "sonner";
 import { classesApi, teachersApi } from "@/lib/api/endpoints";
 
@@ -13,7 +14,7 @@ const dateFmt = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "2-digi
 const timeFmt = new Intl.DateTimeFormat("es-CO", { hour: "2-digit", minute: "2-digit" });
 const durMin = (c: any) => Math.max(0, Math.round((new Date(c.endsAt).getTime() - new Date(c.startsAt).getTime()) / 60000)) || 50;
 
-type Filter = "all" | "upcoming" | "past" | "pending";
+type Filter = "all" | "upcoming" | "past" | "pending" | "frozen";
 
 function TeacherSchedule() {
   const qc = useQueryClient();
@@ -27,6 +28,16 @@ function TeacherSchedule() {
   const invalidate = () => qc.invalidateQueries({ queryKey: ["teacher", "schedule"] });
   const validateM = useMutation({ mutationFn: (id: string) => classesApi.validate(id), onSuccess: () => { toast.success("Asistencia validada"); invalidate(); }, onError: (e: any) => toast.error(e?.message ?? "Error") });
   const noShowM = useMutation({ mutationFn: (id: string) => classesApi.noShow(id), onSuccess: () => { toast.success("Marcado como no asistió"); invalidate(); }, onError: (e: any) => toast.error(e?.message ?? "Error") });
+  const freezeM = useMutation({
+    mutationFn: (v: { id: string; reason?: string }) => classesApi.freeze(v.id, v.reason),
+    onSuccess: () => { toast.success("Clase congelada — no se dará por tomada. Ponle fecha cuando la tengas."); invalidate(); },
+    onError: (e: any) => toast.error(e?.message ?? "Error"),
+  });
+  const unfreezeM = useMutation({
+    mutationFn: (id: string) => classesApi.unfreeze(id),
+    onSuccess: () => { toast.success("Clase de vuelta en su horario"); invalidate(); },
+    onError: (e: any) => toast.error(e?.message ?? "Error"),
+  });
 
   const grouped = useMemo(() => groupByDay((q.data ?? []) as any[]), [q.data]);
 
@@ -38,7 +49,7 @@ function TeacherSchedule() {
           <p className="mt-1 text-brand-ink/70">Tu calendario completo de clases 1-on-1. Valida asistencia desde aquí.</p>
         </div>
         <div className="inline-flex rounded-full border border-brand-line bg-white p-1 text-xs">
-          {(["upcoming", "all", "past", "pending"] as const).map((f) => (
+          {(["upcoming", "all", "past", "pending", "frozen"] as const).map((f) => (
             <button key={f} onClick={() => setFilter(f)} className={`rounded-full px-3 py-1.5 font-medium transition ${filter === f ? "bg-brand-ink text-white" : "text-brand-ink/70 hover:text-brand-ink"}`}>
               {labelFor(f)}
             </button>
@@ -75,6 +86,30 @@ function TeacherSchedule() {
                         <button onClick={() => noShowM.mutate(c.id)} disabled={noShowM.isPending} className="rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">No asistió</button>
                       </>
                     ) : null}
+                    {/* Congelar: para cuando hay que mover la clase pero todavía
+                        no se sabe para cuándo. Sin esto se auto-validaba al
+                        pasar la hora y quedaba cobrada sin haberse dado. */}
+                    {c.status === "scheduled" || c.status === "rescheduled" ? (
+                      <button
+                        onClick={() => {
+                          const motivo = prompt("¿Por qué se reprograma? (opcional)") ?? undefined;
+                          freezeM.mutate({ id: c.id, reason: motivo });
+                        }}
+                        disabled={freezeM.isPending}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                      >
+                        <Snowflake className="size-3.5" /> Congelar
+                      </button>
+                    ) : null}
+                    {c.status === "pending_reschedule" ? (
+                      <button
+                        onClick={() => unfreezeM.mutate(c.id)}
+                        disabled={unfreezeM.isPending}
+                        className="rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40 disabled:opacity-50"
+                      >
+                        Volver a su horario
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               ))}
@@ -87,7 +122,11 @@ function TeacherSchedule() {
 }
 
 function labelFor(f: Filter) {
-  return f === "upcoming" ? "Próximas" : f === "all" ? "Todas" : f === "past" ? "Pasadas" : "Pendientes";
+  if (f === "upcoming") return "Próximas";
+  if (f === "all") return "Todas";
+  if (f === "past") return "Pasadas";
+  if (f === "frozen") return "Por reprogramar";
+  return "Pendientes";
 }
 
 function groupByDay(list: any[]): Array<[string, any[]]> {
@@ -106,6 +145,7 @@ function StatusBadge({ c }: { c: any }) {
     scheduled: { label: "Programada", cls: "bg-brand-cream text-brand-ink" },
     validated: { label: "Validada", cls: "bg-green-100 text-green-800" },
     no_show: { label: "No asistió", cls: "bg-red-100 text-red-800" },
+    pending_reschedule: { label: "Por reprogramar", cls: "bg-amber-100 text-amber-900" },
     cancelled: { label: "Cancelada", cls: "bg-zinc-100 text-zinc-700" },
     rescheduled: { label: "Reprogramada", cls: "bg-amber-100 text-amber-800" },
   };

@@ -1,89 +1,56 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { prepararHtmlLeccion } from "@/lib/learning/lessonHtml";
 
 /**
- * Iframe de una lección HTML con botón de pantalla completa.
+ * Iframe de una lección HTML con modo "a pantalla".
  *
- * Intenta primero la Fullscreen API (ocupa el monitor entero, sin barra del
- * navegador). Si el navegador la niega —pasa en iframes con permisos
- * restringidos, en algunos WebView y en iOS— cae a un modo "a pantalla" por
- * CSS: `fixed inset-0`, que igual tapa sidebar y lista de lecciones, que es lo
- * que se busca. Nunca queda un botón que no hace nada.
+ * Es un modal `fixed inset-0` DENTRO de la página, NO la Fullscreen API del
+ * navegador: esa se apodera del monitor, tapa el resto de ventanas y estorba a
+ * quien está dando clase con la pantalla compartida o con otra app al lado.
+ * El modal ocupa toda la ventana —que es lo que se busca: quitar del medio el
+ * sidebar y la lista de lecciones— y deja el sistema operativo en paz.
  *
- * Esc cierra en ambos modos.
+ * Se cierra con Esc o con el botón.
  */
 export function LessonFrame({ title, html }: { title: string; html: string }) {
-  const contenedorRef = useRef<HTMLDivElement>(null);
-  const [nativo, setNativo] = useState(false);
-  const [porCss, setPorCss] = useState(false);
-  const expandido = nativo || porCss;
+  const [expandido, setExpandido] = useState(false);
 
-  // Fullscreen nativo: el estado real lo manda el navegador (se puede salir
-  // con Esc o desde su propia UI, sin pasar por nuestro botón).
   useEffect(() => {
-    const alCambiar = () => setNativo(document.fullscreenElement === contenedorRef.current);
-    document.addEventListener("fullscreenchange", alCambiar);
-    return () => document.removeEventListener("fullscreenchange", alCambiar);
-  }, []);
-
-  // En el modo CSS el navegador no gestiona Esc: lo hacemos nosotros.
-  useEffect(() => {
-    if (!porCss) return;
+    if (!expandido) return;
     const alTecla = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setPorCss(false);
+      if (e.key === "Escape") setExpandido(false);
     };
     window.addEventListener("keydown", alTecla);
-    return () => window.removeEventListener("keydown", alTecla);
-  }, [porCss]);
-
-  const alternar = useCallback(async () => {
-    const el = contenedorRef.current;
-    if (!el) return;
-    if (document.fullscreenElement) {
-      await document.exitFullscreen().catch(() => {});
-      return;
-    }
-    if (porCss) {
-      setPorCss(false);
-      return;
-    }
-    try {
-      await el.requestFullscreen();
-    } catch {
-      // El navegador no lo permite: expandimos por CSS, que llega igual de
-      // lejos para el caso de uso (tapar sidebar y lecciones).
-      setPorCss(true);
-    }
-  }, [porCss]);
+    // Bloquea el scroll de la página detrás del modal: sin esto, rodar la
+    // rueda sobre el borde movía el contenido de abajo.
+    const overflowPrevio = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", alTecla);
+      document.body.style.overflow = overflowPrevio;
+    };
+  }, [expandido]);
 
   return (
     <div
-      ref={contenedorRef}
-      // `relative` y `fixed` no pueden convivir en la lista: Tailwind emite las
-      // dos y gana la del CSS, no la del orden de la cadena. Por eso el
-      // posicionamiento se elige en un solo sitio.
       className={`group overflow-hidden bg-white ${
-        porCss
-          ? "fixed inset-0 z-50 h-screen w-screen rounded-none border-0"
-          : nativo
-            ? "relative h-screen w-full rounded-none border-0"
-            : "relative h-[72vh] w-full rounded-2xl border border-brand-line"
+        expandido
+          ? "fixed inset-0 z-50 h-screen w-screen"
+          : "relative h-[72vh] w-full rounded-2xl border border-brand-line"
       }`}
     >
       <iframe
         title={title}
         srcDoc={prepararHtmlLeccion(html)}
         className="h-full w-full bg-white"
-        // `allow-*` sin `allowFullScreen`: el contenido del slide no necesita
-        // pedir fullscreen por su cuenta, lo controlamos desde fuera.
         sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"
       />
       <button
         type="button"
-        onClick={alternar}
-        title={expandido ? "Salir de pantalla completa (Esc)" : "Pantalla completa"}
-        aria-label={expandido ? "Salir de pantalla completa" : "Pantalla completa"}
+        onClick={() => setExpandido((v) => !v)}
+        title={expandido ? "Salir (Esc)" : "Ver en grande"}
+        aria-label={expandido ? "Salir de la vista ampliada" : "Ver en grande"}
         // Siempre visible al expandir: ahí es la única salida además de Esc.
         className={`absolute right-3 top-3 z-10 rounded-full bg-brand-ink/80 p-2 text-white shadow-soft backdrop-blur transition hover:bg-brand-ink ${
           expandido ? "opacity-100" : "opacity-0 focus:opacity-100 group-hover:opacity-100"

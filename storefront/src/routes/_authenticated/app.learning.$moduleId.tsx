@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, Circle, Download, FileText, Lock, PlayCircle, Presentation, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { learningApi } from "@/lib/api/endpoints";
-import { prepararHtmlLeccion, urlDeMedios } from "@/lib/learning/lessonHtml";
+import { urlDeMedios } from "@/lib/learning/lessonHtml";
+import { LessonFrame } from "@/components/learning/LessonFrame";
 
 export const Route = createFileRoute("/_authenticated/app/learning/$moduleId")({
   head: ({ params }) => ({ meta: [{ title: `Módulo ${params.moduleId} — FreaknEnglish` }] }),
@@ -222,9 +223,7 @@ function LessonViewer({ lesson }: { lesson: any }) {
   if (lesson.kind === "html") {
     return (
       <div className="flex flex-col gap-3">
-        <div className="h-[72vh] w-full overflow-hidden rounded-2xl border border-brand-line bg-white">
-          <iframe title={lesson.title} srcDoc={prepararHtmlLeccion(lesson.contentHtml ?? url ?? "")} className="h-full w-full bg-white" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin" />
-        </div>
+        <LessonFrame title={lesson.title} html={lesson.contentHtml ?? url ?? ""} />
         {(resultsQ.data ?? []).length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {resultsQ.data!.map((r) => (

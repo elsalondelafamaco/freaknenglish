@@ -43,12 +43,17 @@ import { ExchangeModule } from './modules/exchange/exchange.module'
     // los otros dos se piden explícitamente con @Throttle en los endpoints
     // sensibles (login, registro, recuperación de clave, checkout).
     ThrottlerModule.forRoot([
-      { name: 'default', ttl: 60_000, limit: 100 },
+      // Los límites anteriores (100/min, 20/10s, 5/min) se quedaban cortos en
+      // uso normal: el admin y el profe disparan muchas llamadas por pantalla
+      // (calendario + disponibilidad + listados), y quien se equivoca dos veces
+      // de contraseña se quedaba fuera un minuto. Siguen siendo un techo para
+      // scripts, pero ya no le pegan a una persona trabajando.
+      { name: 'default', ttl: 60_000, limit: 600 },
       // Anti-ráfaga: frena scripts que martillan un endpoint.
-      { name: 'burst', ttl: 10_000, limit: 20 },
-      // Autenticación y correo: pocos intentos por minuto. Protege contra
-      // fuerza bruta de contraseñas y contra quemar la cuota de Resend.
-      { name: 'auth', ttl: 60_000, limit: 5 },
+      { name: 'burst', ttl: 10_000, limit: 120 },
+      // Autenticación y correo: protege contra fuerza bruta de contraseñas y
+      // contra quemar la cuota de Resend, sin castigar un par de reintentos.
+      { name: 'auth', ttl: 60_000, limit: 20 },
     ]),
     PrismaModule,
     AuthModule,

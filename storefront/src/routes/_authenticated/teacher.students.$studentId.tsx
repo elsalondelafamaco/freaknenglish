@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Eye, Pin, PinOff, Video } from "lucide-react";
@@ -304,13 +304,74 @@ export function LessonPlanSection({ studentId }: { studentId: string }) {
   const totalAbiertas = mods.reduce((s, x) => s + x.lessons.filter((l) => l.unlocked).length, 0);
   const total = mods.reduce((s, x) => s + x.lessons.length, 0);
 
+  // Resumen por nivel para los botones de "habilitar/bloquear nivel".
+  const porNivel = useMemo(() => {
+    const etiquetas: Record<string, string> = {
+      beginner: "Beginner",
+      intermediate: "Intermediate",
+      advanced: "Advanced",
+    };
+    const orden = ["beginner", "intermediate", "advanced"];
+    const mapa = new Map<string, { ids: string[]; abiertas: number }>();
+    for (const mod of mods) {
+      const nivel = (mod as any).level ?? "beginner";
+      const acc = mapa.get(nivel) ?? { ids: [], abiertas: 0 };
+      for (const l of mod.lessons) {
+        acc.ids.push(l.lessonId);
+        if (l.unlocked) acc.abiertas++;
+      }
+      mapa.set(nivel, acc);
+    }
+    return [...mapa.entries()]
+      .sort((a, b) => orden.indexOf(a[0]) - orden.indexOf(b[0]))
+      .map(([level, v]) => ({
+        level,
+        label: etiquetas[level] ?? level,
+        ids: v.ids,
+        abiertas: v.abiertas,
+        total: v.ids.length,
+      }));
+  }, [mods]);
+
   return (
     <section>
       <h2 className="text-lg font-semibold text-brand-ink">Contenido habilitado</h2>
       <p className="mt-0.5 text-xs text-brand-ink/55">
         Todo el programa arranca bloqueado. Ve abriendo lo que corresponda a medida que avanzas en
         clase — así el estudiante no se adelanta ni se pierde. {totalAbiertas} de {total} habilitadas.
+        Los niveles por debajo del suyo ya van abiertos automáticamente.
       </p>
+
+      {/* Atajo por nivel: abrir o cerrar un nivel entero de un solo click, en
+          vez de ir módulo por módulo. */}
+      {porNivel.length > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {porNivel.map((n) => (
+            <div
+              key={n.level}
+              className="inline-flex items-center gap-2 rounded-full border border-brand-line bg-white px-3 py-1.5"
+            >
+              <span className="text-xs font-semibold capitalize text-brand-ink">{n.label}</span>
+              <span className="text-[11px] text-brand-ink/55">
+                {n.abiertas}/{n.total}
+              </span>
+              <button
+                type="button"
+                onClick={() => m.mutate({ lessonIds: n.ids, unlock: n.abiertas < n.total })}
+                disabled={m.isPending}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition disabled:opacity-50 ${
+                  n.abiertas < n.total
+                    ? "bg-brand-ink text-white hover:bg-brand-ink-soft"
+                    : "border border-brand-line text-brand-ink/70 hover:bg-brand-cream/40"
+                }`}
+              >
+                {n.abiertas < n.total ? "Habilitar nivel" : "Bloquear nivel"}
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div className="mt-3 overflow-hidden rounded-2xl border border-brand-line bg-white">
         {q.isLoading ? (
           <p className="p-5 text-sm text-brand-ink/55">Cargando…</p>

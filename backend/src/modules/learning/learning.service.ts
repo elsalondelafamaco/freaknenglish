@@ -8,6 +8,9 @@ import {
   sanitizeQuestion,
 } from './checkpoint-questions'
 
+/** Orden de los niveles. Se usa para saber cuáles ya quedaron atrás. */
+const NIVEL_ORDEN: Record<string, number> = { beginner: 0, intermediate: 1, advanced: 2 }
+
 @Injectable()
 export class LearningService {
   constructor(private prisma: PrismaService, private notifications: NotificationsService) {}
@@ -104,7 +107,8 @@ export class LearningService {
 
   /** Estado de bloqueo de cada lección para un estudiante. */
   private async gatingFor(userId: string, level?: 'beginner' | 'intermediate' | 'advanced') {
-    const [modules, progress, unlocks] = await Promise.all([
+    const [usuario, modules, progress, unlocks] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId }, select: { englishLevel: true } }),
       this.prisma.module.findMany({
         where: level ? { level } : undefined,
         orderBy: [{ level: 'asc' }, { position: 'asc' }],
@@ -121,6 +125,13 @@ export class LearningService {
     ])
     const completed = new Set(progress.map((p) => p.lessonId))
     const unlocked = new Set(unlocks.map((u) => u.lessonId))
+
+    // Niveles ANTERIORES al del estudiante: van abiertos de entrada. Si a
+    // alguien se le pone intermediate o advanced es porque ya pasó lo previo;
+    // obligar al profe a habilitar módulo por módulo todo beginner solo para
+    // que pueda consultarlo era trabajo manual sin ningún valor.
+    const nivelDelAlumno = NIVEL_ORDEN[usuario?.englishLevel ?? 'beginner'] ?? 0
+    const esNivelYaSuperado = (nivel: string) => (NIVEL_ORDEN[nivel] ?? 0) < nivelDelAlumno
 
     /** lessonId → { locked, reason, blockingLessonId } */
     const state = new Map<string, { locked: boolean; reason: string | null; blockedBy: string | null }>()
@@ -139,10 +150,15 @@ export class LearningService {
         nivelDeLaCompuerta = m.level
         gate = null
       }
+      // Un nivel ya superado no lleva compuertas de ningún tipo.
+      const yaSuperado = esNivelYaSuperado(m.level)
+      if (yaSuperado) gate = null
+
       for (const l of m.lessons) {
         // Regla 1 — TODO nace bloqueado. El estudiante solo ve lo que su
-        // profesor le fue habilitando (o lo que ya completó antes).
-        const habilitada = unlocked.has(l.id) || completed.has(l.id)
+        // profesor le fue habilitando (o lo que ya completó antes), salvo los
+        // niveles anteriores al suyo, que van abiertos.
+        const habilitada = yaSuperado || unlocked.has(l.id) || completed.has(l.id)
 
         // Regla 2 — un checkpoint sin superar tapa todo lo que viene después,
         // aunque el profe lo hubiera habilitado: no se saltan bases.
@@ -158,7 +174,7 @@ export class LearningService {
           blockedBy: null,
         })
 
-        if (l.isCheckpoint && !completed.has(l.id)) {
+        if (!yaSuperado && l.isCheckpoint && !completed.has(l.id)) {
           gate = { id: l.id, title: l.title, moduleTitle: m.title }
         }
       }

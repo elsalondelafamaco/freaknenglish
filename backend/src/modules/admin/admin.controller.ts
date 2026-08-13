@@ -270,13 +270,13 @@ export class AdminController {
 
   /** @endpoint POST /api/v1/admin/content/modules */
   @Post('content/modules')
-  createModule(@Body() body: { id?: string; level: 'beginner' | 'intermediate' | 'advanced'; title: string; summary?: string; position?: number }) {
+  createModule(@Body() body: { id?: string; level: 'beginner' | 'intermediate' | 'advanced'; title: string; summary?: string; position?: number; unit?: number | null }) {
     return this.svc.saveModule(body)
   }
 
   /** @endpoint PATCH /api/v1/admin/content/modules/:id */
   @Patch('content/modules/:id')
-  updateModule(@Param('id') id: string, @Body() body: { title?: string; summary?: string; level?: 'beginner' | 'intermediate' | 'advanced'; position?: number }) {
+  updateModule(@Param('id') id: string, @Body() body: { title?: string; summary?: string; level?: 'beginner' | 'intermediate' | 'advanced'; position?: number; unit?: number | null }) {
     return this.svc.saveModule({ id, ...body } as any)
   }
 

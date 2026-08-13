@@ -629,9 +629,9 @@ export const adminApi = {
   setPayrollSettings: (hourlyRateCop: number) =>
     apiPatch<{ hourlyRateCop: number }>("/admin/settings/payroll", { hourlyRateCop }),
   content: () => apiGet<LearningModule[]>("/admin/content"),
-  createModule: (body: { id?: string; level: "beginner" | "intermediate" | "advanced"; title: string; summary?: string; position?: number }) =>
+  createModule: (body: { id?: string; level: "beginner" | "intermediate" | "advanced"; title: string; summary?: string; position?: number; unit?: number | null }) =>
     apiPost<any>("/admin/content/modules", body),
-  updateModule: (id: string, body: { level?: "beginner" | "intermediate" | "advanced"; title?: string; summary?: string; position?: number }) =>
+  updateModule: (id: string, body: { level?: "beginner" | "intermediate" | "advanced"; title?: string; summary?: string; position?: number; unit?: number | null }) =>
     apiPatch<any>(`/admin/content/modules/${id}`, body),
   deleteModule: (id: string) => apiPatch<{ ok: true }>(`/admin/content/modules/${id}/delete`, {}),
   createLesson: (body: any) => apiPost<any>("/admin/content/lessons", body),

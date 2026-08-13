@@ -63,6 +63,8 @@ interface BEModule {
   title: string;
   summary?: string | null;
   position: number;
+  /** Unidad dentro del nivel; agrupa los módulos en el catálogo del estudiante. */
+  unit?: number | null;
   lessons: BELesson[];
   checkpoints?: BECheckpoint[];
 }
@@ -209,7 +211,21 @@ function AdminContent() {
                           </button>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold text-brand-ink">{m.title}</div>
+                          <div className="flex items-center gap-1.5">
+                            {/* La unidad es lo que agrupa el catálogo del estudiante;
+                                si falta, el módulo queda suelto y conviene verlo. */}
+                            <span
+                              className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                                m.unit != null
+                                  ? "bg-brand-yellow/50 text-brand-ink"
+                                  : "bg-amber-100 text-amber-800"
+                              }`}
+                              title={m.unit != null ? `Unidad ${m.unit}` : "Sin unidad: queda fuera de los grupos"}
+                            >
+                              {m.unit != null ? `U${m.unit}` : "sin unidad"}
+                            </span>
+                            <span className="truncate text-sm font-semibold text-brand-ink">{m.title}</span>
+                          </div>
                           <div className="truncate text-xs text-brand-ink/55">{m.summary}</div>
                         </div>
                         <span className="text-xs text-brand-ink/55">{m.lessons.length} lecciones</span>
@@ -401,6 +417,9 @@ function ModuleDialog({
   const [summary, setSummary] = useState(initial.summary ?? "");
   const [level, setLevel] = useState<Level>((initial.level ?? "beginner") as Level);
   const [position, setPosition] = useState(initial.position ?? 1);
+  // Unidad dentro del nivel: es lo que agrupa los módulos en el catálogo del
+  // estudiante. Vacío = queda fuera de toda unidad.
+  const [unit, setUnit] = useState<string>(initial.unit != null ? String(initial.unit) : "");
   const [pending, setPending] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
@@ -408,9 +427,9 @@ function ModuleDialog({
     setPending(true);
     try {
       if (initial.id) {
-        await adminApi.updateModule(initial.id, { title, summary, level, position });
+        await adminApi.updateModule(initial.id, { title, summary, level, position, unit: unit.trim() === "" ? null : Number(unit) });
       } else {
-        await adminApi.createModule({ title, summary, level, position });
+        await adminApi.createModule({ title, summary, level, position, unit: unit.trim() === "" ? null : Number(unit) });
       }
       toast.success("Módulo guardado");
       onSaved();
@@ -450,6 +469,20 @@ function ModuleDialog({
             />
           </Field>
         </div>
+        <Field label="Unidad">
+          <input
+            type="number"
+            min={1}
+            value={unit}
+            onChange={(e) => setUnit(e.target.value)}
+            placeholder="1"
+            className="input"
+          />
+          <p className="mt-1 text-[11px] text-brand-ink/55">
+            Agrupa los módulos dentro del nivel en el catálogo del estudiante. Déjalo vacío para
+            que quede suelto, fuera de cualquier unidad.
+          </p>
+        </Field>
         <Actions onClose={onClose} pending={pending} />
       </form>
     </Modal>

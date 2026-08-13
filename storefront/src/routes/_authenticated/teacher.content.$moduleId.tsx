@@ -6,7 +6,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { learningApi, teachersApi } from "@/lib/api/endpoints";
-import { prepararHtmlLeccion, urlDeMedios } from "@/lib/learning/lessonHtml";
+import { urlDeMedios } from "@/lib/learning/lessonHtml";
+import { LessonFrame } from "@/components/learning/LessonFrame";
 
 export const Route = createFileRoute("/_authenticated/teacher/content/$moduleId")({
   head: ({ params }) => ({ meta: [{ title: `Contenido ${params.moduleId} — Profesor` }] }),
@@ -237,14 +238,7 @@ function ContenidoLeccion({ lesson }: { lesson: any }) {
 
   if (lesson.kind === "html") {
     return (
-      <div className="h-[72vh] w-full overflow-hidden rounded-2xl border border-brand-line bg-white">
-        <iframe
-          title={lesson.title}
-          srcDoc={prepararHtmlLeccion(lesson.contentHtml ?? url ?? "")}
-          className="h-full w-full bg-white"
-          sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"
-        />
-      </div>
+      <LessonFrame title={lesson.title} html={lesson.contentHtml ?? url ?? ""} />
     );
   }
   if (lesson.kind === "video" && url) {

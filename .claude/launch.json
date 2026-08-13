@@ -4,7 +4,12 @@
     {
       "name": "storefront",
       "runtimeExecutable": "bun",
-      "runtimeArgs": ["run", "--cwd", "storefront", "dev"],
+      "runtimeArgs": [
+        "run",
+        "--cwd",
+        "storefront",
+        "dev"
+      ],
       "port": 8080,
       "env": {
         "PATH": "/Users/freaknjuan/.local/node/bin:/Users/freaknjuan/.local/bin:/Users/freaknjuan/.bun/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
@@ -13,8 +18,24 @@
     {
       "name": "backend",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--dir", "backend", "run", "dev"],
+      "runtimeArgs": [
+        "--dir",
+        "backend",
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "storefront-pnpm",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "storefront",
+        "run",
+        "dev"
+      ],
+      "port": 8080
     }
   ]
 }

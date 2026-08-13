@@ -458,3 +458,37 @@ html {
 .freakn-calendar .fc-bg-event {
   opacity: 1;
 }
+
+/* ─── Calendario en modo oscuro ────────────────────────────────────────────
+   Los botones de FullCalendar traían `background: #fff !important` quemado,
+   mientras el color de texto sale de `--brand-ink`, que en oscuro es casi
+   blanco: quedaban blanco sobre blanco e ilegibles. Aquí se reemplaza solo el
+   fondo por el mismo tono que usa `.bg-white` en oscuro. */
+.dark .freakn-calendar .fc-button {
+  background: oklch(0.17 0 0) !important;
+  border-color: var(--brand-line) !important;
+}
+.dark .freakn-calendar .fc-button:hover {
+  background: oklch(0.24 0 0) !important;
+}
+/* El activo y "Hoy" van en `--brand-ink`, que en oscuro es claro: el texto
+   blanco de encima tampoco se veía. */
+.dark .freakn-calendar .fc-button-primary:not(:disabled).fc-button-active,
+.dark .freakn-calendar .fc-today-button {
+  background: var(--brand-ink) !important;
+  color: oklch(0.15 0 0) !important;
+  border-color: var(--brand-ink) !important;
+}
+.dark .freakn-calendar .fc-col-header-cell {
+  background: oklch(0.22 0 0);
+}
+/* Nombres de día y horas laterales: estaban en rgb(10 10 10 / .6) y .45, es
+   decir negro translúcido — sobre el fondo oscuro quedaban en 1.15:1 y 1.03:1,
+   invisibles. En oscuro se invierten a blanco translúcido. */
+.dark .freakn-calendar .fc-col-header-cell-cushion {
+  color: rgb(255 255 255 / 0.75);
+}
+.dark .freakn-calendar .fc-timegrid-slot-label-cushion,
+.dark .freakn-calendar .fc-timegrid-axis-cushion {
+  color: rgb(255 255 255 / 0.6);
+}

@@ -1131,7 +1131,16 @@ export class AdminService {
   // CMS · módulos, lecciones, adjuntos
   // ────────────────────────────────────────────────────────────────────────
 
-  async saveModule(input: { id?: string; level: 'beginner' | 'intermediate' | 'advanced'; title: string; summary?: string; position?: number }) {
+  async saveModule(input: {
+    id?: string
+    level: 'beginner' | 'intermediate' | 'advanced'
+    title: string
+    summary?: string
+    position?: number
+    /** Unidad dentro del nivel. Sin esto, todo lo creado desde el admin caía
+     *  en el grupo "sin unidad" mientras el contenido sembrado sí se agrupaba. */
+    unit?: number | null
+  }) {
     const id = input.id ?? randomUUID()
     const existing = await this.prisma.module.findUnique({ where: { id } })
     if (existing) {
@@ -1142,6 +1151,7 @@ export class AdminService {
           description: input.summary ?? existing.description,
           level: (input.level ?? existing.level) as any,
           position: input.position ?? existing.position,
+          unit: input.unit !== undefined ? input.unit : existing.unit,
         },
       })
     }
@@ -1153,6 +1163,7 @@ export class AdminService {
         description: input.summary ?? '',
         level: input.level as any,
         position: input.position ?? (last ? last.position + 1 : 1),
+        unit: input.unit ?? null,
       },
     })
   }

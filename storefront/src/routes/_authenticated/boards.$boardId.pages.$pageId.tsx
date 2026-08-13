@@ -153,7 +153,10 @@ function BoardPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 border-b border-brand-line pb-3 md:flex-row md:flex-wrap md:items-center md:justify-between">
+      {/* Sticky: en una página larga había que subir hasta arriba cada vez que
+          se quería negrita o insertar algo. `bg-brand-surface` para que el
+          texto no se transparente por debajo al hacer scroll. */}
+      <div className="sticky top-0 z-30 -mx-4 flex flex-col gap-2 border-b border-brand-line bg-brand-surface px-4 pb-3 pt-3 md:flex-row md:flex-wrap md:items-center md:justify-between">
         <Toolbar editor={editor} boardId={boardId} />
         <div className="flex items-center gap-2">
           <VersionHistory pageId={pageId} />

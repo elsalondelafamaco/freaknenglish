@@ -9,6 +9,8 @@ import {
   LogOut,
   Mail,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings,
   ShieldCheck,
   ShoppingCart,
@@ -71,6 +73,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  // Sidebar colapsado (solo iconos). Se recuerda entre sesiones: quien lo
+  // colapsa para ganar ancho no quiere volver a hacerlo en cada carga.
+  const [colapsado, setColapsado] = useState(
+    () => typeof window !== "undefined" && window.localStorage.getItem("freakn.sidebar.colapsado") === "1",
+  );
+  const alternarSidebar = () => {
+    setColapsado((v) => {
+      const next = !v;
+      try { window.localStorage.setItem("freakn.sidebar.colapsado", next ? "1" : "0"); } catch { /* modo privado */ }
+      return next;
+    });
+  };
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   // Detalle de módulo (/app/learning/<id>): el HTML de la lección va a sangre.
   const isLessonViewer = /^\/app\/learning\/[^/]+/.test(pathname);
@@ -140,14 +154,33 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-brand-surface">
       <ImpersonationBanner />
       {/* Sidebar — desktop */}
-      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-brand-line bg-white p-5 lg:flex">
-        <div className="flex items-center justify-between">
-          <Link to="/" aria-label="Inicio">
-            <Logo className="h-8 w-auto" />
-          </Link>
-          <NotificationsBell />
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 hidden flex-col border-r border-brand-line bg-white transition-[width] duration-200 lg:flex",
+          colapsado ? "w-16 p-2" : "w-64 p-5",
+        )}
+      >
+        <div className={cn("flex items-center", colapsado ? "justify-center" : "justify-between")}>
+          {colapsado ? null : (
+            <Link to="/" aria-label="Inicio">
+              <Logo className="h-8 w-auto" />
+            </Link>
+          )}
+          {colapsado ? null : <NotificationsBell />}
         </div>
-        <nav className="mt-8 flex flex-col gap-1">
+        <button
+          type="button"
+          onClick={alternarSidebar}
+          title={colapsado ? "Expandir menú" : "Colapsar menú"}
+          aria-label={colapsado ? "Expandir menú" : "Colapsar menú"}
+          className={cn(
+            "mt-2 flex items-center gap-2 rounded-xl py-2 text-xs font-semibold text-brand-ink/60 transition hover:bg-brand-cream/60 hover:text-brand-ink",
+            colapsado ? "justify-center px-2" : "px-3",
+          )}
+        >
+          {colapsado ? <PanelLeftOpen className="size-4" /> : <><PanelLeftClose className="size-4" /> Colapsar</>}
+        </button>
+        <nav className={cn("flex flex-col gap-1", colapsado ? "mt-3" : "mt-5")}>
           {NAV.map((item) => {
             const active = item.end
               ? pathname === item.to
@@ -159,11 +192,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                 label={t((item as any).tKey, item.label)}
                 active={active}
                 badge={item.to === "/admin/schedule" ? requestsCount : 0}
+                compacto={colapsado}
               />
             );
           })}
         </nav>
-        <div className="mt-auto rounded-2xl bg-brand-cream/60 p-4">
+        <div className={cn("mt-auto rounded-2xl bg-brand-cream/60 p-4", colapsado ? "hidden" : "")}>
           <div className="text-sm font-semibold text-brand-ink">{user?.fullName}</div>
           <div className="truncate text-xs text-brand-ink/65">{user?.email}</div>
           <div className="mt-3"><InstallAppButton /></div>
@@ -187,6 +221,23 @@ export function AppShell({ children }: { children: ReactNode }) {
             <LogOut className="size-3.5" /> {t("action.signout")}
           </button>
         </div>
+
+        {/* Colapsado no cabe la tarjeta del usuario, pero notificaciones, tema
+            y salir tienen que seguir a mano: van como iconos sueltos. */}
+        {colapsado ? (
+          <div className="mt-auto flex flex-col items-center gap-2 pb-1">
+            <NotificationsBell />
+            <ThemeToggle className="size-7" />
+            <button
+              onClick={handleSignOut}
+              title={t("action.signout", "Cerrar sesión")}
+              aria-label={t("action.signout", "Cerrar sesión")}
+              className="rounded-xl p-2 text-brand-ink/60 transition hover:bg-brand-cream/60 hover:text-brand-ink"
+            >
+              <LogOut className="size-4" />
+            </button>
+          </div>
+        ) : null}
       </aside>
 
       {/* Topbar — mobile */}
@@ -234,7 +285,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       ) : null}
 
-      <main className="lg:pl-64">
+      <main className={cn("transition-[padding] duration-200", colapsado ? "lg:pl-16" : "lg:pl-64")}>
         {/* Board y aprendizaje usan todo el ancho (se sienten estrechos con
             max-w-6xl); el visor de lección va a sangre en mobile para que el
             HTML del deck aproveche los 375px completos. El resto conserva el
@@ -265,6 +316,7 @@ function NavItem({
   active,
   badge = 0,
   onClick,
+  compacto = false,
 }: {
   to: string;
   label: string;
@@ -272,22 +324,34 @@ function NavItem({
   active: boolean;
   badge?: number;
   onClick?: () => void;
+  /** Sidebar colapsado: solo el icono, con el nombre en el tooltip. */
+  compacto?: boolean;
 }) {
   return (
     <Link
       to={to as never}
       onClick={onClick}
+      title={compacto ? label : undefined}
       className={cn(
-        "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200",
+        "flex items-center gap-2.5 rounded-xl py-2 text-sm font-medium transition-all duration-200",
+        compacto ? "justify-center px-2" : "px-3",
+        "relative",
         active
           ? "bg-brand-ink text-white shadow-soft"
           : "text-brand-ink/75 hover:translate-x-0.5 hover:bg-brand-cream/60 hover:text-brand-ink",
       )}
     >
-      <Icon className="size-4" />
-      {label}
+      <Icon className="size-4 shrink-0" />
+      {compacto ? null : label}
       {badge > 0 ? (
-        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white">
+        <span
+          className={cn(
+            "flex items-center justify-center rounded-full bg-red-500 font-bold text-white",
+            compacto
+              ? "absolute right-1 top-1 size-2 p-0 text-transparent"
+              : "ml-auto h-5 min-w-5 px-1.5 text-[11px]",
+          )}
+        >
           {badge > 99 ? "99+" : badge}
         </span>
       ) : null}

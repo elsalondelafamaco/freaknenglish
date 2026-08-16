@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { AlertTriangle, CalendarOff, ExternalLink, Plus, Trash2, XCircle } from "lucide-react";
+import { AlertTriangle, CalendarOff, ExternalLink, Plus, Snowflake, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { classesApi, scheduleApi, teachersApi } from "@/lib/api/endpoints";
 
@@ -92,6 +92,18 @@ const STATUS_COLOR: Record<string, string> = {
   no_show: "#dc2626",
   cancelled: "#9ca3af",
   rescheduled: "#d97706",
+  // Congelada: sin este color se pintaba igual de negra que una programada y
+  // no había forma de distinguir en el calendario cuál estaba por reprogramar.
+  pending_reschedule: "#0284c7",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  scheduled: "Programada",
+  validated: "Tomada",
+  no_show: "No tomada",
+  cancelled: "Cancelada",
+  rescheduled: "Reprogramada",
+  pending_reschedule: "Por reprogramar",
 };
 
 function TeacherCalendar() {
@@ -133,6 +145,20 @@ function TeacherCalendar() {
     mutationFn: (id: string) => classesApi.noShow(id),
     onSuccess: () => { toast.success("Marcada como no tomada"); setSelected(null); invalidate(); },
     onError: (e: any) => toast.error(e?.message ?? "No se pudo marcar"),
+  });
+  const freezeM = useMutation({
+    mutationFn: (v: { id: string; reason?: string }) => classesApi.freeze(v.id, v.reason),
+    onSuccess: () => {
+      toast.success("Clase congelada — no cuenta como tomada. Ponle fecha cuando la tengas.");
+      setSelected(null);
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo congelar"),
+  });
+  const unfreezeM = useMutation({
+    mutationFn: (id: string) => classesApi.unfreeze(id),
+    onSuccess: () => { toast.success("Clase de vuelta en su horario"); setSelected(null); invalidate(); },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo descongelar"),
   });
   const invalidateAbs = () => {
     qc.invalidateQueries({ queryKey: ["teacher", "absences"] });
@@ -180,7 +206,7 @@ function TeacherCalendar() {
           </p>
         </div>
         <div className="flex items-center gap-3 text-[11px] text-brand-ink/60">
-          {Object.entries({ Programada: "scheduled", Tomada: "validated", "No tomada": "no_show" }).map(([label, st]) => (
+          {Object.entries({ Programada: "scheduled", Tomada: "validated", "No tomada": "no_show", "Por reprogramar": "pending_reschedule" }).map(([label, st]) => (
             <span key={st} className="inline-flex items-center gap-1">
               <span className="inline-block size-2.5 rounded-full" style={{ background: STATUS_COLOR[st] }} /> {label}
             </span>
@@ -355,7 +381,7 @@ function TeacherCalendar() {
                 </p>
               </div>
               <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold text-white" style={{ background: STATUS_COLOR[selected.status] ?? "#111827" }}>
-                {selected.status === "validated" ? "Tomada" : selected.status === "no_show" ? "No tomada" : selected.status === "cancelled" ? "Cancelada" : "Programada"}
+                {STATUS_LABEL[selected.status] ?? "Programada"}
               </span>
             </div>
             {!selected.student.paymentActive ? (
@@ -384,6 +410,31 @@ function TeacherCalendar() {
                   <XCircle className="size-3.5" /> No tomada
                 </button>
               ) : null}
+              {/* Congelar: la clase sale de circulación (no cuenta como tomada
+                  ni entra a nómina) hasta que se le ponga fecha. Es lo que
+                  hace falta cuando el estudiante pide mover y todavía no se
+                  ha acordado para cuándo. */}
+              {["scheduled", "rescheduled", "validated", "no_show"].includes(selected.status) ? (
+                <button
+                  disabled={freezeM.isPending}
+                  onClick={() => {
+                    const motivo = prompt("¿Por qué se reprograma? (opcional)") ?? undefined;
+                    freezeM.mutate({ id: selected.id, reason: motivo });
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-sky-300 bg-sky-50 px-4 py-2 text-xs font-semibold text-sky-900 hover:bg-sky-100 disabled:opacity-60"
+                >
+                  <Snowflake className="size-3.5" /> Congelar
+                </button>
+              ) : null}
+              {selected.status === "pending_reschedule" ? (
+                <button
+                  disabled={unfreezeM.isPending}
+                  onClick={() => unfreezeM.mutate(selected.id)}
+                  className="inline-flex items-center rounded-full border border-brand-line bg-white px-4 py-2 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40 disabled:opacity-60"
+                >
+                  Volver a su horario
+                </button>
+              ) : null}
               <Link
                 to="/teacher/students/$studentId"
                 params={{ studentId: selected.student.id }}
@@ -393,8 +444,11 @@ function TeacherCalendar() {
               </Link>
             </div>
 
-            {/* Mover a otra fecha (incluida OTRA SEMANA) — solo esta clase. */}
-            {["scheduled", "rescheduled"].includes(selected.status) ? (
+            {/* Mover a otra fecha (incluida OTRA SEMANA) — solo esta clase.
+                También desde `validated`/`no_show`/congelada: el caso real es
+                justamente ese, una clase que el sistema ya dio por tomada y
+                que en realidad hay que correr a una fecha futura. */}
+            {["scheduled", "rescheduled", "pending_reschedule", "validated", "no_show"].includes(selected.status) ? (
               <div className="mt-4 rounded-2xl border border-brand-line bg-brand-cream/30 p-3">
                 <div className="text-xs font-semibold text-brand-ink">
                   Mover esta clase (una sola vez, puede ser a otra semana)

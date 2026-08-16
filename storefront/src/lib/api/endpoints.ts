@@ -280,7 +280,10 @@ export const classesApi = {
   /** Estudiante reporta un problema con una clase dictada → avisa a admins. */
   report: (id: string, note: string) => apiPost<{ ok: boolean }>(`/classes/${id}/report`, { note }),
   /** Solo admin: fuerza el estado de una clase (ajuste de nómina/métricas). */
-  adminSetStatus: (id: string, status: "validated" | "no_show" | "scheduled" | "cancelled") =>
+  adminSetStatus: (
+    id: string,
+    status: "validated" | "no_show" | "scheduled" | "cancelled" | "pending_reschedule",
+  ) =>
     apiPatch<ClassSession>(`/classes/${id}/status`, { status }),
 };
 
@@ -504,6 +507,15 @@ export const teachersApi = {
   createAbsencesByClasses: (classIds: string[], reason?: string) =>
     apiPost<{ absences: any[]; cancelled: number }>("/teacher/absences/by-classes", { classIds, reason }),
   deleteAbsence: (id: string) => apiDelete<{ ok: boolean }>(`/teacher/absences/${id}`),
+  /** Material extra: HTMLs de apoyo que sube el admin. Solo profes y admin. */
+  resources: () =>
+    apiGet<Array<{ id: string; title: string; description: string | null; category: string | null; updatedAt: string }>>(
+      "/teacher/resources",
+    ),
+  resource: (id: string) =>
+    apiGet<{ id: string; title: string; description: string | null; category: string | null; contentHtml: string }>(
+      `/teacher/resources/${id}`,
+    ),
 };
 
 // ─── Admin ─────────────────────────────────────────────────────────────
@@ -665,11 +677,36 @@ export const adminApi = {
     id: string,
     body: {
       planId: string;
-      status?: "pending" | "active" | "past_due" | "canceled" | "expired";
+      status?: "pending" | "active" | "past_due" | "canceled" | "expired" | "paused";
       currentPeriodEnd?: string | null;
       startedAt?: string | null;
     },
   ) => apiPatch<any>(`/admin/users/${id}/subscription`, body),
+  /** Congela el plan: borra clases futuras y libera la franja del profesor. */
+  pauseSubscription: (id: string, reason?: string) =>
+    apiPatch<{ subscription: any; classesRemoved: number; slotsFreed: number }>(
+      `/admin/users/${id}/subscription/pause`,
+      { reason },
+    ),
+  /** Reanuda y devuelve los días pausados para ajustar el vencimiento a mano. */
+  resumeSubscription: (id: string) =>
+    apiPatch<{ subscription: any; daysPaused: number; slotsRestored: number }>(
+      `/admin/users/${id}/subscription/resume`,
+      {},
+    ),
+  resources: () =>
+    apiGet<Array<{ id: string; title: string; description: string | null; category: string | null; position: number; published: boolean; updatedAt: string }>>(
+      "/admin/resources",
+    ),
+  resource: (id: string) =>
+    apiGet<{ id: string; title: string; description: string | null; category: string | null; contentHtml: string; position: number; published: boolean }>(
+      `/admin/resources/${id}`,
+    ),
+  createResource: (body: { title: string; description?: string | null; category?: string | null; contentHtml: string; position?: number; published?: boolean }) =>
+    apiPost<any>("/admin/resources", body),
+  updateResource: (id: string, body: Partial<{ title: string; description: string | null; category: string | null; contentHtml: string; position: number; published: boolean }>) =>
+    apiPatch<any>(`/admin/resources/${id}`, body),
+  deleteResource: (id: string) => apiPatch<{ ok: boolean }>(`/admin/resources/${id}/delete`, {}),
   updateUser: (id: string, body: Partial<{ fullName: string; phone: string; role: "student" | "teacher" | "admin"; extraRoles: Array<"student" | "teacher" | "admin">; englishLevel: "beginner" | "intermediate" | "advanced" | null; classDurationMin: number | null }>) =>
     apiPatch<User>(`/admin/users/${id}`, body),
   setUserStatus: (id: string, disabled: boolean) =>

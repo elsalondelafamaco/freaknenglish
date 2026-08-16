@@ -43,6 +43,7 @@ import { Route as AuthenticatedAdminSurveysRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminStorageRouteImport } from './routes/_authenticated/admin.storage'
 import { Route as AuthenticatedAdminSiteRouteImport } from './routes/_authenticated/admin.site'
 import { Route as AuthenticatedAdminScheduleRouteImport } from './routes/_authenticated/admin.schedule'
+import { Route as AuthenticatedAdminResourcesRouteImport } from './routes/_authenticated/admin.resources'
 import { Route as AuthenticatedAdminPayrollRouteImport } from './routes/_authenticated/admin.payroll'
 import { Route as AuthenticatedAdminNotificationsRouteImport } from './routes/_authenticated/admin.notifications'
 import { Route as AuthenticatedAdminContentPromptRouteImport } from './routes/_authenticated/admin.content-prompt'
@@ -51,11 +52,13 @@ import { Route as AuthenticatedAdminCleanupRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminCartsRouteImport } from './routes/_authenticated/admin.carts'
 import { Route as AuthenticatedAdminCalendarRouteImport } from './routes/_authenticated/admin.calendar'
 import { Route as AuthenticatedTeacherStudentsIndexRouteImport } from './routes/_authenticated/teacher.students.index'
+import { Route as AuthenticatedTeacherMaterialIndexRouteImport } from './routes/_authenticated/teacher.material.index'
 import { Route as AuthenticatedTeacherContentIndexRouteImport } from './routes/_authenticated/teacher.content.index'
 import { Route as AuthenticatedAppLearningIndexRouteImport } from './routes/_authenticated/app.learning.index'
 import { Route as AuthenticatedAdminUsersIndexRouteImport } from './routes/_authenticated/admin.users.index'
 import { Route as AuthenticatedAdminPlansIndexRouteImport } from './routes/_authenticated/admin.plans.index'
 import { Route as AuthenticatedTeacherStudentsStudentIdRouteImport } from './routes/_authenticated/teacher.students.$studentId'
+import { Route as AuthenticatedTeacherMaterialResourceIdRouteImport } from './routes/_authenticated/teacher.material.$resourceId'
 import { Route as AuthenticatedTeacherContentModuleIdRouteImport } from './routes/_authenticated/teacher.content.$moduleId'
 import { Route as AuthenticatedAppLearningModuleIdRouteImport } from './routes/_authenticated/app.learning.$moduleId'
 import { Route as AuthenticatedAppCheckpointCheckpointIdRouteImport } from './routes/_authenticated/app.checkpoint.$checkpointId'
@@ -246,6 +249,12 @@ const AuthenticatedAdminScheduleRoute =
     path: '/schedule',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminResourcesRoute =
+  AuthenticatedAdminResourcesRouteImport.update({
+    id: '/resources',
+    path: '/resources',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminPayrollRoute =
   AuthenticatedAdminPayrollRouteImport.update({
     id: '/payroll',
@@ -293,6 +302,12 @@ const AuthenticatedTeacherStudentsIndexRoute =
     path: '/students/',
     getParentRoute: () => AuthenticatedTeacherRoute,
   } as any)
+const AuthenticatedTeacherMaterialIndexRoute =
+  AuthenticatedTeacherMaterialIndexRouteImport.update({
+    id: '/material/',
+    path: '/material/',
+    getParentRoute: () => AuthenticatedTeacherRoute,
+  } as any)
 const AuthenticatedTeacherContentIndexRoute =
   AuthenticatedTeacherContentIndexRouteImport.update({
     id: '/content/',
@@ -321,6 +336,12 @@ const AuthenticatedTeacherStudentsStudentIdRoute =
   AuthenticatedTeacherStudentsStudentIdRouteImport.update({
     id: '/students/$studentId',
     path: '/students/$studentId',
+    getParentRoute: () => AuthenticatedTeacherRoute,
+  } as any)
+const AuthenticatedTeacherMaterialResourceIdRoute =
+  AuthenticatedTeacherMaterialResourceIdRouteImport.update({
+    id: '/material/$resourceId',
+    path: '/material/$resourceId',
     getParentRoute: () => AuthenticatedTeacherRoute,
   } as any)
 const AuthenticatedTeacherContentModuleIdRoute =
@@ -376,6 +397,7 @@ export interface FileRoutesByFullPath {
   '/admin/content-prompt': typeof AuthenticatedAdminContentPromptRoute
   '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
+  '/admin/resources': typeof AuthenticatedAdminResourcesRoute
   '/admin/schedule': typeof AuthenticatedAdminScheduleRoute
   '/admin/site': typeof AuthenticatedAdminSiteRoute
   '/admin/storage': typeof AuthenticatedAdminStorageRoute
@@ -399,11 +421,13 @@ export interface FileRoutesByFullPath {
   '/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
   '/teacher/content/$moduleId': typeof AuthenticatedTeacherContentModuleIdRoute
+  '/teacher/material/$resourceId': typeof AuthenticatedTeacherMaterialResourceIdRoute
   '/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
   '/admin/plans/': typeof AuthenticatedAdminPlansIndexRoute
   '/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/app/learning/': typeof AuthenticatedAppLearningIndexRoute
   '/teacher/content/': typeof AuthenticatedTeacherContentIndexRoute
+  '/teacher/material/': typeof AuthenticatedTeacherMaterialIndexRoute
   '/teacher/students/': typeof AuthenticatedTeacherStudentsIndexRoute
   '/boards/$boardId/pages/$pageId': typeof AuthenticatedBoardsBoardIdPagesPageIdRoute
 }
@@ -426,6 +450,7 @@ export interface FileRoutesByTo {
   '/admin/content-prompt': typeof AuthenticatedAdminContentPromptRoute
   '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
+  '/admin/resources': typeof AuthenticatedAdminResourcesRoute
   '/admin/schedule': typeof AuthenticatedAdminScheduleRoute
   '/admin/site': typeof AuthenticatedAdminSiteRoute
   '/admin/storage': typeof AuthenticatedAdminStorageRoute
@@ -448,11 +473,13 @@ export interface FileRoutesByTo {
   '/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
   '/teacher/content/$moduleId': typeof AuthenticatedTeacherContentModuleIdRoute
+  '/teacher/material/$resourceId': typeof AuthenticatedTeacherMaterialResourceIdRoute
   '/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
   '/admin/plans': typeof AuthenticatedAdminPlansIndexRoute
   '/admin/users': typeof AuthenticatedAdminUsersIndexRoute
   '/app/learning': typeof AuthenticatedAppLearningIndexRoute
   '/teacher/content': typeof AuthenticatedTeacherContentIndexRoute
+  '/teacher/material': typeof AuthenticatedTeacherMaterialIndexRoute
   '/teacher/students': typeof AuthenticatedTeacherStudentsIndexRoute
   '/boards/$boardId/pages/$pageId': typeof AuthenticatedBoardsBoardIdPagesPageIdRoute
 }
@@ -480,6 +507,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/content-prompt': typeof AuthenticatedAdminContentPromptRoute
   '/_authenticated/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/_authenticated/admin/payroll': typeof AuthenticatedAdminPayrollRoute
+  '/_authenticated/admin/resources': typeof AuthenticatedAdminResourcesRoute
   '/_authenticated/admin/schedule': typeof AuthenticatedAdminScheduleRoute
   '/_authenticated/admin/site': typeof AuthenticatedAdminSiteRoute
   '/_authenticated/admin/storage': typeof AuthenticatedAdminStorageRoute
@@ -503,11 +531,13 @@ export interface FileRoutesById {
   '/_authenticated/app/checkpoint/$checkpointId': typeof AuthenticatedAppCheckpointCheckpointIdRoute
   '/_authenticated/app/learning/$moduleId': typeof AuthenticatedAppLearningModuleIdRoute
   '/_authenticated/teacher/content/$moduleId': typeof AuthenticatedTeacherContentModuleIdRoute
+  '/_authenticated/teacher/material/$resourceId': typeof AuthenticatedTeacherMaterialResourceIdRoute
   '/_authenticated/teacher/students/$studentId': typeof AuthenticatedTeacherStudentsStudentIdRoute
   '/_authenticated/admin/plans/': typeof AuthenticatedAdminPlansIndexRoute
   '/_authenticated/admin/users/': typeof AuthenticatedAdminUsersIndexRoute
   '/_authenticated/app/learning/': typeof AuthenticatedAppLearningIndexRoute
   '/_authenticated/teacher/content/': typeof AuthenticatedTeacherContentIndexRoute
+  '/_authenticated/teacher/material/': typeof AuthenticatedTeacherMaterialIndexRoute
   '/_authenticated/teacher/students/': typeof AuthenticatedTeacherStudentsIndexRoute
   '/_authenticated/boards/$boardId/pages/$pageId': typeof AuthenticatedBoardsBoardIdPagesPageIdRoute
 }
@@ -535,6 +565,7 @@ export interface FileRouteTypes {
     | '/admin/content-prompt'
     | '/admin/notifications'
     | '/admin/payroll'
+    | '/admin/resources'
     | '/admin/schedule'
     | '/admin/site'
     | '/admin/storage'
@@ -558,11 +589,13 @@ export interface FileRouteTypes {
     | '/app/checkpoint/$checkpointId'
     | '/app/learning/$moduleId'
     | '/teacher/content/$moduleId'
+    | '/teacher/material/$resourceId'
     | '/teacher/students/$studentId'
     | '/admin/plans/'
     | '/admin/users/'
     | '/app/learning/'
     | '/teacher/content/'
+    | '/teacher/material/'
     | '/teacher/students/'
     | '/boards/$boardId/pages/$pageId'
   fileRoutesByTo: FileRoutesByTo
@@ -585,6 +618,7 @@ export interface FileRouteTypes {
     | '/admin/content-prompt'
     | '/admin/notifications'
     | '/admin/payroll'
+    | '/admin/resources'
     | '/admin/schedule'
     | '/admin/site'
     | '/admin/storage'
@@ -607,11 +641,13 @@ export interface FileRouteTypes {
     | '/app/checkpoint/$checkpointId'
     | '/app/learning/$moduleId'
     | '/teacher/content/$moduleId'
+    | '/teacher/material/$resourceId'
     | '/teacher/students/$studentId'
     | '/admin/plans'
     | '/admin/users'
     | '/app/learning'
     | '/teacher/content'
+    | '/teacher/material'
     | '/teacher/students'
     | '/boards/$boardId/pages/$pageId'
   id:
@@ -638,6 +674,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/content-prompt'
     | '/_authenticated/admin/notifications'
     | '/_authenticated/admin/payroll'
+    | '/_authenticated/admin/resources'
     | '/_authenticated/admin/schedule'
     | '/_authenticated/admin/site'
     | '/_authenticated/admin/storage'
@@ -661,11 +698,13 @@ export interface FileRouteTypes {
     | '/_authenticated/app/checkpoint/$checkpointId'
     | '/_authenticated/app/learning/$moduleId'
     | '/_authenticated/teacher/content/$moduleId'
+    | '/_authenticated/teacher/material/$resourceId'
     | '/_authenticated/teacher/students/$studentId'
     | '/_authenticated/admin/plans/'
     | '/_authenticated/admin/users/'
     | '/_authenticated/app/learning/'
     | '/_authenticated/teacher/content/'
+    | '/_authenticated/teacher/material/'
     | '/_authenticated/teacher/students/'
     | '/_authenticated/boards/$boardId/pages/$pageId'
   fileRoutesById: FileRoutesById
@@ -925,6 +964,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminScheduleRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/resources': {
+      id: '/_authenticated/admin/resources'
+      path: '/resources'
+      fullPath: '/admin/resources'
+      preLoaderRoute: typeof AuthenticatedAdminResourcesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/payroll': {
       id: '/_authenticated/admin/payroll'
       path: '/payroll'
@@ -981,6 +1027,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTeacherStudentsIndexRouteImport
       parentRoute: typeof AuthenticatedTeacherRoute
     }
+    '/_authenticated/teacher/material/': {
+      id: '/_authenticated/teacher/material/'
+      path: '/material'
+      fullPath: '/teacher/material/'
+      preLoaderRoute: typeof AuthenticatedTeacherMaterialIndexRouteImport
+      parentRoute: typeof AuthenticatedTeacherRoute
+    }
     '/_authenticated/teacher/content/': {
       id: '/_authenticated/teacher/content/'
       path: '/content'
@@ -1014,6 +1067,13 @@ declare module '@tanstack/react-router' {
       path: '/students/$studentId'
       fullPath: '/teacher/students/$studentId'
       preLoaderRoute: typeof AuthenticatedTeacherStudentsStudentIdRouteImport
+      parentRoute: typeof AuthenticatedTeacherRoute
+    }
+    '/_authenticated/teacher/material/$resourceId': {
+      id: '/_authenticated/teacher/material/$resourceId'
+      path: '/material/$resourceId'
+      fullPath: '/teacher/material/$resourceId'
+      preLoaderRoute: typeof AuthenticatedTeacherMaterialResourceIdRouteImport
       parentRoute: typeof AuthenticatedTeacherRoute
     }
     '/_authenticated/teacher/content/$moduleId': {
@@ -1078,6 +1138,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminContentPromptRoute: typeof AuthenticatedAdminContentPromptRoute
   AuthenticatedAdminNotificationsRoute: typeof AuthenticatedAdminNotificationsRoute
   AuthenticatedAdminPayrollRoute: typeof AuthenticatedAdminPayrollRoute
+  AuthenticatedAdminResourcesRoute: typeof AuthenticatedAdminResourcesRoute
   AuthenticatedAdminScheduleRoute: typeof AuthenticatedAdminScheduleRoute
   AuthenticatedAdminSiteRoute: typeof AuthenticatedAdminSiteRoute
   AuthenticatedAdminStorageRoute: typeof AuthenticatedAdminStorageRoute
@@ -1095,6 +1156,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminContentPromptRoute: AuthenticatedAdminContentPromptRoute,
   AuthenticatedAdminNotificationsRoute: AuthenticatedAdminNotificationsRoute,
   AuthenticatedAdminPayrollRoute: AuthenticatedAdminPayrollRoute,
+  AuthenticatedAdminResourcesRoute: AuthenticatedAdminResourcesRoute,
   AuthenticatedAdminScheduleRoute: AuthenticatedAdminScheduleRoute,
   AuthenticatedAdminSiteRoute: AuthenticatedAdminSiteRoute,
   AuthenticatedAdminStorageRoute: AuthenticatedAdminStorageRoute,
@@ -1137,8 +1199,10 @@ interface AuthenticatedTeacherRouteChildren {
   AuthenticatedTeacherScheduleRoute: typeof AuthenticatedTeacherScheduleRoute
   AuthenticatedTeacherIndexRoute: typeof AuthenticatedTeacherIndexRoute
   AuthenticatedTeacherContentModuleIdRoute: typeof AuthenticatedTeacherContentModuleIdRoute
+  AuthenticatedTeacherMaterialResourceIdRoute: typeof AuthenticatedTeacherMaterialResourceIdRoute
   AuthenticatedTeacherStudentsStudentIdRoute: typeof AuthenticatedTeacherStudentsStudentIdRoute
   AuthenticatedTeacherContentIndexRoute: typeof AuthenticatedTeacherContentIndexRoute
+  AuthenticatedTeacherMaterialIndexRoute: typeof AuthenticatedTeacherMaterialIndexRoute
   AuthenticatedTeacherStudentsIndexRoute: typeof AuthenticatedTeacherStudentsIndexRoute
 }
 
@@ -1149,9 +1213,13 @@ const AuthenticatedTeacherRouteChildren: AuthenticatedTeacherRouteChildren = {
   AuthenticatedTeacherIndexRoute: AuthenticatedTeacherIndexRoute,
   AuthenticatedTeacherContentModuleIdRoute:
     AuthenticatedTeacherContentModuleIdRoute,
+  AuthenticatedTeacherMaterialResourceIdRoute:
+    AuthenticatedTeacherMaterialResourceIdRoute,
   AuthenticatedTeacherStudentsStudentIdRoute:
     AuthenticatedTeacherStudentsStudentIdRoute,
   AuthenticatedTeacherContentIndexRoute: AuthenticatedTeacherContentIndexRoute,
+  AuthenticatedTeacherMaterialIndexRoute:
+    AuthenticatedTeacherMaterialIndexRoute,
   AuthenticatedTeacherStudentsIndexRoute:
     AuthenticatedTeacherStudentsIndexRoute,
 }

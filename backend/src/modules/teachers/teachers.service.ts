@@ -646,4 +646,23 @@ export class TeachersService {
     }
     return { scope, movedClasses: moved }
   }
+
+  /**
+   * Material extra: listado SIN `contentHtml`. El HTML de cada recurso pesa
+   * como una lección entera; traerlos todos juntos volvería lentísimo el
+   * listado y el profe solo necesita el del que abre.
+   */
+  async listResources() {
+    return this.prisma.teacherResource.findMany({
+      where: { published: true },
+      orderBy: [{ category: 'asc' }, { position: 'asc' }, { createdAt: 'asc' }],
+      select: { id: true, title: true, description: true, category: true, updatedAt: true },
+    })
+  }
+
+  async getResource(id: string) {
+    const r = await this.prisma.teacherResource.findFirst({ where: { id, published: true } })
+    if (!r) throw new NotFoundException('Material no encontrado')
+    return r
+  }
 }

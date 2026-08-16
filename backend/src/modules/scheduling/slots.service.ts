@@ -437,6 +437,10 @@ export class SlotsService {
         deletedAt: null,
         assignedTeacherId: { not: null },
         studentSlots: { none: {} },
+        // Un plan pausado se quedó a propósito sin franja para que otro
+        // estudiante la pueda tomar; sin esta exclusión el backfill se la
+        // devolvía en el siguiente tick diario.
+        NOT: { subscription: { status: 'paused' } },
       },
       select: { id: true, assignedTeacherId: true, schedulePreferences: true, subscription: { select: { status: true, currentPeriodEnd: true } } },
     })

@@ -312,6 +312,8 @@ function StatusPill({ status }: { status: string }) {
     no_show: { label: "No asististe", cls: "bg-orange-100 text-orange-700" },
     rescheduled: { label: "Reprogramada", cls: "bg-brand-yellow/60 text-brand-ink" },
     scheduled: { label: "Programada", cls: "bg-brand-cream text-brand-ink/70" },
+    // Sin esta entrada el estudiante veía el string crudo `pending_reschedule`.
+    pending_reschedule: { label: "Por reprogramar", cls: "bg-sky-100 text-sky-800" },
   };
   const v = map[status] ?? { label: status, cls: "bg-brand-cream text-brand-ink/70" };
   return <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${v.cls}`}>{v.label}</span>;

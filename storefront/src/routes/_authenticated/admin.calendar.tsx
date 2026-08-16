@@ -98,15 +98,22 @@ function AdminCalendar() {
     () =>
       (calQ.data?.classes ?? [])
         .filter((c) => c.teacher && visible(c.teacher.id) && c.status !== "cancelled")
-        .map((c) => ({
-          id: c.id,
-          title: `${c.student.fullName} · ${c.teacher!.fullName}`,
-          start: c.startsAt,
-          end: c.endsAt,
-          backgroundColor: colorFor(c.teacher!.id),
-          borderColor: c.student.paymentActive ? colorFor(c.teacher!.id) : "#f59e0b",
-          extendedProps: c,
-        })),
+        .map((c) => {
+          // Congelada: se marca en el título y se atenúa. El color del bloque
+          // identifica al profesor, así que el estado no puede ir por color
+          // sin perder esa lectura.
+          const congelada = c.status === "pending_reschedule";
+          return {
+            id: c.id,
+            title: `${congelada ? "❄ " : ""}${c.student.fullName} · ${c.teacher!.fullName}`,
+            start: c.startsAt,
+            end: c.endsAt,
+            backgroundColor: colorFor(c.teacher!.id),
+            borderColor: c.student.paymentActive ? colorFor(c.teacher!.id) : "#f59e0b",
+            classNames: congelada ? ["opacity-60"] : [],
+            extendedProps: c,
+          };
+        }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [calQ.data, hidden],
   );

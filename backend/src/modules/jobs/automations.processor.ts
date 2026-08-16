@@ -35,8 +35,16 @@ export class AutomationsProcessor extends WorkerHost {
     // Auto-tomada (decisión Q2: inmediata al terminar; profe corrige 48 h).
     // `pending_reschedule` queda FUERA a propósito: es una clase congelada a la
     // espera de nueva fecha, darla por tomada sería cobrarla sin haberla dado.
+    // Los estudiantes con el plan pausado quedan fuera aunque les haya
+    // sobrevivido alguna clase: pausar borra las futuras, pero una clase de
+    // hace un rato podría alcanzar a colarse en este mismo tick y quedaría
+    // cobrada sin haberse dado, que es justo lo que la pausa evita.
     const auto = await this.prisma.class.updateMany({
-      where: { status: 'scheduled', endsAt: { lt: now } },
+      where: {
+        status: 'scheduled',
+        endsAt: { lt: now },
+        NOT: { student: { subscription: { status: 'paused' } } },
+      },
       data: { status: 'validated', autoValidated: true, validatedAt: now },
     })
     if (auto.count > 0) this.log.log(`Auto-validated ${auto.count} class(es)`)

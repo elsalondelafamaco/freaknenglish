@@ -192,4 +192,16 @@ export class TeachersController {
   deleteAbsence(@CurrentUser() u: AuthUser, @Param('id') id: string) {
     return this.svc.deleteAbsence(u.id, id)
   }
+
+  /**
+   * @endpoint GET /api/v1/teacher/resources
+   * Material extra: HTMLs de apoyo que sube el admin. Sin `contentHtml` para
+   * no traer todo el material en cada carga del listado.
+   */
+  @Get('resources')
+  resources() { return this.svc.listResources() }
+
+  /** @endpoint GET /api/v1/teacher/resources/:id (con el HTML completo) */
+  @Get('resources/:id')
+  resource(@Param('id') id: string) { return this.svc.getResource(id) }
 }

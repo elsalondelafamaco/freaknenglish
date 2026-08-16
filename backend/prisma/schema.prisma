@@ -29,6 +29,9 @@ enum SubscriptionStatus {
   past_due
   canceled
   expired
+  // Plan congelado por el admin: el estudiante no pierde el plan pero sale de
+  // circulación (no se le generan clases ni ocupa franja del profe).
+  paused
 }
 
 enum PaymentStatus {
@@ -178,6 +181,8 @@ model Subscription {
   currentPeriodEnd  DateTime?          @map("current_period_end")
   cancelAt          DateTime?          @map("cancel_at")
   canceledAt        DateTime?          @map("canceled_at")
+  pausedAt          DateTime?          @map("paused_at")
+  pauseReason       String?            @map("pause_reason")
   wompiCustomerId   String?            @map("wompi_customer_id")
   createdAt         DateTime           @default(now()) @map("created_at")
   updatedAt         DateTime           @updatedAt @map("updated_at")
@@ -402,6 +407,28 @@ model LessonAttachment {
 
   @@index([lessonId])
   @@map("lesson_attachments")
+}
+
+/// Material de apoyo para profesores: HTMLs que el admin sube y todos los
+/// profes consultan. El contenido va en columna de texto y NO en el bucket
+/// porque el bucket es de lectura pública (ver storage.service.ts): un archivo
+/// ahí tendría URL abierta y esto es material interno.
+model TeacherResource {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  /// Agrupador libre ("Gramática", "Pronunciación"…). Sin categoría cae en
+  /// "General" al listarse.
+  category    String?
+  contentHtml String   @map("content_html")
+  position    Int      @default(0)
+  published   Boolean  @default(true)
+  createdById String?  @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([category, position])
+  @@map("teacher_resources")
 }
 
 /// Habilitación de un checkpoint para un estudiante concreto. Sin una fila

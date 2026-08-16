@@ -170,7 +170,10 @@ function AdminUserDetail() {
     }
   }
 
-  async function onSetClassStatus(classId: string, status: "validated" | "no_show" | "scheduled" | "cancelled") {
+  async function onSetClassStatus(
+    classId: string,
+    status: "validated" | "no_show" | "scheduled" | "cancelled" | "pending_reschedule",
+  ) {
     try {
       await classesApi.adminSetStatus(classId, status);
       toast.success("Estado de la clase actualizado (nómina ajustada).");
@@ -463,6 +466,7 @@ function AdminUserDetail() {
               </p>
             )}
           </Card>
+          {sub ? <PauseControls userId={user.id} sub={sub} onSaved={bump} /> : null}
           <SubscriptionEditor userId={user.id} sub={sub} onSaved={bump} />
         </>
       ) : null}
@@ -566,6 +570,9 @@ function AdminUserDetail() {
                       <option value="validated">Tomada</option>
                       <option value="no_show">No tomada</option>
                       <option value="rescheduled" disabled>Reprogramada</option>
+                      {/* Congelada: sale de nómina y de métricas hasta que se
+                          le ponga fecha nueva. */}
+                      <option value="pending_reschedule">Por reprogramar</option>
                       <option value="cancelled">Cancelada</option>
                     </select>
                   </li>
@@ -1112,6 +1119,11 @@ function SubscriptionEditor({
             <option value="past_due">En mora</option>
             <option value="canceled">Cancelada</option>
             <option value="expired">Vencida</option>
+            {/* Se congela desde el bloque de arriba, que además libera la
+                franja y quita las clases; aquí solo se muestra el estado. */}
+            <option value="paused" disabled>
+              Congelada
+            </option>
           </select>
         </Field>
         <Field label="Activa hasta">
@@ -1172,6 +1184,113 @@ function adaptAdminUser(u: any): User {
   };
 }
 
+/**
+ * Congelar / reanudar el plan.
+ *
+ * Congelar es lo que resuelve el caso de "el estudiante pausó y el sistema le
+ * sigue marcando las clases como tomadas": borra sus clases futuras, libera su
+ * franja para otro estudiante y saca la suscripción de la generación semanal.
+ * La fecha de vencimiento NO se corre sola — al reanudar se muestran los días
+ * pausados para que el admin la ajuste abajo con criterio.
+ */
+function PauseControls({
+  userId,
+  sub,
+  onSaved,
+}: {
+  userId: string;
+  sub: Subscription;
+  onSaved: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
+  const pausada = sub.status === "paused";
+
+  async function pausar() {
+    setBusy(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const r = await adminApi.pauseSubscription(userId, reason.trim() || undefined);
+      setInfo(
+        `Plan congelado. Se quitaron ${r.classesRemoved} clase(s) futura(s) y se liberaron ${r.slotsFreed} franja(s) del profesor.`,
+      );
+      setReason("");
+      onSaved();
+    } catch (err) {
+      setError((err as Error).message ?? "No se pudo congelar");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reanudar() {
+    setBusy(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const r = await adminApi.resumeSubscription(userId);
+      setInfo(
+        `Plan reanudado tras ${r.daysPaused} día(s) pausado. Se recuperaron ${r.slotsRestored} franja(s). ` +
+          `Si corresponde, corre la fecha de "Activa hasta" ${r.daysPaused} día(s) abajo.`,
+      );
+      onSaved();
+    } catch (err) {
+      setError((err as Error).message ?? "No se pudo reanudar");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card title={pausada ? "Plan congelado" : "Congelar plan"}>
+      {pausada ? (
+        <p className="mb-4 text-xs text-brand-ink/60">
+          Congelado el{" "}
+          {sub.pausedAt ? new Date(sub.pausedAt).toLocaleDateString("es-CO") : "—"}
+          {sub.pauseReason ? ` · ${sub.pauseReason}` : ""}. No se le generan clases y su franja
+          quedó libre. Al reanudar puede que haya que asignarle horario nuevo si otro estudiante
+          la tomó.
+        </p>
+      ) : (
+        <p className="mb-4 text-xs text-brand-ink/60">
+          Para estudiantes que pausan sin fecha de regreso. Quita sus clases futuras del calendario
+          y de la agenda del profesor, libera su franja y evita que el sistema se las dé por
+          tomadas. El plan no se pierde.
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-end gap-3">
+        {!pausada ? (
+          <Field label="Motivo (opcional)">
+            <input
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Viaje, incapacidad…"
+              className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+            />
+          </Field>
+        ) : null}
+        <button
+          type="button"
+          onClick={pausada ? reanudar : pausar}
+          disabled={busy}
+          className={`rounded-full px-5 py-2 text-sm font-semibold shadow-soft transition hover:-translate-y-0.5 disabled:opacity-60 ${
+            pausada ? "bg-brand-ink text-white" : "border border-sky-300 bg-sky-50 text-sky-900"
+          }`}
+        >
+          {busy ? "Procesando…" : pausada ? "Reanudar plan" : "Congelar plan"}
+        </button>
+      </div>
+
+      {error ? <p className="mt-3 text-xs text-red-700">{error}</p> : null}
+      {info ? <p className="mt-3 text-xs text-green-700">{info}</p> : null}
+    </Card>
+  );
+}
+
 function adaptAdminSubscription(s: any): Subscription | null {
   if (!s) return null;
   return {
@@ -1182,6 +1301,8 @@ function adaptAdminSubscription(s: any): Subscription | null {
     startedAt: s.startedAt ?? undefined,
     currentPeriodEnd: s.currentPeriodEnd ?? undefined,
     wompiReference: s.wompiReference ?? undefined,
+    pausedAt: s.pausedAt ?? null,
+    pauseReason: s.pauseReason ?? null,
   };
 }
 

@@ -15,7 +15,10 @@ export type SubscriptionStatus =
   | "active"
   | "past_due"
   | "canceled"
-  | "pending";
+  | "pending"
+  | "expired"
+  /** Congelado por el admin: sin clases generadas y con la franja liberada. */
+  | "paused";
 
 export type PlanId = "2-dias" | "3-dias" | "4-dias" | "5-dias";
 
@@ -57,6 +60,9 @@ export interface Subscription {
   startedAt?: string;
   currentPeriodEnd?: string;
   wompiReference?: string;
+  /** Momento en que el admin congeló el plan; base para calcular los días. */
+  pausedAt?: string | null;
+  pauseReason?: string | null;
 }
 
 export interface Session {

@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  BookOpen,
   CalendarDays,
   LayoutDashboard,
   LayoutGrid,
@@ -46,6 +47,7 @@ const TEACHER_NAV = [
   { to: "/teacher/schedule", label: "Agenda", tKey: "nav.schedule", icon: CalendarDays, end: false },
   { to: "/teacher/students", label: "Estudiantes", tKey: "nav.students", icon: Users, end: false },
   { to: "/teacher/content", label: "Contenido", tKey: "nav.content", icon: Sparkles, end: false },
+  { to: "/teacher/material", label: "Material extra", tKey: "nav.material", icon: BookOpen, end: false },
   { to: "/boards", label: "Boards", tKey: "nav.boards", icon: LayoutGrid, end: false },
   { to: "/teacher/availability", label: "Disponibilidad", tKey: "nav.availability", icon: Settings, end: false },
 ] as const;
@@ -57,6 +59,7 @@ const ADMIN_NAV = [
   { to: "/admin/users", label: "Usuarios", tKey: "nav.users", icon: Users, end: false },
   { to: "/admin/carts", label: "Carritos", tKey: "nav.carts", icon: ShoppingCart, end: false },
   { to: "/admin/content", label: "Contenido", tKey: "nav.content", icon: Sparkles, end: false },
+  { to: "/admin/resources", label: "Material extra", tKey: "nav.material", icon: BookOpen, end: false },
   { to: "/admin/storage", label: "Storage", tKey: "nav.storage", icon: HardDrive, end: false },
   { to: "/admin/payroll", label: "Nómina", tKey: "nav.payroll", icon: ShieldCheck, end: false },
   { to: "/admin/plans", label: "Planes", tKey: "nav.plans", icon: Tag, end: false },

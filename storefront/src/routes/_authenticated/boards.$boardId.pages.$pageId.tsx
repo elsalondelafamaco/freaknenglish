@@ -153,15 +153,17 @@ function BoardPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Sticky: en una página larga había que subir hasta arriba cada vez que
-          se quería negrita o insertar algo. `bg-brand-surface` para que el
-          texto no se transparente por debajo al hacer scroll. */}
-      {/* Sticky respecto a la ventana por debajo de lg y respecto a la sección
-          del board en lg (ver el `lg:overflow-auto` del layout).
-          `top-[61px]` es el alto del topbar móvil del AppShell, que también es
-          sticky: con `top-0` la barra se le metía debajo. En lg ese topbar no
-          existe, así que vuelve a 0. */}
-      <div className="sticky top-[61px] z-20 -mx-4 flex flex-col gap-2 border-b border-brand-line bg-brand-surface px-4 pb-3 pt-3 md:flex-row md:flex-wrap md:items-center md:justify-between lg:top-0 lg:z-30">
+      {/* En una página larga había que subir hasta arriba cada vez que se quería
+          negrita o insertar algo. Queda sticky respecto a la ventana por debajo
+          de lg y respecto a la sección del board en lg (ver el `lg:overflow-auto`
+          del layout). `top-[61px]` es el alto del topbar móvil del AppShell, que
+          también es sticky: con `top-0` la barra se le metía debajo; en lg ese
+          topbar no existe y vuelve a 0. `bg-brand-surface` evita que el texto se
+          transparente por debajo al hacer scroll. */}
+      {/* Los márgenes negativos deben empatar con el padding de la sección que
+          la contiene (`p-3 md:p-6`) para que el fondo llegue de borde a borde
+          sin sobresalir. */}
+      <div className="sticky top-[61px] z-20 -mx-3 flex flex-col gap-2 border-b border-brand-line bg-brand-surface px-3 pb-3 pt-3 md:-mx-6 md:flex-row md:flex-wrap md:items-center md:justify-between md:px-6 lg:top-0 lg:z-30">
         <Toolbar editor={editor} boardId={boardId} />
         <div className="flex items-center gap-2">
           <VersionHistory pageId={pageId} />
@@ -171,8 +173,12 @@ function BoardPage() {
         </div>
       </div>
       {/* `board-paper` mantiene la hoja en claro aunque la app esté en oscuro
-          (ver styles.css): lo que ve el profe es lo mismo que ve el estudiante. */}
-      <div className="board-print-area board-paper relative rounded-2xl bg-white p-4">
+          (ver styles.css): lo que ve el profe es lo mismo que ve el estudiante.
+          `isolate` crea stacking context propio: sin él, el lienzo (z-20) y el
+          panel (z-30) de DrawLayer competían de tú a tú con la barra de
+          herramientas y, al ir después en el DOM, se pintaban ENCIMA de ella.
+          Aislados, la barra —hermana con z-index mayor— siempre queda arriba. */}
+      <div className="board-print-area board-paper relative isolate rounded-2xl bg-white p-4">
         <EditorContent editor={editor} />
         <DrawLayer key={pageId} doc={provider.doc} authorId={user.id} enabled={drawMode} onToggle={setDrawMode} />
       </div>

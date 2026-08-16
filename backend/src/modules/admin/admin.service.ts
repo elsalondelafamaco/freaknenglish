@@ -820,7 +820,7 @@ export class AdminService {
     id: string,
     input: {
       planId: string
-      status?: 'pending' | 'active' | 'past_due' | 'canceled' | 'expired'
+      status?: 'pending' | 'active' | 'past_due' | 'canceled' | 'expired' | 'paused'
       currentPeriodEnd?: string | null
       startedAt?: string | null
     },
@@ -867,6 +867,107 @@ export class AdminService {
       `Suscripción ${existing ? 'actualizada' : 'creada'} manualmente: user=${user.email} plan=${plan.id} status=${status} hasta=${sub.currentPeriodEnd?.toISOString() ?? '—'}`,
     )
     return sub
+  }
+
+  /**
+   * Congela el plan de un estudiante (solo admin).
+   *
+   * Congelar clase por clase no alcanzaba: mientras la suscripción siguiera
+   * `active`, el job diario le seguía generando clases nuevas y el de 5 min se
+   * las daba por tomadas. Aquí se corta de raíz:
+   *  1. La suscripción pasa a `paused` — deja de entrar en `ensureUpcomingClasses`.
+   *  2. Se borran sus clases futuras: salen del calendario y de la agenda del
+   *     profe (son regenerables desde `schedulePreferences` al reanudar).
+   *  3. Se libera su franja, para que otro estudiante la pueda tomar.
+   *
+   * La fecha de vencimiento NO se corre sola: `resume` devuelve los días
+   * pausados y el admin decide cuánto extender.
+   */
+  async pauseSubscription(id: string, reason?: string) {
+    const userId = await this.resolveExistingUserId(id)
+    const sub = await this.prisma.subscription.findUnique({ where: { userId } })
+    if (!sub) throw new NotFoundException('Este usuario no tiene suscripción')
+    if (sub.status === 'paused') throw new BadRequestException('El plan ya está pausado')
+
+    const now = new Date()
+    const canceladas = await this.prisma.class.deleteMany({
+      where: { studentId: userId, status: { in: ['scheduled', 'rescheduled'] }, startsAt: { gte: now } },
+    })
+    const franjas = await this.prisma.scheduleSlot.deleteMany({ where: { studentId: userId } })
+    const updated = await this.prisma.subscription.update({
+      where: { userId },
+      data: { status: 'paused', pausedAt: now, pauseReason: reason?.trim() || null },
+      include: { plan: true },
+    })
+
+    this.log.log(
+      `Plan pausado: user=${userId} clasesLiberadas=${canceladas.count} franjasLiberadas=${franjas.count}`,
+    )
+    return { subscription: updated, classesRemoved: canceladas.count, slotsFreed: franjas.count }
+  }
+
+  /**
+   * Reanuda un plan pausado y regenera el horizonte de clases.
+   *
+   * Devuelve `daysPaused` para que el admin corra el vencimiento a mano. Si en
+   * el entretanto otro estudiante tomó la franja, `ensureUpcomingClasses` no
+   * podrá recrear las clases: por eso también se informa `slotsRestored`.
+   */
+  async resumeSubscription(id: string) {
+    const userId = await this.resolveExistingUserId(id)
+    const sub = await this.prisma.subscription.findUnique({ where: { userId } })
+    if (!sub) throw new NotFoundException('Este usuario no tiene suscripción')
+    if (sub.status !== 'paused') throw new BadRequestException('El plan no está pausado')
+
+    const now = new Date()
+    const daysPaused = sub.pausedAt
+      ? Math.max(0, Math.round((now.getTime() - sub.pausedAt.getTime()) / 86_400_000))
+      : 0
+
+    const updated = await this.prisma.subscription.update({
+      where: { userId },
+      data: { status: 'active', pausedAt: null, pauseReason: null },
+      include: { plan: true },
+    })
+
+    // Reconstruye la franja desde las preferencias guardadas; si alguna hora ya
+    // la tomó otro estudiante, `restoreSlots` la salta y queda por reasignar.
+    const slotsRestored = await this.restoreSlotsFromPreferences(userId)
+    await this.schedulingSvc.ensureUpcomingClasses(userId).catch(() => null)
+
+    this.log.log(`Plan reanudado: user=${userId} díasPausado=${daysPaused} franjas=${slotsRestored}`)
+    return { subscription: updated, daysPaused, slotsRestored }
+  }
+
+  /**
+   * Vuelve a ocupar las franjas del estudiante según sus `schedulePreferences`.
+   * Las horas que otro estudiante ya tomó se saltan en silencio: el admin las
+   * ve vacías en el calendario y le asigna otras.
+   */
+  private async restoreSlotsFromPreferences(studentId: string): Promise<number> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      select: { assignedTeacherId: true, schedulePreferences: true },
+    })
+    if (!user?.assignedTeacherId) return 0
+    const prefs = Array.isArray(user.schedulePreferences)
+      ? (user.schedulePreferences as any[])
+      : []
+    let restored = 0
+    for (const p of prefs) {
+      const weekday = Number(p?.weekday)
+      const hour = Number(p?.hour)
+      if (!Number.isInteger(weekday) || !Number.isInteger(hour)) continue
+      const ocupada = await this.prisma.scheduleSlot.findUnique({
+        where: { teacherId_weekday_hour: { teacherId: user.assignedTeacherId, weekday, hour } },
+      })
+      if (ocupada) continue
+      await this.prisma.scheduleSlot.create({
+        data: { teacherId: user.assignedTeacherId, studentId, weekday, hour, status: 'active' },
+      })
+      restored++
+    }
+    return restored
   }
 
   /**
@@ -1170,6 +1271,68 @@ export class AdminService {
 
   async deleteModule(id: string) {
     await this.prisma.module.delete({ where: { id } })
+    return { ok: true }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // CMS · material extra para profesores
+  // ────────────────────────────────────────────────────────────────────────
+
+  /** Listado del admin: incluye los despublicados, pero nunca el HTML. */
+  async listTeacherResources() {
+    return this.prisma.teacherResource.findMany({
+      orderBy: [{ category: 'asc' }, { position: 'asc' }, { createdAt: 'asc' }],
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        category: true,
+        position: true,
+        published: true,
+        updatedAt: true,
+      },
+    })
+  }
+
+  async getTeacherResource(id: string) {
+    const r = await this.prisma.teacherResource.findUnique({ where: { id } })
+    if (!r) throw new NotFoundException('Material no encontrado')
+    return r
+  }
+
+  async saveTeacherResource(
+    input: {
+      id?: string
+      title: string
+      description?: string | null
+      category?: string | null
+      contentHtml?: string
+      position?: number
+      published?: boolean
+    },
+    adminId?: string,
+  ) {
+    const title = input.title?.trim()
+    if (!title) throw new BadRequestException('El título es obligatorio')
+    const id = input.id ?? randomUUID()
+    const existing = await this.prisma.teacherResource.findUnique({ where: { id } })
+    if (!existing && !input.contentHtml?.trim()) {
+      throw new BadRequestException('Falta el contenido HTML del material')
+    }
+    const data = {
+      title,
+      description: input.description ?? existing?.description ?? null,
+      category: input.category?.trim() || existing?.category || null,
+      contentHtml: input.contentHtml ?? existing?.contentHtml ?? '',
+      position: input.position ?? existing?.position ?? 0,
+      published: input.published ?? existing?.published ?? true,
+    }
+    if (existing) return this.prisma.teacherResource.update({ where: { id }, data })
+    return this.prisma.teacherResource.create({ data: { id, ...data, createdById: adminId ?? null } })
+  }
+
+  async deleteTeacherResource(id: string) {
+    await this.prisma.teacherResource.delete({ where: { id } })
     return { ok: true }
   }
 

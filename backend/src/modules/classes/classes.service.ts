@@ -164,8 +164,12 @@ export class ClassesService {
     if (!isOwnerTeacher && actor.role !== 'admin') {
       throw new ForbiddenException('Solo el profesor de la clase o un admin')
     }
-    if (!['scheduled', 'rescheduled'].includes(c.status)) {
-      throw new BadRequestException('Solo se pueden congelar clases programadas')
+    // `validated` y `no_show` entran a propósito: el job auto-valida en cuanto
+    // pasa la hora, así que cuando el profe se acuerda de congelar la clase ya
+    // suele estar dada por tomada. Si no se pudiera revertir desde ahí, el caso
+    // real —"hay que moverla y aún no sé para cuándo"— quedaría sin salida.
+    if (!['scheduled', 'rescheduled', 'validated', 'no_show'].includes(c.status)) {
+      throw new BadRequestException('Esta clase no se puede congelar (ya está cancelada o congelada)')
     }
     const updated = await this.prisma.class.update({
       where: { id: classId },
@@ -173,9 +177,11 @@ export class ClassesService {
         status: ClassStatus.pending_reschedule,
         frozenAt: new Date(),
         freezeReason: reason?.trim() || null,
-        // Si venía auto-validada por una corrida previa, se limpia.
+        // Deshace la validación: congelada NO cuenta como tomada ni en nómina.
         validatedAt: null,
         autoValidated: false,
+        teacherValidatedAt: null,
+        studentConfirmedAt: null,
       },
     })
     const student = await this.prisma.user.findUnique({ where: { id: c.studentId } })
@@ -218,10 +224,13 @@ export class ClassesService {
     const isOwnerTeacher = c.teacherId === actor.id
     const isAdmin = actor.role === 'admin'
     if (!isOwnerTeacher && !isAdmin) throw new ForbiddenException('Solo el profesor de la clase o un admin')
-    // `pending_reschedule` entra aquí: congelar es justo el paso previo a
-    // ponerle fecha, así que este es el camino natural para descongelarla.
-    if (!['scheduled', 'rescheduled', 'pending_reschedule'].includes(c.status)) {
-      throw new BadRequestException('Solo se pueden mover clases programadas o congeladas')
+    // `pending_reschedule` entra porque congelar es el paso previo a ponerle
+    // fecha. `validated` y `no_show` también: el job da la clase por tomada en
+    // cuanto pasa la hora, así que para cuando se acuerda la nueva fecha con el
+    // estudiante casi siempre está ya validada — y antes eso la dejaba
+    // inamovible, que es justo el bloqueo reportado.
+    if (!['scheduled', 'rescheduled', 'pending_reschedule', 'validated', 'no_show'].includes(c.status)) {
+      throw new BadRequestException('Esta clase no se puede mover (está cancelada)')
     }
     if (newEndsAt.getTime() <= newStartsAt.getTime()) throw new BadRequestException('Rango inválido')
     // Cruce con otra clase del profesor en el destino.
@@ -247,6 +256,12 @@ export class ClassesService {
         // Al ponerle fecha deja de estar congelada.
         frozenAt: null,
         freezeReason: null,
+        // Y deja de estar tomada: se va a dar en la fecha nueva, no en la
+        // vieja. Sin esto, mover una validada la dejaba contando en nómina.
+        validatedAt: null,
+        autoValidated: false,
+        teacherValidatedAt: null,
+        studentConfirmedAt: null,
       },
     })
     const student = await this.prisma.user.findUnique({ where: { id: c.studentId } })
@@ -363,9 +378,13 @@ export class ClassesService {
    * Ajuste MANUAL del admin: fuerza el estado de una clase (tomada / no
    * tomada / programada / cancelada) para correcciones de nómina y métricas.
    */
-  async adminSetStatus(classId: string, status: 'validated' | 'no_show' | 'scheduled' | 'cancelled') {
+  async adminSetStatus(
+    classId: string,
+    status: 'validated' | 'no_show' | 'scheduled' | 'cancelled' | 'pending_reschedule',
+  ) {
     const c = await this.prisma.class.findUnique({ where: { id: classId } })
     if (!c) throw new NotFoundException('Class not found')
+    const congelada = status === 'pending_reschedule'
     return this.prisma.class.update({
       where: { id: classId },
       data: {
@@ -373,6 +392,11 @@ export class ClassesService {
         validatedAt: status === 'validated' ? (c.validatedAt ?? new Date()) : null,
         autoValidated: false,
         ...(status === 'cancelled' ? { cancelledAt: new Date() } : {}),
+        // Congelar/descongelar desde el admin mantiene coherentes los campos
+        // de congelamiento; si no, quedaba `frozenAt` viejo en clases que ya
+        // se habían movido a otro estado.
+        frozenAt: congelada ? (c.frozenAt ?? new Date()) : null,
+        ...(congelada ? {} : { freezeReason: null }),
       },
     })
   }

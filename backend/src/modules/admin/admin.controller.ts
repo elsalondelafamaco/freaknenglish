@@ -157,12 +157,31 @@ export class AdminController {
     @Body()
     body: {
       planId: string
-      status?: 'pending' | 'active' | 'past_due' | 'canceled' | 'expired'
+      status?: 'pending' | 'active' | 'past_due' | 'canceled' | 'expired' | 'paused'
       currentPeriodEnd?: string | null
       startedAt?: string | null
     },
   ) {
     return this.svc.setUserSubscription(id, body)
+  }
+
+  /**
+   * @endpoint PATCH /api/v1/admin/users/:id/subscription/pause
+   * Congela el plan: borra sus clases futuras y libera su franja horaria.
+   */
+  @Patch('users/:id/subscription/pause')
+  pauseSubscription(@Param('id') id: string, @Body() body: { reason?: string }) {
+    return this.svc.pauseSubscription(id, body?.reason)
+  }
+
+  /**
+   * @endpoint PATCH /api/v1/admin/users/:id/subscription/resume
+   * Reanuda el plan y regenera clases. Devuelve `daysPaused` para que el admin
+   * corra el vencimiento a mano si corresponde.
+   */
+  @Patch('users/:id/subscription/resume')
+  resumeSubscription(@Param('id') id: string) {
+    return this.svc.resumeSubscription(id)
   }
 
   /**
@@ -283,6 +302,39 @@ export class AdminController {
   /** @endpoint PATCH /api/v1/admin/content/modules/:id/delete */
   @Patch('content/modules/:id/delete')
   deleteModule(@Param('id') id: string) { return this.svc.deleteModule(id) }
+
+  // ── Material extra para profesores ───────────────────────────────────────
+
+  /** @endpoint GET /api/v1/admin/resources */
+  @Get('resources')
+  listResources() { return this.svc.listTeacherResources() }
+
+  /** @endpoint GET /api/v1/admin/resources/:id (con el HTML) */
+  @Get('resources/:id')
+  getResource(@Param('id') id: string) { return this.svc.getTeacherResource(id) }
+
+  /** @endpoint POST /api/v1/admin/resources */
+  @Post('resources')
+  createResource(
+    @CurrentUser() u: AuthUser,
+    @Body() body: { title: string; description?: string | null; category?: string | null; contentHtml: string; position?: number; published?: boolean },
+  ) {
+    return this.svc.saveTeacherResource(body, u.id)
+  }
+
+  /** @endpoint PATCH /api/v1/admin/resources/:id */
+  @Patch('resources/:id')
+  updateResource(
+    @CurrentUser() u: AuthUser,
+    @Param('id') id: string,
+    @Body() body: { title?: string; description?: string | null; category?: string | null; contentHtml?: string; position?: number; published?: boolean },
+  ) {
+    return this.svc.saveTeacherResource({ id, ...body } as any, u.id)
+  }
+
+  /** @endpoint PATCH /api/v1/admin/resources/:id/delete */
+  @Patch('resources/:id/delete')
+  deleteResource(@Param('id') id: string) { return this.svc.deleteTeacherResource(id) }
 
   /** @endpoint POST /api/v1/admin/content/lessons */
   @Post('content/lessons')

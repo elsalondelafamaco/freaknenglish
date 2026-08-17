@@ -1,9 +1,10 @@
-import { Check, MessageCircle } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { PLANS, copAcobrar, formatCop } from "@/lib/domain/plans";
 import { plansApi } from "@/lib/api/endpoints";
+import { Reveal } from "./anim";
 
 // Fallback de venta si el backend no responde: nunca frenamos una compra.
 const SALES_WHATSAPP = "573012646770";
@@ -22,6 +23,40 @@ type ApiPlan = {
   tag?: string;
 };
 
+function SectionHeader({ trm }: { trm?: number | null }) {
+  return (
+    <Reveal>
+      <div className="h-px w-full bg-brand-ink/25" />
+      <div className="mt-5 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-ink/60">
+            <span className="text-brand-yellow">(</span>03 — Planes que se adaptan a tus
+            necesidades<span className="text-brand-yellow">)</span>
+          </p>
+          <h2 className="mt-5 font-display text-4xl font-extrabold uppercase leading-[1.02] tracking-[-0.02em] text-brand-ink sm:text-5xl lg:text-[68px]">
+            Elige cuántos días a la
+            <br className="hidden lg:block" /> Semana quieres avanzar.
+          </h2>
+        </div>
+        <p className="max-w-[320px] text-[15px] leading-relaxed text-brand-ink/70">
+          Precios en USD; se cobra el equivalente en COP
+          {trm ? (
+            <> con TRM de referencia de {formatCop(Math.round(trm))} (Superfinanciera)</>
+          ) : (
+            <> con TRM de referencia (Superfinanciera)</>
+          )}
+          . Sin cláusulas de permanencia.
+        </p>
+      </div>
+    </Reveal>
+  );
+}
+
+/**
+ * Precios 2026: el USD manda (es el precio de venta real; el COP con TRM del
+ * día es lo que sale en el cobro — misma regla que checkout.service.ts).
+ * El plan destacado se eleva y carga la DNA de sombra dura.
+ */
 export function Pricing() {
   // Fuente de verdad: backend (`GET /api/v1/plans`) que incluye TRM.
   // Si el backend falla, NO mostramos precios posiblemente desactualizados:
@@ -47,31 +82,18 @@ export function Pricing() {
   if (isError || (data && !data.plans.length)) return <PricingWhatsAppFallback />;
 
   return (
-    <section id="precios" className="bg-brand-surface py-20 lg:py-28 scroll-mt-24">
-      <div className="mx-auto max-w-6xl px-5 lg:px-8">
-        <div className="text-center">
-          <p className="text-sm font-medium text-brand-ink/60">
-            Planes que se adaptan a tus necesidades
-          </p>
-          <h2 className="mt-2 text-balance text-3xl font-bold leading-tight tracking-tight text-brand-ink sm:text-4xl lg:text-[44px]">
-            Elige cuántos días a la Semana quieres avanzar
-          </h2>
-          {trm ? (
-            <p className="mt-3 text-xs text-brand-ink/50">
-              TRM referencia: {formatCop(Math.round(trm))} COP / USD (Superfinanciera).
-            </p>
-          ) : null}
-        </div>
-
-        {/* Con 4+ planes activos la grilla pasa a 2×2 en lg y 4 columnas en xl. */}
+    <section id="precios" className="scroll-mt-24 bg-white py-16 lg:py-24">
+      <div className="mx-auto max-w-[1440px] px-5 lg:px-16">
+        <SectionHeader trm={trm} />
         <div
-          className={`mt-12 grid gap-6 lg:items-center ${
-            (plans?.length ?? 3) > 3 ? "sm:grid-cols-2 xl:grid-cols-4" : "lg:grid-cols-3"
-          }`}
+          className={cn(
+            "mt-14 grid gap-8 lg:items-start lg:gap-10",
+            (plans?.length ?? 3) > 3 ? "sm:grid-cols-2 xl:grid-cols-4" : "lg:grid-cols-3",
+          )}
         >
           {isPending || !plans
             ? [0, 1, 2].map((i) => <PriceCardSkeleton key={i} />)
-            : plans.map((p) => <PriceCard key={p.id} plan={p} trm={trm} />)}
+            : plans.map((p, i) => <PriceCard key={p.id} plan={p} trm={trm} index={i} />)}
         </div>
       </div>
     </section>
@@ -81,18 +103,16 @@ export function Pricing() {
 /** Skeleton mientras cargan los precios reales (evita mostrar precios viejos). */
 function PriceCardSkeleton() {
   return (
-    <div className="animate-pulse rounded-3xl bg-brand-yellow-soft/60 p-1.5">
-      <div className="h-9" />
-      <div className="rounded-[22px] bg-brand-yellow-soft px-6 pb-7 pt-6">
-        <div className="mx-auto h-7 w-2/3 rounded-full bg-brand-ink/10" />
-        <div className="mx-auto mt-3 h-9 w-1/2 rounded-full bg-brand-ink/10" />
-        <div className="mt-5 h-11 w-full rounded-full bg-brand-ink/15" />
-        <div className="mt-6 space-y-2.5">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-4 w-full rounded-full bg-brand-ink/10" />
-          ))}
-        </div>
+    <div className="animate-pulse border-2 border-brand-ink/15 bg-brand-cream p-8">
+      <div className="h-9 w-2/3 rounded-full bg-brand-ink/10" />
+      <div className="mt-6 h-px w-full bg-brand-ink/10" />
+      <div className="mt-6 h-12 w-1/2 rounded-full bg-brand-ink/10" />
+      <div className="mt-8 space-y-3">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-4 w-full rounded-full bg-brand-ink/10" />
+        ))}
       </div>
+      <div className="mt-8 h-12 w-full rounded-full bg-brand-ink/15" />
     </div>
   );
 }
@@ -103,100 +123,125 @@ function PriceCardSkeleton() {
  */
 function PricingWhatsAppFallback() {
   return (
-    <section id="precios" className="bg-brand-surface py-20 lg:py-28 scroll-mt-24">
-      <div className="mx-auto max-w-6xl px-5 lg:px-8">
-        <div className="text-center">
-          <p className="text-sm font-medium text-brand-ink/60">
-            Planes que se adaptan a tus necesidades
-          </p>
-          <h2 className="mt-2 text-balance text-3xl font-bold leading-tight tracking-tight text-brand-ink sm:text-4xl lg:text-[44px]">
-            Elige cuántos días a la Semana quieres avanzar
-          </h2>
-        </div>
-
-        <div className="mx-auto mt-12 max-w-2xl rounded-3xl bg-brand-yellow-soft p-1.5">
-          <div className="rounded-[22px] bg-brand-yellow-soft px-8 pb-9 pt-8 text-center">
-            <h3 className="text-2xl font-bold text-brand-ink">
+    <section id="precios" className="scroll-mt-24 bg-white py-16 lg:py-24">
+      <div className="mx-auto max-w-[1440px] px-5 lg:px-16">
+        <SectionHeader />
+        <Reveal delay={120}>
+          <div className="shadow-hard mx-auto mt-14 max-w-2xl border-2 border-brand-ink bg-brand-cream p-10 text-center [--hard-color:var(--brand-ink)]">
+            <h3 className="font-display text-3xl font-bold text-brand-ink">
               Cuéntanos tu meta y te armamos el plan perfecto
             </h3>
             <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-brand-ink/70">
-              Escríbenos por WhatsApp y en minutos te compartimos los planes,
-              precios y horarios disponibles. Sin esperas, con una persona real.
+              Escríbenos por WhatsApp y en minutos te compartimos los planes, precios y
+              horarios disponibles. Sin esperas, con una persona real.
             </p>
             <a
               href={SALES_WHATSAPP_URL}
               target="_blank"
               rel="noreferrer"
-              className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-brand-ink px-8 text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-ink-soft hover:shadow-lg active:scale-[0.98]"
+              className="shadow-hard press-hard mt-7 inline-flex items-center justify-center gap-2 rounded-full bg-brand-ink px-9 py-4 font-display text-[15px] font-bold uppercase text-brand-cream"
             >
               <MessageCircle className="size-4" /> Hablar por WhatsApp
             </a>
-            <ul className="mx-auto mt-7 max-w-sm space-y-2.5 text-left">
+            <ul className="mx-auto mt-8 max-w-sm space-y-2.5 text-left">
               {[
                 "Clases 1 a 1 en vivo con profesor propio",
                 "Planes de 3, 4 o 5 días a la semana",
                 "Horarios fijos que se adaptan a tu rutina",
                 "Respuesta inmediata por WhatsApp",
               ].map((f) => (
-                <li key={f} className="flex items-start gap-2 text-[14px] text-brand-ink/80">
-                  <Check className="mt-0.5 size-4 shrink-0 text-brand-success" strokeWidth={3} />
+                <li key={f} className="flex items-start gap-2.5 text-[14px] text-brand-ink/80">
+                  <span className="mt-0.5 text-[12px] text-brand-yellow">✦</span>
                   {f}
                 </li>
               ))}
             </ul>
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
 }
 
-function PriceCard({ plan, trm }: { plan: ApiPlan; trm: number | null }) {
-  const highlight = plan.highlight;
-  const priceLabel = plan.priceUsd ? `$${plan.priceUsd}` : formatCop(plan.priceCop);
-  const unitLabel = plan.priceUsd ? "USD" : "COP";
+function PriceCard({ plan, trm, index }: { plan: ApiPlan; trm: number | null; index: number }) {
+  const featured = !!plan.highlight;
   return (
-    <div
-      className={cn(
-        "rounded-3xl p-1.5",
-        highlight ? "bg-brand-yellow-soft" : "bg-brand-yellow-soft/60",
-      )}
-    >
-      {plan.tag ? (
-        <p className="px-5 pt-3 pb-2 text-center text-xs font-medium text-brand-ink/70">
-          {plan.tag}
-        </p>
-      ) : (
-        <div className="h-9" />
-      )}
-      <div className="rounded-[22px] bg-brand-yellow-soft px-6 pb-7 pt-6 text-center">
-        <h3 className="text-2xl font-bold text-brand-ink">{plan.name}</h3>
-        <div className="mt-2 text-3xl font-bold text-brand-ink">
-          {priceLabel}{" "}
-          <span className="text-base font-medium text-brand-ink/60">{unitLabel} / mes</span>
+    <Reveal delay={index * 120}>
+      <div
+        className={cn(
+          "border-2 border-brand-ink p-8 transition-transform duration-300",
+          featured
+            ? "shadow-hard relative bg-brand-ink text-brand-cream [--hard-x:10px] lg:-translate-y-6"
+            : "bg-brand-cream text-brand-ink lg:mt-0 hover:-translate-y-1.5",
+        )}
+      >
+        {featured ? (
+          <span className="shadow-hard absolute -top-4 right-6 -rotate-3 border-2 border-brand-ink bg-brand-yellow px-4 py-1.5 font-display text-[12px] font-bold uppercase tracking-[0.06em] text-brand-ink [--hard-x:4px] [--hard-color:var(--brand-ink)]">
+            El más popular
+          </span>
+        ) : null}
+
+        <div className="font-display text-[36px] font-extrabold uppercase leading-none">
+          {plan.daysPerWeek} Días{" "}
+          <span className={cn("text-[16px] font-bold", featured ? "text-brand-cream/55" : "text-brand-ink/55")}>
+            / Semana
+          </span>
         </div>
-        <p className="mt-1 text-xs text-brand-ink/55">
-          {/* Mismo cálculo que el checkout y que el cobro real: USD × TRM.
-              Antes se pintaba el priceCop guardado, que estaba viejo y no
-              cuadraba ni con la TRM de arriba ni con lo que salía al pagar. */}
-          Se cobra {formatCop(copAcobrar(plan, trm))} COP.
-        </p>
-        <Link
-          to="/checkout/$planId"
-          params={{ planId: plan.id }}
-          className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-ink-soft hover:shadow-lg active:scale-[0.98]"
+        {plan.tag ? (
+          <p className={cn("mt-1.5 text-[13px] italic", featured ? "text-brand-cream/60" : "text-brand-ink/60")}>
+            {plan.tag}
+          </p>
+        ) : null}
+
+        <div className={cn("my-6 h-px w-full", featured ? "bg-brand-cream/25" : "bg-brand-ink/25")} />
+
+        {/* USD manda; el COP real (USD × TRM, igual que el checkout) va debajo */}
+        <div className="font-display text-[52px] font-extrabold leading-none">
+          {plan.priceUsd ? (
+            <>
+              ${plan.priceUsd}{" "}
+              <span className={cn("text-[20px]", featured ? "text-white" : "text-brand-ink")}>USD</span>
+            </>
+          ) : (
+            formatCop(plan.priceCop)
+          )}
+        </div>
+        <div
+          className={cn(
+            "mt-1.5 text-[12px] font-semibold uppercase tracking-[0.14em]",
+            featured ? "text-brand-cream/55" : "text-brand-ink/55",
+          )}
         >
-          Seleccionar Plan
-        </Link>
-        <ul className="mt-6 space-y-2.5 text-left">
+          / mes
+        </div>
+
+        <ul className="mt-7 space-y-3">
           {plan.features.map((f) => (
-            <li key={f} className="flex items-start gap-2 text-[14px] text-brand-ink/80">
-              <Check className="mt-0.5 size-4 shrink-0 text-brand-success" strokeWidth={3} />
-              {f}
+            <li key={f} className="flex items-start gap-2.5 text-[14px]">
+              <span className="mt-0.5 text-[12px] text-brand-yellow">✦</span>
+              <span className={featured ? "text-brand-cream/85" : "text-brand-ink/85"}>{f}</span>
             </li>
           ))}
         </ul>
+
+        <Link
+          to="/checkout/$planId"
+          params={{ planId: plan.id }}
+          className={cn(
+            "press-hard mt-8 inline-flex w-full items-center justify-center rounded-full py-4 font-display text-[15px] font-bold uppercase tracking-[0.04em]",
+            featured
+              ? "shadow-hard bg-brand-yellow text-brand-ink [--hard-x:5px] [--hard-color:white]"
+              : "shadow-hard bg-brand-ink text-brand-cream [--hard-x:5px]",
+          )}
+        >
+          Seleccionar Plan →
+        </Link>
+
+        <p className={cn("mt-4 text-center text-[12px]", featured ? "text-brand-cream/50" : "text-brand-ink/50")}>
+          {/* Mismo cálculo que el checkout y que el cobro real: USD × TRM. */}
+          Se cobra {formatCop(copAcobrar(plan, trm))} COP
+        </p>
       </div>
-    </div>
+    </Reveal>
   );
 }

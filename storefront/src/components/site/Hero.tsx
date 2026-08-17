@@ -1,227 +1,148 @@
-import { Bookmark, Mic, TrendingUp, Video } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { ArrowRight } from "lucide-react";
 import { useSiteContent } from "@/lib/site-content";
 import { SiteImage } from "./SiteImage";
-import { DarkPillLink } from "./DarkPillButton";
+import { Marquee, Reveal } from "./anim";
+import { TESTIMONIAL_ITEMS } from "./Testimonials";
 
-const WAVE_HEIGHTS = [
-  8, 14, 17, 11, 7, 15, 18, 12, 9, 16, 13, 8, 11, 17, 14, 10, 7, 12, 18, 15, 11, 8,
+const TICKER = [
+  "CLASES 1 A 1 EN VIVO",
+  "PROFESORES REALES",
+  "HABLA DESDE EL DÍA 1",
+  "FEEDBACK PERSONALIZADO",
+  "CONVERSACIONES PRÁCTICAS",
 ];
 
+/**
+ * Hero 2026: foto full-bleed (slot `hero-image` del admin) tratada como
+ * escenario oscuro, titular display alineado a la derecha y un rotador de
+ * testimonios reales abajo a la izquierda. El nav fijo vive encima.
+ */
 export function Hero() {
-  const { media } = useSiteContent();
   return (
-    <section className="relative overflow-hidden bg-brand-cream pt-28 lg:pt-32">
-      <div className="mx-auto grid max-w-7xl gap-12 px-5 pb-16 lg:grid-cols-[1.05fr_1fr] lg:gap-10 lg:px-8 lg:pb-24">
-        {/* Copy */}
-        <div className="flex flex-col justify-center text-center lg:text-left">
-          <p className="text-sm font-medium tracking-wide text-brand-ink/70">
-            <span className="font-semibold text-brand-ink">Real</span> English.{" "}
-            <span className="font-semibold text-brand-ink">Real</span> Results.
+    <section className="relative flex min-h-[720px] flex-col overflow-hidden bg-brand-ink lg:h-[100svh] lg:max-h-[1000px]">
+      {/* Fondo: foto + tratamientos de legibilidad (scrim, gradientes, calidez) */}
+      <div className="absolute inset-0">
+        <SiteImage
+          slot="hero-image"
+          alt=""
+          loading="eager"
+          className="h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-brand-yellow/5 mix-blend-soft-light" />
+        <div className="absolute inset-0 bg-black/35" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-transparent [background-size:100%_30%] bg-no-repeat" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+      </div>
+
+      {/* Copy — alineado a la derecha, estilo editorial */}
+      <div className="relative mx-auto flex w-full max-w-[1440px] flex-1 flex-col items-center justify-center px-5 pt-28 text-center lg:items-end lg:px-16 lg:pt-24 lg:text-right">
+        <Reveal delay={0}>
+          <p className="flex items-center justify-center gap-3 text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-cream lg:justify-end lg:text-[13px]">
+            <span className="inline-block size-2 bg-brand-yellow" />
+            Real English. Real Results.
           </p>
-          <h1 className="mt-3 text-balance text-[40px] font-bold leading-[1.05] tracking-tight text-brand-ink sm:text-5xl lg:text-[64px]">
-            Speak English with Confidence, in{" "}
-            <span className="marker-highlight">Real</span> Conversations.
+        </Reveal>
+
+        <Reveal delay={120}>
+          <h1 className="mt-5 font-display text-[44px] font-extrabold uppercase leading-[0.96] tracking-[-0.03em] text-brand-cream sm:text-6xl lg:text-[96px]">
+            Speak English with
+            <br />
+            Confidence, in <span className="text-brand-yellow">Real</span>
+            <br />
+            Conversations.
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-brand-ink/75 lg:mx-0 lg:text-base">
-            Clases <strong className="font-semibold text-brand-ink">1 a 1 en Vivo</strong> con
-            profesores reales, conversaciones prácticas y feedback personalizado para que hables
-            inglés con fluidez.
+        </Reveal>
+
+        <Reveal delay={240}>
+          <p className="mx-auto mt-7 max-w-md text-[16px] leading-relaxed text-white/85 lg:mx-0 lg:max-w-[470px] lg:text-[19px]">
+            Clases <strong className="font-semibold text-white">1 a 1 en Vivo</strong> con
+            profesores reales, conversaciones prácticas y feedback personalizado para que
+            hables inglés con fluidez.
           </p>
-          <div className="mt-7 flex justify-center lg:justify-start">
-            <DarkPillLink to="/" hash="precios" size="lg">
-              Comienza Hoy Tu Aprendizaje
-            </DarkPillLink>
-          </div>
-        </div>
+        </Reveal>
 
-        {/* Hero composite */}
-        <div className="relative mx-auto w-full max-w-[560px]">
-          {/* aspect fijo: cualquier imagen que suba el admin queda cover sin
-              desproporcionar el layout */}
-          <div className="relative aspect-square overflow-hidden rounded-[28px] shadow-soft">
-            <SiteImage
-              slot="hero-image"
-              alt="Estudiante en clase de inglés en vivo"
-              loading="eager"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          </div>
+        <Reveal delay={360}>
+          <Link
+            to="/"
+            hash="precios"
+            className="shadow-hard press-hard mt-9 inline-flex items-center gap-3 rounded-[14px] bg-brand-cream px-9 py-5 font-display text-[17px] font-bold text-brand-ink lg:text-[18px]"
+          >
+            Comienza Hoy Tu Aprendizaje
+            <ArrowRight className="size-5" />
+          </Link>
+        </Reveal>
+      </div>
 
-          {/* Progress card */}
-          <div className="absolute -top-4 left-3 sm:left-6 w-[180px] rounded-2xl bg-white p-3 shadow-soft">
-            <div className="flex items-center justify-between text-[11px] font-medium text-brand-ink/70">
-              <span>Progreso de Habla</span>
-              <TrendingUp className="size-3.5 text-brand-success" />
-            </div>
-            <div className="mt-1 text-2xl font-bold text-brand-ink">82%</div>
-            <div className="text-[10px] text-brand-ink/60">Nivel de Fluidez</div>
-            <div className="mt-2 h-10 w-full">
-              <svg viewBox="0 0 100 30" className="h-full w-full">
-                <path
-                  d="M0,25 C15,22 25,18 35,15 C45,12 55,18 65,12 C75,8 85,10 100,4"
-                  fill="none"
-                  stroke="oklch(0.7 0.16 145)"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </div>
-            <div className="text-[10px] font-medium text-brand-success">+12% esta semana</div>
-          </div>
-
-          {/* Live class card */}
-          <div className="absolute -right-2 top-10 sm:-right-6 w-[180px] rounded-2xl bg-white p-3 shadow-soft">
-            <div className="flex items-center gap-1.5 text-[11px] font-medium text-brand-ink/70">
-              <span className="size-2 rounded-full bg-red-500 animate-pulse" />
-              Clase en Vivo
-            </div>
-            <div className="mt-1.5 text-[12px] font-semibold text-brand-ink">
-              Tema: Travel & Adventures
-            </div>
-            <div className="text-[10px] text-brand-ink/60">8:00 PM – 9:00 PM</div>
-            <div className="mt-2 flex -space-x-1.5">
-              {[
-                media["sphere-1"] ?? media["avatar-teacher"],
-                media["sphere-2"] ?? media["avatar-teacher"],
-                media["sphere-3"] ?? media["avatar-teacher"],
-              ].map((src, i) => (
-                <img
-                  key={i}
-                  src={src}
-                  alt=""
-                  className="size-6 rounded-full border-2 border-white object-cover"
-                />
-              ))}
-              <span className="ml-2 flex size-6 items-center justify-center rounded-full border-2 border-white bg-brand-yellow text-[10px] font-bold text-brand-ink">
-                +1
-              </span>
-            </div>
-          </div>
-
-          {/* Vocabulary card */}
-          <div className="absolute -right-2 bottom-20 sm:-right-6 w-[180px] rounded-2xl bg-white p-3 shadow-soft">
-            <div className="flex items-center justify-between text-[11px] font-medium text-brand-ink/70">
-              <span>Nuevo Vocabulario</span>
-              <Bookmark className="size-3.5" />
-            </div>
-            <div className="mt-1.5 text-[14px] font-bold text-brand-ink">Adventure</div>
-            <div className="text-[10px] italic text-brand-ink/60">/əd&apos;ven.tʃər/</div>
-            <div className="mt-1 text-[10px] text-brand-ink/70">A fun or exciting experience.</div>
-          </div>
-
-          {/* Teacher feedback */}
-          <div className="absolute -bottom-2 left-2 sm:left-6 w-[210px] rounded-2xl bg-white p-3 shadow-soft">
-            <div className="flex items-start gap-2">
-              <SiteImage
-                slot="avatar-teacher"
-                alt="Teacher"
-                className="size-7 rounded-full object-cover"
-              />
-              <div className="min-w-0">
-                <div className="text-[11px] font-semibold text-brand-ink">Teacher</div>
-                <div className="text-[10px] leading-snug text-brand-ink/70">
-                  Great job! Your pronunciation is getting much better.
-                </div>
-              </div>
-            </div>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="flex size-6 items-center justify-center rounded-full bg-brand-success/90">
-                <Mic className="size-3 text-white" />
-              </span>
-              <div className="flex-1 flex items-center gap-0.5">
-                {WAVE_HEIGHTS.map((h, i) => (
-                  <span
-                    key={i}
-                    className="w-0.5 rounded-full bg-brand-success/70"
-                    style={{ height: `${h}px` }}
-                  />
-                ))}
-              </div>
-              <span className="text-[10px] text-brand-ink/60">0:18</span>
-            </div>
-          </div>
-
-          {/* Small video pill */}
-          <div className="absolute right-6 -top-2 hidden sm:flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1.5 shadow-soft">
-            <Video className="size-3.5 text-brand-ink" />
-            <span className="text-[10px] font-medium text-brand-ink">Live</span>
-          </div>
+      {/* Fila inferior: rotador de testimonios + señal de scroll */}
+      <div className="relative mx-auto flex w-full max-w-[1440px] items-end justify-between px-5 pb-20 pt-10 lg:px-16 lg:pb-24">
+        <Reveal delay={500} className="max-w-[440px]">
+          <TestimonialRotator />
+        </Reveal>
+        <div className="absolute bottom-20 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 lg:flex">
+          <span className="text-[11px] font-semibold tracking-[0.2em] text-brand-cream/80">
+            ( BAJA )
+          </span>
+          <span className="block h-9 w-px bg-brand-cream/50" />
+          <span className="animate-cue block size-1.5 bg-brand-yellow" />
         </div>
       </div>
 
-      {/* Social proof bar */}
-      <SocialProofBar />
+      {/* Ticker inferior */}
+      <div className="relative border-t border-white/15">
+        <Marquee speed={36} className="py-4">
+          {TICKER.map((t) => (
+            <span key={t} className="flex items-center">
+              <span className="px-6 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-cream/85">
+                {t}
+              </span>
+              <span className="text-[11px] text-brand-yellow">✦</span>
+            </span>
+          ))}
+        </Marquee>
+      </div>
     </section>
   );
 }
 
-function SocialProofBar() {
-  const { media } = useSiteContent();
-  const spheres = ["sphere-1", "sphere-2", "sphere-3", "sphere-4"].map((k) => media[k]);
+/**
+ * Rotador de frases reales de estudiantes (mismos items y overrides del admin
+ * que la sección de testimonios). En código rota cada 5s con fade + slide.
+ */
+function TestimonialRotator() {
+  const { testimonials } = useSiteContent();
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setI((v) => (v + 1) % TESTIMONIAL_ITEMS.length), 5000);
+    return () => clearInterval(id);
+  }, []);
+  const item = TESTIMONIAL_ITEMS[i];
+  const nombre = testimonials[item.imageSlot]?.name?.trim() || item.name;
+  const rol = testimonials[item.imageSlot]?.role?.trim() || item.role;
   return (
-    <div className="mx-auto max-w-6xl px-5 pb-12 lg:px-8 lg:pb-16">
-      <div className="rounded-2xl bg-white/60 backdrop-blur-sm border border-white p-5 shadow-soft lg:p-6">
-        <div className="grid gap-5 sm:grid-cols-3 sm:divide-x sm:divide-brand-line">
-          <div className="flex items-center gap-3 sm:px-2">
-            <div className="flex -space-x-2">
-              {spheres.map((src, i) =>
-                src ? (
-                  <img
-                    key={i}
-                    src={src}
-                    alt=""
-                    className="size-8 rounded-full border-2 border-white object-cover"
-                  />
-                ) : (
-                  <span
-                    key={i}
-                    className="size-8 rounded-full border-2 border-white bg-gradient-to-br from-amber-200 to-amber-400"
-                  />
-                ),
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-1 text-amber-500">
-                {"★★★★★".split("").map((s, i) => (
-                  <span key={i} className="text-sm">
-                    {s}
-                  </span>
-                ))}
-                <span className="ml-1.5 text-xs font-semibold text-brand-ink">
-                  +2000 Estudiantes
-                </span>
-              </div>
-              <p className="text-[11px] italic text-brand-ink/60">
-                "Dejé de traducir, ahora simplemente hablo!"
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 sm:px-5">
-            <span className="flex size-10 items-center justify-center rounded-full bg-brand-cream">
-              <svg className="size-5 text-brand-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20" />
-              </svg>
-            </span>
-            <div>
-              <div className="text-lg font-bold text-brand-ink">+20</div>
-              <div className="text-xs text-brand-ink/60">Países</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 sm:px-5">
-            <span className="flex size-10 items-center justify-center rounded-full bg-brand-cream">
-              <svg className="size-5 text-brand-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
-            </span>
-            <div>
-              <div className="text-lg font-bold text-brand-ink">1 a 1</div>
-              <div className="text-xs text-brand-ink/60">Clases Personalizadas</div>
-            </div>
-          </div>
-        </div>
+    <div className="hidden flex-col gap-3 text-left lg:flex">
+      <span className="text-[11px] tracking-[0.35em] text-brand-yellow">★★★★★</span>
+      {/* key=i re-monta el bloque para disparar la animación de entrada */}
+      <div key={i} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <p className="max-w-[400px] text-[16px] italic leading-relaxed text-brand-cream">
+          &ldquo;{item.quote}&rdquo;
+        </p>
+        <p className="mt-2.5 text-[13px] font-semibold text-white/75">
+          {nombre} <span className="font-normal text-white/50">· {rol}</span>
+        </p>
+      </div>
+      <div className="mt-1 flex items-center gap-1.5">
+        {TESTIMONIAL_ITEMS.map((_, d) => (
+          <span
+            key={d}
+            className={
+              d === i
+                ? "h-[3px] w-7 rounded-full bg-brand-yellow transition-all duration-300"
+                : "h-[3px] w-3 rounded-full bg-white/35 transition-all duration-300"
+            }
+          />
+        ))}
       </div>
     </div>
   );

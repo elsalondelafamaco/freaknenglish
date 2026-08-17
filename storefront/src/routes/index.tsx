@@ -5,6 +5,7 @@ import { HowItWorks } from "@/components/site/HowItWorks";
 import { Testimonials } from "@/components/site/Testimonials";
 import { Pricing } from "@/components/site/Pricing";
 import { Faq } from "@/components/site/Faq";
+import { CtaFinal } from "@/components/site/CtaFinal";
 import { Footer } from "@/components/site/Footer";
 
 import { DEFAULT_FAQS } from "@/lib/site-content";
@@ -51,6 +52,7 @@ function Index() {
       <Testimonials />
       <Pricing />
       <Faq />
+      <CtaFinal />
       <Footer />
     </main>
   );

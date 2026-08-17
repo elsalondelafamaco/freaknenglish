@@ -1,5 +1,6 @@
 import { useSiteContent } from "@/lib/site-content";
 import { Logo } from "./Logo";
+import { useParallax } from "./anim";
 
 const SERVICE_LINKS = [
   { label: "¿Cómo funciona?", href: "/#como-funciona" },
@@ -8,9 +9,16 @@ const SERVICE_LINKS = [
   { label: "Preguntas frecuentes", href: "/#faq" },
 ];
 
+/**
+ * Footer 2026: tinta, columnas a la derecha y el wordmark gigante en amarillo
+ * recortado por el borde inferior — la marca es más grande que la página.
+ * El eco crema desplazado detrás es la sombra dura del logo a escala
+ * arquitectónica (invertida: sombra clara sobre tinta).
+ */
 export function Footer() {
   // Legal (PDFs subidos por el admin) y redes vienen del contenido editable.
   const { legal, social } = useSiteContent();
+  const wordmarkRef = useParallax<HTMLDivElement>(-0.06);
 
   const legalLinks = [
     { label: "Política de privacidad", href: legal.privacy },
@@ -30,33 +38,53 @@ export function Footer() {
   ].filter((c) => c.links.length > 0);
 
   return (
-    <footer className="bg-brand-ink text-white">
-      <div className="mx-auto max-w-7xl px-5 py-16 lg:px-8 lg:py-20">
-        <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
-          <div>
-            <Logo className="h-14 w-auto" />
+    <footer className="overflow-hidden bg-brand-ink text-white">
+      <div className="mx-auto max-w-[1440px] px-5 pt-16 lg:px-16 lg:pt-20">
+        <div className="flex flex-col justify-between gap-12 lg:flex-row">
+          <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-brand-cream/70">
+            Real English. Real Results.
+          </p>
+          <div className="grid grid-cols-2 gap-10 sm:grid-cols-3 lg:gap-14">
+            {cols.map((col) => (
+              <div key={col.title}>
+                <div className="text-[12px] font-semibold uppercase tracking-[0.16em] text-brand-cream/50">
+                  {col.title}
+                </div>
+                <ul className="mt-5 space-y-3">
+                  {col.links.map((l) => (
+                    <li key={l.label}>
+                      <a
+                        href={l.href}
+                        {...(col.external ? { target: "_blank", rel: "noreferrer" } : {})}
+                        className="text-[15px] text-brand-cream underline-offset-4 transition-colors hover:text-brand-yellow hover:underline hover:decoration-brand-yellow"
+                      >
+                        {l.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
-          {cols.map((col) => (
-            <div key={col.title}>
-              <div className="text-sm font-semibold text-white/60">{col.title}</div>
-              <ul className="mt-4 space-y-3">
-                {col.links.map((l) => (
-                  <li key={l.label}>
-                    <a
-                      href={l.href}
-                      {...(col.external ? { target: "_blank", rel: "noreferrer" } : {})}
-                      className="text-[15px] text-white transition-colors hover:text-brand-yellow"
-                    >
-                      {l.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
         </div>
-        <div className="mt-12 border-t border-white/10 pt-6 text-xs text-white/50">
-          Freakn - Todos los derechos reservados 2026®
+
+        <div className="mt-12 flex items-center justify-between border-t border-brand-cream/15 pt-6 text-[12px] text-brand-cream/50">
+          <span>Freakn - Todos los derechos reservados 2026®</span>
+          <span className="hidden font-semibold uppercase tracking-[0.14em] sm:block">
+            Español → Inglés
+          </span>
+        </div>
+
+        {/* Wordmark monumental, recortado por el borde inferior */}
+        <div
+          ref={wordmarkRef}
+          className="relative mt-10 h-[160px] sm:h-[220px] lg:h-[300px]"
+          style={{ transform: "translateY(var(--parallax-y, 0px))" }}
+        >
+          <span aria-hidden className="absolute left-[14px] top-[14px] w-full opacity-10">
+            <Logo className="h-auto w-full text-brand-cream" />
+          </span>
+          <Logo className="absolute left-0 top-0 h-auto w-full text-brand-yellow" />
         </div>
       </div>
     </footer>

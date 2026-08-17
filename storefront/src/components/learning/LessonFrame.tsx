@@ -40,11 +40,18 @@ export function LessonFrame({
 
   // El slide guardado hay que tenerlo ANTES de montar el iframe: `srcDoc` sólo
   // se lee al crear el documento, así que si llegara después no serviría.
+  // `gcTime: 0` — la posición cambia con cada "Next", así que la respuesta no
+  // se guarda en caché: al cerrar la lección se descarta. Con caché, volver a
+  // abrirla en la misma sesión reutilizaba el valor de la primera vez y la
+  // lección arrancaba donde estaba entonces, no donde se quedó. Y hace falta
+  // que el segundo montaje vuelva a quedar "pendiente", para no pintar el
+  // iframe con el dato viejo mientras se refresca.
   const slideQ = useQuery({
     queryKey: ["learning", "last-slide", lessonId, studentId],
     queryFn: () => learningApi.lastSlide(lessonId!, studentId),
     enabled: recuerda,
-    staleTime: Infinity,
+    staleTime: 0,
+    gcTime: 0,
   });
 
   useEffect(() => {

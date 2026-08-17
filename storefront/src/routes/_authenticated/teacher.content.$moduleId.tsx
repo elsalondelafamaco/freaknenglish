@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { learningApi, teachersApi } from "@/lib/api/endpoints";
 import { urlDeMedios } from "@/lib/learning/lessonHtml";
 import { LessonFrame } from "@/components/learning/LessonFrame";
+import { BarraAlumnoEnClase, useAlumnoEnClase } from "@/components/learning/AlumnoEnClase";
 
 export const Route = createFileRoute("/_authenticated/teacher/content/$moduleId")({
   head: ({ params }) => ({ meta: [{ title: `Contenido ${params.moduleId} — Profesor` }] }),
@@ -40,7 +41,11 @@ const KIND_ICON: Record<string, typeof PlayCircle> = {
  */
 function TeacherModuleViewer() {
   const { moduleId } = Route.useParams();
-  const { studentId } = Route.useSearch();
+  // El alumno puede venir en la URL (entrando por "Ver contenido" del perfil)
+  // o de la elección que el profe ya hizo en Contenido. Las dos puertas llevan
+  // al mismo sitio; antes sólo servía la primera.
+  const { studentId: studentIdUrl } = Route.useSearch();
+  const { alumnoId: studentId, elegir, listo: alumnoListo } = useAlumnoEnClase(studentIdUrl);
   const qc = useQueryClient();
   const [activeId, setActiveId] = useState("");
 
@@ -84,7 +89,9 @@ function TeacherModuleViewer() {
   }, [planQ.data]);
 
   const mod = modQ.data as any;
-  if (modQ.isLoading) return <p className="text-sm text-brand-ink/60">Cargando módulo…</p>;
+  // `alumnoListo` evita montar la lección antes de saber con qué alumno se está:
+  // si llegara después, el iframe se recargaría y perdería el slide.
+  if (modQ.isLoading || !alumnoListo) return <p className="text-sm text-brand-ink/60">Cargando módulo…</p>;
   if (!mod) return <p className="text-sm text-brand-ink/60">Módulo no encontrado.</p>;
 
   const lessons: any[] = [...(mod.lessons ?? [])].sort((a, b) => a.position - b.position);
@@ -102,6 +109,8 @@ function TeacherModuleViewer() {
       >
         <ArrowLeft className="size-4" /> Volver al contenido
       </Link>
+
+      <BarraAlumnoEnClase alumnoId={studentId ?? ""} onElegir={elegir} />
 
       <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>

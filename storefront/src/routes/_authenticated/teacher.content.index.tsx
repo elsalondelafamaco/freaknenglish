@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, Users } from "lucide-react";
-import { learningApi, teachersApi } from "@/lib/api/endpoints";
+import { BookOpen } from "lucide-react";
+import { learningApi } from "@/lib/api/endpoints";
+import { BarraAlumnoEnClase, useAlumnoEnClase } from "@/components/learning/AlumnoEnClase";
 import type { EnglishLevel } from "@/lib/domain/types";
 
 export const Route = createFileRoute("/_authenticated/teacher/content/")({
@@ -26,13 +27,12 @@ const LEVELS: Array<{ id: EnglishLevel; label: string }> = [
  */
 function TeacherContent() {
   const [level, setLevel] = useState<EnglishLevel>("beginner");
-  const [studentId, setStudentId] = useState("");
+  const { alumnoId: studentId, elegir } = useAlumnoEnClase();
 
   const modsQ = useQuery({
     queryKey: ["learning", "modules", level],
     queryFn: () => learningApi.modules(level),
   });
-  const studentsQ = useQuery({ queryKey: ["teacher", "students"], queryFn: () => teachersApi.students() });
 
   const mods = (modsQ.data ?? []) as any[];
   const grupos = groupByUnit(mods);
@@ -64,22 +64,9 @@ function TeacherContent() {
             </button>
           ))}
         </div>
-        <label className="ml-auto text-xs font-semibold text-brand-ink/70">
-          <span className="mb-1 flex items-center gap-1.5">
-            <Users className="size-3.5" /> Ver como
-          </span>
-          <select
-            value={studentId}
-            onChange={(e) => setStudentId(e.target.value)}
-            className="w-56 rounded-xl border border-brand-line bg-white px-3 py-2 text-sm font-normal focus:border-brand-ink focus:outline-none"
-          >
-            <option value="">Solo el contenido</option>
-            {(studentsQ.data ?? []).map((s: any) => (
-              <option key={s.id} value={s.id}>{s.fullName}</option>
-            ))}
-          </select>
-        </label>
       </div>
+
+      <BarraAlumnoEnClase alumnoId={studentId} onElegir={elegir} />
 
       {modsQ.isLoading ? (
         <p className="text-sm text-brand-ink/55">Cargando contenido…</p>

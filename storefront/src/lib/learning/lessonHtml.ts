@@ -15,7 +15,7 @@
  * estudiante como el del profesor; si se duplicara, el del profe cargaría el
  * CDN de terceros y vería los slides rotos.
  */
-export function prepararHtmlLeccion(html: string, slideInicial = 0): string {
+export function prepararHtmlLeccion(html: string, slideInicial?: string | null): string {
   if (!html) return html;
   const origen = typeof window !== "undefined" ? window.location.origin : "";
   const conTailwind = html.replaceAll(
@@ -24,12 +24,15 @@ export function prepararHtmlLeccion(html: string, slideInicial = 0): string {
   );
 
   // Retomar la clase donde quedó. Se inyecta como variable ANTES del script de
-  // la lección —y no por postMessage— para que `currentSlide` ya arranque en el
-  // valor correcto: por mensaje habría un parpadeo del slide 1 y una carrera
-  // con el `onload` de la lección.
-  const n = Math.max(0, Math.floor(Number(slideInicial) || 0));
-  if (n === 0) return conTailwind;
-  const marca = `<script>window.__freaknSlideInicial=${n};</script>`;
+  // la lección —y no por postMessage— para que la lección ya arranque en el
+  // slide correcto: por mensaje habría un parpadeo del primero y una carrera
+  // con su propio `onload`.
+  //
+  // Va como texto porque las lecciones no navegan todas igual: unas usan un
+  // índice ("8") y otras el id del slide ("slide-game"). La lección lo
+  // interpreta; aquí sólo se le devuelve lo que ella misma reportó.
+  if (!slideInicial) return conTailwind;
+  const marca = `<script>window.__freaknSlideInicial=${JSON.stringify(String(slideInicial))};</script>`;
   return conTailwind.includes("</head>")
     ? conTailwind.replace("</head>", `${marca}</head>`)
     : marca + conTailwind;

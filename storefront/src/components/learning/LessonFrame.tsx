@@ -54,8 +54,11 @@ export function LessonFrame({
       if (!d || d.source !== "freakn-lesson") return;
       // Silencioso: pasa en cada "Next Step" y un aviso por slide sería
       // insoportable. Si falla, la clase sigue; se reintenta al siguiente.
-      if (d.type === "freakn:slide" && typeof d.payload?.slide === "number") {
-        learningApi.saveLastSlide(lessonId!, d.payload.slide, studentId).catch(() => undefined);
+      // La posición llega como la maneje la lección: un número o el id de un
+      // slide. Se guarda tal cual y se le devuelve igual.
+      const pos = d.payload?.slide;
+      if (d.type === "freakn:slide" && (typeof pos === "number" || typeof pos === "string")) {
+        learningApi.saveLastSlide(lessonId!, pos, studentId).catch(() => undefined);
       }
     };
     window.addEventListener("message", alMensaje);
@@ -96,7 +99,7 @@ export function LessonFrame({
     >
       <iframe
         title={title}
-        srcDoc={prepararHtmlLeccion(html, slideQ.data?.slide ?? 0)}
+        srcDoc={prepararHtmlLeccion(html, slideQ.data?.slide ?? null)}
         className="h-full w-full bg-white"
         sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"
       />

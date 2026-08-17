@@ -314,9 +314,9 @@ export const learningApi = {
    * contra el estudiante, no contra quien comparte pantalla.
    */
   lastSlide: (lessonId: string, studentId?: string) =>
-    apiGet<{ slide: number }>(`/learning/lessons/${lessonId}/slide`, studentId ? { studentId } : undefined),
-  saveLastSlide: (lessonId: string, slide: number, studentId?: string) =>
-    apiPost<{ ok: boolean; slide: number }>(`/learning/lessons/${lessonId}/slide`, { slide, studentId }),
+    apiGet<{ slide: string | null }>(`/learning/lessons/${lessonId}/slide`, studentId ? { studentId } : undefined),
+  saveLastSlide: (lessonId: string, slide: string | number | null, studentId?: string) =>
+    apiPost<{ ok: boolean; slide: string | null }>(`/learning/lessons/${lessonId}/slide`, { slide, studentId }),
   checkpoint: (id: string) => apiGet<CheckpointV2>(`/learning/checkpoints/${id}`),
   submitCheckpoint: (id: string, answers: Record<string, unknown>) =>
     apiPost<CheckpointSubmitResult>(`/learning/checkpoints/${id}/submit`, { answers }),

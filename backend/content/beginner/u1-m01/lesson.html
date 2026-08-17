@@ -908,7 +908,8 @@
             if (currentSlide < 0) currentSlide = 0;
             if (currentSlide >= slides.length) currentSlide = slides.length - 1;
             updateUI();
-            reportarSlide();
+        
+            if (window.__freaknSlide) window.__freaknSlide(currentSlide);
         }
 
         // Multiple Choice Logic
@@ -961,26 +962,7 @@
         }
 
         // Initialize on load
-        function reportarSlide() {
-            try {
-                parent.postMessage({
-                    source: "freakn-lesson",
-                    type: "freakn:slide",
-                    payload: { slide: currentSlide, total: slides.length }
-                }, "*");
-            } catch (e) {}
-        }
-
-        // Retomar la clase donde quedó. Una lección puede tomar dos o tres
-        // clases; antes cada una volvía a empezar en el slide 1. La plataforma
-        // inyecta el slide guardado del ESTUDIANTE antes de que corra este
-        // script, por eso se lee aquí y no se pide por mensaje: así no hay
-        // parpadeo del primer slide.
-        window.onload = function () {
-            var guardado = Number(window.__freaknSlideInicial || 0);
-            if (guardado > 0 && guardado < slides.length) currentSlide = guardado;
-            updateUI();
-        };
+        window.onload = updateUI;
     </script>
 
     <script>
@@ -1007,5 +989,30 @@
         };
       })();
     </script>
+
+<script>
+    /* Memoria de slide (plataforma Freakn'). Una lección puede tomar dos o tres
+       clases; sin esto cada clase volvía a empezar en el primer slide. */
+    (function () {
+        window.__freaknSlide = function (posicion) {
+            try {
+                parent.postMessage({
+                    source: "freakn-lesson",
+                    type: "freakn:slide",
+                    payload: { slide: posicion }
+                }, "*");
+            } catch (e) {}
+        };
+        window.addEventListener("load", function () {
+            var g = window.__freaknSlideInicial;
+            if (g === undefined || g === null || g === "") return;
+            /* Llega como texto. Las lecciones que navegan por número comparan
+               con === y con una cadena no encontrarían nada. */
+            var destino = /^[0-9]+$/.test(String(g)) ? Number(g) : g;
+            if (destino === 0) return;
+            try { nav(destino); } catch (e) {}
+        });
+    })();
+</script>
 </body>
 </html>

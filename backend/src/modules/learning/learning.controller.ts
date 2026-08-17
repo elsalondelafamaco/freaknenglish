@@ -92,9 +92,9 @@ export class LearningController {
   setSlide(
     @CurrentUser() u: AuthUser,
     @Param('lessonId') lessonId: string,
-    @Body() body: { slide: number; studentId?: string },
+    @Body() body: { slide: string | number | null; studentId?: string },
   ) {
-    return this.svc.setLastSlide(u.id, u.roles, lessonId, body?.slide ?? 0, body?.studentId)
+    return this.svc.setLastSlide(u.id, u.roles, lessonId, body?.slide ?? null, body?.studentId)
   }
 
   /**

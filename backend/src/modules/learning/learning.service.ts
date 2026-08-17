@@ -541,26 +541,35 @@ export class LearningService {
     const objetivo = await this.resolverEstudiante(userId, roles, studentId)
     const p = await this.prisma.lessonProgress.findUnique({
       where: { userId_lessonId: { userId: objetivo, lessonId } },
-      select: { lastSlide: true },
+      select: { lastSlideRef: true },
     })
-    return { slide: p?.lastSlide ?? 0 }
+    return { slide: p?.lastSlideRef ?? null }
   }
 
+  /**
+   * La posición llega tal cual la reporta la lección y se guarda sin
+   * interpretarla: unas navegan por índice ("8") y otras por id de slide
+   * ("slide-game"). Sólo se acota el largo, para que un HTML mal hecho no
+   * pueda escribir cualquier cosa en la base.
+   */
   async setLastSlide(
     userId: string,
     roles: string[],
     lessonId: string,
-    slide: number,
+    slide: unknown,
     studentId?: string,
   ) {
     const objetivo = await this.resolverEstudiante(userId, roles, studentId)
-    const n = Math.max(0, Math.floor(Number(slide) || 0))
+    const ref =
+      slide === null || slide === undefined || slide === ''
+        ? null
+        : String(slide).slice(0, 120)
     await this.prisma.lessonProgress.upsert({
       where: { userId_lessonId: { userId: objetivo, lessonId } },
-      update: { lastSlide: n },
-      create: { userId: objetivo, lessonId, lastSlide: n, secondsWatched: 0 },
+      update: { lastSlideRef: ref },
+      create: { userId: objetivo, lessonId, lastSlideRef: ref, secondsWatched: 0 },
     })
-    return { ok: true, slide: n }
+    return { ok: true, slide: ref }
   }
 
   /**

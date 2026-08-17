@@ -268,6 +268,8 @@
             document.querySelectorAll('.slide-container').forEach(el => el.classList.remove('active'));
             document.getElementById(`slide-${slideNum}`).classList.add('active');
             if(slideNum === 4) loadQuestion();
+        
+            if (window.__freaknSlide) window.__freaknSlide(slideNum);
         }
 
         function checkStory() {
@@ -421,5 +423,30 @@
         };
       })();
     </script>
+
+<script>
+    /* Memoria de slide (plataforma Freakn'). Una lección puede tomar dos o tres
+       clases; sin esto cada clase volvía a empezar en el primer slide. */
+    (function () {
+        window.__freaknSlide = function (posicion) {
+            try {
+                parent.postMessage({
+                    source: "freakn-lesson",
+                    type: "freakn:slide",
+                    payload: { slide: posicion }
+                }, "*");
+            } catch (e) {}
+        };
+        window.addEventListener("load", function () {
+            var g = window.__freaknSlideInicial;
+            if (g === undefined || g === null || g === "") return;
+            /* Llega como texto. Las lecciones que navegan por número comparan
+               con === y con una cadena no encontrarían nada. */
+            var destino = /^[0-9]+$/.test(String(g)) ? Number(g) : g;
+            if (destino === 0) return;
+            try { nav(destino); } catch (e) {}
+        });
+    })();
+</script>
 </body>
 </html>

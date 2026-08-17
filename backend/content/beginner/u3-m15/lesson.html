@@ -653,7 +653,7 @@
             return false;
         }
         window.__freaknSlide = function (posicion) {
-            if (esInseguro(posicion)) return;
+            if (String(posicion).indexOf("juego:") !== 0 && esInseguro(posicion)) return;
             try {
                 parent.postMessage({
                     source: "freakn-lesson",
@@ -667,6 +667,20 @@
             if (g === undefined || g === null || g === "") return;
             /* Llega como texto. Las lecciones que navegan por número comparan
                con === y con una cadena no encontrarían nada. */
+            /* Los juegos guardan "juego:N". Se retoman llamando a su propio
+               startGame(N), que sí prepara la pantalla entera —nivel, marcador
+               y primera pregunta—, en vez de saltar al slide y dejarlo vacío.
+               Se vuelve al principio del nivel, no a la pregunta exacta: es un
+               punto limpio y el marcador del nivel se rehace de cero. */
+            var juego = /^juego:(.*)$/.exec(String(g));
+            if (juego) {
+                var nivel = juego[1];
+                try {
+                    if (nivel === "") startGame();
+                    else startGame(/^[0-9]+$/.test(nivel) ? Number(nivel) : nivel);
+                } catch (e) {}
+                return;
+            }
             var destino = /^[0-9]+$/.test(String(g)) ? Number(g) : g;
             if (destino === 0 || esInseguro(destino)) return;
             try { nav(destino); } catch (e) {}

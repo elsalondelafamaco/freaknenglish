@@ -97,6 +97,11 @@ export function BarraAlumnoEnClase({
     return s ? { id: s.id, nombre: s.fullName, enCurso: c === enCurso } : null;
   }, [alumnoId, hoyQ.data, alumnos]);
 
+  // Sin alumnos a cargo (un admin revisando contenido, o un profe recién
+  // creado) la pregunta no tiene respuesta posible: mejor no preguntar. Se
+  // espera a que cargue la lista para no parpadear.
+  if (!elegido && (alumnosQ.isPending || alumnos.length === 0)) return null;
+
   if (elegido) {
     return (
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-brand-ink/15 bg-brand-cream/50 px-4 py-3">

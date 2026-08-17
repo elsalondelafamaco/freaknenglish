@@ -66,6 +66,17 @@ export function LessonFrame({
       const pos = d.payload?.slide;
       if (d.type === "freakn:slide" && (typeof pos === "number" || typeof pos === "string")) {
         learningApi.saveLastSlide(lessonId!, pos, studentId).catch(() => undefined);
+        return;
+      }
+      // Resultados de las actividades. Sólo cuando hay alumno: en clase la
+      // lección la tiene abierta el profe compartiendo pantalla, y lo que
+      // responde el alumno no quedaba registrado en ninguna parte. Sin alumno
+      // (biblioteca) no se guarda, y en el portal del estudiante lo maneja su
+      // propia pantalla, que además le avisa en pantalla.
+      if (studentId && d.type === "freakn:activity:result" && d.payload?.activityId) {
+        learningApi
+          .saveActivityResult(lessonId!, { ...d.payload, studentId })
+          .catch(() => undefined);
       }
     };
     window.addEventListener("message", alMensaje);

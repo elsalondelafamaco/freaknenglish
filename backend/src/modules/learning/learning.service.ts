@@ -208,12 +208,28 @@ export class LearningService {
    */
   async saveActivityResult(
     userId: string,
+    roles: string[],
     lessonId: string,
-    body: { activityId: string; title?: string; score?: number; maxScore?: number; answers?: unknown[] },
+    body: {
+      activityId: string
+      title?: string
+      score?: number
+      maxScore?: number
+      answers?: unknown[]
+      /** Alumno dueño del resultado cuando reporta el profe dando la clase. */
+      studentId?: string
+    },
   ) {
     const activityId = String(body.activityId ?? '').trim()
     if (!activityId) throw new Error('activityId requerido')
-    await this.assertLessonAccess(userId, lessonId)
+    // El resultado es del ESTUDIANTE. En clase la lección la tiene abierta el
+    // profe, compartiendo pantalla: sin esto, lo que respondía el alumno no
+    // quedaba registrado en ningún lado.
+    const objetivo = await this.resolverEstudiante(userId, roles, body.studentId)
+    // El gating es de quien cursa. Si reporta el profe por su alumno, la
+    // autorización ya la dio `resolverEstudiante` con la relación entre ambos:
+    // puede estar dando una lección que aún no le abrió.
+    if (objetivo === userId) await this.assertLessonAccess(userId, lessonId)
     const answers = (Array.isArray(body.answers) ? body.answers : []) as any[]
     const data = {
       title: body.title ?? undefined,
@@ -224,14 +240,14 @@ export class LearningService {
     // Las lecciones reportan PROGRESIVAMENTE (cada respuesta re-envía el
     // acumulado). Solo cuenta como intento nuevo cuando el envío trae MENOS
     // respuestas que lo guardado (el estudiante empezó la actividad de cero).
-    const key = { userId_lessonId_activityId: { userId, lessonId, activityId } }
+    const key = { userId_lessonId_activityId: { userId: objetivo, lessonId, activityId } }
     const existing = await this.prisma.activityResult.findUnique({ where: key })
     const prevCount = Array.isArray(existing?.answers) ? (existing!.answers as any[]).length : 0
     const isNewRun = !!existing && answers.length < prevCount
     return this.prisma.activityResult.upsert({
       where: key,
       update: { ...data, ...(isNewRun ? { attempts: { increment: 1 } } : {}) },
-      create: { userId, lessonId, activityId, ...data },
+      create: { userId: objetivo, lessonId, activityId, ...data },
     })
   }
 

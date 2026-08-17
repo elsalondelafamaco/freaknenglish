@@ -744,6 +744,27 @@
         }
 
         desc.innerText = explanation;
+    
+        /* Reporte progresivo. Antes el resultado sólo se mandaba en la
+           pantalla final: una clase que se cortaba a mitad del juego no
+           dejaba constancia de nada. El total sale de las preguntas
+           declaradas y no de las respondidas, para que "4 de 5" no parezca
+           mejor que "24 de 30". */
+        try {
+            var __total = 0;
+            for (var __k in questions) {
+                if (Object.prototype.hasOwnProperty.call(questions, __k) && questions[__k] && questions[__k].length) {
+                    __total += questions[__k].length;
+                }
+            }
+            FreaknActivity.submit({
+                activityId: "lesson-quiz",
+                title: document.title,
+                score: totalScore,
+                maxScore: __total || freaknAnswers.length,
+                answers: freaknAnswers
+            });
+        } catch (e) {}
     }
 
     function showFeedbackDirect(titleText, descText, isCorrect, callback = null) {
@@ -782,6 +803,14 @@
         } else {
             loadQuestion();
         }
+    }
+
+    function __totalPreguntas() {
+        var n = 0;
+        for (var k in questions) {
+            if (Object.prototype.hasOwnProperty.call(questions, k) && questions[k] && questions[k].length) n += questions[k].length;
+        }
+        return n || freaknAnswers.length;
     }
 
     function showOutro() {

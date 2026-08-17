@@ -38,9 +38,17 @@ export class LearningController {
   saveActivityResult(
     @CurrentUser() u: AuthUser,
     @Param('lessonId') lessonId: string,
-    @Body() body: { activityId: string; title?: string; score?: number; maxScore?: number; answers?: unknown[] },
+    @Body()
+    body: {
+      activityId: string
+      title?: string
+      score?: number
+      maxScore?: number
+      answers?: unknown[]
+      studentId?: string
+    },
   ) {
-    return this.svc.saveActivityResult(u.id, lessonId, body)
+    return this.svc.saveActivityResult(u.id, u.roles, lessonId, body)
   }
 
   /** @endpoint GET /api/v1/learning/my/activity-results?lessonId= */

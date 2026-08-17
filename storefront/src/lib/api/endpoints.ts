@@ -426,6 +426,8 @@ export type ActivityResultInput = {
   score?: number;
   maxScore?: number;
   answers?: ActivityAnswer[];
+  /** Alumno dueño del resultado cuando lo reporta el profe dando la clase. */
+  studentId?: string;
 };
 export type ActivityResultRow = {
   id: string;

@@ -423,13 +423,24 @@
         function registrarRespuesta(id, pregunta, respuesta, acerto, esperada) {
             if (freaknAnswers.some(function (a) { return a.id === id; })) return; // 1er intento
             freaknAnswers.push({ id: id, question: pregunta, answer: respuesta, correct: acerto, expected: esperada });
+            /* Reporte progresivo. Antes el resultado sólo salía en la pantalla
+               final: una clase que se cortaba a mitad del juego no dejaba rastro. */
+            try { reportarResultado(); } catch (e) {}
+        }
+        function __totalPreguntas() {
+            var n = 0;
+            var banco = typeof gameData !== "undefined" ? gameData : null;
+            for (var k in banco) {
+                if (Object.prototype.hasOwnProperty.call(banco, k) && banco[k] && banco[k].length) n += banco[k].length;
+            }
+            return n || freaknAnswers.length;
         }
         function reportarResultado() {
             FreaknActivity.submit({
                 activityId: "lesson-quiz",
                 title: document.title,
                 score: freaknAnswers.filter(function (a) { return a.correct; }).length,
-                maxScore: freaknAnswers.length,
+                maxScore: __totalPreguntas(),
                 answers: freaknAnswers
             });
         }

@@ -543,7 +543,20 @@
     /* Memoria de slide (plataforma Freakn'). Una lección puede tomar dos o tres
        clases; sin esto cada clase volvía a empezar en el primer slide. */
     (function () {
+        /* Slides que NO se pueden retomar: el nav() los muestra pero es la
+           línea siguiente la que los rellena (la pregunta del juego, el
+           marcador final). Saltar directo a ellos deja la plantilla vacía y
+           la lección bloqueada. Ni se guardan ni se restauran, así que la
+           posición se queda en el último slide seguro anterior. */
+        var INSEGUROS = [];
+        function esInseguro(v) {
+            for (var i = 0; i < INSEGUROS.length; i++) {
+                if (String(INSEGUROS[i]) === String(v)) return true;
+            }
+            return false;
+        }
         window.__freaknSlide = function (posicion) {
+            if (esInseguro(posicion)) return;
             try {
                 parent.postMessage({
                     source: "freakn-lesson",
@@ -558,7 +571,7 @@
             /* Llega como texto. Las lecciones que navegan por número comparan
                con === y con una cadena no encontrarían nada. */
             var destino = /^[0-9]+$/.test(String(g)) ? Number(g) : g;
-            if (destino === 0) return;
+            if (destino === 0 || esInseguro(destino)) return;
             try { nav(destino); } catch (e) {}
         });
     })();

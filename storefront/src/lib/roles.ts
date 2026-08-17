@@ -17,3 +17,18 @@ export function rolesOfRow(u: RawUser): AppRole[] {
 export function rowHasRole(u: RawUser, role: AppRole): boolean {
   return rolesOfRow(u).includes(role);
 }
+
+/**
+ * Portal que le corresponde a estos roles.
+ *
+ * Existe porque varios enlaces mandaban a `/app` a todo el mundo (el botón
+ * "Hola, {nombre}" de la home, entre otros) y un profesor terminaba en el
+ * dashboard del estudiante viendo "Aún no tienes un plan activo" — con el
+ * menú de profe al lado. El orden importa: admin manda sobre profe, y profe
+ * sobre estudiante.
+ */
+export function homePathFor(roles: readonly AppRole[] | undefined | null): string {
+  if (roles?.includes("admin")) return "/admin";
+  if (roles?.includes("teacher")) return "/teacher";
+  return "/app";
+}

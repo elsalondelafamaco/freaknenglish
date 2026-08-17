@@ -42,7 +42,13 @@ function AuthenticatedLayout() {
   const initialPath = useRef<string>(
     typeof window !== "undefined" ? window.location.pathname + window.location.search : "/app",
   );
-  const redirected = useRef(false);
+  // Última redirección hecha, como "origen→destino". Antes esto era un booleano
+  // de un solo uso: bastaba UNA redirección para que el guard de roles quedara
+  // muerto el resto de la sesión. Así, un profe que llegaba a /app (por el
+  // botón "Hola, {nombre}" de la home, por ejemplo) se quedaba ahí viendo el
+  // dashboard del estudiante. Guardar el par permite seguir evaluando sin
+  // rebotar en bucle sobre la misma navegación.
+  const ultimaRedireccion = useRef<string | null>(null);
   const [checked, setChecked] = useState(false);
   // Cualquier request que devuelva 403 account_banned dispara este evento
   // (ver lib/api/client.ts) y bloquea toda la UI.
@@ -110,11 +116,19 @@ function AuthenticatedLayout() {
         else if (hasActiveSub && !hasSchedule) target = "/onboarding/schedule";
       }
 
-      if (target && !redirected.current) {
-        redirected.current = true;
-        navigate({ to: target as never, replace: true });
-        return;
+      if (target && target !== pathname) {
+        const salto = `${pathname}→${target}`;
+        // Mismo salto dos veces seguidas = el destino no se aplicó; cortar
+        // antes de entrar en bucle.
+        if (ultimaRedireccion.current !== salto) {
+          ultimaRedireccion.current = salto;
+          navigate({ to: target as never, replace: true });
+          return;
+        }
       }
+      // Sin redirección pendiente: se libera el anti-bucle para que un salto
+      // futuro (otra ruta, otro rol) vuelva a poder ejecutarse.
+      ultimaRedireccion.current = null;
       setChecked(true);
     }
   }, [isAuthenticated, loading, navigate, user, pathname, mySub, subPending, backendDown]);

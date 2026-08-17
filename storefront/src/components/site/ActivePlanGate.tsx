@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Logo } from "./Logo";
 import { subscriptionsApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { homePathFor } from "@/lib/roles";
 
 /**
  * Un usuario logueado con plan activo (fuera de la ventana de renovación de
@@ -24,7 +25,7 @@ export function useActivePlanGate() {
 }
 
 export function ActivePlanScreen({ end }: { end: Date | null }) {
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   return (
     <main className="min-h-screen bg-brand-cream px-5 py-16">
       <div className="mx-auto max-w-lg">
@@ -40,7 +41,7 @@ export function ActivePlanScreen({ end }: { end: Date | null }) {
               : "Tu suscripción está vigente. Podrás renovar cuando esté por vencer."}
           </p>
           <Link
-            to="/app"
+            to={homePathFor(user?.roles)}
             className="mt-6 inline-flex h-12 items-center justify-center rounded-full bg-brand-ink px-6 text-sm font-semibold text-white transition hover:bg-brand-ink-soft"
           >
             Ir a mi portal

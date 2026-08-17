@@ -33,7 +33,7 @@ import { adminApi, classesApi, scheduleApi } from "@/lib/api/endpoints";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SchedulePickerGrid } from "@/components/schedule/SchedulePickerGrid";
 import type { SlotRef } from "@/lib/api/endpoints";
-import { rolesOfRow } from "@/lib/roles";
+import { homePathFor, rolesOfRow } from "@/lib/roles";
 import { ActivityResultsSection, CheckpointAttemptsSection, CheckpointGatesSection, LessonPlanSection } from "./teacher.students.$studentId";
 import { setAccessToken } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -151,12 +151,7 @@ function AdminUserDetail() {
     const r = await adminApi.impersonate(user.id);
     setAccessToken(r.accessToken);
     await refresh();
-    const dest = user.roles.includes("admin")
-      ? "/admin"
-      : user.roles.includes("teacher")
-        ? "/teacher"
-        : "/app";
-    router.navigate({ to: dest, replace: true });
+    router.navigate({ to: homePathFor(user.roles), replace: true });
   }
 
   async function onToggleActive() {
@@ -560,21 +555,31 @@ function AdminUserDetail() {
                         {new Date(c.startsAt).toLocaleString("es-CO")} • {c.durationMin} min
                       </div>
                     </div>
-                    {/* Ajuste manual: se refleja en nómina y métricas */}
-                    <select
-                      value={c.status}
-                      onChange={(e) => void onSetClassStatus(c.id, e.target.value as any)}
-                      className="rounded-full border border-brand-line bg-white px-2.5 py-1 text-xs font-semibold capitalize text-brand-ink"
-                    >
-                      <option value="scheduled">Programada</option>
-                      <option value="validated">Tomada</option>
-                      <option value="no_show">No tomada</option>
-                      <option value="rescheduled" disabled>Reprogramada</option>
-                      {/* Congelada: sale de nómina y de métricas hasta que se
-                          le ponga fecha nueva. */}
-                      <option value="pending_reschedule">Por reprogramar</option>
-                      <option value="cancelled">Cancelada</option>
-                    </select>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Cambiar fecha desde el admin: es la única salida cuando
+                          una clase quedó en un día que el calendario del profe
+                          no muestra (fin de semana) o cuando hay que arreglar
+                          una reprogramación mal digitada. */}
+                      <ClassDateEditor
+                        session={c}
+                        onMoved={() => { bump(); toast.success("Clase movida"); }}
+                      />
+                      {/* Ajuste manual: se refleja en nómina y métricas */}
+                      <select
+                        value={c.status}
+                        onChange={(e) => void onSetClassStatus(c.id, e.target.value as any)}
+                        className="rounded-full border border-brand-line bg-white px-2.5 py-1 text-xs font-semibold capitalize text-brand-ink"
+                      >
+                        <option value="scheduled">Programada</option>
+                        <option value="validated">Tomada</option>
+                        <option value="no_show">No tomada</option>
+                        <option value="rescheduled" disabled>Reprogramada</option>
+                        {/* Congelada: sale de nómina y de métricas hasta que se
+                            le ponga fecha nueva. */}
+                        <option value="pending_reschedule">Por reprogramar</option>
+                        <option value="cancelled">Cancelada</option>
+                      </select>
+                    </div>
                   </li>
                 ))}
             </ul>
@@ -1182,6 +1187,79 @@ function adaptAdminUser(u: any): User {
     lastLoginAt: u.lastLoginAt ?? undefined,
     createdAt: u.createdAt ?? new Date().toISOString(),
   };
+}
+
+/**
+ * Cambia la fecha de una clase desde el admin.
+ *
+ * El profesor solo puede mover clases desde su calendario, y ese calendario
+ * oculta sábado y domingo: una clase que cayera ahí (por un error al digitar
+ * la fecha, por ejemplo) quedaba inalcanzable. Ahora el sistema ya no deja
+ * mandarlas al fin de semana, y esto es la salida para las que ya quedaron.
+ */
+function ClassDateEditor({ session, onMoved }: { session: ClassSession; onMoved: () => void }) {
+  const [abierto, setAbierto] = useState(false);
+  const [valor, setValor] = useState(() => toDatetimeLocal(session.startsAt));
+  const [busy, setBusy] = useState(false);
+
+  async function mover() {
+    setBusy(true);
+    try {
+      const inicio = new Date(valor);
+      if (Number.isNaN(inicio.getTime())) throw new Error("Fecha inválida");
+      const fin = new Date(inicio.getTime() + (session.durationMin || 50) * 60_000);
+      await classesApi.reschedule(session.id, inicio.toISOString(), fin.toISOString());
+      setAbierto(false);
+      onMoved();
+    } catch (err) {
+      toast.error((err as Error).message ?? "No se pudo mover la clase");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!abierto) {
+    return (
+      <button
+        type="button"
+        onClick={() => { setValor(toDatetimeLocal(session.startsAt)); setAbierto(true); }}
+        className="rounded-full border border-brand-line bg-white px-2.5 py-1 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40"
+      >
+        Cambiar fecha
+      </button>
+    );
+  }
+  return (
+    <span className="flex flex-wrap items-center gap-1.5">
+      <input
+        type="datetime-local"
+        value={valor}
+        onChange={(e) => setValor(e.target.value)}
+        className="rounded-xl border border-brand-line bg-white px-2 py-1 text-xs focus:border-brand-ink focus:outline-none"
+      />
+      <button
+        type="button"
+        onClick={() => void mover()}
+        disabled={busy}
+        className="rounded-full bg-brand-ink px-3 py-1 text-xs font-semibold text-white disabled:opacity-60"
+      >
+        {busy ? "…" : "Mover"}
+      </button>
+      <button
+        type="button"
+        onClick={() => setAbierto(false)}
+        className="rounded-full border border-brand-line px-2.5 py-1 text-xs text-brand-ink/70 hover:bg-brand-cream/40"
+      >
+        Cancelar
+      </button>
+    </span>
+  );
+}
+
+/** ISO → valor para <input type="datetime-local"> en hora local. */
+function toDatetimeLocal(iso: string): string {
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
 
 /**

@@ -11,6 +11,7 @@ import {
 } from "@/components/site/AuthShell";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { getSessionSnapshot } from "@/lib/auth/session";
+import { homePathFor } from "@/lib/roles";
 import { useQueryClient } from "@tanstack/react-query";
 
 const searchSchema = z.object({ redirect: z.string().optional() });
@@ -34,10 +35,7 @@ function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   function defaultRouteForCurrentUser(): string {
-    const u = getSessionSnapshot();
-    if (u?.roles.includes("admin")) return "/admin";
-    if (u?.roles.includes("teacher")) return "/teacher";
-    return "/app";
+    return homePathFor(getSessionSnapshot()?.roles);
   }
 
   async function onSubmit(e: React.FormEvent) {

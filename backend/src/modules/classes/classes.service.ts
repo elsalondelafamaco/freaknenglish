@@ -2,11 +2,17 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { ClassStatus } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
+import { SlotsService } from '../scheduling/slots.service'
+import { assertDentroDeLaVentana } from '../scheduling/class-window'
 import { env } from '../../config/env'
 
 @Injectable()
 export class ClassesService {
-  constructor(private prisma: PrismaService, private notifications: NotificationsService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+    private slots: SlotsService,
+  ) {}
 
   /**
    * Ventana (ms) para que el estudiante cancele/reagende de forma autónoma.
@@ -233,6 +239,10 @@ export class ClassesService {
       throw new BadRequestException('Esta clase no se puede mover (está cancelada)')
     }
     if (newEndsAt.getTime() <= newStartsAt.getTime()) throw new BadRequestException('Rango inválido')
+    // Sábados, domingos y horas fuera de la ventana quedan bloqueados: no
+    // entran a nómina y el calendario del profe ni siquiera los muestra, así
+    // que una clase que caiga ahí se vuelve irrecuperable desde su portal.
+    assertDentroDeLaVentana(newStartsAt, newEndsAt, await this.slots.getConfig())
     // Cruce con otra clase del profesor en el destino.
     if (c.teacherId) {
       const clash = await this.prisma.class.findFirst({

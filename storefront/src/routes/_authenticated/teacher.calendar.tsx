@@ -97,6 +97,14 @@ const STATUS_COLOR: Record<string, string> = {
   pending_reschedule: "#0284c7",
 };
 
+const NOMBRE_DIA = ["domingos", "lunes", "martes", "miércoles", "jueves", "viernes", "sábados"];
+/** "lunes, martes, miércoles, jueves y viernes" a partir de los días de la config. */
+function diasHabiles(days: number[]): string {
+  const nombres = days.slice().sort().map((d) => NOMBRE_DIA[d]);
+  if (nombres.length <= 1) return nombres[0] ?? "";
+  return `${nombres.slice(0, -1).join(", ")} y ${nombres[nombres.length - 1]}`;
+}
+
 const STATUS_LABEL: Record<string, string> = {
   scheduled: "Programada",
   validated: "Tomada",
@@ -195,6 +203,22 @@ function TeacherCalendar() {
   }, [calQ.data]);
 
   const cfg = cfgQ.data;
+
+  // Valida el destino del "mover clase" contra la ventana operativa (por
+  // política no se dictan clases fuera de ella: no entran a nómina, y el
+  // calendario ni siquiera pinta sábado y domingo).
+  const errorDestino = (() => {
+    if (!moveDraft || !cfg) return null;
+    const d = new Date(moveDraft);
+    if (Number.isNaN(d.getTime())) return "Fecha inválida.";
+    if (!cfg.days.includes(d.getDay())) {
+      return `No se dictan clases los ${NOMBRE_DIA[d.getDay()]}. Solo ${diasHabiles(cfg.days)}.`;
+    }
+    if (d.getHours() < cfg.startHour || d.getHours() > cfg.endHour) {
+      return `La hora debe estar entre ${cfg.startHour}:00 y ${cfg.endHour}:00.`;
+    }
+    return null;
+  })();
 
   return (
     <div className="flex flex-col gap-4">
@@ -461,7 +485,7 @@ function TeacherCalendar() {
                     className="rounded-xl border border-brand-line bg-white px-3 py-2 text-xs focus:border-brand-ink focus:outline-none"
                   />
                   <button
-                    disabled={moveM.isPending || moveDraft === null}
+                    disabled={moveM.isPending || moveDraft === null || !!errorDestino}
                     onClick={() => {
                       moveM.mutate({ id: selected.id, startsAt: new Date(moveDraft!).toISOString(), scope: "once" });
                       setSelected(null);
@@ -472,8 +496,15 @@ function TeacherCalendar() {
                     Mover clase
                   </button>
                 </div>
+                {/* Aviso antes de mandar: el backend igual lo rechaza, pero
+                    equivocarse de fecha y enterarse solo por un toast rojo es
+                    justo lo que hizo que una clase terminara en un sábado. */}
+                {errorDestino ? (
+                  <p className="mt-1.5 text-[11px] font-semibold text-red-700">{errorDestino}</p>
+                ) : null}
                 <p className="mt-1.5 text-[11px] text-brand-ink/55">
                   El horario recurrente no cambia: la próxima semana la clase vuelve a su franja habitual.
+                  {cfg ? ` Solo ${diasHabiles(cfg.days)}, de ${cfg.startHour}:00 a ${cfg.endHour}:00.` : ""}
                 </p>
               </div>
             ) : null}

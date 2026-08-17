@@ -2,6 +2,7 @@ import { Injectable, ForbiddenException, NotFoundException, BadRequestException 
 import { PrismaService } from '../../prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { SlotsService, availabilityCovers } from '../scheduling/slots.service'
+import { assertDentroDeLaVentana } from '../scheduling/class-window'
 import { LearningService } from '../learning/learning.service'
 
 @Injectable()
@@ -473,9 +474,16 @@ export class TeachersService {
     if (!c) throw new NotFoundException('Clase no encontrada')
     if (c.teacherId !== teacherId) throw new ForbiddenException('La clase no es tuya')
     if (isNaN(newStartsAt.getTime())) throw new BadRequestException('Fecha inválida')
+    if (c.status === 'cancelled') throw new BadRequestException('Esta clase está cancelada, no se puede mover')
     // Conserva la duración real de la clase (puede no ser 50 min).
     const durMs = c.endsAt.getTime() - c.startsAt.getTime()
     const newEndsAt = new Date(newStartsAt.getTime() + (durMs > 0 ? durMs : 50 * 60 * 1000))
+
+    // Ventana operativa (días y horas). El scope `forever` ya la validaba más
+    // abajo; `once` NO, y por ese hueco una clase se fue a un sábado: quedó
+    // fuera de nómina y, como el calendario del profe oculta el fin de semana,
+    // invisible e imposible de volver a mover desde su portal.
+    assertDentroDeLaVentana(newStartsAt, newEndsAt, await this.slots.getConfig())
 
     // AC-20: no soltar sobre otra clase del profe.
     const clash = await this.prisma.class.findFirst({
@@ -500,7 +508,20 @@ export class TeachersService {
     if (scope === 'once') {
       const updated = await this.prisma.class.update({
         where: { id: classId },
-        data: { startsAt: newStartsAt, endsAt: newEndsAt },
+        data: {
+          startsAt: newStartsAt,
+          endsAt: newEndsAt,
+          status: 'rescheduled',
+          // Deja de estar congelada y deja de contar como tomada: se va a dar
+          // en la fecha nueva. Sin esto, mover una clase que el job ya había
+          // auto-validado la dejaba cobrada en nómina en su fecha vieja.
+          frozenAt: null,
+          freezeReason: null,
+          validatedAt: null,
+          autoValidated: false,
+          teacherValidatedAt: null,
+          studentConfirmedAt: null,
+        },
       })
       if (student) {
         await this.notifications.enqueue({

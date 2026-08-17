@@ -38,6 +38,11 @@ function DashboardPage() {
   });
 
   if (!user) return null;
+  // Cinturón: si un profe o un admin cae aquí (enlace viejo, marcador,
+  // impersonación), NO se le muestra el cartel de "aún no tienes un plan" —
+  // no tiene plan porque no es estudiante. El guard de `_authenticated` lo
+  // manda a su portal; mientras tanto, esto evita el susto.
+  if (!user.roles.includes("student")) return null;
 
   const subStatus = (subQ.data as any)?.status ?? null;
   const subActive = subStatus === "active";

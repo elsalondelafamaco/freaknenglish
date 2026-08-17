@@ -8,6 +8,7 @@ import { Logo } from "./Logo";
 import { DarkPillLink } from "./DarkPillButton";
 import { ThemeToggle } from "@/components/app/ThemeToggle";
 import { WhatsAppIcon } from "./WhatsAppIcon";
+import { homePathFor } from "@/lib/roles";
 
 const NAV = [
   { label: "¿Cómo Funciona?", href: "#como-funciona" },
@@ -19,6 +20,9 @@ export function Navbar() {
   const [open, setOpen] = useState(false);
   const { isAuthenticated, user } = useAuth();
   const firstName = user?.fullName.split(" ")[0];
+  // Cada rol a su portal: mandar a todos a /app dejaba al profe en el
+  // dashboard del estudiante, con el cartel de "aún no tienes un plan".
+  const miPortal = homePathFor(user?.roles);
   const contactQ = useQuery({ queryKey: ["contact"], queryFn: () => settingsApi.contact(), staleTime: 5 * 60_000 });
   const c = contactQ.data;
   const waHref = c ? `https://wa.me/${c.whatsappNumber}?text=${encodeURIComponent(c.whatsappMessage)}` : "https://wa.me/573000000000";
@@ -56,7 +60,7 @@ export function Navbar() {
           </span>
           <ThemeToggle />
           {isAuthenticated ? (
-            <DarkPillLink to="/app" size="md" withArrow>
+            <DarkPillLink to={miPortal} size="md" withArrow>
               {firstName ? `Hola, ${firstName}` : "Mi cuenta"}
             </DarkPillLink>
           ) : (
@@ -93,7 +97,7 @@ export function Navbar() {
             ))}
             <hr className="border-brand-line" />
             {isAuthenticated ? (
-              <DarkPillLink to="/app" className="w-full">
+              <DarkPillLink to={miPortal} className="w-full">
                 Ir a mi cuenta
               </DarkPillLink>
             ) : (

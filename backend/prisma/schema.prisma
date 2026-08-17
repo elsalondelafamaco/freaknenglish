@@ -460,6 +460,11 @@ model LessonProgress {
   lessonId    String    @map("lesson_id")
   completedAt DateTime? @map("completed_at")
   secondsWatched Int    @default(0) @map("seconds_watched")
+  /// Último slide visto de la lección interactiva (índice base 0). Una lección
+  /// puede tomar dos o tres clases: sin esto, cada clase volvía a empezar en el
+  /// slide 1. Se guarda contra el ESTUDIANTE, no contra quien tiene la pantalla
+  /// abierta — normalmente el profe, compartiendo pantalla.
+  lastSlide   Int?      @map("last_slide")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -509,6 +509,60 @@ export class LearningService {
     })
   }
 
+  // ─── Slide donde quedó la clase ───────────────────────────────────
+  //
+  // Una lección interactiva puede tomar dos o tres clases. El avance se guarda
+  // contra el ESTUDIANTE, nunca contra quien tiene la pantalla abierta: en
+  // clase normalmente es el profe quien comparte pantalla, y sin esa
+  // distinción todos sus alumnos compartirían el mismo slide.
+
+  /** ¿Puede `userId` tocar el avance de `studentId`? Devuelve a quién escribir. */
+  private async resolverEstudiante(
+    userId: string,
+    roles: string[],
+    studentId?: string,
+  ): Promise<string> {
+    if (!studentId || studentId === userId) return userId
+    if (roles.includes('admin')) return studentId
+    if (roles.includes('teacher')) {
+      const suyo = await this.prisma.user.findFirst({
+        where: {
+          id: studentId,
+          OR: [{ assignedTeacherId: userId }, { classesAsStudent: { some: { teacherId: userId } } }],
+        },
+        select: { id: true },
+      })
+      if (suyo) return suyo.id
+    }
+    throw new ForbiddenException('No puedes ver el avance de ese estudiante')
+  }
+
+  async getLastSlide(userId: string, roles: string[], lessonId: string, studentId?: string) {
+    const objetivo = await this.resolverEstudiante(userId, roles, studentId)
+    const p = await this.prisma.lessonProgress.findUnique({
+      where: { userId_lessonId: { userId: objetivo, lessonId } },
+      select: { lastSlide: true },
+    })
+    return { slide: p?.lastSlide ?? 0 }
+  }
+
+  async setLastSlide(
+    userId: string,
+    roles: string[],
+    lessonId: string,
+    slide: number,
+    studentId?: string,
+  ) {
+    const objetivo = await this.resolverEstudiante(userId, roles, studentId)
+    const n = Math.max(0, Math.floor(Number(slide) || 0))
+    await this.prisma.lessonProgress.upsert({
+      where: { userId_lessonId: { userId: objetivo, lessonId } },
+      update: { lastSlide: n },
+      create: { userId: objetivo, lessonId, lastSlide: n, secondsWatched: 0 },
+    })
+    return { ok: true, slide: n }
+  }
+
   /**
    * Envío de checkpoint v2: valida gating (reintentos/cooldown), califica por
    * tipo de pregunta server-side y guarda el intento con feedback detallado

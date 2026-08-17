@@ -73,6 +73,31 @@ export class LearningController {
   }
 
   /**
+   * @endpoint GET /api/v1/learning/lessons/:lessonId/slide?studentId=
+   * Slide donde quedó la última clase. `studentId` sólo lo manda el profe (o
+   * admin) cuando abre la lección para dar clase a ese estudiante; el
+   * estudiante en su propia cuenta no lo necesita.
+   */
+  @Get('lessons/:lessonId/slide')
+  getSlide(
+    @CurrentUser() u: AuthUser,
+    @Param('lessonId') lessonId: string,
+    @Query('studentId') studentId?: string,
+  ) {
+    return this.svc.getLastSlide(u.id, u.roles, lessonId, studentId)
+  }
+
+  /** @endpoint POST /api/v1/learning/lessons/:lessonId/slide */
+  @Post('lessons/:lessonId/slide')
+  setSlide(
+    @CurrentUser() u: AuthUser,
+    @Param('lessonId') lessonId: string,
+    @Body() body: { slide: number; studentId?: string },
+  ) {
+    return this.svc.setLastSlide(u.id, u.roles, lessonId, body?.slide ?? 0, body?.studentId)
+  }
+
+  /**
    * @endpoint POST /api/v1/learning/checkpoints/:id/submit
    * Respuestas por tipo: single=índice|string, multi=array, truefalse=bool,
    * fill=string, order/match/dragwords=array de strings.

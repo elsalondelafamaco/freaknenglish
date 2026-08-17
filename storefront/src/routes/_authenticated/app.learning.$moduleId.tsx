@@ -223,7 +223,7 @@ function LessonViewer({ lesson }: { lesson: any }) {
   if (lesson.kind === "html") {
     return (
       <div className="flex flex-col gap-3">
-        <LessonFrame title={lesson.title} html={lesson.contentHtml ?? url ?? ""} />
+        <LessonFrame title={lesson.title} html={lesson.contentHtml ?? url ?? ""} lessonId={lesson.id} recordarSlide />
         {(resultsQ.data ?? []).length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {resultsQ.data!.map((r) => (

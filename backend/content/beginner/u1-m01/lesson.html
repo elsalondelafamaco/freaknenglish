@@ -908,6 +908,7 @@
             if (currentSlide < 0) currentSlide = 0;
             if (currentSlide >= slides.length) currentSlide = slides.length - 1;
             updateUI();
+            reportarSlide();
         }
 
         // Multiple Choice Logic
@@ -960,7 +961,26 @@
         }
 
         // Initialize on load
-        window.onload = updateUI;
+        function reportarSlide() {
+            try {
+                parent.postMessage({
+                    source: "freakn-lesson",
+                    type: "freakn:slide",
+                    payload: { slide: currentSlide, total: slides.length }
+                }, "*");
+            } catch (e) {}
+        }
+
+        // Retomar la clase donde quedó. Una lección puede tomar dos o tres
+        // clases; antes cada una volvía a empezar en el slide 1. La plataforma
+        // inyecta el slide guardado del ESTUDIANTE antes de que corra este
+        // script, por eso se lee aquí y no se pide por mensaje: así no hay
+        // parpadeo del primer slide.
+        window.onload = function () {
+            var guardado = Number(window.__freaknSlideInicial || 0);
+            if (guardado > 0 && guardado < slides.length) currentSlide = guardado;
+            updateUI();
+        };
     </script>
 
     <script>

@@ -146,7 +146,7 @@ function TeacherModuleViewer() {
                   </span>
                 ) : null}
               </div>
-              <ContenidoLeccion lesson={active} />
+              <ContenidoLeccion lesson={active} studentId={studentId} />
               {studentId ? (
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <button
@@ -232,13 +232,24 @@ function TeacherModuleViewer() {
  * Contenido crudo de la lección. A diferencia del visor del estudiante, aquí
  * NO se guarda progreso ni resultados: el profe está revisando el material, no
  * cursándolo, y sus interacciones no deben contarle a nadie.
+ *
+ * La excepción es el slide: con `?studentId=` el profe no está revisando, está
+ * DANDO la clase de ese alumno —normalmente compartiendo pantalla— y ahí sí
+ * hay que recordar dónde quedaron. Se guarda contra el alumno, nunca contra el
+ * profe. En la biblioteca de contenido (sin alumno) no se guarda nada.
  */
-function ContenidoLeccion({ lesson }: { lesson: any }) {
+function ContenidoLeccion({ lesson, studentId }: { lesson: any; studentId?: string }) {
   const url = urlDeMedios(lesson);
 
   if (lesson.kind === "html") {
     return (
-      <LessonFrame title={lesson.title} html={lesson.contentHtml ?? url ?? ""} />
+      <LessonFrame
+        title={lesson.title}
+        html={lesson.contentHtml ?? url ?? ""}
+        lessonId={lesson.id}
+        studentId={studentId}
+        recordarSlide={!!studentId}
+      />
     );
   }
   if (lesson.kind === "video" && url) {

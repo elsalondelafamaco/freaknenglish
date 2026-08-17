@@ -308,6 +308,15 @@ export const learningApi = {
     apiPost<ActivityResultRow>(`/learning/lessons/${lessonId}/activity-result`, body),
   myActivityResults: (lessonId?: string) =>
     apiGet<ActivityResultRow[]>("/learning/my/activity-results", lessonId ? { lessonId } : undefined),
+  /**
+   * Slide donde quedó la última clase. `studentId` va sólo cuando es el profe
+   * quien tiene la lección abierta para dar la clase: el avance se guarda
+   * contra el estudiante, no contra quien comparte pantalla.
+   */
+  lastSlide: (lessonId: string, studentId?: string) =>
+    apiGet<{ slide: number }>(`/learning/lessons/${lessonId}/slide`, studentId ? { studentId } : undefined),
+  saveLastSlide: (lessonId: string, slide: number, studentId?: string) =>
+    apiPost<{ ok: boolean; slide: number }>(`/learning/lessons/${lessonId}/slide`, { slide, studentId }),
   checkpoint: (id: string) => apiGet<CheckpointV2>(`/learning/checkpoints/${id}`),
   submitCheckpoint: (id: string, answers: Record<string, unknown>) =>
     apiPost<CheckpointSubmitResult>(`/learning/checkpoints/${id}/submit`, { answers }),

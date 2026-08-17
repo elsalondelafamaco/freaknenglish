@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft, CheckCircle2, Circle, Download, FileText, PlayCircle, Presentation,
@@ -45,7 +45,20 @@ function TeacherModuleViewer() {
   // o de la elección que el profe ya hizo en Contenido. Las dos puertas llevan
   // al mismo sitio; antes sólo servía la primera.
   const { studentId: studentIdUrl } = Route.useSearch();
-  const { alumnoId: studentId, elegir, listo: alumnoListo } = useAlumnoEnClase(studentIdUrl);
+  const { alumnoId: studentId, elegir: recordarAlumno, listo: alumnoListo } = useAlumnoEnClase(studentIdUrl);
+  const navigate = useNavigate();
+  // Cambiar de alumno tiene que tocar TAMBIÉN la URL. La URL manda sobre lo
+  // recordado, así que sin esto el selector de la barra no hacía nada visible
+  // cuando se había llegado con `?studentId=`.
+  const elegir = (id: string) => {
+    recordarAlumno(id);
+    navigate({
+      to: "/teacher/content/$moduleId",
+      params: { moduleId },
+      search: (id ? { studentId: id } : {}) as never,
+      replace: true,
+    });
+  };
   const qc = useQueryClient();
   const [activeId, setActiveId] = useState("");
 

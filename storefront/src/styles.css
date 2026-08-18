@@ -371,6 +371,21 @@
   }
 }
 
+/* Variante lateral del reveal: entra deslizándose desde la derecha
+   (carrusel de testimonios). Mismo contrato: useReveal añade `is-in`. */
+@utility reveal-x {
+  opacity: 0;
+  transform: translateX(56px);
+  transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+  &.is-in {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Marquee infinito: el contenido va duplicado y el track se desplaza -50%. */
 @keyframes fk-marquee {
   to {

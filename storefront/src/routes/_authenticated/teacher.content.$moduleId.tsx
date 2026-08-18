@@ -14,6 +14,11 @@ export const Route = createFileRoute("/_authenticated/teacher/content/$moduleId"
   head: ({ params }) => ({ meta: [{ title: `Contenido ${params.moduleId} — Profesor` }] }),
   validateSearch: (s: Record<string, unknown>) => ({
     studentId: typeof s.studentId === "string" && s.studentId ? s.studentId : undefined,
+    // Nivel desde el que se entró, para poder volver a esa misma pestaña.
+    level:
+      s.level === "beginner" || s.level === "intermediate" || s.level === "advanced"
+        ? s.level
+        : undefined,
   }),
   component: TeacherModuleViewer,
 });
@@ -44,7 +49,7 @@ function TeacherModuleViewer() {
   // El alumno puede venir en la URL (entrando por "Ver contenido" del perfil)
   // o de la elección que el profe ya hizo en Contenido. Las dos puertas llevan
   // al mismo sitio; antes sólo servía la primera.
-  const { studentId: studentIdUrl } = Route.useSearch();
+  const { studentId: studentIdUrl, level: levelUrl } = Route.useSearch();
   const { alumnoId: studentId, elegir: recordarAlumno, listo: alumnoListo } = useAlumnoEnClase(studentIdUrl);
   const navigate = useNavigate();
   // Cambiar de alumno tiene que tocar TAMBIÉN la URL. La URL manda sobre lo
@@ -55,7 +60,7 @@ function TeacherModuleViewer() {
     navigate({
       to: "/teacher/content/$moduleId",
       params: { moduleId },
-      search: (id ? { studentId: id } : {}) as never,
+      search: ({ ...(id ? { studentId: id } : {}), ...(levelUrl ? { level: levelUrl } : {}) }) as never,
       replace: true,
     });
   };
@@ -117,7 +122,15 @@ function TeacherModuleViewer() {
     <div className="flex flex-col gap-6">
       <Link
         to="/teacher/content"
-        search={studentId ? ({ studentId } as any) : undefined}
+        // El nivel sale de la URL, y si se llegó sin él (por ejemplo desde la
+        // ficha del alumno) se deduce del propio módulo: volver al básico
+        // estando en intermedio era justo lo que molestaba.
+        search={
+          {
+            ...(studentId ? { studentId } : {}),
+            ...(levelUrl || mod?.level ? { level: levelUrl ?? mod.level } : {}),
+          } as any
+        }
         className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-ink/65 hover:text-brand-ink"
       >
         <ArrowLeft className="size-4" /> Volver al contenido

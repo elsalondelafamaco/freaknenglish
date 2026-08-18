@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 8: Call the Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;700;900&family=Montserrat:ital,wght@0,400;0,500;0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'bold-yellow': '#E4DF33',
+                        'bold-dark': '#1A1A1A',
+                        'bold-gray': '#F3F4F6',
+                        'bold-text': '#4B5563',
+                        'bold-border': '#E5E7EB',
+                        'bold-blue': '#93E5FF'
+                    },
+                    fontFamily: {
+                        urbanist: ['"Urbanist"', 'sans-serif'],
+                        montserrat: ['"Montserrat"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { background-color: #E5E7EB; color: #1A1A1A; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100dvh; margin: 0; }
+        h1, h2, h3, h4, h5, .font-urbanist { text-transform: uppercase; letter-spacing: -0.02em; }
+        .presentation-wrapper { width: 100vw; height: 100dvh; padding: 2rem; display: flex; justify-content: center; align-items: center; }
+        .slide-container { width: 100%; max-width: 1280px; aspect-ratio: 16 / 9; background-color: #FFFFFF; position: relative; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2); font-family: 'Montserrat', sans-serif; }
+        
+        /* Updated Slide padding for mobile clearing */
+        .slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 4rem 5rem; opacity: 0; z-index: 0; pointer-events: none; transform: translateY(15px) scale(0.98); transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+        
+        .slide.active { opacity: 1; z-index: 10; pointer-events: all; transform: translateY(0) scale(1); }
+        
+        /* Custom Scrollbar */
+        .slide::-webkit-scrollbar { width: 8px; }
+        .slide::-webkit-scrollbar-thumb { background: #1A1A1A; }
+        .slide::-webkit-scrollbar-track { background: #F3F4F6; }
+
+        /* Split Layout - Modified for responsiveness */
+        .split-layout { display: flex; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        .split-left { flex: 1; background-color: #E4DF33; color: #1A1A1A; padding: 4rem 5rem; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
+        .split-right { flex: 1; background-color: #1A1A1A; color: #FFFFFF; padding: 4rem 5rem; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
+        
+        .mirrored-text { position: absolute; opacity: 0.1; font-weight: 900; font-size: 200px; font-family: 'Urbanist', sans-serif; white-space: nowrap; transform: scaleX(-1); pointer-events: none; z-index: 0; }
+
+        /* 3D Flip Cards */
+        .perspective { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        /* Adjusted hover for touch devices */
+        @media (hover: hover) {
+            .group:hover .group-hover-rotate-y-180 { transform: rotateY(180deg); }
+        }
+        .group:active .group-hover-rotate-y-180 { transform: rotateY(180deg); }
+
+
+        /* Mobile-First Responsive Design via Custom Classes (CRITICAL REQUIREMENT) */
+        @media (max-width: 820px) {
+            .presentation-wrapper { padding: 0; }
+            .slide-container { aspect-ratio: auto; height: 100dvh; border-radius: 0; box-shadow: none; max-width: 100vw; }
+            
+            /* Reduced padding on mobile, increased bottom padding to clear nav buttons */
+            .slide { padding: 3rem 1.25rem 6.5rem 1.25rem !important; position: absolute; justify-content: flex-start; }
+            .slide.\!p-0 { padding: 0 !important; }
+            
+            /* Stacking the split layouts */
+            .split-layout { flex-direction: column; position: static; height: auto; min-height: 100%; }
+            .split-left { padding: 4rem 1.25rem 2.5rem 1.25rem; flex: none; min-height: 50vh; }
+            .split-right { padding: 2.5rem 1.25rem 6.5rem 1.25rem; flex: none; min-height: 50vh; }
+            
+            .mirrored-text { font-size: 90px !important; }
+            
+            /* 3D Cards specific mobile fixes */
+            .perspective { height: 180px; } /* Slightly smaller cards on mobile */
+        }
+    </style>
+</head>
+<body class="font-montserrat antialiased selection:bg-bold-dark selection:text-bold-yellow">
+
+    <div class="presentation-wrapper">
+        <div class="slide-container" id="presentation">
+            
+            <div class="absolute top-0 left-0 w-full h-2 bg-bold-gray z-50">
+                <div id="progress-bar" class="h-full bg-bold-dark transition-all duration-500 ease-out" style="width: 0%;"></div>
+            </div>
+
+            <button onclick="nav(-1)" id="prev-btn" class="absolute bottom-6 left-6 z-50 bg-bold-dark text-bold-yellow w-12 h-12 flex items-center justify-center hover:bg-bold-yellow hover:text-bold-dark transition-colors border-2 border-bold-dark min-h-[48px] min-w-[48px]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+            <button onclick="nav(1)" id="next-btn" class="absolute bottom-6 right-6 z-50 bg-bold-dark text-bold-yellow w-12 h-12 flex items-center justify-center hover:bg-bold-yellow hover:text-bold-dark transition-colors border-2 border-bold-dark min-h-[48px] min-w-[48px]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+
+            <div class="slide active !p-0 flex flex-col justify-center">
+                <div class="split-layout">
+                    <div class="split-left" style="background-color: #E4DF33; color: #1A1A1A;">
+                        <div class="mirrored-text" style="top: 10%; right: -50px; color: #1A1A1A;">KAREN</div>
+                        <h1 class="text-5xl md:text-7xl lg:text-8xl font-urbanist font-black leading-none relative z-10 text-bold-dark">CALL THE<br><span class="text-white">MANAGER.</span></h1>
+                        <div class="inline-block bg-bold-dark text-bold-yellow px-4 py-2 font-urbanist font-bold tracking-widest text-base md:text-sm mt-6 relative z-10 self-start">MODULE 8</div>
+                    </div>
+                    <div class="split-right" style="background-color: #1A1A1A; color: #FFFFFF;">
+                        <div class="mirrored-text" style="bottom: 10%; left: -50px; color: #FFFFFF;">RIGHT</div>
+                        <div class="relative z-10 border-l-4 md:border-l-8 border-bold-yellow pl-6 md:pl-8">
+                            <p class="text-2xl md:text-3xl lg:text-4xl font-bold font-montserrat mb-4 md:mb-6 leading-tight text-white">"The customer is always right... until they start screaming at the minimum-wage staff."</p>
+                            <p class="font-urbanist font-black tracking-widest text-bold-gray text-lg md:text-xl">— Anonymous</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide flex flex-col justify-center">
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-urbanist font-black text-bold-dark mb-6 md:mb-8 lg:mb-12 mt-4 md:mt-0">WARM-UP</h2>
+                <div class="space-y-4 md:space-y-6 lg:space-y-8 max-w-5xl">
+                    <div class="flex gap-4 md:gap-6 items-start">
+                        <span class="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-bold-yellow text-bold-dark flex items-center justify-center font-urbanist font-black text-xl md:text-2xl border-2 border-bold-dark">1</span>
+                        <p class="text-bold-dark font-bold text-lg md:text-2xl lg:text-3xl leading-relaxed mt-1">When you receive genuinely bad service at a restaurant, do you usually speak up or stay silent?</p>
+                    </div>
+                    <div class="flex gap-4 md:gap-6 items-start">
+                        <span class="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-bold-yellow text-bold-dark flex items-center justify-center font-urbanist font-black text-xl md:text-2xl border-2 border-bold-dark">2</span>
+                        <p class="text-bold-dark font-bold text-lg md:text-2xl lg:text-3xl leading-relaxed mt-1">Have you ever witnessed someone acting like an entitled "Karen" in public?</p>
+                    </div>
+                    <div class="flex gap-4 md:gap-6 items-start">
+                        <span class="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-bold-yellow text-bold-dark flex items-center justify-center font-urbanist font-black text-xl md:text-2xl border-2 border-bold-dark">3</span>
+                        <p class="text-bold-dark font-bold text-lg md:text-2xl lg:text-3xl leading-relaxed mt-1">Do you think the famous business rule "the customer is always right" is outdated?</p>
+                    </div>
+                    <div class="flex gap-4 md:gap-6 items-start">
+                        <span class="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-bold-yellow text-bold-dark flex items-center justify-center font-urbanist font-black text-xl md:text-2xl border-2 border-bold-dark">4</span>
+                        <p class="text-bold-dark font-bold text-lg md:text-2xl lg:text-3xl leading-relaxed mt-1">At exactly what point does a legitimate consumer complaint cross the line into harassment?</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide flex flex-col justify-center">
+                <div class="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4 md:mb-6 shrink-0 mt-4 md:mt-0">
+                    <h2 class="text-3xl md:text-4xl lg:text-5xl font-urbanist font-black text-bold-dark">THE DILEMMA</h2>
+                    <div class="bg-bold-dark text-bold-yellow px-3 py-1 font-urbanist font-bold tracking-widest text-xs border-2 border-bold-dark">CASE STUDY</div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 flex-1 min-h-0 overflow-y-auto lg:overflow-visible">
+                    <!-- The Confession -->
+                    <div class="bg-bold-gray p-5 md:p-6 lg:p-8 border-t-8 border-bold-yellow flex flex-col shadow-sm h-auto lg:h-full justify-center">
+                        <div class="flex items-center justify-between mb-4 md:mb-6 border-b-2 border-bold-border pb-3 md:pb-4 shrink-0">
+                            <span class="font-urbanist font-black text-bold-dark text-lg md:text-xl lg:text-2xl">@AngryDiner</span>
+                            <span class="text-bold-text text-[10px] md:text-xs font-bold uppercase tracking-widest">Posted 1 hour ago</span>
+                        </div>
+                        <div class="text-bold-text font-montserrat text-base md:text-lg lg:text-xl leading-snug lg:leading-relaxed">
+                            <p class="mb-3 md:mb-4">"I went to a high-end steakhouse last night to celebrate my anniversary. <strong>Initially</strong>, everything seemed fine, but then my steak arrived completely cold and undercooked.</p>
+                            <p class="mb-3 md:mb-4">I didn't want to make a big deal out of it at first... but when the bill arrived, I realized they had also charged us for expensive drinks we never ordered.</p>
+                            <p class="mb-3 md:mb-4">I politely asked the waiter to fix it. He rolled his eyes and mumbled that the system couldn't be changed. I completely lost my patience. <strong>Ultimately</strong>, I slammed my hand on the table and demanded the manager immediately.</p>
+                            <p class="font-bold text-bold-dark text-base md:text-lg lg:text-xl mt-4 md:mt-6 border-l-4 border-bold-dark pl-3 md:pl-4">Am I the villain for ruining the vibe of the entire restaurant to protect my money?"</p>
+                        </div>
+                    </div>
+                    
+                    <!-- The Interrogation -->
+                    <div class="flex flex-col gap-5 md:gap-6 h-auto lg:h-full">
+                        <div class="border-2 border-bold-border p-5 md:p-6 lg:p-8 bg-white flex-1 shadow-sm flex flex-col justify-center">
+                            <div class="inline-block self-start bg-bold-dark text-bold-yellow px-3 md:px-4 py-1 md:py-2 font-urbanist font-bold tracking-widest text-[10px] md:text-xs mb-4 md:mb-6">THE VERDICT</div>
+                            <ul class="space-y-3 md:space-y-4 text-bold-dark font-bold text-base md:text-lg lg:text-xl leading-snug">
+                                <li class="flex items-start gap-3 md:gap-4"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> Was slamming their hand on the table a justified response, or highly embarrassing?</li>
+                                <li class="flex items-start gap-3 md:gap-4"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> How did the waiter's attitude escalate the situation unnecessarily?</li>
+                            </ul>
+                        </div>
+                        <div class="border-2 border-bold-dark p-5 md:p-6 lg:p-8 bg-bold-dark text-white flex-1 shadow-sm flex flex-col justify-center">
+                            <div class="inline-block self-start bg-bold-yellow text-bold-dark px-3 md:px-4 py-1 md:py-2 font-urbanist font-bold tracking-widest text-[10px] md:text-xs mb-4 md:mb-6">DEVIL'S ADVOCATE</div>
+                            <ul class="space-y-3 md:space-y-4 text-white font-bold text-base md:text-lg lg:text-xl leading-snug">
+                                <li class="flex items-start gap-3 md:gap-4"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> Defend the waiter: Why might restaurant staff seem so uncaring on a busy Saturday night?</li>
+                                <li class="flex items-start gap-3 md:gap-4"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> If you were the manager, what would you say to this angry customer?</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide flex flex-col justify-center">
+                <div class="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4 md:mb-6 mt-4 md:mt-0 shrink-0">
+                    <h2 class="text-3xl md:text-4xl lg:text-5xl font-urbanist font-black text-bold-dark">VOCABULARY UPGRADE</h2>
+                    <div class="bg-bold-dark text-bold-yellow px-3 py-1 font-urbanist font-bold tracking-widest text-xs border-2 border-bold-dark">HOVER TO REVEAL</div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 h-auto lg:h-full pb-4">
+                    <!-- Card 1 -->
+                    <div class="group perspective h-48 md:h-56">
+                        <div class="relative w-full h-full transition-transform duration-500 transform-style-3d group-hover-rotate-y-180 shadow-md">
+                            <div class="absolute w-full h-full backface-hidden bg-bold-dark text-white flex flex-col items-center justify-center border-b-8 border-bold-yellow p-4 text-center">
+                                <span class="text-xs lg:text-sm text-bold-yellow font-bold uppercase tracking-widest mb-1 md:mb-2 block">Phrasal Verb</span>
+                                <h4 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black">SPEAK UP</h4>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-bold-gray text-bold-dark p-4 md:p-6 flex flex-col items-center justify-center text-center border-2 border-bold-dark">
+                                <p class="font-bold text-base md:text-lg lg:text-xl mb-2 md:mb-3 leading-tight">To express your opinion frankly and publicly when you see an issue.</p>
+                                <p class="italic text-xs md:text-sm lg:text-base font-bold text-bold-text leading-tight">"The food was terrible, but I was too shy to speak up."</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="group perspective h-48 md:h-56">
+                        <div class="relative w-full h-full transition-transform duration-500 transform-style-3d group-hover-rotate-y-180 shadow-md">
+                            <div class="absolute w-full h-full backface-hidden bg-bold-dark text-white flex flex-col items-center justify-center border-b-8 border-bold-yellow p-4 text-center">
+                                <span class="text-xs lg:text-sm text-bold-yellow font-bold uppercase tracking-widest mb-1 md:mb-2 block">Phrasal Verb</span>
+                                <h4 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black">RIP OFF</h4>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-bold-gray text-bold-dark p-4 md:p-6 flex flex-col items-center justify-center text-center border-2 border-bold-dark">
+                                <p class="font-bold text-base md:text-lg lg:text-xl mb-2 md:mb-3 leading-tight">To cheat someone financially by severely overcharging them.</p>
+                                <p class="italic text-xs md:text-sm lg:text-base font-bold text-bold-text leading-tight">"Don't buy water at the concert; they will rip you off."</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="group perspective h-48 md:h-56">
+                        <div class="relative w-full h-full transition-transform duration-500 transform-style-3d group-hover-rotate-y-180 shadow-md">
+                            <div class="absolute w-full h-full backface-hidden bg-bold-dark text-white flex flex-col items-center justify-center border-b-8 border-bold-yellow p-4 text-center">
+                                <span class="text-xs lg:text-sm text-bold-yellow font-bold uppercase tracking-widest mb-1 md:mb-2 block">Phrasal Verb</span>
+                                <h4 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black">POINT OUT</h4>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-bold-gray text-bold-dark p-4 md:p-6 flex flex-col items-center justify-center text-center border-2 border-bold-dark">
+                                <p class="font-bold text-base md:text-lg lg:text-xl mb-2 md:mb-3 leading-tight">To direct someone's attention to a specific mistake or hidden fact.</p>
+                                <p class="italic text-xs md:text-sm lg:text-base font-bold text-bold-text leading-tight">"I gently pointed out an error on our bill."</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 4 -->
+                    <div class="group perspective h-48 md:h-56">
+                        <div class="relative w-full h-full transition-transform duration-500 transform-style-3d group-hover-rotate-y-180 shadow-md">
+                            <div class="absolute w-full h-full backface-hidden bg-bold-yellow text-bold-dark flex flex-col items-center justify-center border-b-8 border-bold-dark p-4 text-center">
+                                <span class="text-xs lg:text-sm text-bold-dark font-bold uppercase tracking-widest mb-1 md:mb-2 block">Idiom</span>
+                                <h4 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black leading-none px-2">PIECE OF YOUR MIND</h4>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-bold-dark text-white p-4 md:p-6 flex flex-col items-center justify-center text-center border-2 border-bold-yellow">
+                                <p class="font-bold text-base md:text-lg lg:text-xl mb-2 md:mb-3 leading-tight text-bold-gray">To angrily tell someone exactly what you think of their bad behavior.</p>
+                                <p class="italic text-xs md:text-sm lg:text-base font-bold text-bold-yellow leading-tight">"I was so furious I gave the manager a piece of my mind."</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 5 -->
+                    <div class="group perspective h-48 md:h-56">
+                        <div class="relative w-full h-full transition-transform duration-500 transform-style-3d group-hover-rotate-y-180 shadow-md">
+                            <div class="absolute w-full h-full backface-hidden bg-bold-yellow text-bold-dark flex flex-col items-center justify-center border-b-8 border-bold-dark p-4 text-center">
+                                <span class="text-xs lg:text-sm text-bold-dark font-bold uppercase tracking-widest mb-1 md:mb-2 block">Idiom</span>
+                                <h4 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black leading-none px-2">MAKE A SCENE</h4>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-bold-dark text-white p-4 md:p-6 flex flex-col items-center justify-center text-center border-2 border-bold-yellow">
+                                <p class="font-bold text-base md:text-lg lg:text-xl mb-2 md:mb-3 leading-tight text-bold-gray">To create a loud, embarrassing public disturbance over a problem.</p>
+                                <p class="italic text-xs md:text-sm lg:text-base font-bold text-bold-yellow leading-tight">"Please just pay the extra dollar; I don't want to make a scene."</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 6 -->
+                    <div class="group perspective h-48 md:h-56">
+                        <div class="relative w-full h-full transition-transform duration-500 transform-style-3d group-hover-rotate-y-180 shadow-md">
+                            <div class="absolute w-full h-full backface-hidden bg-bold-yellow text-bold-dark flex flex-col items-center justify-center border-b-8 border-bold-dark p-4 text-center">
+                                <span class="text-xs lg:text-sm text-bold-dark font-bold uppercase tracking-widest mb-1 md:mb-2 block">Slang</span>
+                                <h4 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black">KAREN</h4>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-bold-dark text-white p-4 md:p-6 flex flex-col items-center justify-center text-center border-2 border-bold-yellow">
+                                <p class="font-bold text-base md:text-lg lg:text-xl mb-2 md:mb-3 leading-tight text-bold-gray">An entitled, demanding customer who complains over tiny things.</p>
+                                <p class="italic text-xs md:text-sm lg:text-base font-bold text-bold-yellow leading-tight">"She went full Karen and demanded the cashier be fired."</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide flex flex-col justify-center">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4 mt-4 md:mt-0 shrink-0">
+                    <h2 class="text-3xl md:text-4xl lg:text-5xl font-urbanist font-black text-bold-dark">THE CONFRONTATION</h2>
+                    
+                    <div class="flex flex-wrap items-center gap-4 w-full md:w-auto">
+                        <!-- Audio Upload & Player -->
+                        <div id="audio-container" class="flex items-center bg-bold-gray border-2 border-bold-dark px-2 md:px-3 py-1 flex-1 md:flex-none">
+                            <audio id="audio-player" controls class="h-10 w-full md:w-64" preload="metadata" src="https://minio-production-3d3d.up.railway.app/freakn-cms/audio/intermediate-2/module-08-call-the-manager.m4a"></audio>
+                        </div>
+                        
+                        <!-- Upload Label/Button -->
+                        <label class="cursor-pointer bg-white text-bold-dark w-12 h-12 md:w-14 md:h-14 border-2 border-bold-dark flex items-center justify-center hover:bg-bold-yellow transition-colors shrink-0" title="Upload Audio File">
+                            <svg class="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+                            </svg>
+                            <input type="file" accept="audio/*" class="hidden" onchange="loadAudio(event)">
+                        </label>
+                        
+                        <!-- Show Script Button -->
+                        <button onclick="toggleScript()" id="toggleScriptBtn" class="bg-bold-dark text-bold-yellow px-4 md:px-8 py-3 md:py-4 font-urbanist font-black uppercase tracking-widest text-sm hover:bg-bold-yellow hover:text-bold-dark transition-colors border-2 border-bold-dark min-h-[44px] flex-1 md:flex-none">
+                            SHOW SCRIPT
+                        </button>
+                    </div>
+                </div>
+
+                <div id="listening-questions" class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 flex-1 min-h-0 overflow-y-auto lg:overflow-visible">
+                    <!-- True/False spans 2 columns on large -->
+                    <div class="col-span-1 lg:col-span-2 border-2 border-bold-border p-5 md:p-6 lg:p-8 bg-white h-auto lg:h-full">
+                        <div class="inline-block bg-bold-dark text-white px-3 md:px-4 py-1 md:py-2 font-urbanist font-bold tracking-widest text-[10px] md:text-xs mb-4 md:mb-6">TRUE OR FALSE?</div>
+                        <p class="text-bold-text italic text-base md:text-lg mb-4 md:mb-6">Listen to the confrontation at the restaurant. Decide if the statements are True (T) or False (F).</p>
+                        
+                        <ul class="space-y-4 md:space-y-6 text-base md:text-lg lg:text-xl text-bold-dark font-bold leading-tight">
+                            <li class="flex items-start gap-3 md:gap-4">
+                                <div class="flex gap-2 shrink-0">
+                                    <button onclick="this.classList.toggle('bg-bold-yellow')" class="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-bold-dark flex items-center justify-center hover:bg-bold-gray transition-colors font-urbanist font-black min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">T</button>
+                                    <button onclick="this.classList.toggle('bg-bold-yellow')" class="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-bold-dark flex items-center justify-center hover:bg-bold-gray transition-colors font-urbanist font-black min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">F</button>
+                                </div>
+                                <span class="mt-1 md:mt-2">The customer's soup was served completely frozen solid.</span>
+                            </li>
+                            <li class="flex items-start gap-3 md:gap-4">
+                                <div class="flex gap-2 shrink-0">
+                                    <button onclick="this.classList.toggle('bg-bold-yellow')" class="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-bold-dark flex items-center justify-center hover:bg-bold-gray transition-colors font-urbanist font-black min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">T</button>
+                                    <button onclick="this.classList.toggle('bg-bold-yellow')" class="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-bold-dark flex items-center justify-center hover:bg-bold-gray transition-colors font-urbanist font-black min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">F</button>
+                                </div>
+                                <span class="mt-1 md:mt-2">The waitress admits that the kitchen was struggling to keep up with orders initially.</span>
+                            </li>
+                            <li class="flex items-start gap-3 md:gap-4">
+                                <div class="flex gap-2 shrink-0">
+                                    <button onclick="this.classList.toggle('bg-bold-yellow')" class="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-bold-dark flex items-center justify-center hover:bg-bold-gray transition-colors font-urbanist font-black min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">T</button>
+                                    <button onclick="this.classList.toggle('bg-bold-yellow')" class="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-bold-dark flex items-center justify-center hover:bg-bold-gray transition-colors font-urbanist font-black min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">F</button>
+                                </div>
+                                <span class="mt-1 md:mt-2">The customer eventually accepts the waitress's offer to reheat the meal.</span>
+                            </li>
+                            <li class="flex items-start gap-3 md:gap-4">
+                                <div class="flex gap-2 shrink-0">
+                                    <button onclick="this.classList.toggle('bg-bold-yellow')" class="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-bold-dark flex items-center justify-center hover:bg-bold-gray transition-colors font-urbanist font-black min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">T</button>
+                                    <button onclick="this.classList.toggle('bg-bold-yellow')" class="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-bold-dark flex items-center justify-center hover:bg-bold-gray transition-colors font-urbanist font-black min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">F</button>
+                                </div>
+                                <span class="mt-1 md:mt-2">The waitress directly asks the customer to stop yelling.</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Reaction spans 1 column -->
+                    <div class="col-span-1 border-2 border-bold-dark p-5 md:p-6 lg:p-8 bg-bold-dark text-white flex flex-col justify-center h-auto lg:h-full">
+                        <div class="inline-block self-start bg-white text-bold-dark px-3 md:px-4 py-1 md:py-2 font-urbanist font-bold tracking-widest text-[10px] md:text-xs mb-4 md:mb-6 md:mb-8">REACTION</div>
+                        <ul class="space-y-4 md:space-y-6 lg:space-y-8 text-base md:text-lg lg:text-xl text-bold-gray leading-snug">
+                            <li class="flex items-start gap-3 md:gap-4"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> Does the customer have a valid reason to be extremely upset, or is he overreacting?</li>
+                            <li class="flex items-start gap-3 md:gap-4"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> How would you physically handle this intense situation if you were the waitress?</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div id="listening-script" class="hidden bg-bold-gray border-4 border-bold-dark p-6 md:p-8 lg:p-10 h-[300px] md:h-[400px] overflow-y-auto text-lg md:text-xl leading-relaxed text-bold-dark">
+                    <div class="bg-bold-yellow text-bold-dark px-3 md:px-4 py-1 md:py-2 font-urbanist font-black inline-block mb-4 md:mb-6 text-xs md:text-sm">RESTAURANT ARGUMENT</div>
+                    <p class="mb-4 md:mb-6"><span class="font-urbanist font-black">CUSTOMER:</span> "Excuse me? I need to speak to a manager right now. This soup is completely freezing... it's like nobody even touched it."</p>
+                    <p class="mb-4 md:mb-6"><span class="font-urbanist font-black text-bold-text">WAITRESS:</span> "I am so sorry, sir. <strong>Initially</strong>, the kitchen was really backed up with a massive party. I can take it back and have them reheat it immediately."</p>
+                    <p class="mb-4 md:mb-6"><span class="font-urbanist font-black">CUSTOMER:</span> "I don't want it reheated! Look, I don't want to make a scene and give you a piece of my mind, but paying forty dollars for cold soup is a total rip-off. <strong>Ultimately</strong>, I expect this to be removed from my final bill..."</p>
+                    <p><span class="font-urbanist font-black text-bold-text">WAITRESS:</span> "I understand you're frustrated, sir, but please don't raise your voice at me. I will go and get the manager for you right now."</p>
+                </div>
+            </div>
+
+            <div class="slide flex flex-col justify-center">
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-urbanist font-black text-bold-dark mb-6 md:mb-8 lg:mb-12 mt-4 md:mt-0">DEEP DISCUSSION</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 h-auto pb-4 md:pb-0 overflow-y-auto md:overflow-visible">
+                    <div class="bg-bold-gray p-5 md:p-6 lg:p-8 border-t-8 border-bold-dark shadow-sm hover:shadow-md transition-shadow">
+                        <p class="text-xl md:text-2xl lg:text-3xl text-bold-dark font-bold leading-snug">Is the famous business motto "the customer is always right" fundamentally flawed and damaging to employees?</p>
+                    </div>
+                    <div class="bg-bold-gray p-5 md:p-6 lg:p-8 border-t-8 border-bold-yellow shadow-sm hover:shadow-md transition-shadow">
+                        <p class="text-xl md:text-2xl lg:text-3xl text-bold-dark font-bold leading-snug">Do you think people who explode at service workers are reacting to bad service, or projecting their own miserable lives?</p>
+                    </div>
+                    <div class="bg-bold-gray p-5 md:p-6 lg:p-8 border-t-8 border-bold-yellow shadow-sm hover:shadow-md transition-shadow">
+                        <p class="text-xl md:text-2xl lg:text-3xl text-bold-dark font-bold leading-snug">Where is the exact line between asserting your valid consumer rights and becoming an abusive "Karen"?</p>
+                    </div>
+                    <div class="bg-bold-gray p-5 md:p-6 lg:p-8 border-t-8 border-bold-dark shadow-sm hover:shadow-md transition-shadow">
+                        <p class="text-xl md:text-2xl lg:text-3xl text-bold-dark font-bold leading-snug">If you owned a restaurant, would you empower your staff to talk back to rude customers, or prioritize reputation?</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slide flex items-center justify-center text-center bg-bold-dark">
+                <div class="mirrored-text hidden md:block" style="top: 20%; color: #FFFFFF;">EMPATHY</div>
+                <div class="max-w-5xl relative z-10 w-full px-4">
+                    <div class="inline-block bg-bold-yellow text-bold-dark px-4 md:px-6 py-2 md:py-3 font-urbanist font-black tracking-widest text-base md:text-lg mb-8 md:mb-12">FINAL THOUGHT</div>
+                    <h2 class="text-4xl md:text-5xl lg:text-7xl font-urbanist font-black text-white leading-tight mb-8 md:mb-10">
+                        "Does demanding total perfection from minimum-wage staff reveal our own <span class="text-bold-yellow">lack of empathy</span>?"
+                    </h2>
+                    <div class="w-24 md:w-32 h-2 bg-bold-yellow mx-auto mb-8 md:mb-10"></div>
+                    <p class="text-lg md:text-xl lg:text-2xl font-bold text-bold-gray font-montserrat tracking-wide mb-10 md:mb-12">
+                        Are we fighting for our consumer rights, or just addicted to feeling superior?
+                    </p>
+                    
+                    <button onclick="submitFreaknActivity(this)" class="bg-bold-yellow text-bold-dark px-6 md:px-8 py-3 md:py-4 font-urbanist font-black uppercase tracking-widest text-sm md:text-base hover:bg-white transition-colors border-2 border-bold-dark w-full md:w-auto min-h-[44px]">
+                        SUBMIT MODULE
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- FreaknActivity v1 Exact Implementation ---
+        window.FreaknActivity = window.FreaknActivity || {
+            submit: function(data) {
+                console.log("FreaknActivity submitted:", data);
+            }
+        };
+
+        function submitFreaknActivity(btnElement) {
+            window.FreaknActivity.submit({
+                module: "Module 8: Call the Manager",
+                completed: true,
+                timestamp: new Date().toISOString()
+            });
+            btnElement.innerText = "COMPLETED!";
+            btnElement.disabled = true;
+            btnElement.classList.add("opacity-50", "cursor-not-allowed");
+        }
+        // ----------------------------------------------
+
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const progressBar = document.getElementById('progress-bar');
+
+        function updateProgress() {
+            progressBar.style.width = `${((currentSlide + 1) / slides.length) * 100}%`;
+            document.getElementById('prev-btn').style.display = currentSlide === 0 ? 'none' : 'flex';
+            document.getElementById('next-btn').style.display = currentSlide === slides.length - 1 ? 'none' : 'flex';
+        }
+
+        function nav(d) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = Math.max(0, Math.min(slides.length - 1, currentSlide + d));
+            slides[currentSlide].classList.add('active');
+            updateProgress();
+        
+            if (window.__freaknSlide) window.__freaknSlide(currentSlide);
+        }
+
+        function toggleScript() {
+            const scriptDiv = document.getElementById('listening-script');
+            const questionsDiv = document.getElementById('listening-questions');
+            const btn = document.getElementById('toggleScriptBtn');
+            
+            if (scriptDiv.classList.contains('hidden')) {
+                scriptDiv.classList.remove('hidden');
+                questionsDiv.classList.add('hidden');
+                btn.innerText = 'HIDE SCRIPT';
+                btn.classList.add('bg-bold-yellow', 'text-bold-dark');
+                btn.classList.remove('bg-bold-dark', 'text-bold-yellow');
+            } else {
+                scriptDiv.classList.add('hidden');
+                questionsDiv.classList.remove('hidden');
+                btn.innerText = 'SHOW SCRIPT';
+                btn.classList.remove('bg-bold-yellow', 'text-bold-dark');
+                btn.classList.add('bg-bold-dark', 'text-bold-yellow');
+            }
+        }
+
+        function loadAudio(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const audioPlayer = document.getElementById('audio-player');
+                const audioContainer = document.getElementById('audio-container');
+                audioPlayer.src = URL.createObjectURL(file);
+                audioContainer.classList.remove('hidden');
+            }
+        }
+
+        updateProgress();
+
+        // Keyboard navigation support
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nav(1);
+            if (e.key === 'ArrowLeft') nav(-1);
+        });
+    </script>
+
+<script>
+    /* Memoria de slide (plataforma Freakn'). Una lección interactiva puede
+       tomar dos o tres clases; sin esto cada clase volvía a empezar en el
+       primer slide. */
+    (function () {
+        window.__freaknSlide = function (posicion) {
+            try {
+                parent.postMessage({
+                    source: "freakn-lesson",
+                    type: "freakn:slide",
+                    payload: { slide: posicion }
+                }, "*");
+            } catch (e) {}
+        };
+        window.addEventListener("load", function () {
+            var guardado = window.__freaknSlideInicial;
+            if (guardado === undefined || guardado === null || guardado === "") return;
+            /* Llega como texto y nav() suma: hay que convertirlo o "5" se
+               concatenaría en vez de sumarse. */
+            var destino = parseInt(guardado, 10);
+            if (!destino || destino < 1) return;
+            try { nav(destino); } catch (e) {}
+        });
+    })();
+</script>
+</body>
+</html>

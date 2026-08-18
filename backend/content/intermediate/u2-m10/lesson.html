@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 10: Tattoos & Professionalism</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;700;900&family=Montserrat:ital,wght@0,400;0,500;0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'bold-yellow': '#E4DF33',
+                        'bold-dark': '#1A1A1A',
+                        'bold-gray': '#F3F4F6',
+                        'bold-text': '#4B5563',
+                        'bold-border': '#E5E7EB',
+                        'bold-blue': '#93E5FF'
+                    },
+                    fontFamily: {
+                        urbanist: ['"Urbanist"', 'sans-serif'],
+                        montserrat: ['"Montserrat"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { background-color: #E5E7EB; color: #1A1A1A; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100dvh; margin: 0; }
+        h1, h2, h3, h4, h5, .font-urbanist { text-transform: uppercase; letter-spacing: -0.02em; }
+        .presentation-wrapper { width: 100vw; height: 100dvh; padding: 2rem; display: flex; justify-content: center; align-items: center; }
+        .slide-container { width: 100%; max-width: 1280px; aspect-ratio: 16 / 9; background-color: #FFFFFF; position: relative; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2); font-family: 'Montserrat', sans-serif; }
+        
+        /* Strict padding rules for large-text breathing room */
+        .slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 4rem 5rem; opacity: 0; z-index: 0; pointer-events: none; transform: translateY(15px) scale(0.98); transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; }
+        
+        .slide.active { opacity: 1; z-index: 10; pointer-events: all; transform: translateY(0) scale(1); }
+        
+        /* Custom Scrollbar */
+        .slide::-webkit-scrollbar { width: 8px; }
+        .slide::-webkit-scrollbar-thumb { background: #1A1A1A; }
+        .slide::-webkit-scrollbar-track { background: #F3F4F6; }
+
+        /* Split Layout */
+        .split-layout { display: flex; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        .split-left { flex: 1; background-color: #E4DF33; color: #1A1A1A; padding: 4rem 5rem; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
+        .split-right { flex: 1; background-color: #1A1A1A; color: #FFFFFF; padding: 4rem 5rem; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
+        
+        .mirrored-text { position: absolute; opacity: 0.1; font-weight: 900; font-size: 200px; font-family: 'Urbanist', sans-serif; white-space: nowrap; transform: scaleX(-1); pointer-events: none; z-index: 0; }
+
+        /* 3D Flip Cards */
+        .perspective { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        @media (hover: hover) {
+            .group:hover .group-hover-rotate-y-180 { transform: rotateY(180deg); }
+        }
+        .group:active .group-hover-rotate-y-180 { transform: rotateY(180deg); }
+
+        /* Mobile-First Responsive Design via Custom Classes (CRITICAL REQUIREMENT) */
+        @media (max-width: 820px) {
+            .presentation-wrapper { padding: 0; }
+            .slide-container { aspect-ratio: auto; height: 100dvh; border-radius: 0; box-shadow: none; max-width: 100vw; }
+            
+            /* Reduced padding on mobile, increased bottom padding to clear nav buttons */
+            .slide { padding: 3rem 1.25rem 6.5rem 1.25rem !important; position: absolute; justify-content: flex-start; }
+            .slide.\!p-0 { padding: 0 !important; }
+            
+            /* Stacking the split layouts */
+            .split-layout { flex-direction: column; position: static; height: auto; min-height: 100%; }
+            .split-left { padding: 4rem 1.25rem 2.5rem 1.25rem; flex: none; min-height: 50vh; }
+            .split-right { padding: 2.5rem 1.25rem 6.5rem 1.25rem; flex: none; min-height: 50vh; }
+            
+            .mirrored-text { font-size: 90px !important; }
+            
+            /* 3D Cards specific mobile fixes */
+            .perspective { height: 180px; min-height: 180px; } 
+        }
+    </style>
+</head>
+<body class="font-montserrat antialiased selection:bg-bold-dark selection:text-bold-yellow">
+
+    <div class="presentation-wrapper">
+        <div class="slide-container" id="presentation">
+            
+            <div class="absolute top-0 left-0 w-full h-2 bg-bold-gray z-50">
+                <div id="progress-bar" class="h-full bg-bold-dark transition-all duration-500 ease-out" style="width: 0%;"></div>
+            </div>
+
+            <button onclick="nav(-1)" id="prev-btn" class="absolute bottom-6 left-6 z-50 bg-bold-dark text-bold-yellow w-12 h-12 flex items-center justify-center hover:bg-bold-yellow hover:text-bold-dark transition-colors shadow-md min-h-[48px] min-w-[48px]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+            <button onclick="nav(1)" id="next-btn" class="absolute bottom-6 right-6 z-50 bg-bold-dark text-bold-yellow w-12 h-12 flex items-center justify-center hover:bg-bold-yellow hover:text-bold-dark transition-colors shadow-md min-h-[48px] min-w-[48px]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+
+            <!-- Slide 1: Title -->
+            <div class="slide active !p-0 flex flex-col justify-center">
+                <div class="split-layout">
+                    <div class="split-left" style="background-color: #1A1A1A; color: #E4DF33;">
+                        <div class="mirrored-text" style="top: 10%; right: -50px;">INKED</div>
+                        <h1 class="text-5xl md:text-7xl lg:text-8xl font-urbanist font-black leading-none relative z-10">INKED AT<br><span class="text-white">WORK.</span></h1>
+                        <div class="inline-block bg-bold-yellow text-bold-dark px-4 py-2 font-urbanist font-bold tracking-widest text-base md:text-sm mt-6 relative z-10 self-start">MODULE 10</div>
+                    </div>
+                    <div class="split-right" style="background-color: #E4DF33; color: #1A1A1A;">
+                        <div class="mirrored-text" style="bottom: 10%; left: -50px; color: #1A1A1A;">SKIN</div>
+                        <div class="relative z-10 border-l-4 md:border-l-8 border-bold-dark pl-6 md:pl-8">
+                            <p class="text-2xl md:text-3xl lg:text-4xl font-bold font-montserrat mb-4 md:mb-6 leading-tight">"A tattoo doesn't change your work ethic; it just changes how close-minded people see you."</p>
+                            <p class="font-urbanist font-black tracking-widest text-bold-dark text-lg md:text-xl">— Anonymous</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 2: Warm-Up -->
+            <div class="slide flex flex-col justify-center">
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-urbanist font-black text-bold-dark mb-6 md:mb-8 lg:mb-12 mt-4 md:mt-0">WARM-UP</h2>
+                <div class="space-y-4 md:space-y-6 lg:space-y-8 max-w-5xl">
+                    <div class="flex gap-4 md:gap-6 items-start"><span class="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-bold-yellow text-bold-dark flex items-center justify-center font-urbanist font-black text-xl md:text-2xl border-2 border-bold-dark">1</span><p class="text-bold-dark font-bold text-lg md:text-2xl lg:text-3xl leading-relaxed mt-1">How many people do you know who have at least one hidden tattoo?</p></div>
+                    <div class="flex gap-4 md:gap-6 items-start"><span class="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-bold-yellow text-bold-dark flex items-center justify-center font-urbanist font-black text-xl md:text-2xl border-2 border-bold-dark">2</span><p class="text-bold-dark font-bold text-lg md:text-2xl lg:text-3xl leading-relaxed mt-1">Do you think a doctor with neck tattoos is less qualified than one without?</p></div>
+                    <div class="flex gap-4 md:gap-6 items-start"><span class="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-bold-yellow text-bold-dark flex items-center justify-center font-urbanist font-black text-xl md:text-2xl border-2 border-bold-dark">3</span><p class="text-bold-dark font-bold text-lg md:text-2xl lg:text-3xl leading-relaxed mt-1">Why are some older generations so fiercely against visible body modifications?</p></div>
+                    <div class="flex gap-4 md:gap-6 items-start"><span class="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-bold-yellow text-bold-dark flex items-center justify-center font-urbanist font-black text-xl md:text-2xl border-2 border-bold-dark">4</span><p class="text-bold-dark font-bold text-lg md:text-2xl lg:text-3xl leading-relaxed mt-1">Is asking an employee to cover their tattoos a violation of self-expression?</p></div>
+                </div>
+            </div>
+
+            <!-- Slide 3: Reading & Check -->
+            <div class="slide flex flex-col justify-center">
+                <div class="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4 md:mb-6 shrink-0 mt-4 md:mt-0">
+                    <h2 class="text-3xl md:text-4xl lg:text-5xl font-urbanist font-black text-bold-dark">THE DRESS CODE</h2>
+                    <div class="bg-bold-dark text-bold-yellow px-3 py-1 font-urbanist font-bold tracking-widest text-xs border-2 border-bold-dark">READING & CHECK</div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 flex-1 min-h-0 overflow-y-auto lg:overflow-visible">
+                    <!-- The Confession -->
+                    <div class="bg-bold-gray p-5 md:p-6 lg:p-8 border-t-8 border-bold-yellow flex flex-col h-auto lg:h-full shadow-sm justify-center">
+                        <div class="flex items-center justify-between mb-4 md:mb-6 border-b-2 border-bold-border pb-3 md:pb-4 shrink-0">
+                            <span class="font-urbanist font-black text-bold-dark text-lg md:text-xl lg:text-2xl">@CorporateRebel</span>
+                            <span class="text-bold-text text-[10px] md:text-xs font-bold uppercase tracking-widest">Op-Ed Submission</span>
+                        </div>
+                        <div class="text-bold-text font-montserrat text-base md:text-lg lg:text-xl leading-snug lg:leading-relaxed">
+                            <p class="mb-3 md:mb-4">"I've been a top-performing software engineer for five years. Last month, I finally got a full sleeve tattoo. <strong>Frankly,</strong> I didn't think it would be a big deal since I just work behind a computer all day!</p>
+                            <p class="mb-3 md:mb-4">However, my manager immediately pulled me aside. She told me that while my work is excellent, visible ink is heavily frowned upon by the conservative executives. I was told to wear long sleeves every day, even in the middle of a blazing summer!</p>
+                            <p class="font-bold text-bold-dark text-base md:text-xl lg:text-2xl mt-4 md:mt-6 border-l-4 border-bold-dark pl-3 md:pl-4"><strong>Arguably,</strong> what I have permanently drawn on my skin has absolutely zero impact on the quality of the code I write. I refused to cover it up, and now my promotion is suddenly 'on hold'."</p>
+                        </div>
+                    </div>
+                    
+                    <!-- The Interrogation -->
+                    <div class="flex flex-col gap-5 md:gap-6 h-auto lg:h-full min-h-0">
+                        <div class="border-2 border-bold-border p-5 md:p-6 lg:p-8 bg-white flex-1 shadow-sm flex flex-col justify-center">
+                            <div class="inline-block self-start bg-bold-dark text-bold-yellow px-3 md:px-4 py-1 md:py-2 font-urbanist font-bold tracking-widest text-[10px] md:text-xs mb-4 md:mb-6">DETAIL</div>
+                            <ul class="space-y-3 md:space-y-4 text-bold-dark font-bold text-base md:text-lg lg:text-xl leading-snug">
+                                <li class="flex items-start gap-3 md:gap-4"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> What did the manager explicitly say about the executives' opinion?</li>
+                                <li class="flex items-start gap-3 md:gap-4"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> How did the company supposedly react when the writer refused to wear long sleeves?</li>
+                            </ul>
+                        </div>
+                        <div class="border-2 border-bold-dark p-5 md:p-6 lg:p-8 bg-bold-dark text-white flex-1 shadow-sm flex flex-col justify-center">
+                            <div class="inline-block self-start bg-bold-yellow text-bold-dark px-3 md:px-4 py-1 md:py-2 font-urbanist font-bold tracking-widest text-[10px] md:text-xs mb-4 md:mb-6">THINKING</div>
+                            <ul class="space-y-3 md:space-y-4 text-white font-bold text-base md:text-lg lg:text-xl leading-snug">
+                                <li class="flex items-start gap-3 md:gap-4"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> Do you agree that "professionalism" is just a way to force conformity?</li>
+                                <li class="flex items-start gap-3 md:gap-4"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> If you were the manager, how would you have handled this top performer?</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 4: Vocabulary -->
+            <div class="slide flex flex-col justify-center">
+                <div class="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4 md:mb-6 shrink-0 mt-4 md:mt-0">
+                    <h2 class="text-3xl md:text-4xl lg:text-5xl font-urbanist font-black text-bold-dark">VOCABULARY</h2>
+                    <div class="bg-bold-dark text-bold-yellow px-3 py-1 font-urbanist font-bold tracking-widest text-xs border-2 border-bold-dark">HOVER TO REVEAL</div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 flex-1 min-h-0 pb-4 h-auto lg:h-full">
+                    <!-- Card 1 -->
+                    <div class="group perspective h-48 md:h-56 lg:h-auto min-h-[12rem] lg:min-h-[14rem]">
+                        <div class="relative w-full h-full transition-transform duration-500 transform-style-3d group-hover-rotate-y-180 shadow-md cursor-pointer">
+                            <div class="absolute w-full h-full backface-hidden bg-bold-dark text-white flex flex-col items-center justify-center border-b-8 border-bold-yellow p-4 text-center">
+                                <span class="text-xs lg:text-sm text-bold-yellow font-bold uppercase tracking-widest mb-1 md:mb-3 block">Phrasal Verb</span>
+                                <h4 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black">FROWN UPON</h4>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-bold-gray text-bold-dark p-4 md:p-6 flex flex-col items-center justify-center text-center border-2 border-bold-dark">
+                                <p class="font-bold text-base md:text-lg lg:text-xl mb-2 md:mb-3 leading-tight">To strongly disapprove of something socially or professionally.</p>
+                                <p class="italic text-xs md:text-sm lg:text-base font-bold text-bold-text leading-tight">"Dating a coworker is heavily frowned upon in this firm."</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="group perspective h-48 md:h-56 lg:h-auto min-h-[12rem] lg:min-h-[14rem]">
+                        <div class="relative w-full h-full transition-transform duration-500 transform-style-3d group-hover-rotate-y-180 shadow-md cursor-pointer">
+                            <div class="absolute w-full h-full backface-hidden bg-bold-dark text-white flex flex-col items-center justify-center border-b-8 border-bold-yellow p-4 text-center">
+                                <span class="text-xs lg:text-sm text-bold-yellow font-bold uppercase tracking-widest mb-1 md:mb-3 block">Phrasal Verb</span>
+                                <h4 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black">COVER UP</h4>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-bold-gray text-bold-dark p-4 md:p-6 flex flex-col items-center justify-center text-center border-2 border-bold-dark">
+                                <p class="font-bold text-base md:text-lg lg:text-xl mb-2 md:mb-3 leading-tight">To hide something completely from sight.</p>
+                                <p class="italic text-xs md:text-sm lg:text-base font-bold text-bold-text leading-tight">"She has to cover up her neck tattoo with makeup every day."</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="group perspective h-48 md:h-56 lg:h-auto min-h-[12rem] lg:min-h-[14rem]">
+                        <div class="relative w-full h-full transition-transform duration-500 transform-style-3d group-hover-rotate-y-180 shadow-md cursor-pointer">
+                            <div class="absolute w-full h-full backface-hidden bg-bold-dark text-white flex flex-col items-center justify-center border-b-8 border-bold-yellow p-4 text-center">
+                                <span class="text-xs lg:text-sm text-bold-yellow font-bold uppercase tracking-widest mb-1 md:mb-3 block">Phrasal Verb</span>
+                                <h4 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black">STAND BY</h4>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-bold-gray text-bold-dark p-4 md:p-6 flex flex-col items-center justify-center text-center border-2 border-bold-dark">
+                                <p class="font-bold text-base md:text-lg lg:text-xl mb-2 md:mb-3 leading-tight">To stubbornly defend a decision, action, or person.</p>
+                                <p class="italic text-xs md:text-sm lg:text-base font-bold text-bold-text leading-tight">"Even though they fired me, I stand by what I said to the boss."</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 4 -->
+                    <div class="group perspective h-48 md:h-56 lg:h-auto min-h-[12rem] lg:min-h-[14rem]">
+                        <div class="relative w-full h-full transition-transform duration-500 transform-style-3d group-hover-rotate-y-180 shadow-md cursor-pointer">
+                            <div class="absolute w-full h-full backface-hidden bg-bold-yellow text-bold-dark flex flex-col items-center justify-center border-b-8 border-bold-dark p-4 text-center">
+                                <span class="text-xs lg:text-sm text-bold-dark font-bold uppercase tracking-widest mb-1 md:mb-3 block">Idiom</span>
+                                <h4 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black text-center leading-none px-2 md:px-4">SHOW TRUE COLORS</h4>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-bold-dark text-white p-4 md:p-6 flex flex-col items-center justify-center text-center border-2 border-bold-yellow">
+                                <p class="font-bold text-base md:text-lg lg:text-xl mb-2 md:mb-3 leading-tight text-bold-gray">To finally reveal your real character or intentions.</p>
+                                <p class="italic text-xs md:text-sm lg:text-base font-bold text-bold-yellow leading-tight">"When the pressure was on, the manager showed his true colors."</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 5 -->
+                    <div class="group perspective h-48 md:h-56 lg:h-auto min-h-[12rem] lg:min-h-[14rem]">
+                        <div class="relative w-full h-full transition-transform duration-500 transform-style-3d group-hover-rotate-y-180 shadow-md cursor-pointer">
+                            <div class="absolute w-full h-full backface-hidden bg-bold-yellow text-bold-dark flex flex-col items-center justify-center border-b-8 border-bold-dark p-4 text-center">
+                                <span class="text-xs lg:text-sm text-bold-dark font-bold uppercase tracking-widest mb-1 md:mb-3 block">Saying</span>
+                                <h4 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black text-center leading-tight">TO EACH THEIR OWN</h4>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-bold-dark text-white p-4 md:p-6 flex flex-col items-center justify-center text-center border-2 border-bold-yellow">
+                                <p class="font-bold text-base md:text-lg lg:text-xl mb-2 md:mb-3 leading-tight text-bold-gray">Acknowledging that everyone has the right to their own preferences.</p>
+                                <p class="italic text-xs md:text-sm lg:text-base font-bold text-bold-yellow leading-tight">"I wouldn't dye my hair pink, but hey, to each their own."</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 6 -->
+                    <div class="group perspective h-48 md:h-56 lg:h-auto min-h-[12rem] lg:min-h-[14rem]">
+                        <div class="relative w-full h-full transition-transform duration-500 transform-style-3d group-hover-rotate-y-180 shadow-md cursor-pointer">
+                            <div class="absolute w-full h-full backface-hidden bg-bold-yellow text-bold-dark flex flex-col items-center justify-center border-b-8 border-bold-dark p-4 text-center">
+                                <span class="text-xs lg:text-sm text-bold-dark font-bold uppercase tracking-widest mb-1 md:mb-3 block">Slang</span>
+                                <h4 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black">INKED</h4>
+                            </div>
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-bold-dark text-white p-4 md:p-6 flex flex-col items-center justify-center text-center border-2 border-bold-yellow">
+                                <p class="font-bold text-base md:text-lg lg:text-xl mb-2 md:mb-3 leading-tight text-bold-gray">Describing someone who has tattoos.</p>
+                                <p class="italic text-xs md:text-sm lg:text-base font-bold text-bold-yellow leading-tight">"Half of the executives at this tech company are heavily inked."</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 5: Listening -->
+            <div class="slide flex flex-col justify-center">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-8 shrink-0 mt-4 md:mt-0 gap-4">
+                    <h2 class="text-3xl md:text-4xl lg:text-5xl font-urbanist font-black text-bold-dark">STREET INTERVIEW</h2>
+                    
+                    <div class="flex flex-wrap items-center gap-4 w-full md:w-auto">
+                        <!-- Audio Upload & Player -->
+                        <div id="audio-container" class="flex items-center bg-bold-gray border-2 border-bold-dark px-2 md:px-3 py-1 flex-1 md:flex-none">
+                            <audio id="audio-player" controls class="h-10 w-full md:w-64" preload="metadata" src="https://minio-production-3d3d.up.railway.app/freakn-cms/audio/intermediate-2/module-10-tattoos-professionalism.m4a"></audio>
+                        </div>
+                        
+                        <!-- Upload Label/Button -->
+                        <label class="cursor-pointer bg-white text-bold-dark w-12 h-12 md:w-14 md:h-14 border-2 border-bold-dark flex items-center justify-center hover:bg-bold-yellow transition-colors shrink-0" title="Upload Audio File">
+                            <svg class="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+                            </svg>
+                            <input type="file" accept="audio/*" class="hidden" onchange="loadAudio(event)">
+                        </label>
+                        
+                        <!-- Show Script Button -->
+                        <button onclick="toggleScript()" id="toggleScriptBtn" class="bg-bold-dark text-bold-yellow px-4 md:px-8 py-3 md:py-4 font-urbanist font-black uppercase tracking-widest text-xs md:text-sm hover:bg-bold-yellow hover:text-bold-dark transition-colors border-2 border-bold-dark min-h-[44px] flex-1 md:flex-none">
+                            SHOW SCRIPT
+                        </button>
+                    </div>
+                </div>
+
+                <div id="listening-questions" class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 flex-1 min-h-0 overflow-y-auto lg:overflow-visible">
+                    <!-- True/False spans 2 columns -->
+                    <div class="col-span-1 lg:col-span-2 border-2 border-bold-border p-5 md:p-6 lg:p-8 bg-white flex flex-col justify-center h-auto lg:h-full">
+                        <div class="inline-block bg-bold-dark text-white px-3 md:px-4 py-1 md:py-2 font-urbanist font-bold tracking-widest text-[10px] md:text-xs mb-4 md:mb-6 self-start">TRUE OR FALSE?</div>
+                        <p class="text-bold-text italic text-sm md:text-base lg:text-lg mb-4 md:mb-6">Listen to the journalist interview a pedestrian. Decide if the statements are True (T) or False (F).</p>
+                        
+                        <ul class="space-y-4 md:space-y-6 text-base md:text-lg lg:text-xl text-bold-dark font-bold leading-tight">
+                            <li class="flex items-start gap-3 md:gap-4">
+                                <div class="flex gap-2 shrink-0">
+                                    <button onclick="this.classList.toggle('bg-bold-yellow')" class="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-bold-dark flex items-center justify-center hover:bg-bold-gray transition-colors font-urbanist font-black min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">T</button>
+                                    <button onclick="this.classList.toggle('bg-bold-yellow')" class="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-bold-dark flex items-center justify-center hover:bg-bold-gray transition-colors font-urbanist font-black min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">F</button>
+                                </div>
+                                <span class="mt-1 md:mt-2">The interviewee currently works as an artist in a highly creative industry.</span>
+                            </li>
+                            <li class="flex items-start gap-3 md:gap-4">
+                                <div class="flex gap-2 shrink-0">
+                                    <button onclick="this.classList.toggle('bg-bold-yellow')" class="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-bold-dark flex items-center justify-center hover:bg-bold-gray transition-colors font-urbanist font-black min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">T</button>
+                                    <button onclick="this.classList.toggle('bg-bold-yellow')" class="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-bold-dark flex items-center justify-center hover:bg-bold-gray transition-colors font-urbanist font-black min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">F</button>
+                                </div>
+                                <span class="mt-1 md:mt-2">He believes his tattoos actually help him connect with certain younger clients.</span>
+                            </li>
+                            <li class="flex items-start gap-3 md:gap-4">
+                                <div class="flex gap-2 shrink-0">
+                                    <button onclick="this.classList.toggle('bg-bold-yellow')" class="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-bold-dark flex items-center justify-center hover:bg-bold-gray transition-colors font-urbanist font-black min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">T</button>
+                                    <button onclick="this.classList.toggle('bg-bold-yellow')" class="w-8 h-8 md:w-10 md:h-10 rounded-full border-2 border-bold-dark flex items-center justify-center hover:bg-bold-gray transition-colors font-urbanist font-black min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">F</button>
+                                </div>
+                                <span class="mt-1 md:mt-2">He states he is willing to wear long sleeves if a high-paying company demands it.</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Reaction spans 1 column -->
+                    <div class="col-span-1 border-2 border-bold-dark p-5 md:p-6 lg:p-8 bg-bold-dark text-white flex flex-col justify-center h-auto lg:h-full">
+                        <div class="inline-block self-start bg-white text-bold-dark px-3 md:px-4 py-1 md:py-2 font-urbanist font-bold tracking-widest text-[10px] md:text-xs mb-4 md:mb-8">REACTION</div>
+                        <ul class="space-y-4 md:space-y-8 text-base md:text-lg lg:text-xl text-bold-gray leading-snug">
+                            <li class="flex items-start gap-3 md:gap-4"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> Does the interviewee have the privilege of refusing jobs simply because he is already a manager?</li>
+                            <li class="flex items-start gap-3 md:gap-4"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> Do you agree that tattoos can make a professional seem "more approachable"?</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div id="listening-script" class="hidden bg-bold-gray border-4 border-bold-dark p-6 md:p-10 h-[300px] md:h-full flex-1 overflow-y-auto text-base md:text-lg lg:text-xl leading-relaxed text-bold-dark">
+                    <div class="bg-bold-yellow text-bold-dark px-3 md:px-4 py-1 md:py-2 font-urbanist font-black inline-block mb-4 md:mb-6 text-xs md:text-sm">STREET INTERVIEW</div>
+                    <p class="mb-4 md:mb-6"><span class="font-urbanist font-black text-bold-text">JOURNALIST:</span> "Excuse me! We're asking people on the street about corporate dress codes. Do you think visible tattoos are unprofessional?"</p>
+                    <p class="mb-4 md:mb-6"><span class="font-urbanist font-black">INTERVIEWEE:</span> "Oh, man. <strong>Frankly,</strong> that whole idea is completely outdated<strong>!</strong> I mean, look at me. I’m heavily <strong>inked</strong>, and I manage a whole team of financial analysts. <strong>Arguably,</strong> my tattoos make me *more* approachable to our younger clients<strong>!</strong>"</p>
+                    <p class="mb-4 md:mb-6"><span class="font-urbanist font-black text-bold-text">JOURNALIST:</span> "But what if a traditional company asks you to <strong>cover up</strong>?"</p>
+                    <p><span class="font-urbanist font-black">INTERVIEWEE:</span> "I wouldn't work there. I <strong>stand by</strong> who I am. If a company judges my ink instead of my brain, it <strong>shows their true colors</strong>. Honestly, <strong>to each their own</strong>, but I think judging someone’s skin is just ridiculous<strong>!</strong>"</p>
+                </div>
+            </div>
+
+            <!-- Slide 6: Discussion -->
+            <div class="slide flex flex-col justify-center">
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-urbanist font-black text-bold-dark mb-6 md:mb-10 mt-4 md:mt-0">DEEP DISCUSSION</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 h-auto pb-4 md:pb-0 overflow-y-auto md:overflow-visible">
+                    <div class="bg-bold-gray p-5 md:p-6 lg:p-8 border-t-8 border-bold-dark shadow-sm hover:shadow-md transition-shadow">
+                        <p class="text-lg md:text-2xl lg:text-3xl text-bold-dark font-bold leading-snug">Is it fair for a bank or hospital to ban tattoos to make their older, conservative clients feel "safe"?</p>
+                    </div>
+                    <div class="bg-bold-gray p-5 md:p-6 lg:p-8 border-t-8 border-bold-yellow shadow-sm hover:shadow-md transition-shadow">
+                        <p class="text-lg md:text-2xl lg:text-3xl text-bold-dark font-bold leading-snug">Where is the exact line? Are sleeve tattoos okay, but face and neck tattoos entirely unacceptable?</p>
+                    </div>
+                    <div class="bg-bold-gray p-5 md:p-6 lg:p-8 border-t-8 border-bold-yellow shadow-sm hover:shadow-md transition-shadow">
+                        <p class="text-lg md:text-2xl lg:text-3xl text-bold-dark font-bold leading-snug">If you owned a luxury business, would you allow your customer-facing staff to have visible tattoos?</p>
+                    </div>
+                    <div class="bg-bold-gray p-5 md:p-6 lg:p-8 border-t-8 border-bold-dark shadow-sm hover:shadow-md transition-shadow">
+                        <p class="text-lg md:text-2xl lg:text-3xl text-bold-dark font-bold leading-snug">Do you think people who choose to get extreme body modifications should fully expect to be judged?</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 7: Final -->
+            <div class="slide flex items-center justify-center text-center bg-bold-dark">
+                <div class="mirrored-text hidden md:block" style="top: 20%; color: #FFFFFF;">COLORS</div>
+                <div class="max-w-5xl relative z-10 w-full px-4">
+                    <div class="inline-block bg-bold-yellow text-bold-dark px-4 md:px-6 py-2 md:py-3 font-urbanist font-black tracking-widest text-base md:text-lg mb-8 md:mb-12">FINAL THOUGHT</div>
+                    <h2 class="text-4xl md:text-6xl lg:text-7xl font-urbanist font-black text-white leading-tight mb-8 md:mb-10">
+                        "Are we judging people by their capabilities, or just by their <span class="text-bold-yellow">packaging</span>?"
+                    </h2>
+                    <div class="w-24 md:w-32 h-2 bg-bold-yellow mx-auto mb-8 md:mb-10"></div>
+                    <p class="text-lg md:text-xl lg:text-2xl font-bold text-bold-gray font-montserrat tracking-wide mb-10 md:mb-12">
+                        Is your definition of 'professional' just an outdated uniform?
+                    </p>
+                    
+                    <button onclick="submitFreaknActivity(this)" class="bg-bold-yellow text-bold-dark px-6 md:px-8 py-3 md:py-4 font-urbanist font-black uppercase tracking-widest text-sm md:text-base hover:bg-white transition-colors border-2 border-bold-dark w-full md:w-auto min-h-[44px]">
+                        SUBMIT MODULE
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- FreaknActivity v1 Exact Implementation ---
+        window.FreaknActivity = window.FreaknActivity || {
+            submit: function(data) {
+                console.log("FreaknActivity submitted:", data);
+            }
+        };
+
+        function submitFreaknActivity(btnElement) {
+            window.FreaknActivity.submit({
+                module: "Module 10: Tattoos & Professionalism",
+                completed: true,
+                timestamp: new Date().toISOString()
+            });
+            btnElement.innerText = "COMPLETED!";
+            btnElement.disabled = true;
+            btnElement.classList.add("opacity-50", "cursor-not-allowed");
+        }
+        // ----------------------------------------------
+
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const progressBar = document.getElementById('progress-bar');
+
+        function updateProgress() {
+            progressBar.style.width = `${((currentSlide + 1) / slides.length) * 100}%`;
+            document.getElementById('prev-btn').style.display = currentSlide === 0 ? 'none' : 'flex';
+            document.getElementById('next-btn').style.display = currentSlide === slides.length - 1 ? 'none' : 'flex';
+        }
+
+        function nav(d) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = Math.max(0, Math.min(slides.length - 1, currentSlide + d));
+            slides[currentSlide].classList.add('active');
+            updateProgress();
+        
+            if (window.__freaknSlide) window.__freaknSlide(currentSlide);
+        }
+
+        function toggleScript() {
+            const scriptDiv = document.getElementById('listening-script');
+            const questionsDiv = document.getElementById('listening-questions');
+            const btn = document.getElementById('toggleScriptBtn');
+            
+            if (scriptDiv.classList.contains('hidden')) {
+                scriptDiv.classList.remove('hidden');
+                questionsDiv.classList.add('hidden');
+                btn.innerText = 'HIDE SCRIPT';
+                btn.classList.add('bg-bold-yellow', 'text-bold-dark');
+                btn.classList.remove('bg-bold-dark', 'text-bold-yellow');
+            } else {
+                scriptDiv.classList.add('hidden');
+                questionsDiv.classList.remove('hidden');
+                btn.innerText = 'SHOW SCRIPT';
+                btn.classList.remove('bg-bold-yellow', 'text-bold-dark');
+                btn.classList.add('bg-bold-dark', 'text-bold-yellow');
+            }
+        }
+
+        function loadAudio(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const audioPlayer = document.getElementById('audio-player');
+                const audioContainer = document.getElementById('audio-container');
+                audioPlayer.src = URL.createObjectURL(file);
+                audioContainer.classList.remove('hidden');
+            }
+        }
+
+        updateProgress();
+
+        // Keyboard navigation support
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nav(1);
+            if (e.key === 'ArrowLeft') nav(-1);
+        });
+    </script>
+
+<script>
+    /* Memoria de slide (plataforma Freakn'). Una lección interactiva puede
+       tomar dos o tres clases; sin esto cada clase volvía a empezar en el
+       primer slide. */
+    (function () {
+        window.__freaknSlide = function (posicion) {
+            try {
+                parent.postMessage({
+                    source: "freakn-lesson",
+                    type: "freakn:slide",
+                    payload: { slide: posicion }
+                }, "*");
+            } catch (e) {}
+        };
+        window.addEventListener("load", function () {
+            var guardado = window.__freaknSlideInicial;
+            if (guardado === undefined || guardado === null || guardado === "") return;
+            /* Llega como texto y nav() suma: hay que convertirlo o "5" se
+               concatenaría en vez de sumarse. */
+            var destino = parseInt(guardado, 10);
+            if (!destino || destino < 1) return;
+            try { nav(destino); } catch (e) {}
+        });
+    })();
+</script>
+</body>
+</html>

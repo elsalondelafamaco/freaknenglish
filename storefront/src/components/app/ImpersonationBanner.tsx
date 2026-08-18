@@ -22,7 +22,10 @@ export function ImpersonationBanner() {
     } catch {
       /* ignore */
     }
-    await qc.invalidateQueries({ queryKey: ["me"] });
+    // Vaciar, no invalidar sólo ["me"]: al volver a ser admin, todo lo que se
+    // cacheó como el otro usuario (sus clases, sus alumnos, su progreso) sigue
+    // en memoria y se pinta bajo la sesión del admin hasta que caduque.
+    qc.clear();
     await refresh();
     router.navigate({ to: "/admin/users" });
   }

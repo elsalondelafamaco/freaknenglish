@@ -49,10 +49,13 @@ function AdminUserDetail() {
   const { id } = Route.useParams();
   const router = useRouter();
   const { user: me, refresh } = useAuth();
+  const qc = useQueryClient();
   const [tick, setTick] = useState(0);
   const [tab, setTab] = useState<TabId>("overview");
   const [editing, setEditing] = useState(false);
   const [banConfirmOpen, setBanConfirmOpen] = useState(false);
+  const [verComoOpen, setVerComoOpen] = useState(false);
+  const [entrando, setEntrando] = useState(false);
   const [resetInfo, setResetInfo] = useState<{ link: string | null } | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const [remote, setRemote] = useState<any | null>(null);
@@ -145,13 +148,38 @@ function AdminUserDetail() {
     }
   }
 
+  /**
+   * Entrar a la plataforma como otro usuario.
+   *
+   * Antes esto pedía confirmación con `confirm()` del navegador, que bloquea
+   * el render entero mientras está abierto y que Chrome suprime en varias
+   * situaciones — cuando lo suprime devuelve `false` y el botón se quedaba
+   * sin hacer absolutamente nada, sin aviso. El resto de la pantalla ya
+   * confirmaba con Dialog propio; esto era lo único que faltaba.
+   *
+   * Y hay que VACIAR la caché de react-query al cambiar de identidad: se
+   * cambia el token pero los datos cacheados siguen siendo los del admin,
+   * incluido `["me"]` — que es justo lo que mira la barra amarilla para
+   * saber si mostrar el botón de salir. Con la caché sucia se entraba a la
+   * otra cuenta sin forma visible de volver.
+   */
   async function onImpersonate() {
-    if (!me) return;
-    if (!confirm(`Vas a navegar como ${user.fullName}. ¿Continuar?`)) return;
-    const r = await adminApi.impersonate(user.id);
-    setAccessToken(r.accessToken);
-    await refresh();
-    router.navigate({ to: homePathFor(user.roles), replace: true });
+    if (!me || entrando) return;
+    setEntrando(true);
+    try {
+      const r = await adminApi.impersonate(user.id);
+      setAccessToken(r.accessToken);
+      qc.clear();
+      await refresh();
+      setVerComoOpen(false);
+      router.navigate({ to: homePathFor(user.roles), replace: true });
+    } catch (err) {
+      // Sin esto, un 429 o un 403 dejaban una promesa rechazada en la consola
+      // y cero señales en pantalla: el botón "no hacía nada".
+      toast.error(`No se pudo entrar como ${user.fullName}: ${(err as Error).message}`);
+    } finally {
+      setEntrando(false);
+    }
   }
 
   async function onToggleActive() {
@@ -281,8 +309,8 @@ function AdminUserDetail() {
           </button>
           {user.id !== me?.id ? (
             <button
-              onClick={onImpersonate}
-              disabled={isDeleted || isDisabled}
+              onClick={() => setVerComoOpen(true)}
+              disabled={isDeleted || isDisabled || entrando}
               className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-3 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-40"
             >
               <Eye className="size-3.5" /> Ver como este usuario
@@ -290,6 +318,36 @@ function AdminUserDetail() {
           ) : null}
         </div>
       </header>
+
+      {/* Confirmación de "ver como" — misma UI propia que el resto. */}
+      <Dialog open={verComoOpen} onOpenChange={(o) => { if (!entrando) setVerComoOpen(o); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>¿Entrar como {user.fullName}?</DialogTitle>
+            <DialogDescription>
+              Vas a ver la plataforma con su cuenta y sus permisos durante 30
+              minutos. Lo que hagas queda registrado a su nombre. Para volver a
+              tu sesión, usa el botón de la barra amarilla de arriba.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              onClick={() => setVerComoOpen(false)}
+              disabled={entrando}
+              className="rounded-full border border-brand-line bg-white px-4 py-2 text-sm font-semibold text-brand-ink disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => void onImpersonate()}
+              disabled={entrando}
+              className="rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white hover:bg-brand-ink/90 disabled:opacity-60"
+            >
+              {entrando ? "Entrando…" : "Sí, entrar"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirmación de ban con UI propia (nada de window.confirm). */}
       <Dialog open={banConfirmOpen} onOpenChange={setBanConfirmOpen}>

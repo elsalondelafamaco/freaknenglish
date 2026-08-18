@@ -1375,5 +1375,84 @@
     };
 
 </script>
+
+<script>
+    /* Memoria y reporte de la actividad extra (plataforma Freakn'). */
+    (function () {
+        if (typeof game === "undefined" || !game || !game.slides) return;
+        window.__freaknExtraA = true;
+
+        function respuestas() {
+            if (game.freaknAnswers) return game.freaknAnswers;
+            if (game.answers) return game.answers;
+            try { if (typeof freaknAnswers !== "undefined") return freaknAnswers; } catch (e) {}
+            return [];
+        }
+
+        /* Se manda el acumulado tras cada pregunta. El backend guarda sobre el
+           mismo intento mientras el número de respuestas no baje, así que esto
+           no crea un intento por pregunta. */
+        function reportar() {
+            try {
+                FreaknActivity.submit({
+                    activityId: "extra-activity",
+                    title: document.title,
+                    score: game.score,
+                    maxScore: game.maxScore,
+                    answers: respuestas()
+                });
+            } catch (e) {}
+        }
+
+        [1, 2, 3].forEach(function (n) {
+            var original = game["loadL" + n];
+            if (typeof original !== "function") return;
+            game["loadL" + n] = function () {
+                var r = original.apply(this, arguments);
+                try {
+                    if (window.__freaknSlide) window.__freaknSlide("juego:" + n);
+                    reportar();
+                } catch (e) {}
+                return r;
+            };
+        });
+
+        window.__freaknSlide = function (posicion) {
+            try {
+                parent.postMessage({
+                    source: "freakn-lesson",
+                    type: "freakn:slide",
+                    payload: { slide: posicion }
+                }, "*");
+            } catch (e) {}
+        };
+
+        /* Va después del window.onload que llama a game.init(): los oyentes
+           corren en el orden en que se registran y este se añade el último. */
+        window.addEventListener("load", function () {
+            var guardado = window.__freaknSlideInicial;
+            var m = /^juego:(\d+)$/.exec(String(guardado || ""));
+            if (!m) return;
+            var n = Number(m[1]);
+            var destino = game.slides.indexOf("slide-level" + n);
+            if (destino < 0 || typeof game["loadL" + n] !== "function") return;
+            try {
+                var actual = document.getElementById(game.slides[game.currentSlideIdx]);
+                if (actual) actual.classList.remove("active");
+                game.currentSlideIdx = destino;
+                var nuevo = document.getElementById(game.slides[destino]);
+                if (nuevo) nuevo.classList.add("active");
+                /* Lo mismo que destapa startGame(); sin esto se retoma sin
+                   barra de progreso ni marcador. */
+                var barra = document.getElementById("progressBarContainer");
+                var marcador = document.getElementById("scoreTracker");
+                if (barra) barra.style.display = "block";
+                if (marcador) marcador.style.display = "block";
+                game["l" + n + "Index"] = 0;
+                game["loadL" + n]();
+            } catch (e) {}
+        });
+    })();
+</script>
 </body>
 </html>

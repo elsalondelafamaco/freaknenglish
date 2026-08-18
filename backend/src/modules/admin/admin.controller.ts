@@ -6,6 +6,9 @@ import { RolesGuard } from '../../common/guards/roles.guard'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator'
 import { AdminService } from './admin.service'
+import { AUTH_COOKIE_PATH, IMPERSONATION_COOKIE } from '../auth/auth.cookies'
+import { IMPERSONATION_TTL_MS } from '../auth/auth.service'
+import { env } from '../../config/env'
 
 @ApiTags('admin')
 @ApiBearerAuth()
@@ -201,8 +204,23 @@ export class AdminController {
    * Auditoría: inserta en `impersonation_logs`.
    */
   @Post('users/:id/impersonate')
-  impersonate(@Param('id') targetId: string, @Req() req: any) {
-    return this.svc.impersonate(req.user.id, targetId)
+  async impersonate(
+    @Param('id') targetId: string,
+    @Req() req: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const r = await this.svc.impersonate(req.user.id, targetId)
+    // El vale va en cookie httpOnly y no en la respuesta: así la suplantación
+    // sobrevive a un F5. Antes vivía sólo en memoria del navegador y al
+    // recargar volvías a ser el admin sin ningún aviso.
+    res.cookie(IMPERSONATION_COOKIE, r.ticket, {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: IMPERSONATION_TTL_MS,
+      path: AUTH_COOKIE_PATH,
+    })
+    return { accessToken: r.accessToken, target: r.target }
   }
 
   // ────────────────────────────────────────────────────────────────────────

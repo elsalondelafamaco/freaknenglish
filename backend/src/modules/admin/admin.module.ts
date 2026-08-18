@@ -8,6 +8,7 @@ import { AdminService } from './admin.service'
 import { StorageModule } from '../storage/storage.module'
 import { NotificationsModule } from '../notifications/notifications.module'
 import { SchedulingModule } from '../scheduling/scheduling.module'
+import { AuthModule } from '../auth/auth.module'
 
 @Module({
   imports: [
@@ -16,6 +17,8 @@ import { SchedulingModule } from '../scheduling/scheduling.module'
     StorageModule,
     NotificationsModule,
     SchedulingModule,
+    // Para firmar el vale de suplantación (ver auth.service).
+    AuthModule,
   ],
   controllers: [AdminController, PublicSettingsController],
   providers: [AdminService],

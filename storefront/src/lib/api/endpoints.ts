@@ -22,6 +22,8 @@ export const authApi = {
     apiPost<{ accessToken: string }>("/auth/signup", input),
   refresh: () => apiPost<{ accessToken: string }>("/auth/refresh"),
   logout: () => apiPost<{ ok: true }>("/auth/logout"),
+  /** Termina la suplantación: borra el vale y devuelve al admin a su sesión. */
+  stopImpersonation: () => apiPost<{ accessToken: string }>("/auth/stop-impersonation"),
   forgot: (email: string) => apiPost<{ ok: true }>("/auth/forgot", { email }),
   reset: (token: string, password: string) =>
     apiPost<{ ok: true }>("/auth/reset", { token, password }),

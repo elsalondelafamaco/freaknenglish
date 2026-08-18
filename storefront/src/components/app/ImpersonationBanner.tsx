@@ -15,9 +15,11 @@ export function ImpersonationBanner() {
   if (!me?.impersonatorId) return null;
 
   async function exit() {
-    // La cookie de refresh sigue siendo la del admin → refresh restaura su token.
+    // Borra el vale de suplantación en el servidor y devuelve el token del
+    // admin. Un `refresh` normal ya no basta: mientras el vale exista, el
+    // backend sigue devolviendo la sesión del suplantado.
     try {
-      const r = await authApi.refresh();
+      const r = await authApi.stopImpersonation();
       setAccessToken(r.accessToken);
     } catch {
       /* ignore */

@@ -8,7 +8,11 @@ import { env } from '../../config/env'
 import { PASSWORD_RESET_TTL_MS, resetTtlMs, ttlLabel } from '../../common/password-reset-ttl'
 
 /** Token pair returned to the client. */
-export type Tokens = { accessToken: string; refreshToken: string }
+export type Tokens = { accessToken: string; refreshToken: string; userId: string }
+
+/** Cuánto dura una suplantación antes de volver sola a la sesión del admin. */
+export const IMPERSONATION_TTL = '30m'
+export const IMPERSONATION_TTL_MS = 30 * 60 * 1000
 
 @Injectable()
 export class AuthService {
@@ -161,6 +165,57 @@ export class AuthService {
     ])
   }
 
+  /**
+   * Vale de suplantación: dice QUIÉN suplanta a QUIÉN, nada más.
+   *
+   * Va en cookie httpOnly aparte de la de sesión, que sigue siendo la del
+   * admin. Antes la suplantación vivía sólo en un token en memoria del
+   * navegador: al recargar la página, la app pedía sesión con la cookie del
+   * admin y le devolvían la del admin — volvías a ser tú sin ningún aviso.
+   *
+   * Deliberadamente NO es un refresh token del suplantado: no da acceso por
+   * sí solo. En cada renovación se comprueba contra la sesión real de quien
+   * pide, así que el vale sin la cookie del admin no vale nada.
+   */
+  async signImpersonationTicket(adminId: string, targetId: string): Promise<string> {
+    return this.jwt.signAsync(
+      { imp: true, adminId, targetId },
+      { secret: env.JWT_SECRET, expiresIn: IMPERSONATION_TTL },
+    )
+  }
+
+  /**
+   * Convierte el vale en un access token del suplantado, si sigue valiendo.
+   *
+   * `sessionUserId` es el dueño real de la cookie de sesión. Que tengan que
+   * coincidir es lo que impide que un vale olvidado en el navegador sirva
+   * para otra persona que inicie sesión después en el mismo equipo.
+   */
+  async accessTokenParaSuplantacion(vale: string, sessionUserId: string): Promise<string | null> {
+    let datos: { imp?: boolean; adminId?: string; targetId?: string }
+    try {
+      datos = await this.jwt.verifyAsync(vale, { secret: env.JWT_SECRET })
+    } catch {
+      return null // caducado o manipulado: se sigue como la sesión de siempre
+    }
+    if (!datos?.imp || datos.adminId !== sessionUserId || !datos.targetId) return null
+
+    const [admin, target] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: datos.adminId } }),
+      this.prisma.user.findUnique({ where: { id: datos.targetId } }),
+    ])
+    // El rol se vuelve a mirar en cada renovación: si a alguien le quitan el
+    // admin mientras está suplantando, deja de poder renovarla.
+    const esAdmin = admin?.role === 'admin' || (admin?.extraRoles ?? []).includes('admin')
+    if (!admin || !esAdmin || admin.disabledAt || admin.deletedAt) return null
+    if (!target || target.disabledAt || target.deletedAt) return null
+
+    return this.jwt.signAsync(
+      { sub: target.id, email: target.email, role: target.role, impersonatorId: admin.id, actAs: target.id },
+      { secret: env.JWT_SECRET, expiresIn: env.JWT_EXPIRES_IN },
+    )
+  }
+
   private async issueTokens(user: { id: string; email: string; role: string }): Promise<Tokens> {
     const accessToken = await this.jwt.signAsync(
       { sub: user.id, email: user.email, role: user.role },
@@ -179,6 +234,6 @@ export class AuthService {
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       },
     })
-    return { accessToken, refreshToken }
+    return { accessToken, refreshToken, userId: user.id }
   }
 }

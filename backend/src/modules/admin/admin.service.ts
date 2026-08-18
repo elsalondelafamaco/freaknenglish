@@ -12,6 +12,7 @@ import { NotificationsService } from '../notifications/notifications.service'
 import { SchedulingService } from '../scheduling/scheduling.service'
 import { ADMIN_RESET_TTL_MS, INVITE_TTL_MS, resetTtlMs, ttlLabel } from '../../common/password-reset-ttl'
 import { SlotsService, SlotRef } from '../scheduling/slots.service'
+import { AuthService, IMPERSONATION_TTL } from '../auth/auth.service'
 import { validateQuestion } from '../learning/checkpoint-questions'
 
 @Injectable()
@@ -31,6 +32,7 @@ export class AdminService {
     private notificationsSvc: NotificationsService,
     private schedulingSvc: SchedulingService,
     private slotsSvc: SlotsService,
+    private auth: AuthService,
   ) {}
 
   private async resolveExistingUserId(idOrAlias: string): Promise<string> {
@@ -1001,9 +1003,12 @@ export class AdminService {
     await this.prisma.impersonationLog.create({ data: { adminId, targetId } }).catch(() => null)
     const accessToken = await this.jwt.signAsync(
       { sub: target.id, role: target.role, impersonatorId: adminId, actAs: target.id },
-      { expiresIn: '30m' },
+      { expiresIn: IMPERSONATION_TTL },
     )
-    return { accessToken, target: { id: target.id, fullName: target.fullName, role: target.role } }
+    // El vale es lo que hace que la suplantación aguante una recarga; el
+    // controlador lo guarda en cookie httpOnly. Ver auth.service.
+    const ticket = await this.auth.signImpersonationTicket(adminId, target.id)
+    return { accessToken, ticket, target: { id: target.id, fullName: target.fullName, role: target.role } }
   }
 
   // ────────────────────────────────────────────────────────────────────────

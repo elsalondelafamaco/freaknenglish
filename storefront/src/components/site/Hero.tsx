@@ -2,9 +2,12 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { useSiteContent } from "@/lib/site-content";
-import { SiteImage } from "./SiteImage";
 import { Marquee, Reveal } from "./anim";
 import { TESTIMONIAL_ITEMS } from "./Testimonials";
+// Imagen del rediseño (Figma): por decisión de Daniel el hero usa esta foto
+// fija del bundle — NO el slot `hero-image` del admin (que hoy tiene la foto
+// antigua del estudio). Cuando el admin suba la foto nueva, volver a SiteImage.
+import heroImg from "@/assets/hero-student.jpg";
 
 const TICKER = [
   "CLASES 1 A 1 EN VIVO",
@@ -24,12 +27,7 @@ export function Hero() {
     <section className="relative flex min-h-[720px] flex-col overflow-hidden bg-brand-ink lg:h-[100svh] lg:max-h-[1000px]">
       {/* Fondo: foto + tratamientos de legibilidad (scrim, gradientes, calidez) */}
       <div className="absolute inset-0">
-        <SiteImage
-          slot="hero-image"
-          alt=""
-          loading="eager"
-          className="h-full w-full object-cover"
-        />
+        <img src={heroImg} alt="" loading="eager" className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-brand-yellow/5 mix-blend-soft-light" />
         <div className="absolute inset-0 bg-black/35" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-transparent [background-size:100%_30%] bg-no-repeat" />

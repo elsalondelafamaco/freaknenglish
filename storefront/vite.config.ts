@@ -33,7 +33,20 @@ export default defineConfig({
   // defaults Nitro to `cloudflare-module`; this top-level `nitro.preset` override
   // is the documented way to hard-pin the target outside a Lovable build, so the
   // build emits a .output/server/index.mjs that opens an HTTP listener on PORT.
-  nitro: { preset: "node-server" },
+  //
+  // `LANDING_PREVIEW=1` (deploy manual a Vercel en dominio secundario) cambia el
+  // target a `vercel` y proxya /api/v1 hacia la API de producción, para que el
+  // preview cargue el contenido real del CMS sin pelear con CORS. Se compila con
+  // `VITE_API_URL=/api/v1`. El build normal de Railway no se ve afectado.
+  nitro:
+    process.env.LANDING_PREVIEW === "1"
+      ? {
+          preset: "vercel",
+          routeRules: {
+            "/api/v1/**": { proxy: "https://api.freaknenglish.com/api/v1/**" },
+          },
+        }
+      : { preset: "node-server" },
   vite: {
     ...(apiProxyTarget
       ? {

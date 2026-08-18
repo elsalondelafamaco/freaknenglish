@@ -217,6 +217,36 @@
 
         // Freakn Activity tracking (extra-activity)
         var freaknAnswers = [];
+        /* Reporte progresivo (plataforma Freakn'). El resultado sólo se
+           mandaba en la pantalla final: una actividad empezada y no terminada
+           no dejaba constancia de nada. Se engancha en el push del array para
+           no depender de dónde apunte cada archivo sus respuestas. */
+        var __freaknTotal = 20;
+        function __freaknReportarParcial() {
+            try {
+                FreaknActivity.submit({
+                    activityId: "extra-activity",
+                    title: document.title,
+                    score: freaknAnswers.filter(function (a) { return a.correct; }).length,
+                    maxScore: __freaknTotal || freaknAnswers.length,
+                    answers: freaknAnswers.slice()
+                });
+            } catch (e) {}
+        }
+        /* OJO: tiene que ser NO enumerable. Como propiedad normal, el array
+           deja de ser clonable y `postMessage` revienta con DataCloneError —
+           que el puente se traga en silencio. Resultado: la actividad dejaría
+           de guardar resultados del todo, incluido el envío final. */
+        Object.defineProperty(freaknAnswers, "push", {
+            value: function () {
+                var n = Array.prototype.push.apply(this, arguments);
+                __freaknReportarParcial();
+                return n;
+            },
+            writable: true,
+            enumerable: false,
+            configurable: true
+        });
         function registrarRespuesta(id, pregunta, respuesta, acerto, esperada) {
             if (freaknAnswers.some(function (a) { return a.id === id; })) return; // 1er intento
             freaknAnswers.push({ id: id, question: pregunta, answer: respuesta, correct: acerto, expected: esperada });
@@ -327,6 +357,8 @@
                 });
                 loadQuestionL2();
             }
+        
+            if (window.__freaknSlide) window.__freaknSlide(slideNum);
         }
 
         function updateScoreDisplays() {
@@ -560,5 +592,47 @@
         };
       })();
     </script>
+
+<script>
+    /* Memoria de posición de la actividad extra (plataforma Freakn'). */
+    (function () {
+        window.__freaknExtraB = true;
+        /* Slides que NO se pueden retomar: el nav() los enseña pero es el
+           código de alrededor el que los rellena (la pregunta, el marcador
+           final). Se retoma en el último slide seguro anterior. */
+        var INSEGUROS = ["5"];
+        function esInseguro(v) {
+            for (var i = 0; i < INSEGUROS.length; i++) {
+                if (String(INSEGUROS[i]) === String(v)) return true;
+            }
+            return false;
+        }
+        window.__freaknSlide = function (posicion) {
+            if (esInseguro(posicion)) return;
+            try {
+                parent.postMessage({
+                    source: "freakn-lesson",
+                    type: "freakn:slide",
+                    payload: { slide: posicion }
+                }, "*");
+            } catch (e) {}
+        };
+        window.addEventListener("load", function () {
+            var g = window.__freaknSlideInicial;
+            if (g === undefined || g === null || g === "") return;
+            var destino = /^[0-9]+$/.test(String(g)) ? Number(g) : g;
+            if (destino === 0 || esInseguro(destino)) return;
+            /* Salvaguarda: si el slide guardado ya no existe —porque la
+               actividad se editó, o porque la posición viene de una versión
+               anterior— nav() apaga todos y no enciende ninguno, y el alumno
+               se encuentra la pantalla en blanco. Si eso pasa, se deshace. */
+            var activo = document.querySelector(".slide-container.active, .slide.active");
+            try { nav(destino); } catch (e) {}
+            if (!document.querySelector(".slide-container.active, .slide.active") && activo) {
+                activo.classList.add("active");
+            }
+        });
+    })();
+</script>
 </body>
 </html>

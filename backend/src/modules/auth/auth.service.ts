@@ -10,9 +10,17 @@ import { PASSWORD_RESET_TTL_MS, resetTtlMs, ttlLabel } from '../../common/passwo
 /** Token pair returned to the client. */
 export type Tokens = { accessToken: string; refreshToken: string; userId: string }
 
-/** Cuánto dura una suplantación antes de volver sola a la sesión del admin. */
-export const IMPERSONATION_TTL = '30m'
-export const IMPERSONATION_TTL_MS = 30 * 60 * 1000
+/**
+ * Cuánto dura una suplantación antes de volver sola a la sesión del admin.
+ *
+ * Una hora: media se quedaba corta para revisar la cuenta de un profesor y
+ * caducaba a media revisión, sin más aviso que volver a ser admin de golpe.
+ * El vale sigue comprobándose en cada renovación (rol, baneos, que la sesión
+ * siga siendo la del mismo admin), así que alargarlo no relaja esos controles
+ * — sólo el plazo antes de tener que volver a entrar.
+ */
+export const IMPERSONATION_TTL = '1h'
+export const IMPERSONATION_TTL_MS = 60 * 60 * 1000
 
 @Injectable()
 export class AuthService {

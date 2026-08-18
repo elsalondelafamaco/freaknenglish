@@ -325,9 +325,9 @@ function AdminUserDetail() {
           <DialogHeader>
             <DialogTitle>¿Entrar como {user.fullName}?</DialogTitle>
             <DialogDescription>
-              Vas a ver la plataforma con su cuenta y sus permisos durante 30
-              minutos. Lo que hagas queda registrado a su nombre. Para volver a
-              tu sesión, usa el botón de la barra amarilla de arriba.
+              Vas a ver la plataforma con su cuenta y sus permisos durante una
+              hora. Lo que hagas queda registrado a su nombre. Para volver a tu
+              sesión, usa el botón de la barra amarilla de arriba.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

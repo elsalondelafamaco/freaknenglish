@@ -992,7 +992,7 @@ export class AdminService {
   }
 
   /**
-   * Genera un JWT de impersonación que dura 30 min y registra log de auditoría.
+   * Genera un JWT de impersonación (ver IMPERSONATION_TTL) y registra log de auditoría.
    * Claim adicional `actAs` + `impersonatorId` para que el frontend pueda
    * mostrar el banner y permitir regresar.
    */

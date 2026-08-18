@@ -129,11 +129,11 @@ function PricingWhatsAppFallback() {
         <Reveal delay={120}>
           <div className="shadow-hard mx-auto mt-14 max-w-2xl border-2 border-brand-ink bg-brand-cream p-10 text-center [--hard-color:var(--brand-ink)]">
             <h3 className="font-display text-3xl font-bold text-brand-ink">
-              Cuéntanos tu meta y te armamos el plan perfecto
+              Escríbenos a WhatsApp si tienes preguntas
             </h3>
             <p className="mx-auto mt-3 max-w-md text-[15px] leading-relaxed text-brand-ink/70">
-              Escríbenos por WhatsApp y en minutos te compartimos los planes, precios y
-              horarios disponibles. Sin esperas, con una persona real.
+              En minutos te compartimos los planes, precios y horarios disponibles.
+              Sin esperas, con una persona real.
             </p>
             <a
               href={SALES_WHATSAPP_URL}

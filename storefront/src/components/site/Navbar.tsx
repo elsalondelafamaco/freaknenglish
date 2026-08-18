@@ -5,7 +5,6 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
 import { settingsApi } from "@/lib/api/endpoints";
 import { Logo } from "./Logo";
-import { ThemeToggle } from "@/components/app/ThemeToggle";
 import { WhatsAppIcon } from "./WhatsAppIcon";
 import { homePathFor } from "@/lib/roles";
 import { useScrolled } from "./anim";
@@ -18,10 +17,11 @@ const NAV = [
 ];
 
 /**
- * Nav de la landing 2026: vive SOBRE la foto oscura del hero (texto claro,
- * hairline sutil) y al hacer scroll se compacta con fondo tinta. La "puerta"
- * de estudiantes (Inicia Sesión / Hola, {nombre}) mantiene posición y forma
- * en ambos estados para que los que entran a diario nunca la busquen.
+ * Nav de la landing 2026: links en la tipografía display del botón (Bricolage
+ * bold, mayúsculas) con índice amarillo, y la puerta de estudiantes como
+ * bloque de dos líneas ("¿Ya eres estudiante?" + "Inicia Sesión →"). Vive
+ * sobre la foto del hero y se compacta con fondo tinta al hacer scroll.
+ * Sin ThemeToggle aquí: se perdía sobre la foto (sigue en el portal).
  */
 export function Navbar() {
   const [open, setOpen] = useState(false);
@@ -34,20 +34,6 @@ export function Navbar() {
   const c = contactQ.data;
   const waHref = c ? `https://wa.me/${c.whatsappNumber}?text=${encodeURIComponent(c.whatsappMessage)}` : "https://wa.me/573000000000";
   const scrolled = useScrolled(90);
-
-  const authPill = (
-    <Link
-      to={isAuthenticated ? miPortal : "/login"}
-      className={cn(
-        "inline-flex items-center gap-2 rounded-full border-[1.5px] font-semibold transition-all duration-200",
-        scrolled ? "px-5 py-2 text-[14px]" : "px-5 py-2.5 text-[15px]",
-        "border-white/40 text-white hover:border-brand-yellow hover:text-brand-yellow",
-      )}
-    >
-      <span>{isAuthenticated ? (firstName ? `Hola, ${firstName}` : "Mi cuenta") : "Inicia Sesión"}</span>
-      <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
-    </Link>
-  );
 
   return (
     <header
@@ -68,36 +54,49 @@ export function Navbar() {
           <Logo className={cn("w-auto transition-all duration-300", scrolled ? "h-7" : "h-8 md:h-9")} />
         </Link>
 
-        <nav className="hidden items-center gap-9 lg:flex">
+        {/* Links en la tipografía del botón (display bold) con índice amarillo */}
+        <nav className="hidden items-center gap-10 lg:flex">
           {NAV.map((item) => (
             <a
               key={item.href}
               href={item.href}
-              className="group relative text-[15px] font-semibold text-white/85 transition-colors hover:text-white"
+              className="group relative font-display text-[14px] font-bold uppercase tracking-[0.05em] text-brand-cream/90 transition-colors hover:text-white"
             >
               {item.label}
               {/* subrayado amarillo que entra de izquierda a derecha */}
-              <span className="absolute -bottom-1 left-0 h-0.5 w-0 bg-brand-yellow transition-all duration-200 group-hover:w-full" />
+              <span className="absolute -bottom-1.5 left-0 h-0.5 w-0 bg-brand-yellow transition-all duration-200 group-hover:w-full" />
             </a>
           ))}
         </nav>
 
-        <div className="hidden items-center gap-5 lg:flex">
+        <div className="hidden items-center gap-7 lg:flex">
           <a
             href={waHref}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-white/75 transition-colors hover:text-white"
+            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-white/70 transition-colors hover:text-white"
           >
             <WhatsAppIcon className="size-3.5 text-[#25D366]" />
-            ¿Dudas? Escríbenos
+            Escríbenos
           </a>
-          <ThemeToggle className="border-white/25 bg-transparent text-white" />
-          {authPill}
+          {/* Puerta de estudiantes: pregunta arriba, acción abajo */}
+          <Link
+            to={isAuthenticated ? miPortal : "/login"}
+            className="group block text-right"
+          >
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-white/55 transition-colors group-hover:text-white/75">
+              {isAuthenticated ? "Tu cuenta" : "¿Ya eres estudiante?"}
+            </span>
+            <span className="mt-0.5 inline-flex items-center gap-1.5 font-display text-[16px] font-bold uppercase tracking-[0.02em] text-brand-cream">
+              <span className="border-b-2 border-brand-yellow pb-px transition-colors group-hover:border-white group-hover:text-white">
+                {isAuthenticated ? (firstName ? `Hola, ${firstName}` : "Mi cuenta") : "Inicia Sesión"}
+              </span>
+              <ArrowRight className="size-4 text-brand-yellow transition-transform duration-200 group-hover:translate-x-1" />
+            </span>
+          </Link>
         </div>
 
-        <div className="-mr-2 flex items-center gap-1 lg:hidden">
-          <ThemeToggle className="border-0 bg-transparent text-white" />
+        <div className="-mr-2 flex items-center lg:hidden">
           <button
             onClick={() => setOpen((v) => !v)}
             className="rounded-xl border-[1.5px] border-white/40 p-2 text-white hover:border-brand-yellow"
@@ -111,29 +110,30 @@ export function Navbar() {
       {open ? (
         <div className="mx-4 border-2 border-brand-ink bg-brand-cream p-5 shadow-hard lg:hidden">
           <div className="flex flex-col gap-4">
-            {NAV.map((item, i) => (
+            {NAV.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className="flex items-baseline gap-3 font-display text-xl font-extrabold uppercase text-brand-ink"
+                className="font-display text-xl font-extrabold uppercase text-brand-ink"
               >
-                <span className="text-xs font-semibold text-brand-ink/50">
-                  <span className="text-brand-yellow">(</span>0{i + 1}
-                  <span className="text-brand-yellow">)</span>
-                </span>
                 {item.label}
               </a>
             ))}
             <hr className="border-brand-ink/15" />
-            <Link
-              to={isAuthenticated ? miPortal : "/login"}
-              onClick={() => setOpen(false)}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-ink py-3 font-semibold text-brand-cream"
-            >
-              {isAuthenticated ? "Ir a mi cuenta" : "Inicia Sesión"}
-              <ArrowRight className="size-4" />
-            </Link>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-ink/55">
+                {isAuthenticated ? "Tu cuenta" : "¿Ya eres estudiante?"}
+              </p>
+              <Link
+                to={isAuthenticated ? miPortal : "/login"}
+                onClick={() => setOpen(false)}
+                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-ink py-3 font-display font-bold uppercase text-brand-cream"
+              >
+                {isAuthenticated ? "Ir a mi cuenta" : "Inicia Sesión"}
+                <ArrowRight className="size-4" />
+              </Link>
+            </div>
           </div>
         </div>
       ) : null}

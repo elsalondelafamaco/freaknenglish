@@ -38,9 +38,7 @@ export function HowItWorks() {
                 Así es como empiezas
                 <br className="hidden lg:block" /> a hablar inglés
                 <br className="hidden lg:block" /> desde el{" "}
-                <span className="text-brand-yellow [-webkit-text-stroke:1.5px_var(--brand-ink)]">
-                  día 1.
-                </span>
+                <span className="marker-highlight">día 1.</span>
               </h2>
             </div>
             <p className="max-w-[320px] text-[15px] leading-relaxed text-brand-ink/70">
@@ -58,7 +56,7 @@ export function HowItWorks() {
               {STEPS.map((s, i) => (
                 <div key={s} className="flex items-center gap-9">
                   <div className="flex items-center gap-3">
-                    <span className="font-display text-[32px] font-extrabold text-brand-yellow [-webkit-text-stroke:1px_var(--brand-ink)]">
+                    <span className="font-display text-[32px] font-extrabold text-brand-yellow [text-shadow:2px_2px_0_var(--brand-ink)]">
                       0{i + 1}.
                     </span>
                     <span className="font-display text-[16px] font-bold uppercase tracking-[0.01em] text-brand-ink">

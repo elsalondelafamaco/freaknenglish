@@ -31,9 +31,7 @@ export function Faq() {
             Si tienes
             <br className="hidden lg:block" /> preguntas,
             <br className="hidden lg:block" /> tenemos{" "}
-            <span className="text-brand-yellow [-webkit-text-stroke:1.5px_var(--brand-ink)]">
-              respuestas.
-            </span>
+            <span className="marker-highlight">respuestas.</span>
           </h2>
           <p className="mt-5 max-w-[340px] text-[15px] leading-relaxed text-brand-ink/70">
             Todo lo que necesitas saber sobre FreaknEnglish y cómo entregamos resultados.
@@ -100,9 +98,7 @@ function FaqItem({
         <span
           className={cn(
             "shrink-0 font-display text-[26px] font-extrabold leading-none transition-transform duration-300",
-            open
-              ? "rotate-45 text-brand-yellow [-webkit-text-stroke:1px_var(--brand-ink)]"
-              : "text-brand-ink",
+            open ? "rotate-45 text-brand-yellow [text-shadow:1.5px_1.5px_0_var(--brand-ink)]" : "text-brand-ink",
           )}
         >
           +

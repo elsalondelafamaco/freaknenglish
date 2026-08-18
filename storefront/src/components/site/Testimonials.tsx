@@ -1,9 +1,8 @@
 import { useRef, useState, type CSSProperties, type PointerEvent } from "react";
-import { ArrowLeft, ArrowRight, Play } from "lucide-react";
+import { ArrowLeft, ArrowRight, Pause, Play } from "lucide-react";
 import { useSiteContent } from "@/lib/site-content";
 import { cn } from "@/lib/utils";
 import { MediaThumb } from "./MediaThumb";
-import { VideoModal } from "./VideoModal";
 import { useReveal } from "./anim";
 import { TickerBand } from "./TickerBand";
 
@@ -62,7 +61,8 @@ const CARD_GAP = 28;
  */
 export function Testimonials() {
   const { media, testimonials } = useSiteContent();
-  const [video, setVideo] = useState<{ src: string; title: string } | null>(null);
+  // Un solo video sonando a la vez: reproducir uno detiene el anterior.
+  const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
 
@@ -159,7 +159,8 @@ export function Testimonials() {
                 imageSlot={item.imageSlot}
                 videoUrl={videoUrl}
                 rebel={i === 1}
-                onPlay={() => videoUrl && setVideo({ src: videoUrl, title: nombre })}
+                playing={playingIndex === i}
+                onToggle={() => setPlayingIndex((v) => (v === i ? null : i))}
               />
             );
           })}
@@ -173,21 +174,16 @@ export function Testimonials() {
           />
         </div>
 
-        <p className="mt-10 text-center text-[13px] font-semibold uppercase tracking-[0.16em] text-brand-cream/60">
-          <span className="text-brand-yellow">✦</span> +2000 Estudiantes{" "}
-          <span className="text-brand-yellow">✦</span> +20 Países{" "}
-          <span className="text-brand-yellow">✦</span> Clases 1 a 1{" "}
-          <span className="text-brand-yellow">✦</span>
-        </p>
       </div>
-      {video ? <VideoModal src={video.src} title={video.title} onClose={() => setVideo(null)} /> : null}
     </section>
   );
 }
 
 /**
  * Tarjeta vertical estilo referencia: chips arriba, quote como título y el
- * video (vertical) llenando el resto. Hover: el video se reproduce muteado.
+ * video (vertical) llenando el resto. Hover: preview muteado. Click: se
+ * reproduce AHÍ MISMO con sonido (los videos son 9:16 — en un modal quedaban
+ * con franjas negras, así que el player es la propia tarjeta).
  */
 function VideoCard({
   index,
@@ -197,7 +193,8 @@ function VideoCard({
   imageSlot,
   videoUrl,
   rebel,
-  onPlay,
+  playing,
+  onToggle,
 }: {
   index: number;
   quote: string;
@@ -206,7 +203,8 @@ function VideoCard({
   imageSlot: string;
   videoUrl?: string;
   rebel: boolean;
-  onPlay: () => void;
+  playing: boolean;
+  onToggle: () => void;
 }) {
   const ref = useReveal<HTMLDivElement>(0.15);
   const [hover, setHover] = useState(false);
@@ -247,47 +245,72 @@ function VideoCard({
         </p>
 
         {/* Video vertical llenando el resto de la tarjeta */}
-        <div className="relative mx-3 mb-3 flex-1 overflow-hidden">
-          <MediaThumb
-            imageSlot={imageSlot}
-            videoUrl={videoUrl}
-            alt={nombre}
-            className={cn(
-              "absolute inset-0 h-full w-full object-cover transition-all duration-500",
-              hover && videoUrl ? "opacity-0" : "opacity-100 group-hover:scale-[1.03]",
-            )}
-          />
-          {/* Preview muteado al hover (el modal reproduce con sonido) */}
-          {hover && videoUrl ? (
+        <div
+          className="relative mx-3 mb-3 flex-1 cursor-pointer overflow-hidden"
+          onClick={videoUrl ? onToggle : undefined}
+        >
+          {playing && videoUrl ? (
+            /* Player inline CON sonido — la tarjeta es el reproductor */
             <video
               src={videoUrl}
-              muted
               autoPlay
-              loop
               playsInline
+              onEnded={onToggle}
               className="absolute inset-0 h-full w-full object-cover"
             />
-          ) : null}
+          ) : (
+            <>
+              <MediaThumb
+                imageSlot={imageSlot}
+                videoUrl={videoUrl}
+                alt={nombre}
+                className={cn(
+                  "absolute inset-0 h-full w-full object-cover transition-all duration-500",
+                  hover && videoUrl ? "opacity-0" : "opacity-100 group-hover:scale-[1.03]",
+                )}
+              />
+              {/* Preview muteado al hover (el click activa el sonido) */}
+              {hover && videoUrl ? (
+                <video
+                  src={videoUrl}
+                  muted
+                  autoPlay
+                  loop
+                  playsInline
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : null}
+            </>
+          )}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
           {videoUrl ? (
             <>
-              <button
-                onClick={onPlay}
-                className={cn(
-                  "shadow-hard press-hard absolute left-1/2 top-1/2 flex size-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-brand-ink bg-brand-yellow transition-opacity duration-300 [--hard-x:4px] [--hard-color:var(--brand-ink)]",
-                  hover && "opacity-0",
+              {!playing ? (
+                <span
+                  className={cn(
+                    "shadow-hard pointer-events-none absolute left-1/2 top-1/2 flex size-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-brand-ink bg-brand-yellow transition-opacity duration-300 [--hard-x:4px] [--hard-color:var(--brand-ink)]",
+                    hover && "opacity-0",
+                  )}
+                >
+                  <Play className="size-6 translate-x-0.5 fill-brand-ink text-brand-ink" />
+                </span>
+              ) : null}
+              <span className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-full bg-white/95 px-4 py-2 text-[12px] font-semibold text-brand-ink">
+                {playing ? (
+                  <>
+                    Pausar <Pause className="size-3.5" />
+                  </>
+                ) : hover ? (
+                  <>
+                    Escuchar con sonido <ArrowRight className="size-3.5" />
+                  </>
+                ) : (
+                  <>
+                    Ver testimonio <ArrowRight className="size-3.5" />
+                  </>
                 )}
-                aria-label={`Reproducir testimonio de ${nombre}`}
-              >
-                <Play className="size-6 translate-x-0.5 fill-brand-ink text-brand-ink" />
-              </button>
-              <button
-                onClick={onPlay}
-                className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-full bg-white/95 px-4 py-2 text-[12px] font-semibold text-brand-ink transition-transform duration-200 hover:scale-[1.04]"
-              >
-                Ver testimonio <ArrowRight className="size-3.5" />
-              </button>
+              </span>
             </>
           ) : null}
 

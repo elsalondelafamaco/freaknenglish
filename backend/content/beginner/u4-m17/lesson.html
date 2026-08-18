@@ -433,7 +433,7 @@
            marcador final). Saltar directo a ellos deja la plantilla vacía y
            la lección bloqueada. Ni se guardan ni se restauran, así que la
            posición se queda en el último slide seguro anterior. */
-        var INSEGUROS = [];
+        var INSEGUROS = ["5"];
         function esInseguro(v) {
             for (var i = 0; i < INSEGUROS.length; i++) {
                 if (String(INSEGUROS[i]) === String(v)) return true;

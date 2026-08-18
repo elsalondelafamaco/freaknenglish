@@ -405,7 +405,7 @@
                 <h3 id="final-status" class="text-5xl mb-6">NOT BAD...</h3>
                 <p id="final-comment" class="text-2xl leading-relaxed mb-10">You've established your future. Now the only thing left is to actually wake up before noon like Gelmy says, and do it!</p>
                 <div class="flex gap-4">
-                    <button class="btn-freak !bg-white" onclick="nav(4); loadQuestion(0);"><span>⬅️ BACK TO GAME</span></button>
+                    <button class="btn-freak !bg-white" onclick="nav('game'); loadQuestion();"><span>⬅️ BACK TO GAME</span></button>
                     <button class="btn-freak" onclick="location.reload()"><span>RESTART LESSON</span></button>
                 </div>
             </div>
@@ -740,7 +740,7 @@
            marcador final). Saltar directo a ellos deja la plantilla vacía y
            la lección bloqueada. Ni se guardan ni se restauran, así que la
            posición se queda en el último slide seguro anterior. */
-        var INSEGUROS = ["4"];
+        var INSEGUROS = ["4", "final", "game"];
         function esInseguro(v) {
             for (var i = 0; i < INSEGUROS.length; i++) {
                 if (String(INSEGUROS[i]) === String(v)) return true;

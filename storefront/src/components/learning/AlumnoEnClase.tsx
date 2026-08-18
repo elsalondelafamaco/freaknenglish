@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { GraduationCap, Users, X } from "lucide-react";
 import { classesApi, teachersApi } from "@/lib/api/endpoints";
@@ -55,13 +55,20 @@ export function useAlumnoEnClase(desdeUrl?: string) {
     }
   }, []);
 
-  // La URL manda: venir por "Ver contenido" del perfil del alumno es una
-  // elección explícita y pisa lo recordado.
+  // La URL se adopta cuando CAMBIA, no mientras difiera. La condición anterior
+  // era `desdeUrl !== recordado`, que se cumple para siempre en cuanto el profe
+  // elige a otro alumno: el efecto lo devolvía al de la URL en el mismo
+  // instante y el selector quedaba muerto. A partir de aquí manda `recordado`,
+  // que es lo que el profe eligió de último.
+  const urlAplicada = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (desdeUrl && desdeUrl !== recordado) elegir(desdeUrl);
-  }, [desdeUrl, recordado, elegir]);
+    if (desdeUrl && desdeUrl !== urlAplicada.current) {
+      urlAplicada.current = desdeUrl;
+      elegir(desdeUrl);
+    }
+  }, [desdeUrl, elegir]);
 
-  return { alumnoId: desdeUrl || recordado, elegir, listo };
+  return { alumnoId: recordado, elegir, listo };
 }
 
 export function BarraAlumnoEnClase({

@@ -38,9 +38,20 @@ function TeacherContent() {
   const { level: levelUrl, studentId: studentIdUrl } = Route.useSearch();
   const navigate = useNavigate();
   const level: EnglishLevel = levelUrl ?? "beginner";
-  const { alumnoId: studentId, elegir } = useAlumnoEnClase(studentIdUrl);
+  const { alumnoId: studentId, elegir: recordarAlumno } = useAlumnoEnClase(studentIdUrl);
   const setLevel = (id: EnglishLevel) =>
     navigate({ to: "/teacher/content", search: (s: any) => ({ ...s, level: id }), replace: true });
+  // Cambiar de alumno también tiene que tocar la URL, igual que en el visor del
+  // módulo: si no, se vuelve aquí desde un módulo con `?studentId=` puesto y la
+  // dirección seguiría anunciando al alumno anterior.
+  const elegir = (id: string) => {
+    recordarAlumno(id);
+    navigate({
+      to: "/teacher/content",
+      search: (s: any) => ({ ...s, studentId: id || undefined }),
+      replace: true,
+    });
+  };
 
   const modsQ = useQuery({
     queryKey: ["learning", "modules", level],

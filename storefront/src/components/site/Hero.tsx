@@ -44,12 +44,12 @@ export function Hero() {
         </Reveal>
 
         <Reveal delay={120}>
-          <h1 className="mt-5 font-display text-[44px] font-extrabold uppercase leading-[0.96] tracking-[-0.03em] text-brand-cream sm:text-6xl lg:text-[96px]">
+          <h1 className="mt-5 text-balance font-display text-[40px] font-extrabold uppercase leading-[0.98] tracking-[-0.03em] text-brand-cream sm:text-6xl lg:text-[96px] lg:leading-[0.96]">
             Speak English with
-            <br />
-            Confidence, in <span className="text-brand-yellow">Real</span>
-            <br />
-            Conversations.
+            <br className="hidden lg:block" />
+            {" "}Confidence, in <span className="text-brand-yellow">Real</span>
+            <br className="hidden lg:block" />
+            {" "}Conversations.
           </h1>
         </Reveal>
 
@@ -65,7 +65,7 @@ export function Hero() {
           <Link
             to="/"
             hash="precios"
-            className="shadow-hard press-hard mt-9 inline-flex items-center gap-3 rounded-[14px] bg-brand-cream px-9 py-5 font-display text-[17px] font-bold text-brand-ink lg:text-[18px]"
+            className="shadow-hard press-hard mt-9 inline-flex items-center gap-2.5 whitespace-nowrap rounded-[14px] bg-brand-cream px-6 py-4 font-display text-[15px] font-bold text-brand-ink lg:gap-3 lg:px-9 lg:py-5 lg:text-[18px]"
           >
             Comienza Hoy Tu Aprendizaje
             <ArrowRight className="size-5" />

@@ -48,8 +48,20 @@ export function HowItWorks() {
           </div>
         </Reveal>
 
-        {/* Riel de pasos */}
+        {/* Riel de pasos — vertical en móvil, horizontal en desktop */}
         <Reveal delay={120}>
+          <div className="mt-10 flex flex-col gap-4 lg:hidden">
+            {STEPS.map((s, i) => (
+              <div key={s} className="flex items-center gap-3">
+                <span className="font-display text-[26px] font-extrabold text-brand-yellow [text-shadow:2px_2px_0_var(--brand-ink)]">
+                  0{i + 1}.
+                </span>
+                <span className="font-display text-[15px] font-bold uppercase text-brand-ink">
+                  {s}
+                </span>
+              </div>
+            ))}
+          </div>
           <div className="relative mt-14 hidden items-center justify-center lg:flex">
             <div className="absolute inset-x-0 top-1/2 h-px bg-brand-ink/20" />
             <div className="relative flex items-center gap-9 bg-brand-cream px-8">

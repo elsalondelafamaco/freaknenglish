@@ -19,7 +19,7 @@ export function CtaFinal() {
             </p>
           </Reveal>
           <Reveal delay={120}>
-            <h2 className="mt-7 font-display text-5xl font-extrabold uppercase leading-[0.96] tracking-[-0.02em] text-brand-ink sm:text-7xl lg:text-[108px]">
+            <h2 className="mt-7 font-display text-[38px] font-extrabold uppercase leading-[0.96] tracking-[-0.02em] text-brand-ink sm:text-7xl lg:text-[108px]">
               Deja de traducir.
               <br />
               Empieza a{" "}
@@ -29,7 +29,7 @@ export function CtaFinal() {
           <Reveal delay={240}>
             <Link
               to="/checkout"
-              className="press-hard mt-12 inline-flex items-center gap-3 rounded-full bg-brand-ink px-12 py-6 font-display text-[18px] font-bold uppercase tracking-[0.03em] text-brand-yellow shadow-hard [--hard-x:7px] [--hard-color:white] lg:text-[20px]"
+              className="press-hard mt-12 inline-flex items-center gap-2.5 whitespace-nowrap rounded-full bg-brand-ink px-7 py-4 font-display text-[14px] font-bold uppercase tracking-[0.03em] text-brand-yellow shadow-hard [--hard-x:7px] [--hard-color:white] lg:gap-3 lg:px-12 lg:py-6 lg:text-[20px]"
             >
               Comienza Hoy Tu Aprendizaje
               <ArrowRight className="size-5" />

@@ -120,6 +120,16 @@ export function Navbar() {
                 {item.label}
               </a>
             ))}
+            <a
+              href={waHref}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setOpen(false)}
+              className="inline-flex items-center gap-2 text-[14px] font-semibold text-brand-ink"
+            >
+              <WhatsAppIcon className="size-4 text-[#25D366]" />
+              ¿Dudas? Escríbenos por WhatsApp
+            </a>
             <hr className="border-brand-ink/15" />
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-ink/55">

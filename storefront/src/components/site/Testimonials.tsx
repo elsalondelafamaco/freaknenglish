@@ -49,7 +49,6 @@ const TICKER = [
   "RESULTADOS QUE SE ESCUCHAN",
 ];
 
-const CARD_W = 380;
 const CARD_GAP = 28;
 
 /**
@@ -67,7 +66,12 @@ export function Testimonials() {
   const [progress, setProgress] = useState(0);
 
   const scrollByCard = (dir: 1 | -1) => {
-    trackRef.current?.scrollBy({ left: dir * (CARD_W + CARD_GAP), behavior: "smooth" });
+    const el = trackRef.current;
+    if (!el) return;
+    // Ancho real de la tarjeta (responsive en móvil), no una constante.
+    const card = el.querySelector<HTMLElement>("[data-card]");
+    const step = (card?.offsetWidth ?? 380) + CARD_GAP;
+    el.scrollBy({ left: dir * step, behavior: "smooth" });
   };
 
   const onTrackScroll = () => {
@@ -212,8 +216,9 @@ function VideoCard({
   return (
     <div
       ref={ref}
-      className="reveal-x shrink-0 snap-start"
-      style={{ "--reveal-delay": `${index * 110}ms`, width: CARD_W } as CSSProperties}
+      data-card
+      className="reveal-x w-[min(380px,85vw)] shrink-0 snap-start"
+      style={{ "--reveal-delay": `${index * 110}ms` } as CSSProperties}
     >
       <article
         onMouseEnter={() => setHover(true)}

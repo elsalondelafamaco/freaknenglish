@@ -30,8 +30,7 @@ function SectionHeader({ trm }: { trm?: number | null }) {
       <div className="mt-5 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-ink/60">
-            <span className="text-brand-yellow">(</span>03 — Planes que se adaptan a tus
-            necesidades<span className="text-brand-yellow">)</span>
+            Planes que se adaptan a tus necesidades
           </p>
           <h2 className="mt-5 font-display text-4xl font-extrabold uppercase leading-[1.02] tracking-[-0.02em] text-brand-ink sm:text-5xl lg:text-[68px]">
             Elige cuántos días a la

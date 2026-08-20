@@ -15,7 +15,7 @@ export function CtaFinal() {
         <div className="mx-auto flex max-w-[1440px] flex-col items-center px-5 text-center lg:px-16">
           <Reveal>
             <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-ink">
-              (05 — Empieza)
+              Empieza Hoy
             </p>
           </Reveal>
           <Reveal delay={120}>

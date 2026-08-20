@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
 import { settingsApi } from "@/lib/api/endpoints";
+import { useSiteContent } from "@/lib/site-content";
 import { Logo } from "./Logo";
 import { WhatsAppIcon } from "./WhatsAppIcon";
 import { homePathFor } from "@/lib/roles";
@@ -107,46 +108,136 @@ export function Navbar() {
         </div>
       </div>
 
-      {open ? (
-        <div className="mx-4 border-2 border-brand-ink bg-brand-cream p-5 shadow-hard lg:hidden">
-          <div className="flex flex-col gap-4">
-            {NAV.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className="font-display text-xl font-extrabold uppercase text-brand-ink"
-              >
-                {item.label}
-              </a>
-            ))}
-            <a
-              href={waHref}
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => setOpen(false)}
-              className="inline-flex items-center gap-2 text-[14px] font-semibold text-brand-ink"
-            >
-              <WhatsAppIcon className="size-4 text-[#25D366]" />
-              ¿Dudas? Escríbenos por WhatsApp
-            </a>
-            <hr className="border-brand-ink/15" />
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-ink/55">
-                {isAuthenticated ? "Tu cuenta" : "¿Ya eres estudiante?"}
-              </p>
-              <Link
-                to={isAuthenticated ? miPortal : "/login"}
-                onClick={() => setOpen(false)}
-                className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-ink py-3 font-display font-bold uppercase text-brand-cream"
-              >
-                {isAuthenticated ? "Ir a mi cuenta" : "Inicia Sesión"}
-                <ArrowRight className="size-4" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {open ? <MobileMenu onClose={() => setOpen(false)} isAuthenticated={isAuthenticated} miPortal={miPortal} waHref={waHref} /> : null}
     </header>
+  );
+}
+
+const MENU_ITEMS = [...NAV, { label: "FAQ", href: "#faq" }];
+
+/**
+ * Menú móvil 2026 (diseño de Figma): takeover completo en crema — la página
+ * "se voltea a su lado claro". Links gigantes numerados, puerta de Inicia
+ * Sesión, zona de estudiantes hacia el dashboard, WhatsApp y footer.
+ */
+function MobileMenu({
+  onClose,
+  isAuthenticated,
+  miPortal,
+  waHref,
+}: {
+  onClose: () => void;
+  isAuthenticated: boolean;
+  miPortal: string;
+  waHref: string;
+}) {
+  const { social } = useSiteContent();
+  // Scroll-lock mientras el takeover está abierto.
+  useEffect(() => {
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = "";
+    };
+  }, []);
+
+  const socials = [
+    { label: "Instagram", href: social.instagram },
+    { label: "Facebook", href: social.facebook },
+  ].filter((s): s is { label: string; href: string } => !!s.href);
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-brand-cream px-6 pb-8 lg:hidden">
+      {/* Barra superior propia: logo tinta + cerrar */}
+      <div className="flex items-center justify-between py-5">
+        <Link to="/" onClick={onClose} className="text-brand-ink" aria-label="FreaknEnglish">
+          <Logo className="h-8 w-auto" />
+        </Link>
+        <button
+          onClick={onClose}
+          className="rounded-xl border-[1.5px] border-brand-ink/35 p-2 text-brand-ink"
+          aria-label="Cerrar menú"
+        >
+          <X className="size-5" />
+        </button>
+      </div>
+
+      {/* Links gigantes numerados */}
+      <nav className="mt-8 flex flex-col gap-7">
+        {MENU_ITEMS.map((item, i) => (
+          <a
+            key={item.href}
+            href={item.href}
+            onClick={onClose}
+            className="flex items-baseline gap-3"
+          >
+            <span className="text-[13px] font-semibold text-brand-ink/50">
+              <span className="text-brand-yellow">(</span>0{i + 1}
+              <span className="text-brand-yellow">)</span>
+            </span>
+            <span className="font-display text-[30px] font-extrabold uppercase leading-none text-brand-ink">
+              {item.label}
+            </span>
+          </a>
+        ))}
+      </nav>
+
+      {!isAuthenticated ? (
+        <Link
+          to="/login"
+          onClick={onClose}
+          className="mt-9 inline-flex w-fit items-center gap-2 rounded-full border-[1.5px] border-brand-ink/40 px-6 py-3 text-[15px] font-semibold text-brand-ink"
+        >
+          Inicia Sesión <ArrowRight className="size-4" />
+        </Link>
+      ) : null}
+
+      <div className="mt-8 border-t border-brand-ink/15 pt-7">
+        <span className="inline-block rounded-full bg-brand-yellow px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-brand-ink">
+          Zona Estudiantes
+        </span>
+        <Link
+          to={isAuthenticated ? miPortal : "/login"}
+          onClick={onClose}
+          className="mt-3 flex items-center gap-2 font-display text-[24px] font-extrabold uppercase leading-none text-brand-ink"
+        >
+          Ir a mi Dashboard <ArrowRight className="size-5" />
+        </Link>
+        <p className="mt-2.5 max-w-[300px] text-[14px] leading-relaxed text-brand-ink/60">
+          Confirma tus clases, avanza en tus módulos y revisa tu calendario.
+        </p>
+      </div>
+
+      <div className="mt-8">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-ink/55">
+          ¿Alguna duda?
+        </p>
+        <a
+          href={waHref}
+          target="_blank"
+          rel="noreferrer"
+          onClick={onClose}
+          className="mt-2 inline-flex items-center gap-3 font-display text-[22px] font-bold text-brand-ink"
+        >
+          Escríbenos <ArrowRight className="size-5" />
+          <span className="inline-flex items-center gap-1.5 text-[13px] font-sans font-semibold text-brand-ink/60">
+            <WhatsAppIcon className="size-4 text-[#25D366]" /> WhatsApp
+          </span>
+        </a>
+      </div>
+
+      <div className="mt-auto flex items-center justify-between border-t border-brand-ink/15 pt-6 text-[11px] font-semibold uppercase tracking-[0.1em] text-brand-ink/55">
+        <span>© Freakn&apos; 2026</span>
+        <span className="flex gap-3">
+          {socials.length
+            ? socials.map((s, i) => (
+                <a key={s.label} href={s.href} target="_blank" rel="noreferrer" className="hover:text-brand-ink">
+                  {s.label}
+                  {i < socials.length - 1 ? " ·" : ""}
+                </a>
+              ))
+            : "Instagram · Facebook"}
+        </span>
+      </div>
+    </div>
   );
 }

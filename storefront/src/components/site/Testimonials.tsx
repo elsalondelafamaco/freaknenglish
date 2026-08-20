@@ -110,8 +110,7 @@ export function Testimonials() {
           <div>
             <div className="h-px w-full bg-brand-cream/25" />
             <p className="mt-5 text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-cream/70">
-              <span className="text-brand-yellow">(</span>02 — ¿Porqué nuestro Programa
-              Funciona?<span className="text-brand-yellow">)</span>
+              ¿Porqué nuestro Programa Funciona?
             </p>
             <h2 className="mt-5 font-display text-4xl font-extrabold uppercase leading-[1.02] tracking-[-0.02em] text-brand-cream sm:text-5xl lg:text-[64px]">
               Conoce los <span className="text-brand-yellow">Testimonios</span>

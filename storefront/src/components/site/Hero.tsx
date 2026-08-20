@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { useSiteContent } from "@/lib/site-content";
@@ -36,24 +36,35 @@ export function Hero() {
 
       {/* Copy — alineado a la derecha, estilo editorial */}
       <div className="relative mx-auto flex w-full max-w-[1440px] flex-1 flex-col items-center justify-center px-5 pt-28 text-center lg:items-end lg:px-16 lg:pt-24 lg:text-right">
-        <Reveal delay={0}>
+        <Reveal delay={950}>
           <p className="flex items-center justify-center gap-3 text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-cream lg:justify-end lg:text-[13px]">
             <span className="inline-block size-2 bg-brand-yellow" />
             Real English. Real Results.
           </p>
         </Reveal>
 
-        <Reveal delay={120}>
-          <h1 className="mt-5 text-balance font-display text-[40px] font-extrabold uppercase leading-[0.98] tracking-[-0.03em] text-brand-cream sm:text-6xl lg:text-[96px] lg:leading-[0.96]">
-            Speak English with
-            <br className="hidden lg:block" />
-            {" "}Confidence, in <span className="text-brand-yellow">Real</span>
-            <br className="hidden lg:block" />
-            {" "}Conversations.
-          </h1>
-        </Reveal>
+        {/* Mask-reveal: cada línea sube desde detrás de su máscara, en cascada,
+            justo cuando el preloader termina su wipe (~1.1s). */}
+        <h1 className="mt-5 font-display text-[36px] font-extrabold uppercase leading-[1.02] tracking-[-0.03em] text-brand-cream sm:text-6xl lg:text-[96px] lg:leading-[0.98]">
+          {[
+            <>Speak English with</>,
+            <>
+              Confidence, in <span className="text-brand-yellow">Real</span>
+            </>,
+            <>Conversations.</>,
+          ].map((line, i) => (
+            <span key={i} className="block overflow-hidden pb-[0.06em] mb-[-0.06em]">
+              <span
+                className="animate-line-up block"
+                style={{ "--line-delay": `${1000 + i * 130}ms` } as CSSProperties}
+              >
+                {line}
+              </span>
+            </span>
+          ))}
+        </h1>
 
-        <Reveal delay={240}>
+        <Reveal delay={1300}>
           <p className="mx-auto mt-7 max-w-md text-[16px] leading-relaxed text-white/85 lg:mx-0 lg:max-w-[470px] lg:text-[19px]">
             Clases <strong className="font-semibold text-white">1 a 1 en Vivo</strong> con
             profesores reales, conversaciones prácticas y feedback personalizado para que
@@ -61,7 +72,7 @@ export function Hero() {
           </p>
         </Reveal>
 
-        <Reveal delay={360}>
+        <Reveal delay={1420}>
           <Link
             to="/"
             hash="precios"
@@ -75,7 +86,7 @@ export function Hero() {
 
       {/* Fila inferior: rotador de testimonios + señal de scroll */}
       <div className="relative mx-auto flex w-full max-w-[1440px] items-end justify-between px-5 pb-20 pt-10 lg:px-16 lg:pb-24">
-        <Reveal delay={500} className="max-w-[440px]">
+        <Reveal delay={1550} className="max-w-[440px]">
           <TestimonialRotator />
         </Reveal>
         <div className="absolute bottom-20 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 lg:flex">

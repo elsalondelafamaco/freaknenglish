@@ -31,8 +31,7 @@ export function HowItWorks() {
           <div className="mt-5 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-ink/60">
-                <span className="text-brand-yellow">(</span>01 — ¿Cómo Funciona Freakn?
-                <span className="text-brand-yellow">)</span>
+                ¿Cómo Funciona Freakn?
               </p>
               <h2 className="mt-5 font-display text-4xl font-extrabold uppercase leading-[1.02] tracking-[-0.02em] text-brand-ink sm:text-5xl lg:text-[68px]">
                 Así es como empiezas

@@ -24,8 +24,7 @@ export function Faq() {
         <Reveal>
           <div className="h-px w-full bg-brand-ink/25 lg:hidden" />
           <p className="mt-5 text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-ink/60 lg:mt-0">
-            <span className="text-brand-yellow">(</span>04 — FAQ
-            <span className="text-brand-yellow">)</span>
+            Preguntas Frecuentes
           </p>
           <h2 className="mt-5 font-display text-4xl font-extrabold uppercase leading-[1.0] tracking-[-0.02em] text-brand-ink sm:text-5xl lg:text-[56px]">
             Si tienes

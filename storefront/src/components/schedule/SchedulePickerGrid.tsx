@@ -101,7 +101,7 @@ export function SchedulePickerGrid({
   };
 
   return (
-    <div className="overflow-x-auto rounded-3xl border border-brand-line bg-white p-4 shadow-soft">
+    <div className="shadow-hard overflow-x-auto border-2 border-brand-ink bg-white p-4">
       <div className="min-w-[640px]">
         <div className="grid" style={{ gridTemplateColumns: `72px repeat(${days.length}, 1fr)` }}>
           <div />
@@ -160,10 +160,10 @@ function HourRow({
             title={slotTimeRange(h, durationMin)}
             className={`m-0.5 flex h-11 items-center justify-center gap-1 rounded-xl border text-[11px] font-semibold transition ${
               isSel
-                ? "border-brand-ink bg-brand-ink text-white shadow-soft"
+                ? "border-brand-ink bg-brand-ink text-brand-cream"
                 : isAuto
-                  ? "border-brand-yellow bg-brand-yellow/25 text-brand-ink hover:bg-brand-yellow/50"
-                  : "border-brand-line bg-white text-brand-ink/60 hover:bg-brand-cream/50"
+                  ? "border-brand-ink/70 bg-brand-yellow/30 text-brand-ink hover:bg-brand-yellow/60"
+                  : "border-brand-line bg-white text-brand-ink/60 hover:border-brand-ink/40 hover:bg-brand-cream/60"
             }`}
           >
             {/* El rayito marca inicio inmediato, pero la hora siempre se ve. */}

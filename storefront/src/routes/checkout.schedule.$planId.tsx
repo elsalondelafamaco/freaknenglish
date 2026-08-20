@@ -107,16 +107,16 @@ function SchedulePicker() {
 
         <header className="mt-8 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-brand-ink/55">Paso 2 de 3 · Tu horario</p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-ink/60">Paso 2 de 3 · Tu horario</p>
+            <h1 className="mt-3 font-display text-4xl font-extrabold uppercase leading-[1.02] tracking-[-0.02em] text-brand-ink md:text-[46px]">
               Elige tus {need} clases de la semana
             </h1>
             <p className="mt-1 text-[15px] text-brand-ink/65">
               Clases de {cfg.durationMin} min. Este será tu horario fijo semanal.
             </p>
           </div>
-          <div className="rounded-2xl border border-brand-line bg-white px-4 py-3 text-center">
-            <div className="text-2xl font-bold text-brand-ink">{selected.length}/{need}</div>
+          <div className="shadow-hard border-2 border-brand-ink bg-white px-5 py-3 text-center [--hard-x:4px]">
+            <div className="font-display text-3xl font-extrabold text-brand-ink">{selected.length}/{need}</div>
             <div className="text-[11px] uppercase tracking-wide text-brand-ink/55">franjas elegidas</div>
           </div>
         </header>
@@ -151,7 +151,7 @@ function SchedulePicker() {
         </div>
 
         {complete && !assignable ? (
-          <div className="mt-4 flex items-start gap-3 rounded-2xl border border-brand-line bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink">
+          <div className="mt-4 flex items-start gap-3 border-2 border-brand-ink bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink">
             <Sparkles className="mt-0.5 size-4 shrink-0" />
             <p>
               Ese horario está muy solicitado 💛 Completa tu compra con total tranquilidad: nuestro equipo te
@@ -165,7 +165,7 @@ function SchedulePicker() {
           <button
             onClick={continueToPay}
             disabled={!complete}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-brand-ink px-8 text-sm font-semibold text-white transition hover:bg-brand-ink-soft disabled:cursor-not-allowed disabled:opacity-50"
+            className="shadow-hard press-hard inline-flex h-12 items-center justify-center gap-2 rounded-full bg-brand-ink px-8 font-display text-[14px] font-bold uppercase tracking-[0.04em] text-brand-cream disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none [--hard-x:5px]"
           >
             Continuar al pago <ArrowRight className="size-4" />
           </button>

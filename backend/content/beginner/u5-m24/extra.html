@@ -1373,7 +1373,9 @@
 </script>
 
 <script>
-    /* Memoria y reporte de la actividad extra (plataforma Freakn'). */
+    /* Reporte de la actividad extra (plataforma Freakn').
+       Sin memoria de posición: restaurarla reiniciaba el marcador y la
+       actividad se calificaba solo sobre el nivel retomado. */
     (function () {
         if (typeof game === "undefined" || !game || !game.slides) return;
         window.__freaknExtraA = true;
@@ -1406,48 +1408,12 @@
             game["loadL" + n] = function () {
                 var r = original.apply(this, arguments);
                 try {
-                    if (window.__freaknSlide) window.__freaknSlide("juego:" + n);
                     reportar();
                 } catch (e) {}
                 return r;
             };
         });
 
-        window.__freaknSlide = function (posicion) {
-            try {
-                parent.postMessage({
-                    source: "freakn-lesson",
-                    type: "freakn:slide",
-                    payload: { slide: posicion }
-                }, "*");
-            } catch (e) {}
-        };
-
-        /* Va después del window.onload que llama a game.init(): los oyentes
-           corren en el orden en que se registran y este se añade el último. */
-        window.addEventListener("load", function () {
-            var guardado = window.__freaknSlideInicial;
-            var m = /^juego:(\d+)$/.exec(String(guardado || ""));
-            if (!m) return;
-            var n = Number(m[1]);
-            var destino = game.slides.indexOf("slide-level" + n);
-            if (destino < 0 || typeof game["loadL" + n] !== "function") return;
-            try {
-                var actual = document.getElementById(game.slides[game.currentSlideIdx]);
-                if (actual) actual.classList.remove("active");
-                game.currentSlideIdx = destino;
-                var nuevo = document.getElementById(game.slides[destino]);
-                if (nuevo) nuevo.classList.add("active");
-                /* Lo mismo que destapa startGame(); sin esto se retoma sin
-                   barra de progreso ni marcador. */
-                var barra = document.getElementById("progressBarContainer");
-                var marcador = document.getElementById("scoreTracker");
-                if (barra) barra.style.display = "block";
-                if (marcador) marcador.style.display = "block";
-                game["l" + n + "Index"] = 0;
-                game["loadL" + n]();
-            } catch (e) {}
-        });
     })();
 </script>
 </body>

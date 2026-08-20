@@ -322,8 +322,6 @@
                 });
                 loadQuestionL2();
             }
-        
-            if (window.__freaknSlide) window.__freaknSlide(slideNum);
         }
 
         function updateScoreDisplays() {
@@ -600,47 +598,5 @@
         };
       })();
     </script>
-
-<script>
-    /* Memoria de posición de la actividad extra (plataforma Freakn'). */
-    (function () {
-        window.__freaknExtraB = true;
-        /* Slides que NO se pueden retomar: el nav() los enseña pero es el
-           código de alrededor el que los rellena (la pregunta, el marcador
-           final). Se retoma en el último slide seguro anterior. */
-        var INSEGUROS = ["5"];
-        function esInseguro(v) {
-            for (var i = 0; i < INSEGUROS.length; i++) {
-                if (String(INSEGUROS[i]) === String(v)) return true;
-            }
-            return false;
-        }
-        window.__freaknSlide = function (posicion) {
-            if (esInseguro(posicion)) return;
-            try {
-                parent.postMessage({
-                    source: "freakn-lesson",
-                    type: "freakn:slide",
-                    payload: { slide: posicion }
-                }, "*");
-            } catch (e) {}
-        };
-        window.addEventListener("load", function () {
-            var g = window.__freaknSlideInicial;
-            if (g === undefined || g === null || g === "") return;
-            var destino = /^[0-9]+$/.test(String(g)) ? Number(g) : g;
-            if (destino === 0 || esInseguro(destino)) return;
-            /* Salvaguarda: si el slide guardado ya no existe —porque la
-               actividad se editó, o porque la posición viene de una versión
-               anterior— nav() apaga todos y no enciende ninguno, y el alumno
-               se encuentra la pantalla en blanco. Si eso pasa, se deshace. */
-            var activo = document.querySelector(".slide-container.active, .slide.active");
-            try { nav(destino); } catch (e) {}
-            if (!document.querySelector(".slide-container.active, .slide.active") && activo) {
-                activo.classList.add("active");
-            }
-        });
-    })();
-</script>
 </body>
 </html>

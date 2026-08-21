@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common'
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import {
@@ -412,6 +412,43 @@ export class LearningService {
     })
   }
 
+  /** Material (links y PDFs) que su profesor le dejó a este estudiante. */
+  myStudentResources(userId: string) {
+    return this.prisma.studentResource.findMany({
+      where: { studentId: userId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true, kind: true, title: true, description: true, url: true,
+        contentType: true, sizeBytes: true, createdAt: true,
+        teacher: { select: { id: true, fullName: true } },
+      },
+    })
+  }
+
+  /**
+   * Reportes del estudiante. Sólo los publicados: sin `publishedAt` el reporte
+   * es un borrador del profe y no tiene por qué verse todavía.
+   */
+  myReports(userId: string) {
+    return this.prisma.studentReport.findMany({
+      where: { studentId: userId, publishedAt: { not: null } },
+      orderBy: { publishedAt: 'desc' },
+      select: {
+        id: true, periodLabel: true, level: true, publishedAt: true,
+        teacher: { select: { id: true, fullName: true } },
+      },
+    })
+  }
+
+  async myReport(userId: string, id: string) {
+    const r = await this.prisma.studentReport.findFirst({
+      where: { id, studentId: userId, publishedAt: { not: null } },
+      include: { teacher: { select: { id: true, fullName: true } } },
+    })
+    if (!r) throw new NotFoundException('Reporte no encontrado')
+    return r
+  }
+
   /**
    * Resultados de un estudiante con contexto (lección + módulo) — lo usan el
    * admin (todos) y el profesor (sus estudiantes; la autorización la valida
@@ -551,41 +588,6 @@ export class LearningService {
       if (suyo) return suyo.id
     }
     throw new ForbiddenException('No puedes ver el avance de ese estudiante')
-  }
-
-  async getLastSlide(userId: string, roles: string[], lessonId: string, studentId?: string) {
-    const objetivo = await this.resolverEstudiante(userId, roles, studentId)
-    const p = await this.prisma.lessonProgress.findUnique({
-      where: { userId_lessonId: { userId: objetivo, lessonId } },
-      select: { lastSlideRef: true },
-    })
-    return { slide: p?.lastSlideRef ?? null }
-  }
-
-  /**
-   * La posición llega tal cual la reporta la lección y se guarda sin
-   * interpretarla: unas navegan por índice ("8") y otras por id de slide
-   * ("slide-game"). Sólo se acota el largo, para que un HTML mal hecho no
-   * pueda escribir cualquier cosa en la base.
-   */
-  async setLastSlide(
-    userId: string,
-    roles: string[],
-    lessonId: string,
-    slide: unknown,
-    studentId?: string,
-  ) {
-    const objetivo = await this.resolverEstudiante(userId, roles, studentId)
-    const ref =
-      slide === null || slide === undefined || slide === ''
-        ? null
-        : String(slide).slice(0, 120)
-    await this.prisma.lessonProgress.upsert({
-      where: { userId_lessonId: { userId: objetivo, lessonId } },
-      update: { lastSlideRef: ref },
-      create: { userId: objetivo, lessonId, lastSlideRef: ref, secondsWatched: 0 },
-    })
-    return { ok: true, slide: ref }
   }
 
   /**

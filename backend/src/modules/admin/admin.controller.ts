@@ -335,7 +335,7 @@ export class AdminController {
   @Post('resources')
   createResource(
     @CurrentUser() u: AuthUser,
-    @Body() body: { title: string; description?: string | null; category?: string | null; contentHtml: string; position?: number; published?: boolean },
+    @Body() body: { title: string; description?: string | null; category?: string | null; level?: 'beginner' | 'intermediate' | 'advanced' | null; contentHtml: string; position?: number; published?: boolean },
   ) {
     return this.svc.saveTeacherResource(body, u.id)
   }
@@ -345,7 +345,7 @@ export class AdminController {
   updateResource(
     @CurrentUser() u: AuthUser,
     @Param('id') id: string,
-    @Body() body: { title?: string; description?: string | null; category?: string | null; contentHtml?: string; position?: number; published?: boolean },
+    @Body() body: { title?: string; description?: string | null; category?: string | null; level?: 'beginner' | 'intermediate' | 'advanced' | null; contentHtml?: string; position?: number; published?: boolean },
   ) {
     return this.svc.saveTeacherResource({ id, ...body } as any, u.id)
   }

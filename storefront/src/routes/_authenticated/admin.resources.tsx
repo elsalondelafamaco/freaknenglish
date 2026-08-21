@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff, FileUp, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { adminApi } from "@/lib/api/endpoints";
+import type { EnglishLevel } from "@/lib/domain/types";
 import { LessonFrame } from "@/components/learning/LessonFrame";
 
 export const Route = createFileRoute("/_authenticated/admin/resources")({
@@ -16,11 +17,22 @@ type Borrador = {
   title: string;
   description: string;
   category: string;
+  /** "" = sirve para los tres niveles. */
+  level: EnglishLevel | "";
   contentHtml: string;
   published: boolean;
 };
 
-const VACIO: Borrador = { title: "", description: "", category: "", contentHtml: "", published: true };
+const VACIO: Borrador = { title: "", description: "", category: "", level: "", contentHtml: "", published: true };
+
+const NIVELES: Array<{ id: EnglishLevel | ""; label: string }> = [
+  { id: "", label: "Todos los niveles" },
+  { id: "beginner", label: "Beginner (A1–A2)" },
+  { id: "intermediate", label: "Intermediate (B1–B2)" },
+  { id: "advanced", label: "Advanced (C1)" },
+];
+const etiquetaNivel = (l: EnglishLevel | null) =>
+  NIVELES.find((n) => n.id === (l ?? ""))?.label ?? "Todos los niveles";
 
 /**
  * Material extra: el admin sube los HTML de apoyo y todos los profesores los
@@ -41,6 +53,7 @@ function AdminResources() {
         title: b.title.trim(),
         description: b.description.trim() || null,
         category: b.category.trim() || null,
+        level: b.level || null,
         contentHtml: b.contentHtml,
         published: b.published,
       };
@@ -70,6 +83,7 @@ function AdminResources() {
         title: r.title,
         description: r.description ?? "",
         category: r.category ?? "",
+        level: r.level ?? "",
         contentHtml: r.contentHtml,
         published: r.published,
       });
@@ -111,6 +125,7 @@ function AdminResources() {
             <thead className="bg-brand-cream/50 text-left text-xs uppercase tracking-wide text-brand-ink/60">
               <tr>
                 <th className="px-4 py-3">Título</th>
+                <th className="px-4 py-3">Nivel</th>
                 <th className="px-4 py-3">Categoría</th>
                 <th className="px-4 py-3">Estado</th>
                 <th className="px-4 py-3" />
@@ -123,6 +138,7 @@ function AdminResources() {
                     <div className="font-medium text-brand-ink">{r.title}</div>
                     {r.description ? <div className="text-xs text-brand-ink/60">{r.description}</div> : null}
                   </td>
+                  <td className="px-4 py-3 text-brand-ink/70">{etiquetaNivel(r.level)}</td>
                   <td className="px-4 py-3 text-brand-ink/70">{r.category ?? "General"}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${r.published ? "bg-green-100 text-green-800" : "bg-zinc-100 text-zinc-700"}`}>
@@ -239,7 +255,19 @@ function EditorMaterial({
             />
           </label>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="text-xs font-semibold text-brand-ink/70">
+              Nivel
+              <select
+                value={valor.level}
+                onChange={(e) => onChange({ ...valor, level: e.target.value as EnglishLevel | "" })}
+                className="mt-1 w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm font-normal text-brand-ink focus:border-brand-ink focus:outline-none"
+              >
+                {NIVELES.map((n) => (
+                  <option key={n.id} value={n.id}>{n.label}</option>
+                ))}
+              </select>
+            </label>
             <label className="text-xs font-semibold text-brand-ink/70">
               Categoría (opcional)
               <input

@@ -310,15 +310,14 @@ export const learningApi = {
     apiPost<ActivityResultRow>(`/learning/lessons/${lessonId}/activity-result`, body),
   myActivityResults: (lessonId?: string) =>
     apiGet<ActivityResultRow[]>("/learning/my/activity-results", lessonId ? { lessonId } : undefined),
-  /**
-   * Slide donde quedó la última clase. `studentId` va sólo cuando es el profe
-   * quien tiene la lección abierta para dar la clase: el avance se guarda
-   * contra el estudiante, no contra quien comparte pantalla.
-   */
-  lastSlide: (lessonId: string, studentId?: string) =>
-    apiGet<{ slide: string | null }>(`/learning/lessons/${lessonId}/slide`, studentId ? { studentId } : undefined),
-  saveLastSlide: (lessonId: string, slide: string | number | null, studentId?: string) =>
-    apiPost<{ ok: boolean; slide: string | null }>(`/learning/lessons/${lessonId}/slide`, { slide, studentId }),
+  /** Material (links y PDFs) que su profesor le dejó a este estudiante. */
+  myResources: () => apiGet<StudentResource[]>("/learning/my/resources"),
+  /** Reportes publicados. Los borradores del profe no llegan aquí. */
+  myReports: () =>
+    apiGet<Array<Pick<StudentReport, "id" | "periodLabel" | "level" | "publishedAt"> & { teacher?: { id: string; fullName: string } | null }>>(
+      "/learning/my/reports",
+    ),
+  myReport: (id: string) => apiGet<StudentReport>(`/learning/my/reports/${id}`),
   checkpoint: (id: string) => apiGet<CheckpointV2>(`/learning/checkpoints/${id}`),
   submitCheckpoint: (id: string, answers: Record<string, unknown>) =>
     apiPost<CheckpointSubmitResult>(`/learning/checkpoints/${id}/submit`, { answers }),
@@ -520,15 +519,93 @@ export const teachersApi = {
   createAbsencesByClasses: (classIds: string[], reason?: string) =>
     apiPost<{ absences: any[]; cancelled: number }>("/teacher/absences/by-classes", { classIds, reason }),
   deleteAbsence: (id: string) => apiDelete<{ ok: boolean }>(`/teacher/absences/${id}`),
-  /** Material extra: HTMLs de apoyo que sube el admin. Solo profes y admin. */
-  resources: () =>
-    apiGet<Array<{ id: string; title: string; description: string | null; category: string | null; updatedAt: string }>>(
+  /**
+   * Material extra: HTMLs de apoyo que sube el admin. Solo profes y admin.
+   * Filtrar por `level` trae también el material sin nivel, que sirve para los
+   * tres.
+   */
+  resources: (level?: EnglishLevel) =>
+    apiGet<Array<{ id: string; title: string; description: string | null; category: string | null; level: EnglishLevel | null; updatedAt: string }>>(
       "/teacher/resources",
+      level ? { level } : undefined,
     ),
   resource: (id: string) =>
-    apiGet<{ id: string; title: string; description: string | null; category: string | null; contentHtml: string }>(
+    apiGet<{ id: string; title: string; description: string | null; category: string | null; level: EnglishLevel | null; contentHtml: string }>(
       `/teacher/resources/${id}`,
     ),
+
+  // ── Material para un estudiante concreto (links y PDFs) ──────────────────
+  signStudentUpload: (studentId: string, filename: string, contentType: string) =>
+    apiPost<{ uploadUrl: string; publicUrl: string; storageKey: string; expiresIn: number }>(
+      `/teacher/students/${studentId}/uploads/sign`,
+      { filename, contentType },
+    ),
+  studentResources: (studentId: string) =>
+    apiGet<StudentResource[]>(`/teacher/students/${studentId}/resources`),
+  createStudentResources: (body: {
+    studentIds: string[];
+    kind: "link" | "file";
+    title: string;
+    description?: string | null;
+    url: string;
+    storageKey?: string | null;
+    contentType?: string | null;
+    sizeBytes?: number | null;
+  }) => apiPost<{ ok: boolean; creados: number }>("/teacher/student-resources", body),
+  deleteStudentResource: (id: string) =>
+    apiDelete<{ ok: boolean }>(`/teacher/student-resources/${id}`),
+
+  // ── Reportes de progreso ────────────────────────────────────────────────
+  studentReports: (studentId: string) =>
+    apiGet<StudentReport[]>(`/teacher/students/${studentId}/reports`),
+  reportDraft: (studentId: string, from: string, to: string) =>
+    apiGet<{ level: EnglishLevel | null; classesTaken: number; classesTotal: number }>(
+      `/teacher/students/${studentId}/report-draft`,
+      { from, to },
+    ),
+  saveReport: (body: {
+    id?: string;
+    studentId: string;
+    periodLabel: string;
+    level?: EnglishLevel | null;
+    classesTaken?: number | null;
+    classesTotal?: number | null;
+    strengths?: string | null;
+    improvements?: string | null;
+    recommendation?: string | null;
+    comment?: string | null;
+    publish?: boolean;
+  }) => apiPost<StudentReport>("/teacher/reports", body),
+};
+
+/** Material que un profesor le deja a un estudiante concreto. */
+export type StudentResource = {
+  id: string;
+  kind: "link" | "file";
+  title: string;
+  description: string | null;
+  url: string;
+  storageKey?: string | null;
+  contentType: string | null;
+  sizeBytes: number | null;
+  createdAt: string;
+  teacher?: { id: string; fullName: string } | null;
+};
+
+/** Reporte de progreso. Sin `publishedAt` es un borrador del profe. */
+export type StudentReport = {
+  id: string;
+  periodLabel: string;
+  level: EnglishLevel | null;
+  classesTaken: number | null;
+  classesTotal: number | null;
+  strengths: string | null;
+  improvements: string | null;
+  recommendation: string | null;
+  comment: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+  teacher?: { id: string; fullName: string } | null;
 };
 
 // ─── Admin ─────────────────────────────────────────────────────────────
@@ -708,16 +785,16 @@ export const adminApi = {
       {},
     ),
   resources: () =>
-    apiGet<Array<{ id: string; title: string; description: string | null; category: string | null; position: number; published: boolean; updatedAt: string }>>(
+    apiGet<Array<{ id: string; title: string; description: string | null; category: string | null; level: EnglishLevel | null; position: number; published: boolean; updatedAt: string }>>(
       "/admin/resources",
     ),
   resource: (id: string) =>
-    apiGet<{ id: string; title: string; description: string | null; category: string | null; contentHtml: string; position: number; published: boolean }>(
+    apiGet<{ id: string; title: string; description: string | null; category: string | null; level: EnglishLevel | null; contentHtml: string; position: number; published: boolean }>(
       `/admin/resources/${id}`,
     ),
-  createResource: (body: { title: string; description?: string | null; category?: string | null; contentHtml: string; position?: number; published?: boolean }) =>
+  createResource: (body: { title: string; description?: string | null; category?: string | null; level?: EnglishLevel | null; contentHtml: string; position?: number; published?: boolean }) =>
     apiPost<any>("/admin/resources", body),
-  updateResource: (id: string, body: Partial<{ title: string; description: string | null; category: string | null; contentHtml: string; position: number; published: boolean }>) =>
+  updateResource: (id: string, body: Partial<{ title: string; description: string | null; category: string | null; level: EnglishLevel | null; contentHtml: string; position: number; published: boolean }>) =>
     apiPatch<any>(`/admin/resources/${id}`, body),
   deleteResource: (id: string) => apiPatch<{ ok: boolean }>(`/admin/resources/${id}/delete`, {}),
   updateUser: (id: string, body: Partial<{ fullName: string; phone: string; role: "student" | "teacher" | "admin"; extraRoles: Array<"student" | "teacher" | "admin">; englishLevel: "beginner" | "intermediate" | "advanced" | null; classDurationMin: number | null }>) =>

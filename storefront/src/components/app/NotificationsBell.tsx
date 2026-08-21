@@ -29,7 +29,14 @@ function timeAgo(iso: string) {
   return `${Math.floor(diff / 86400)} d`;
 }
 
-export function NotificationsBell() {
+/**
+ * `haciaArriba`: el panel se abre por encima de la campana en vez de por
+ * debajo. Hace falta donde la campana queda pegada al borde inferior de la
+ * pantalla —el sidebar colapsado la manda al fondo—, porque el panel mide unos
+ * 26rem y se salía de la ventana sin nada que lo rescatara: el `<aside>` es
+ * `fixed inset-y-0` y no tiene scroll.
+ */
+export function NotificationsBell({ haciaArriba = false }: { haciaArriba?: boolean }) {
   const [open, setOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string>("");
   const qc = useQueryClient();
@@ -75,7 +82,11 @@ export function NotificationsBell() {
       {open ? (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 lg:left-0 lg:right-auto z-50 mt-2 w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl border border-brand-line bg-white p-2 shadow-lg">
+          <div
+            className={`absolute right-0 lg:left-0 lg:right-auto z-50 w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl border border-brand-line bg-white p-2 shadow-lg ${
+              haciaArriba ? "bottom-full mb-2" : "mt-2"
+            }`}
+          >
             <div className="flex items-center justify-between px-3 py-2">
               <div className="text-sm font-semibold text-brand-ink">Notificaciones</div>
               {unread > 0 ? (

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
 import { prepararHtmlLeccion } from "@/lib/learning/lessonHtml";
 import { learningApi } from "@/lib/api/endpoints";
 
@@ -15,73 +14,54 @@ import { learningApi } from "@/lib/api/endpoints";
  *
  * Se cierra con Esc o con el botón.
  *
- * Con `recordarSlide` la lección retoma donde quedó la clase anterior. Una
- * lección interactiva puede tomar dos o tres clases y antes cada una volvía a
- * empezar en el slide 1. El avance se guarda contra el ESTUDIANTE (`studentId`
- * cuando es el profe quien tiene la pantalla abierta), nunca contra quien
- * comparte pantalla — si no, todos los alumnos de un profe compartirían slide.
+ * La lección SIEMPRE arranca en el primer slide. Hubo una versión que la
+ * retomaba donde se había quedado, pero el puntaje no viajaba con ella: al
+ * volver, el alumno quedaba calificado sólo sobre las preguntas que le
+ * faltaban. Empezar de cero es lo correcto mientras la nota sea de la corrida
+ * completa.
  */
 export function LessonFrame({
   title,
   html,
   lessonId,
   studentId,
-  recordarSlide = false,
 }: {
   title: string;
   html: string;
   lessonId?: string;
-  /** Alumno dueño del avance. Sin esto se guarda contra quien está en sesión. */
+  /** Alumno dueño del resultado. Sin esto no se guarda nada. */
   studentId?: string;
-  recordarSlide?: boolean;
 }) {
   const [expandido, setExpandido] = useState(false);
-  const recuerda = recordarSlide && !!lessonId;
-
-  // El slide guardado hay que tenerlo ANTES de montar el iframe: `srcDoc` sólo
-  // se lee al crear el documento, así que si llegara después no serviría.
-  // `gcTime: 0` — la posición cambia con cada "Next", así que la respuesta no
-  // se guarda en caché: al cerrar la lección se descarta. Con caché, volver a
-  // abrirla en la misma sesión reutilizaba el valor de la primera vez y la
-  // lección arrancaba donde estaba entonces, no donde se quedó. Y hace falta
-  // que el segundo montaje vuelva a quedar "pendiente", para no pintar el
-  // iframe con el dato viejo mientras se refresca.
-  const slideQ = useQuery({
-    queryKey: ["learning", "last-slide", lessonId, studentId],
-    queryFn: () => learningApi.lastSlide(lessonId!, studentId),
-    enabled: recuerda,
-    staleTime: 0,
-    gcTime: 0,
-  });
+  // Cambiar esta `key` desmonta y vuelve a montar el iframe, así que el
+  // `srcDoc` se ejecuta desde cero. Es la forma de ofrecer "volver a empezar"
+  // en TODAS las lecciones: la mayoría no trae botón propio de reintentar, y
+  // los HTML no se tocan.
+  const [intento, setIntento] = useState(0);
+  const [confirmandoReinicio, setConfirmandoReinicio] = useState(false);
 
   useEffect(() => {
-    if (!recuerda) return;
+    // Ojo: este efecto no es sólo del alumno en su portal — es el ÚNICO
+    // registro de resultados cuando el profe abre la lección con un estudiante
+    // seleccionado. Si se condiciona de más, el profe deja de guardar notas.
+    if (!lessonId || !studentId) return;
     const alMensaje = (e: MessageEvent) => {
       const d = e.data;
       if (!d || d.source !== "freakn-lesson") return;
-      // Silencioso: pasa en cada "Next Step" y un aviso por slide sería
-      // insoportable. Si falla, la clase sigue; se reintenta al siguiente.
-      // La posición llega como la maneje la lección: un número o el id de un
-      // slide. Se guarda tal cual y se le devuelve igual.
-      const pos = d.payload?.slide;
-      if (d.type === "freakn:slide" && (typeof pos === "number" || typeof pos === "string")) {
-        learningApi.saveLastSlide(lessonId!, pos, studentId).catch(() => undefined);
-        return;
-      }
       // Resultados de las actividades. Sólo cuando hay alumno: en clase la
       // lección la tiene abierta el profe compartiendo pantalla, y lo que
       // responde el alumno no quedaba registrado en ninguna parte. Sin alumno
       // (biblioteca) no se guarda, y en el portal del estudiante lo maneja su
       // propia pantalla, que además le avisa en pantalla.
-      if (studentId && d.type === "freakn:activity:result" && d.payload?.activityId) {
+      if (d.type === "freakn:activity:result" && d.payload?.activityId) {
         learningApi
-          .saveActivityResult(lessonId!, { ...d.payload, studentId })
+          .saveActivityResult(lessonId, { ...d.payload, studentId })
           .catch(() => undefined);
       }
     };
     window.addEventListener("message", alMensaje);
     return () => window.removeEventListener("message", alMensaje);
-  }, [recuerda, lessonId, studentId]);
+  }, [lessonId, studentId]);
 
   useEffect(() => {
     if (!expandido) return;
@@ -99,12 +79,9 @@ export function LessonFrame({
     };
   }, [expandido]);
 
-  if (recuerda && slideQ.isPending) {
-    return (
-      <div className="flex h-[72vh] w-full items-center justify-center rounded-2xl border border-brand-line bg-white">
-        <div className="size-8 animate-spin rounded-full border-2 border-brand-ink/20 border-t-brand-ink" />
-      </div>
-    );
+  function reiniciar() {
+    setIntento((n) => n + 1);
+    setConfirmandoReinicio(false);
   }
 
   return (
@@ -116,23 +93,50 @@ export function LessonFrame({
       }`}
     >
       <iframe
+        key={intento}
         title={title}
-        srcDoc={prepararHtmlLeccion(html, slideQ.data?.slide ?? null)}
+        srcDoc={prepararHtmlLeccion(html)}
         className="h-full w-full bg-white"
         sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"
       />
-      <button
-        type="button"
-        onClick={() => setExpandido((v) => !v)}
-        title={expandido ? "Salir (Esc)" : "Ver en grande"}
-        aria-label={expandido ? "Salir de la vista ampliada" : "Ver en grande"}
-        // Siempre visible al expandir: ahí es la única salida además de Esc.
-        className={`absolute right-3 top-3 z-10 rounded-full bg-brand-ink/80 p-2 text-white shadow-soft backdrop-blur transition hover:bg-brand-ink ${
-          expandido ? "opacity-100" : "opacity-0 focus:opacity-100 group-hover:opacity-100"
+      <div
+        className={`absolute right-3 top-3 z-10 flex items-center gap-2 transition ${
+          expandido ? "opacity-100" : "opacity-0 focus-within:opacity-100 group-hover:opacity-100"
         }`}
       >
-        {expandido ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
-      </button>
+        {/* Confirmación en dos pasos y no `confirm()`: Chrome lo suprime en
+            varias situaciones y el botón se quedaría sin hacer nada. */}
+        {confirmandoReinicio ? (
+          <span className="flex items-center gap-1 rounded-full bg-brand-ink/80 px-2 py-1 text-xs text-white backdrop-blur">
+            ¿Perder lo avanzado?
+            <button type="button" onClick={reiniciar} className="rounded-full bg-white/20 px-2 py-0.5 font-semibold hover:bg-white/30">
+              Sí
+            </button>
+            <button type="button" onClick={() => setConfirmandoReinicio(false)} className="px-1 hover:underline">
+              No
+            </button>
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmandoReinicio(true)}
+            title="Volver a empezar"
+            aria-label="Volver a empezar la lección"
+            className="rounded-full bg-brand-ink/80 p-2 text-white shadow-soft backdrop-blur transition hover:bg-brand-ink"
+          >
+            <RotateCcw className="size-4" />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setExpandido((v) => !v)}
+          title={expandido ? "Salir (Esc)" : "Ver en grande"}
+          aria-label={expandido ? "Salir de la vista ampliada" : "Ver en grande"}
+          className="rounded-full bg-brand-ink/80 p-2 text-white shadow-soft backdrop-blur transition hover:bg-brand-ink"
+        >
+          {expandido ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+        </button>
+      </div>
     </div>
   );
 }

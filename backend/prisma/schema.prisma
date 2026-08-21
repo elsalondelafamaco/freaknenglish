@@ -118,6 +118,10 @@ model User {
   studentSlots  ScheduleSlot[] @relation("StudentSlots")
   absences         TeacherAbsence[]
   boards           BoardMember[]
+  materialRecibido StudentResource[] @relation("StudentResourceStudent")
+  materialEnviado  StudentResource[] @relation("StudentResourceTeacher")
+  reportesRecibidos StudentReport[]  @relation("StudentReportStudent")
+  reportesEscritos  StudentReport[]  @relation("StudentReportTeacher")
 
   assignedTeacher  User?         @relation("StudentTeacher", fields: [assignedTeacherId], references: [id], onDelete: SetNull)
   assignedStudents User[]        @relation("StudentTeacher")
@@ -420,6 +424,9 @@ model TeacherResource {
   /// Agrupador libre ("Gramática", "Pronunciación"…). Sin categoría cae en
   /// "General" al listarse.
   category    String?
+  /// Nivel al que aplica. NULO = sirve para los tres: es el valor por defecto
+  /// para no obligar a clasificar el material que ya estaba cargado.
+  level       EnglishLevel?
   contentHtml String   @map("content_html")
   position    Int      @default(0)
   published   Boolean  @default(true)
@@ -427,8 +434,67 @@ model TeacherResource {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  @@index([category, position])
+  @@index([level, category, position])
   @@map("teacher_resources")
+}
+
+/// Material que un profesor le deja a UN estudiante concreto: un link o un
+/// archivo (típicamente un PDF de refuerzo). Se crea una fila por estudiante,
+/// aunque el profe lo mande a varios de una vez.
+///
+/// El archivo va al bucket, que es de lectura pública: la URL lleva un UUID y
+/// por eso no se adivina, pero quien la tenga la abre sin sesión. Es material
+/// de estudio, no datos sensibles, y es como ya se sirve el resto del producto.
+model StudentResource {
+  id          String   @id @default(uuid())
+  studentId   String   @map("student_id")
+  teacherId   String   @map("teacher_id")
+  /// 'link' | 'file'
+  kind        String
+  title       String
+  description String?
+  /// URL pública del archivo, o el link tal cual lo pegó el profe.
+  url         String
+  /// Sólo para `kind: 'file'`: hace falta para borrar el objeto del bucket.
+  storageKey  String?  @map("storage_key")
+  contentType String?  @map("content_type")
+  sizeBytes   Int?     @map("size_bytes")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  student User @relation("StudentResourceStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  teacher User @relation("StudentResourceTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, createdAt])
+  @@map("student_resources")
+}
+
+/// Reporte de progreso que el profesor le escribe a un estudiante. A
+/// diferencia de `ClassNote` —que es privada del profe y el alumno nunca ve—
+/// esto está hecho para que el estudiante lo lea: al publicarlo se le notifica.
+model StudentReport {
+  id             String        @id @default(uuid())
+  studentId      String        @map("student_id")
+  teacherId      String        @map("teacher_id")
+  /// Periodo que cubre, en texto libre ("Agosto 2026", "Primer trimestre").
+  periodLabel    String        @map("period_label")
+  level          EnglishLevel?
+  classesTaken   Int?          @map("classes_taken")
+  classesTotal   Int?          @map("classes_total")
+  strengths      String?
+  improvements   String?
+  recommendation String?
+  comment        String?
+  /// Nulo = borrador. El estudiante sólo ve los publicados.
+  publishedAt    DateTime?     @map("published_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  student User @relation("StudentReportStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  teacher User @relation("StudentReportTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, createdAt])
+  @@map("student_reports")
 }
 
 /// Habilitación de un checkpoint para un estudiante concreto. Sin una fila
@@ -460,20 +526,15 @@ model LessonProgress {
   lessonId    String    @map("lesson_id")
   completedAt DateTime? @map("completed_at")
   secondsWatched Int    @default(0) @map("seconds_watched")
-  /// Posición en la lección interactiva donde quedó la última clase. Una
-  /// lección puede tomar dos o tres clases: sin esto, cada clase volvía a
-  /// empezar en el primer slide. Se guarda contra el ESTUDIANTE, no contra
-  /// quien tiene la pantalla abierta — normalmente el profe, compartiendo
-  /// pantalla.
-  ///
-  /// Es texto y no número porque las lecciones no navegan todas igual: unas
-  /// usan un índice ("8") y otras el id del slide ("slide-game"). Se guarda tal
-  /// cual lo reporta la lección y se le devuelve igual; la plataforma no
-  /// interpreta el valor.
+  /// @deprecated Guardaba el slide donde quedó la clase para retomarla ahí.
+  /// Se retiró: la posición viajaba sola, sin el puntaje, y al volver el alumno
+  /// quedaba calificado sólo sobre las preguntas que le faltaban. Hoy toda
+  /// lección arranca en el primer slide. Ya nada lee ni escribe estas dos
+  /// columnas; se dejan porque producción arranca con `prisma db push` y
+  /// borrarlas pediría `--accept-data-loss`. Se pueden quitar en una migración
+  /// tranquila.
   lastSlideRef String?  @map("last_slide_ref")
-  /// @deprecated Sustituida por lastSlideRef. Se deja para no forzar un borrado
-  /// de columna en el arranque de producción (`prisma db push`); se puede
-  /// quitar en una migración tranquila.
+  /// @deprecated Ver `lastSlideRef`. Versión numérica, en desuso desde antes.
   lastSlide   Int?      @map("last_slide")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 

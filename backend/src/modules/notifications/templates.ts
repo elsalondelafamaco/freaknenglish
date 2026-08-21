@@ -174,6 +174,16 @@ export const templates = {
       { preheader: 'Tu profe habilitó tu checkpoint' },
     ),
 
+  student_report: (v: { fullName?: string; teacherName?: string; periodLabel?: string }) =>
+    wrap(
+      'Tu reporte de progreso está listo',
+      `<p>${v.fullName ? `${String(v.fullName).split(' ')[0]}, ` : ''}${v.teacherName ?? 'tu profesor'} escribió tu reporte${v.periodLabel ? ` de <b>${v.periodLabel}</b>` : ''}.</p>
+       <p>Ahí encontrarás en qué vas fuerte, qué conviene reforzar y la recomendación
+       para el siguiente tramo. Vale la pena leerlo con calma antes de tu próxima clase.</p>
+       ${cta(`${env.PUBLIC_SITE_URL}/app/reports`, 'Ver mi reporte')}`,
+      { preheader: 'Tu profe escribió tu reporte de progreso' },
+    ),
+
   class_cancelled: (v: { reason?: string }) =>
     wrap('Tu clase fue cancelada', `<p>${v.reason ? `Motivo: ${v.reason}` : 'La clase fue cancelada.'}</p>${cta(`${env.PUBLIC_SITE_URL}/app/calendar`, 'Reagendar')}`),
 

@@ -2,10 +2,19 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { teachersApi } from "@/lib/api/endpoints";
+import type { EnglishLevel } from "@/lib/domain/types";
 import { LessonFrame } from "@/components/learning/LessonFrame";
+
+const ES_NIVEL = (v: unknown): v is EnglishLevel =>
+  v === "beginner" || v === "intermediate" || v === "advanced";
 
 export const Route = createFileRoute("/_authenticated/teacher/material/$resourceId")({
   head: () => ({ meta: [{ title: "Material extra — Profesor" }] }),
+  // El nivel viaja con el enlace sólo para poder devolver al profe al mismo
+  // filtro del que salió.
+  validateSearch: (s: Record<string, unknown>) => ({
+    level: ES_NIVEL(s.level) ? s.level : undefined,
+  }),
   component: TeacherMaterialDetail,
 });
 
@@ -15,6 +24,7 @@ export const Route = createFileRoute("/_authenticated/teacher/material/$resource
  */
 function TeacherMaterialDetail() {
   const { resourceId } = useParams({ from: "/_authenticated/teacher/material/$resourceId" });
+  const { level } = Route.useSearch();
   const q = useQuery({
     queryKey: ["teacher", "resources", resourceId],
     queryFn: () => teachersApi.resource(resourceId),
@@ -22,7 +32,7 @@ function TeacherMaterialDetail() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link to="/teacher/material" className="inline-flex w-fit items-center gap-1.5 text-sm text-brand-ink/60 hover:text-brand-ink">
+      <Link to="/teacher/material" search={{ level }} className="inline-flex w-fit items-center gap-1.5 text-sm text-brand-ink/60 hover:text-brand-ink">
         <ArrowLeft className="size-4" /> Material extra
       </Link>
 

@@ -1,23 +1,48 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { BookOpen, Search } from "lucide-react";
 import { teachersApi } from "@/lib/api/endpoints";
+import type { EnglishLevel } from "@/lib/domain/types";
+
+const ES_NIVEL = (v: unknown): v is EnglishLevel =>
+  v === "beginner" || v === "intermediate" || v === "advanced";
 
 export const Route = createFileRoute("/_authenticated/teacher/material/")({
   head: () => ({ meta: [{ title: "Material extra — Profesor" }] }),
+  // Mismo criterio que el catálogo de contenido: el nivel va en la URL, porque
+  // abrir un material y volver desmonta esta pantalla y con estado local el
+  // profe perdía el filtro cada vez.
+  validateSearch: (s: Record<string, unknown>) => ({
+    level: ES_NIVEL(s.level) ? s.level : undefined,
+  }),
   component: TeacherMaterial,
 });
+
+const NIVELES: Array<{ id: EnglishLevel | ""; label: string }> = [
+  { id: "", label: "Todos" },
+  { id: "beginner", label: "Beginner (A1–A2)" },
+  { id: "intermediate", label: "Intermediate (B1–B2)" },
+  { id: "advanced", label: "Advanced (C1)" },
+];
 
 /**
  * Material de apoyo para profesores: HTMLs que sube el admin con temas
  * puntuales (gramática, pronunciación, dinámicas). No es contenido de curso,
  * así que no aparece en ningún catálogo del estudiante — la ruta cuelga de
  * `/teacher`, que ya exige el rol.
+ *
+ * Se filtra por nivel y, dentro de cada nivel, se agrupa por categoría. El
+ * material sin nivel sale en todos: sirve para los tres.
  */
 function TeacherMaterial() {
   const [q, setQ] = useState("");
-  const listQ = useQuery({ queryKey: ["teacher", "resources"], queryFn: () => teachersApi.resources() });
+  const { level } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const listQ = useQuery({
+    queryKey: ["teacher", "resources", level ?? "todos"],
+    queryFn: () => teachersApi.resources(level),
+  });
 
   const grupos = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -56,6 +81,23 @@ function TeacherMaterial() {
         </label>
       </header>
 
+      <div className="flex flex-wrap gap-2">
+        {NIVELES.map((n) => (
+          <button
+            key={n.id || "todos"}
+            type="button"
+            onClick={() => navigate({ search: { level: n.id || undefined }, replace: true })}
+            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+              (level ?? "") === n.id
+                ? "bg-brand-ink text-white"
+                : "border border-brand-line bg-white text-brand-ink/70 hover:bg-brand-cream/50"
+            }`}
+          >
+            {n.label}
+          </button>
+        ))}
+      </div>
+
       {listQ.isLoading ? (
         <div className="text-sm text-brand-ink/60">Cargando…</div>
       ) : grupos.length === 0 ? (
@@ -72,6 +114,7 @@ function TeacherMaterial() {
                   key={r.id}
                   to="/teacher/material/$resourceId"
                   params={{ resourceId: r.id }}
+                  search={{ level }}
                   className="group flex flex-col gap-1.5 rounded-2xl border border-brand-line bg-white p-4 transition hover:border-brand-ink/30 hover:shadow-soft"
                 >
                   <span className="inline-flex size-9 items-center justify-center rounded-xl bg-brand-cream text-brand-ink">

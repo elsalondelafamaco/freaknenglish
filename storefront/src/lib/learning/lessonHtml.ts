@@ -14,28 +14,21 @@
  * Vive aquí (y no dentro de una ruta) porque lo usan tanto el visor del
  * estudiante como el del profesor; si se duplicara, el del profe cargaría el
  * CDN de terceros y vería los slides rotos.
+ *
+ * Hubo aquí una inyección de `window.__freaknSlideInicial` para que la lección
+ * retomara donde se quedó. Se retiró: el puntaje no viajaba con la posición, y
+ * el alumno terminaba calificado sólo sobre las preguntas que le faltaban. Los
+ * bloques de "memoria de slide" siguen dentro de los HTML pero quedan inertes
+ * sin ese marcador —cada uno comprueba que exista y si no, no hace nada—, así
+ * que no hubo que tocar las 84 lecciones.
  */
-export function prepararHtmlLeccion(html: string, slideInicial?: string | null): string {
+export function prepararHtmlLeccion(html: string): string {
   if (!html) return html;
   const origen = typeof window !== "undefined" ? window.location.origin : "";
-  const conTailwind = html.replaceAll(
+  return html.replaceAll(
     "https://cdn.tailwindcss.com",
     `${origen}/vendor/tailwind-cdn.js`,
   );
-
-  // Retomar la clase donde quedó. Se inyecta como variable ANTES del script de
-  // la lección —y no por postMessage— para que la lección ya arranque en el
-  // slide correcto: por mensaje habría un parpadeo del primero y una carrera
-  // con su propio `onload`.
-  //
-  // Va como texto porque las lecciones no navegan todas igual: unas usan un
-  // índice ("8") y otras el id del slide ("slide-game"). La lección lo
-  // interpreta; aquí sólo se le devuelve lo que ella misma reportó.
-  if (!slideInicial) return conTailwind;
-  const marca = `<script>window.__freaknSlideInicial=${JSON.stringify(String(slideInicial))};</script>`;
-  return conTailwind.includes("</head>")
-    ? conTailwind.replace("</head>", `${marca}</head>`)
-    : marca + conTailwind;
 }
 
 /** URL del recurso de una lección (video, slides, pdf o descarga). */

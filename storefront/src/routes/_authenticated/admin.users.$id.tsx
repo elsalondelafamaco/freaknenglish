@@ -34,7 +34,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SchedulePickerGrid } from "@/components/schedule/SchedulePickerGrid";
 import type { SlotRef } from "@/lib/api/endpoints";
 import { homePathFor, rolesOfRow } from "@/lib/roles";
-import { ActivityResultsSection, CheckpointAttemptsSection, CheckpointGatesSection, LessonPlanSection } from "./teacher.students.$studentId";
+import { ActivityResultsSection, CheckpointAttemptsSection, CheckpointGatesSection, LessonPlanSection, StudentReportsSection, StudentResourcesSection } from "./teacher.students.$studentId";
 import { setAccessToken } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
@@ -43,7 +43,7 @@ export const Route = createFileRoute("/_authenticated/admin/users/$id")({
   component: AdminUserDetail,
 });
 
-type TabId = "overview" | "subscription" | "schedule" | "payments" | "classes" | "learning" | "nps" | "notes" | "students";
+type TabId = "overview" | "subscription" | "schedule" | "payments" | "classes" | "learning" | "reports" | "nps" | "notes" | "students";
 
 function AdminUserDetail() {
   const { id } = Route.useParams();
@@ -237,6 +237,7 @@ function AdminUserDetail() {
     { id: "payments", label: "Pagos", show: isStudent },
     { id: "classes", label: "Clases", show: true },
     { id: "learning", label: "Aprendizaje", show: isStudent },
+    { id: "reports", label: "Reportes", show: isStudent },
     { id: "nps", label: "Encuestas (NPS)", show: isStudent },
     { id: "notes", label: "Notas del profe", show: isStudent },
     { id: "students", label: `Estudiantes (${students.length})`, show: isTeacher },
@@ -676,7 +677,16 @@ function AdminUserDetail() {
           <div className="mt-4">
             <CheckpointAttemptsSection studentId={user.id} />
           </div>
+          {/* El material que su profe le dejó: el admin lo ve y también puede
+              agregar o quitar, igual que en el portal del profesor. */}
+          <div className="mt-4">
+            <StudentResourcesSection studentId={user.id} />
+          </div>
         </>
+      ) : null}
+
+      {tab === "reports" && isStudent ? (
+        <StudentReportsSection studentId={user.id} />
       ) : null}
 
       {tab === "nps" && isStudent ? (

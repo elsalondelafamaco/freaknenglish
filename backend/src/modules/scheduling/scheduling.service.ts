@@ -290,41 +290,40 @@ export class SchedulingService {
     const durationMin = user.classDurationMin ?? 50
     await this.slots.validateSelection(blocks, expected, durationMin)
 
-    // Buscar profesor que cubra todos los bloques.
-    const teachers = await this.prisma.user.findMany({
-      where: IS_ACTIVE_TEACHER,
-      include: { availability: true },
-    })
-    const match = teachers.find((t) =>
-      blocks.every((b) =>
-        t.availability.some((a) => a.weekday === b.weekday && isHourInRange(b.hour, a.startsAt, a.endsAt)),
-      ),
-    )
+    // Profes que cubren TODA la selección, ordenados por MENOR CARGA (franjas
+    // semanales ya ocupadas). Antes esto era un `find()` sobre un `findMany`
+    // sin orden: se quedaba con el primero que devolviera la base, así que un
+    // mismo profe acumulaba alumnos mientras otros seguían vacíos. La lista
+    // ordenada ya existía —el checkout la usa desde siempre— y aquí se estaba
+    // resolviendo por otro camino.
+    const candidatos = await this.slots.candidateTeachers(blocks, userId)
 
-    let effectiveMatch = match ?? null
-    if (effectiveMatch) {
-      // El match por hora de inicio no basta para clases largas ni ve las
-      // horas invadidas por otros estudiantes largos: la misma validación
-      // del alta admin decide; si no cabe, degrada a asignación manual.
+    // Se prueban EN ORDEN hasta que uno encaje de verdad. Antes, si el primero
+    // fallaba la validación de encaje, el código se rendía y mandaba al alumno
+    // a la cola manual sin mirar a los demás.
+    let effectiveMatch: { id: string } | null = null
+    for (const teacherId of candidatos) {
+      // El cubrir la hora de inicio no basta para clases largas ni ve las
+      // horas invadidas por otros estudiantes largos: decide la misma
+      // validación del alta admin.
       try {
-        await this.assertBlocksFitTeacher(effectiveMatch.id, blocks, durationMin, userId)
+        await this.assertBlocksFitTeacher(teacherId, blocks, durationMin, userId)
       } catch {
-        effectiveMatch = null
+        continue
       }
-    }
-    if (effectiveMatch) {
-      const holdRelease = await this.prisma.scheduleSlot.deleteMany({ where: { studentId: userId } })
-      void holdRelease
+      await this.prisma.scheduleSlot.deleteMany({ where: { studentId: userId } })
       try {
         await this.prisma.$transaction(
           blocks.map((b) =>
             this.prisma.scheduleSlot.create({
-              data: { teacherId: effectiveMatch!.id, studentId: userId, weekday: b.weekday, hour: b.hour, status: 'active' },
+              data: { teacherId, studentId: userId, weekday: b.weekday, hour: b.hour, status: 'active' },
             }),
           ),
         )
+        effectiveMatch = { id: teacherId }
+        break
       } catch {
-        effectiveMatch = null // franja ocupada: degradar a manual
+        continue // carrera: alguien tomó la franja entre el chequeo y el insert
       }
     }
     const status = effectiveMatch ? 'auto_assigned' : 'manual_pending'
@@ -342,9 +341,18 @@ export class SchedulingService {
       await this.ensureUpcomingClasses(userId)
     }
 
+    // `candidateTeachers` devuelve sólo ids; el nombre se busca una vez, y
+    // únicamente cuando hubo asignación.
+    const profeAsignado = effectiveMatch
+      ? await this.prisma.user.findUnique({
+          where: { id: effectiveMatch.id },
+          select: { id: true, fullName: true },
+        })
+      : null
+
     return {
       status,
-      teacher: effectiveMatch ? { id: effectiveMatch.id, fullName: effectiveMatch.fullName } : null,
+      teacher: profeAsignado,
       blocks,
     }
   }

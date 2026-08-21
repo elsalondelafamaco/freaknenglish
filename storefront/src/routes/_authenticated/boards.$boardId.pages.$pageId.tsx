@@ -31,6 +31,7 @@ import { colorFor, createPageProvider, type BoardPageProvider, type EstadoGuarda
 import { DrawLayer } from "@/components/board/DrawLayer";
 import { VersionHistory } from "@/components/board/VersionHistory";
 import { htmlToMarkdown, downloadFile } from "@/lib/board/exportPage";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export const Route = createFileRoute("/_authenticated/boards/$boardId/pages/$pageId")({
   head: () => ({ meta: [{ title: "Board · Página" }] }),
@@ -318,31 +319,38 @@ function Toolbar({ editor, boardId }: { editor: NonNullable<ReturnType<typeof us
       <button className={btn} data-active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()}><UnderlineIcon className="size-4" /></button>
       <button className={btn} data-active={editor.isActive("strike")} onClick={() => editor.chain().focus().toggleStrike().run()}><Strikethrough className="size-4" /></button>
 
-      <div className="relative">
-        <button className={btn} onClick={() => { setOpenColor((v) => !v); setOpenHi(false); }}><Palette className="size-4" /></button>
-        {openColor ? (
-          <div className="absolute left-0 top-full z-40 mt-1 flex gap-1 rounded-lg border border-brand-line bg-white p-1 shadow">
-            {TEXT_COLORS.map((c) => (
-              <button key={c} className="size-5 rounded-full border border-brand-line" style={{ background: c }}
-                onClick={() => { editor.chain().focus().setColor(c).run(); setOpenColor(false); }} />
-            ))}
-            <button className="rounded px-1.5 text-[10px]" onClick={() => { editor.chain().focus().unsetColor().run(); setOpenColor(false); }}>×</button>
-          </div>
-        ) : null}
-      </div>
+      {/* Color y resaltador van en Popover (portal al `body`) y no en un div
+          absoluto. La fila de la barra es `overflow-x-auto` por debajo de `md`
+          —y con overflow-x en auto el navegador también recorta en vertical—,
+          y la sección que la contiene es `lg:overflow-auto`: entre las dos, el
+          desplegable quedaba cortado justo al angostar la ventana. El portal
+          lo saca de ambos recortes y del contexto de apilamiento que crea la
+          barra `sticky z-20`. */}
+      <Popover open={openColor} onOpenChange={setOpenColor}>
+        <PopoverTrigger asChild>
+          <button className={btn} aria-label="Color del texto"><Palette className="size-4" /></button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="flex w-auto gap-1 rounded-lg border-brand-line bg-white p-1 shadow">
+          {TEXT_COLORS.map((c) => (
+            <button key={c} className="size-5 rounded-full border border-brand-line" style={{ background: c }}
+              onClick={() => { editor.chain().focus().setColor(c).run(); setOpenColor(false); }} />
+          ))}
+          <button className="rounded px-1.5 text-[10px] text-brand-ink" onClick={() => { editor.chain().focus().unsetColor().run(); setOpenColor(false); }}>×</button>
+        </PopoverContent>
+      </Popover>
 
-      <div className="relative">
-        <button className={btn} onClick={() => { setOpenHi((v) => !v); setOpenColor(false); }}><Highlighter className="size-4" /></button>
-        {openHi ? (
-          <div className="absolute left-0 top-full z-40 mt-1 flex gap-1 rounded-lg border border-brand-line bg-white p-1 shadow">
-            {HIGHLIGHTS.map((c) => (
-              <button key={c} className="size-5 rounded-full border border-brand-line" style={{ background: c }}
-                onClick={() => { editor.chain().focus().toggleHighlight({ color: c }).run(); setOpenHi(false); }} />
-            ))}
-            <button className="rounded px-1.5 text-[10px]" onClick={() => { editor.chain().focus().unsetHighlight().run(); setOpenHi(false); }}>×</button>
-          </div>
-        ) : null}
-      </div>
+      <Popover open={openHi} onOpenChange={setOpenHi}>
+        <PopoverTrigger asChild>
+          <button className={btn} aria-label="Resaltador"><Highlighter className="size-4" /></button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="flex w-auto gap-1 rounded-lg border-brand-line bg-white p-1 shadow">
+          {HIGHLIGHTS.map((c) => (
+            <button key={c} className="size-5 rounded-full border border-brand-line" style={{ background: c }}
+              onClick={() => { editor.chain().focus().toggleHighlight({ color: c }).run(); setOpenHi(false); }} />
+          ))}
+          <button className="rounded px-1.5 text-[10px] text-brand-ink" onClick={() => { editor.chain().focus().unsetHighlight().run(); setOpenHi(false); }}>×</button>
+        </PopoverContent>
+      </Popover>
 
       <span className="mx-1 h-4 w-px bg-brand-line" />
       <button className={btn} data-active={editor.isActive("heading", { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}><Heading1 className="size-4" /></button>

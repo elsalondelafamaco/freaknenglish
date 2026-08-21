@@ -1286,12 +1286,13 @@ export class AdminService {
   /** Listado del admin: incluye los despublicados, pero nunca el HTML. */
   async listTeacherResources() {
     return this.prisma.teacherResource.findMany({
-      orderBy: [{ category: 'asc' }, { position: 'asc' }, { createdAt: 'asc' }],
+      orderBy: [{ level: 'asc' }, { category: 'asc' }, { position: 'asc' }, { createdAt: 'asc' }],
       select: {
         id: true,
         title: true,
         description: true,
         category: true,
+        level: true,
         position: true,
         published: true,
         updatedAt: true,
@@ -1311,6 +1312,7 @@ export class AdminService {
       title: string
       description?: string | null
       category?: string | null
+      level?: 'beginner' | 'intermediate' | 'advanced' | null
       contentHtml?: string
       position?: number
       published?: boolean
@@ -1328,6 +1330,9 @@ export class AdminService {
       title,
       description: input.description ?? existing?.description ?? null,
       category: input.category?.trim() || existing?.category || null,
+      // Omitirlo conserva lo que había; mandarlo en null lo pone en "todos los
+      // niveles", que es el valor por defecto.
+      level: (input.level !== undefined ? input.level : existing?.level) ?? null,
       contentHtml: input.contentHtml ?? existing?.contentHtml ?? '',
       position: input.position ?? existing?.position ?? 0,
       published: input.published ?? existing?.published ?? true,

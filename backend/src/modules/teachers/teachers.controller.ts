@@ -199,9 +199,105 @@ export class TeachersController {
    * no traer todo el material en cada carga del listado.
    */
   @Get('resources')
-  resources() { return this.svc.listResources() }
+  resources(@Query('level') level?: string) { return this.svc.listResources(level) }
 
   /** @endpoint GET /api/v1/teacher/resources/:id (con el HTML completo) */
   @Get('resources/:id')
   resource(@Param('id') id: string) { return this.svc.getResource(id) }
+
+  // ── Material para un estudiante concreto ─────────────────────────────────
+
+  /**
+   * @endpoint POST /api/v1/teacher/students/:studentId/uploads/sign
+   * Firma la subida de un archivo (PDF) para ese estudiante.
+   */
+  @Post('students/:studentId/uploads/sign')
+  signStudentUpload(
+    @CurrentUser() u: AuthUser,
+    @Param('studentId') studentId: string,
+    @Body() body: { filename: string; contentType: string },
+  ) {
+    return this.svc.signStudentUpload(u.id, studentId, body?.filename, body?.contentType, u.role === 'admin')
+  }
+
+  /** @endpoint GET /api/v1/teacher/students/:studentId/resources */
+  @Get('students/:studentId/resources')
+  studentResources(@CurrentUser() u: AuthUser, @Param('studentId') studentId: string) {
+    return this.svc.listStudentResources(u.id, studentId, u.role === 'admin')
+  }
+
+  /**
+   * @endpoint POST /api/v1/teacher/student-resources
+   * Crea el material para uno o varios estudiantes a la vez.
+   */
+  @Post('student-resources')
+  createStudentResources(
+    @CurrentUser() u: AuthUser,
+    @Body()
+    body: {
+      studentIds: string[]
+      kind: 'link' | 'file'
+      title: string
+      description?: string | null
+      url: string
+      storageKey?: string | null
+      contentType?: string | null
+      sizeBytes?: number | null
+    },
+  ) {
+    return this.svc.createStudentResources(u.id, body, u.role === 'admin')
+  }
+
+  /** @endpoint DELETE /api/v1/teacher/student-resources/:id */
+  @Delete('student-resources/:id')
+  deleteStudentResource(@CurrentUser() u: AuthUser, @Param('id') id: string) {
+    return this.svc.deleteStudentResource(u.id, id, u.role === 'admin')
+  }
+
+  // ── Reportes de progreso ─────────────────────────────────────────────────
+
+  /** @endpoint GET /api/v1/teacher/students/:studentId/reports */
+  @Get('students/:studentId/reports')
+  studentReports(@CurrentUser() u: AuthUser, @Param('studentId') studentId: string) {
+    return this.svc.listStudentReports(u.id, studentId, u.role === 'admin')
+  }
+
+  /**
+   * @endpoint GET /api/v1/teacher/students/:studentId/report-draft?from&to
+   * Precarga: nivel y clases tomadas/programadas del periodo.
+   */
+  @Get('students/:studentId/report-draft')
+  reportDraft(
+    @CurrentUser() u: AuthUser,
+    @Param('studentId') studentId: string,
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ) {
+    return this.svc.reportDraft(u.id, studentId, new Date(from), new Date(to), u.role === 'admin')
+  }
+
+  /**
+   * @endpoint POST /api/v1/teacher/reports
+   * Crea o edita un reporte. Con `publish: true` lo publica y avisa al alumno.
+   */
+  @Post('reports')
+  saveReport(
+    @CurrentUser() u: AuthUser,
+    @Body()
+    body: {
+      id?: string
+      studentId: string
+      periodLabel: string
+      level?: 'beginner' | 'intermediate' | 'advanced' | null
+      classesTaken?: number | null
+      classesTotal?: number | null
+      strengths?: string | null
+      improvements?: string | null
+      recommendation?: string | null
+      comment?: string | null
+      publish?: boolean
+    },
+  ) {
+    return this.svc.saveStudentReport(u.id, body, u.role === 'admin')
+  }
 }

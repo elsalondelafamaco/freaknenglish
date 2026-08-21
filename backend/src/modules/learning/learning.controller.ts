@@ -57,6 +57,27 @@ export class LearningController {
     return this.svc.myActivityResults(u.id, lessonId || undefined)
   }
 
+  /**
+   * @endpoint GET /api/v1/learning/my/resources
+   * Material (links y PDFs) que su profesor le dejó a este estudiante.
+   */
+  @Get('my/resources')
+  myResources(@CurrentUser() u: AuthUser) {
+    return this.svc.myStudentResources(u.id)
+  }
+
+  /** @endpoint GET /api/v1/learning/my/reports  (sólo los publicados) */
+  @Get('my/reports')
+  myReports(@CurrentUser() u: AuthUser) {
+    return this.svc.myReports(u.id)
+  }
+
+  /** @endpoint GET /api/v1/learning/my/reports/:id */
+  @Get('my/reports/:id')
+  myReport(@CurrentUser() u: AuthUser, @Param('id') id: string) {
+    return this.svc.myReport(u.id, id)
+  }
+
   /** @endpoint GET /api/v1/learning/progress  (current user, all levels) */
   @Get('progress')
   getProgress(@CurrentUser() u: AuthUser) { return this.svc.userProgress(u.id) }
@@ -78,31 +99,6 @@ export class LearningController {
     @Body() body: { lessonId: string; secondsWatched: number; completed: boolean },
   ) {
     return this.svc.upsertProgress(u.id, body.lessonId, body.secondsWatched, body.completed)
-  }
-
-  /**
-   * @endpoint GET /api/v1/learning/lessons/:lessonId/slide?studentId=
-   * Slide donde quedó la última clase. `studentId` sólo lo manda el profe (o
-   * admin) cuando abre la lección para dar clase a ese estudiante; el
-   * estudiante en su propia cuenta no lo necesita.
-   */
-  @Get('lessons/:lessonId/slide')
-  getSlide(
-    @CurrentUser() u: AuthUser,
-    @Param('lessonId') lessonId: string,
-    @Query('studentId') studentId?: string,
-  ) {
-    return this.svc.getLastSlide(u.id, u.roles, lessonId, studentId)
-  }
-
-  /** @endpoint POST /api/v1/learning/lessons/:lessonId/slide */
-  @Post('lessons/:lessonId/slide')
-  setSlide(
-    @CurrentUser() u: AuthUser,
-    @Param('lessonId') lessonId: string,
-    @Body() body: { slide: string | number | null; studentId?: string },
-  ) {
-    return this.svc.setLastSlide(u.id, u.roles, lessonId, body?.slide ?? null, body?.studentId)
   }
 
   /**

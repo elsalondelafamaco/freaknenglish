@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Eye, Pin, PinOff, Video } from "lucide-react";
+import { ArrowLeft, Eye, Pin, PinOff, Trash2, Video } from "lucide-react";
 import { toast } from "sonner";
 import { teachersApi } from "@/lib/api/endpoints";
+import type { EnglishLevel } from "@/lib/domain/types";
 
 export const Route = createFileRoute("/_authenticated/teacher/students/$studentId")({
   head: () => ({ meta: [{ title: "Estudiante — Freakn for Teachers" }] }),
@@ -180,11 +181,442 @@ function TeacherStudentDetail() {
         </aside>
       </section>
 
+      <StudentResourcesSection studentId={studentId} />
+      <StudentReportsSection studentId={studentId} />
       <LessonPlanSection studentId={studentId} />
       <CheckpointGatesSection studentId={studentId} />
       <ActivityResultsSection studentId={studentId} />
       <CheckpointAttemptsSection studentId={studentId} />
     </div>
+  );
+}
+
+const NIVELES_REPORTE: Array<{ id: EnglishLevel | ""; label: string }> = [
+  { id: "", label: "Sin nivelar" },
+  { id: "beginner", label: "Beginner" },
+  { id: "intermediate", label: "Intermediate" },
+  { id: "advanced", label: "Advanced" },
+];
+
+const pesoLegible = (b: number | null) =>
+  b == null ? "" : b > 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`;
+
+/**
+ * Material extra del estudiante: links y PDFs que le deja su profesor.
+ *
+ * El PDF va al bucket, que es de lectura pública. La clave lleva un UUID, así
+ * que la URL no se adivina, pero quien la tenga la abre sin sesión: es material
+ * de estudio y es como ya se sirve todo lo demás del producto.
+ */
+export function StudentResourcesSection({ studentId }: { studentId: string }) {
+  const qc = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [tipo, setTipo] = useState<"link" | "file">("link");
+  const [titulo, setTitulo] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+  const [url, setUrl] = useState("");
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [destinatarios, setDestinatarios] = useState<string[]>([studentId]);
+  const [subiendo, setSubiendo] = useState(false);
+
+  const q = useQuery({
+    queryKey: ["student-resources", studentId],
+    queryFn: () => teachersApi.studentResources(studentId),
+  });
+  // Para poder mandarle el mismo material a varios de un tirón.
+  const alumnosQ = useQuery({ queryKey: ["teacher", "students"], queryFn: () => teachersApi.students() });
+
+  const invalidar = () => qc.invalidateQueries({ queryKey: ["student-resources"] });
+  const borrarM = useMutation({
+    mutationFn: (id: string) => teachersApi.deleteStudentResource(id),
+    onSuccess: () => { invalidar(); toast.success("Material eliminado"); },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo eliminar"),
+  });
+
+  function limpiar() {
+    setTitulo(""); setDescripcion(""); setUrl(""); setArchivo(null);
+    setDestinatarios([studentId]);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  async function guardar() {
+    if (!titulo.trim()) return toast.error("Ponle un título");
+    if (destinatarios.length === 0) return toast.error("Elige al menos un estudiante");
+    setSubiendo(true);
+    try {
+      let payloadUrl = url.trim();
+      let storageKey: string | null = null;
+      let contentType: string | null = null;
+      let sizeBytes: number | null = null;
+
+      if (tipo === "file") {
+        if (!archivo) throw new Error("Elige un archivo");
+        // Dos pasos, como el resto del producto: se firma y se sube directo al
+        // bucket; el backend nunca ve el archivo.
+        const firma = await teachersApi.signStudentUpload(
+          studentId,
+          archivo.name,
+          archivo.type || "application/octet-stream",
+        );
+        const r = await fetch(firma.uploadUrl, {
+          method: "PUT",
+          headers: { "content-type": archivo.type || "application/octet-stream" },
+          body: archivo,
+        });
+        if (!r.ok) throw new Error("Falló la subida del archivo");
+        payloadUrl = firma.publicUrl;
+        storageKey = firma.storageKey;
+        contentType = archivo.type || null;
+        sizeBytes = archivo.size;
+      } else if (!payloadUrl) {
+        throw new Error("Pega el enlace");
+      }
+
+      const res = await teachersApi.createStudentResources({
+        studentIds: destinatarios,
+        kind: tipo,
+        title: titulo.trim(),
+        description: descripcion.trim() || null,
+        url: payloadUrl,
+        storageKey,
+        contentType,
+        sizeBytes,
+      });
+      toast.success(res.creados > 1 ? `Material enviado a ${res.creados} estudiantes` : "Material agregado");
+      limpiar();
+      invalidar();
+    } catch (e: any) {
+      toast.error(e?.message ?? "No se pudo guardar");
+    } finally {
+      setSubiendo(false);
+    }
+  }
+
+  const items = q.data ?? [];
+  const alumnos = (alumnosQ.data ?? []) as any[];
+
+  return (
+    <section>
+      <h2 className="text-lg font-semibold text-brand-ink">Material extra del estudiante</h2>
+      <p className="mt-1 text-sm text-brand-ink/65">
+        Links y PDFs de refuerzo. Sólo los ve este estudiante en su portal.
+      </p>
+
+      <div className="mt-3 grid gap-4 rounded-2xl border border-brand-line bg-white p-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+        <div className="flex flex-col gap-3">
+          <div className="inline-flex w-fit rounded-full border border-brand-line p-1 text-xs">
+            {(["link", "file"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTipo(t)}
+                className={`rounded-full px-3 py-1.5 font-medium transition ${tipo === t ? "bg-brand-ink text-white" : "text-brand-ink/70 hover:text-brand-ink"}`}
+              >
+                {t === "link" ? "Enlace" : "Archivo"}
+              </button>
+            ))}
+          </div>
+
+          <input
+            value={titulo}
+            onChange={(e) => setTitulo(e.target.value)}
+            placeholder="Título (ej. Guía de past simple)"
+            className="w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+          />
+          <input
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value)}
+            placeholder="Descripción corta (opcional)"
+            className="w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+          />
+
+          {tipo === "link" ? (
+            <input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://…"
+              className="w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+            />
+          ) : (
+            <div className="flex flex-col gap-1">
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.mp3,.m4a"
+                onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
+                className="w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-xs file:mr-3 file:rounded-full file:border-0 file:bg-brand-cream file:px-3 file:py-1 file:text-xs file:font-semibold"
+              />
+              {archivo ? (
+                <span className="text-[11px] text-brand-ink/55">{archivo.name} · {pesoLegible(archivo.size)}</span>
+              ) : null}
+            </div>
+          )}
+
+          {alumnos.length > 1 ? (
+            <details className="rounded-xl border border-brand-line bg-brand-cream/30 p-2 text-xs">
+              <summary className="cursor-pointer font-semibold text-brand-ink">
+                Enviar también a otros ({destinatarios.length} seleccionado{destinatarios.length === 1 ? "" : "s"})
+              </summary>
+              <div className="mt-2 flex max-h-40 flex-col gap-1 overflow-y-auto">
+                {alumnos.map((a) => (
+                  <label key={a.id} className="flex items-center gap-2 text-brand-ink/80">
+                    <input
+                      type="checkbox"
+                      checked={destinatarios.includes(a.id)}
+                      onChange={(e) =>
+                        setDestinatarios((prev) =>
+                          e.target.checked ? [...new Set([...prev, a.id])] : prev.filter((x) => x !== a.id),
+                        )
+                      }
+                    />
+                    {a.fullName}
+                  </label>
+                ))}
+              </div>
+            </details>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => void guardar()}
+            disabled={subiendo}
+            className="rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-50"
+          >
+            {subiendo ? "Guardando…" : "Agregar material"}
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          {q.isLoading ? (
+            <p className="text-sm text-brand-ink/60">Cargando…</p>
+          ) : items.length === 0 ? (
+            <p className="text-sm text-brand-ink/55">Este estudiante todavía no tiene material.</p>
+          ) : (
+            items.map((m) => (
+              <div key={m.id} className="flex items-start justify-between gap-3 rounded-xl bg-brand-cream/40 p-3">
+                <div className="min-w-0">
+                  <a href={m.url} target="_blank" rel="noreferrer" className="font-medium text-brand-ink hover:underline">
+                    {m.title}
+                  </a>
+                  {m.description ? <div className="text-xs text-brand-ink/65">{m.description}</div> : null}
+                  <div className="mt-0.5 text-[10px] uppercase tracking-wide text-brand-ink/45">
+                    {m.kind === "file" ? "Archivo" : "Enlace"}
+                    {m.sizeBytes ? ` · ${pesoLegible(m.sizeBytes)}` : ""}
+                    {" · "}
+                    {new Date(m.createdAt).toLocaleDateString("es-CO", { day: "2-digit", month: "short" })}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => borrarM.mutate(m.id)}
+                  disabled={borrarM.isPending}
+                  className="shrink-0 rounded-lg p-1.5 text-red-500/70 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                  aria-label="Eliminar material"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Reportes de progreso. A diferencia de las notas privadas, esto SÍ lo ve el
+ * estudiante: al publicarlo le llega notificación en la campana y por correo.
+ * Mientras no se publique es un borrador y sólo lo ve el profe.
+ */
+export function StudentReportsSection({ studentId }: { studentId: string }) {
+  const qc = useQueryClient();
+  const [abierto, setAbierto] = useState(false);
+  const [borrador, setBorrador] = useState({
+    id: undefined as string | undefined,
+    periodLabel: "",
+    level: "" as EnglishLevel | "",
+    classesTaken: "" as number | "",
+    classesTotal: "" as number | "",
+    strengths: "",
+    improvements: "",
+    recommendation: "",
+    comment: "",
+  });
+
+  const q = useQuery({
+    queryKey: ["student-reports", studentId],
+    queryFn: () => teachersApi.studentReports(studentId),
+  });
+
+  const guardarM = useMutation({
+    mutationFn: (publish: boolean) =>
+      teachersApi.saveReport({
+        id: borrador.id,
+        studentId,
+        periodLabel: borrador.periodLabel,
+        level: borrador.level || null,
+        classesTaken: borrador.classesTaken === "" ? null : Number(borrador.classesTaken),
+        classesTotal: borrador.classesTotal === "" ? null : Number(borrador.classesTotal),
+        strengths: borrador.strengths,
+        improvements: borrador.improvements,
+        recommendation: borrador.recommendation,
+        comment: borrador.comment,
+        publish,
+      }),
+    onSuccess: (_r, publish) => {
+      qc.invalidateQueries({ queryKey: ["student-reports", studentId] });
+      setAbierto(false);
+      toast.success(publish ? "Reporte publicado — al estudiante ya le llegó el aviso" : "Borrador guardado");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo guardar"),
+  });
+
+  /** Abre el formulario con el periodo del mes en curso y las clases contadas. */
+  async function nuevo() {
+    const hoy = new Date();
+    const desde = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    const hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59);
+    const periodo = desde.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+    let previo = { level: null as EnglishLevel | null, classesTaken: 0, classesTotal: 0 };
+    try {
+      previo = await teachersApi.reportDraft(studentId, desde.toISOString(), hasta.toISOString());
+    } catch {
+      /* si falla la precarga, el profe lo llena a mano */
+    }
+    setBorrador({
+      id: undefined,
+      periodLabel: periodo.charAt(0).toUpperCase() + periodo.slice(1),
+      level: previo.level ?? "",
+      classesTaken: previo.classesTaken,
+      classesTotal: previo.classesTotal,
+      strengths: "",
+      improvements: "",
+      recommendation: "",
+      comment: "",
+    });
+    setAbierto(true);
+  }
+
+  function editar(r: any) {
+    setBorrador({
+      id: r.id,
+      periodLabel: r.periodLabel,
+      level: r.level ?? "",
+      classesTaken: r.classesTaken ?? "",
+      classesTotal: r.classesTotal ?? "",
+      strengths: r.strengths ?? "",
+      improvements: r.improvements ?? "",
+      recommendation: r.recommendation ?? "",
+      comment: r.comment ?? "",
+    });
+    setAbierto(true);
+  }
+
+  const campo = "w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm focus:border-brand-ink focus:outline-none";
+  const reportes = q.data ?? [];
+
+  return (
+    <section>
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-semibold text-brand-ink">Reportes de progreso</h2>
+          <p className="mt-1 text-sm text-brand-ink/65">
+            El estudiante los lee en su portal. Al publicarlo le llega aviso por correo y campana.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void nuevo()}
+          className="rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink-soft"
+        >
+          Nuevo reporte
+        </button>
+      </div>
+
+      {abierto ? (
+        <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-brand-ink/20 bg-brand-cream/30 p-4">
+          <div className="grid gap-3 sm:grid-cols-4">
+            <label className="text-xs font-semibold text-brand-ink/70 sm:col-span-2">
+              Periodo
+              <input value={borrador.periodLabel} onChange={(e) => setBorrador({ ...borrador, periodLabel: e.target.value })} placeholder="Agosto 2026" className={`mt-1 font-normal ${campo}`} />
+            </label>
+            <label className="text-xs font-semibold text-brand-ink/70">
+              Nivel
+              <select value={borrador.level} onChange={(e) => setBorrador({ ...borrador, level: e.target.value as EnglishLevel | "" })} className={`mt-1 font-normal ${campo}`}>
+                {NIVELES_REPORTE.map((n) => <option key={n.id} value={n.id}>{n.label}</option>)}
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-brand-ink/70">
+              Clases (tomadas / programadas)
+              <div className="mt-1 flex items-center gap-1">
+                <input type="number" min={0} value={borrador.classesTaken} onChange={(e) => setBorrador({ ...borrador, classesTaken: e.target.value === "" ? "" : Number(e.target.value) })} className={`font-normal ${campo}`} />
+                <span className="text-brand-ink/50">/</span>
+                <input type="number" min={0} value={borrador.classesTotal} onChange={(e) => setBorrador({ ...borrador, classesTotal: e.target.value === "" ? "" : Number(e.target.value) })} className={`font-normal ${campo}`} />
+              </div>
+            </label>
+          </div>
+
+          {([
+            ["strengths", "Fortalezas", "En qué va bien: pronunciación, fluidez, participación…"],
+            ["improvements", "Por mejorar", "Lo que conviene reforzar en el próximo tramo"],
+            ["recommendation", "Recomendación", "Qué debería practicar o cambiar"],
+            ["comment", "Comentario para el estudiante", "Un mensaje libre; es lo primero que va a leer"],
+          ] as const).map(([k, label, ph]) => (
+            <label key={k} className="text-xs font-semibold text-brand-ink/70">
+              {label}
+              <textarea
+                rows={2}
+                value={(borrador as any)[k]}
+                onChange={(e) => setBorrador({ ...borrador, [k]: e.target.value })}
+                placeholder={ph}
+                className={`mt-1 font-normal ${campo}`}
+              />
+            </label>
+          ))}
+
+          <div className="flex flex-wrap justify-end gap-2">
+            <button type="button" onClick={() => setAbierto(false)} className="rounded-full border border-brand-line px-4 py-2 text-xs font-semibold text-brand-ink hover:bg-white">
+              Cancelar
+            </button>
+            <button type="button" onClick={() => guardarM.mutate(false)} disabled={guardarM.isPending} className="rounded-full border border-brand-line bg-white px-4 py-2 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40 disabled:opacity-50">
+              Guardar borrador
+            </button>
+            <button type="button" onClick={() => guardarM.mutate(true)} disabled={guardarM.isPending} className="rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-50">
+              Publicar y avisar
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="mt-3 flex flex-col gap-2">
+        {q.isLoading ? (
+          <p className="text-sm text-brand-ink/60">Cargando…</p>
+        ) : reportes.length === 0 ? (
+          <p className="text-sm text-brand-ink/55">Todavía no le has escrito ningún reporte.</p>
+        ) : (
+          reportes.map((r) => (
+            <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brand-line bg-white p-3">
+              <div>
+                <div className="font-medium text-brand-ink">{r.periodLabel}</div>
+                <div className="text-[10px] uppercase tracking-wide text-brand-ink/45">
+                  {r.teacher?.fullName ?? ""}
+                  {r.classesTaken != null ? ` · ${r.classesTaken}/${r.classesTotal ?? "—"} clases` : ""}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${r.publishedAt ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-900"}`}>
+                  {r.publishedAt ? `Publicado ${new Date(r.publishedAt).toLocaleDateString("es-CO", { day: "2-digit", month: "short" })}` : "Borrador"}
+                </span>
+                <button type="button" onClick={() => editar(r)} className="rounded-full border border-brand-line px-3 py-1 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40">
+                  {r.publishedAt ? "Editar" : "Continuar"}
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
   );
 }
 

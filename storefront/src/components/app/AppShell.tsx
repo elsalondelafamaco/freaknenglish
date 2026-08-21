@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   BookOpen,
   CalendarDays,
+  FileBarChart,
   LayoutDashboard,
   LayoutGrid,
   HardDrive,
@@ -37,6 +38,8 @@ const STUDENT_NAV = [
   { to: "/app", label: "Inicio", tKey: "nav.home", icon: LayoutDashboard, end: true },
   { to: "/app/calendar", label: "Calendario", tKey: "nav.calendar", icon: CalendarDays, end: false },
   { to: "/app/learning", label: "Aprendizaje", tKey: "nav.learning", icon: Sparkles, end: false },
+  { to: "/app/material", label: "Mi material", tKey: "nav.mymaterial", icon: BookOpen, end: false },
+  { to: "/app/reports", label: "Mis reportes", tKey: "nav.myreports", icon: FileBarChart, end: false },
   { to: "/boards", label: "Boards", tKey: "nav.boards", icon: LayoutGrid, end: false },
   { to: "/app/settings", label: "Configuración", tKey: "nav.settings", icon: Settings, end: false },
 ] as const;
@@ -229,7 +232,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             y salir tienen que seguir a mano: van como iconos sueltos. */}
         {colapsado ? (
           <div className="mt-auto flex flex-col items-center gap-2 pb-1">
-            <NotificationsBell />
+            {/* Pegada al fondo de la pantalla: el panel tiene que subir. */}
+            <NotificationsBell haciaArriba />
             <ThemeToggle className="size-7" />
             <button
               onClick={handleSignOut}

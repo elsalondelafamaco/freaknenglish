@@ -4,6 +4,7 @@ import { NotificationsService } from '../notifications/notifications.service'
 import { SlotsService, availabilityCovers } from '../scheduling/slots.service'
 import { assertDentroDeLaVentana } from '../scheduling/class-window'
 import { LearningService } from '../learning/learning.service'
+import { StorageService } from '../storage/storage.service'
 
 @Injectable()
 export class TeachersService {
@@ -12,6 +13,7 @@ export class TeachersService {
     private notifications: NotificationsService,
     private slots: SlotsService,
     private learning: LearningService,
+    private storage: StorageService,
   ) {}
 
   /** El profe solo opera sobre sus estudiantes; el admin sobre todos. */
@@ -673,11 +675,19 @@ export class TeachersService {
    * como una lección entera; traerlos todos juntos volvería lentísimo el
    * listado y el profe solo necesita el del que abre.
    */
-  async listResources() {
+  async listResources(level?: string) {
+    const nivel = ['beginner', 'intermediate', 'advanced'].includes(level ?? '')
+      ? (level as 'beginner' | 'intermediate' | 'advanced')
+      : undefined
     return this.prisma.teacherResource.findMany({
-      where: { published: true },
-      orderBy: [{ category: 'asc' }, { position: 'asc' }, { createdAt: 'asc' }],
-      select: { id: true, title: true, description: true, category: true, updatedAt: true },
+      where: {
+        published: true,
+        // Filtrar por un nivel trae también el material sin nivel: ese sirve
+        // para los tres y no tendría sentido esconderlo.
+        ...(nivel ? { OR: [{ level: nivel }, { level: null }] } : {}),
+      },
+      orderBy: [{ level: 'asc' }, { category: 'asc' }, { position: 'asc' }, { createdAt: 'asc' }],
+      select: { id: true, title: true, description: true, category: true, level: true, updatedAt: true },
     })
   }
 
@@ -685,5 +695,239 @@ export class TeachersService {
     const r = await this.prisma.teacherResource.findFirst({ where: { id, published: true } })
     if (!r) throw new NotFoundException('Material no encontrado')
     return r
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Material para un estudiante concreto (links y PDFs)
+  // ──────────────────────────────────────────────────────────────────────
+
+  /**
+   * Firma la subida de un archivo para un estudiante. El objeto queda en el
+   * bucket, que es de lectura pública: la clave lleva un UUID y por eso la URL
+   * no se adivina, pero quien la tenga la abre sin sesión. Es material de
+   * estudio, y es como ya se sirve el resto del producto.
+   */
+  async signStudentUpload(
+    teacherId: string,
+    studentId: string,
+    filename: string,
+    contentType: string,
+    isAdmin = false,
+  ) {
+    await this.assertOwnsStudent(teacherId, studentId, isAdmin)
+    if (!filename?.trim()) throw new BadRequestException('Falta el nombre del archivo')
+    return this.storage.signUpload({
+      filename,
+      contentType: contentType || 'application/octet-stream',
+      prefix: `students/${studentId}`,
+    })
+  }
+
+  /** Material de un estudiante, para el profe (o el admin) que lo gestiona. */
+  async listStudentResources(teacherId: string, studentId: string, isAdmin = false) {
+    await this.assertOwnsStudent(teacherId, studentId, isAdmin)
+    return this.prisma.studentResource.findMany({
+      where: { studentId },
+      orderBy: { createdAt: 'desc' },
+      include: { teacher: { select: { id: true, fullName: true } } },
+    })
+  }
+
+  /**
+   * Crea el material para uno o varios estudiantes de golpe: es común que el
+   * mismo PDF le sirva a media agenda. Se valida la pertenencia de CADA uno —
+   * si no, un profe podría colar material en la cuenta de un alumno ajeno.
+   */
+  async createStudentResources(
+    teacherId: string,
+    input: {
+      studentIds: string[]
+      kind: 'link' | 'file'
+      title: string
+      description?: string | null
+      url: string
+      storageKey?: string | null
+      contentType?: string | null
+      sizeBytes?: number | null
+    },
+    isAdmin = false,
+  ) {
+    const ids = [...new Set(input.studentIds ?? [])].filter(Boolean)
+    if (ids.length === 0) throw new BadRequestException('Elige al menos un estudiante')
+    const title = input.title?.trim()
+    if (!title) throw new BadRequestException('El título es obligatorio')
+    const url = input.url?.trim()
+    if (!url) throw new BadRequestException('Falta el enlace o el archivo')
+    if (input.kind === 'link' && !/^https?:\/\//i.test(url)) {
+      throw new BadRequestException('El enlace debe empezar por http:// o https://')
+    }
+    for (const sid of ids) await this.assertOwnsStudent(teacherId, sid, isAdmin)
+
+    await this.prisma.studentResource.createMany({
+      data: ids.map((studentId) => ({
+        studentId,
+        teacherId,
+        kind: input.kind,
+        title,
+        description: input.description?.trim() || null,
+        url,
+        storageKey: input.storageKey ?? null,
+        contentType: input.contentType ?? null,
+        sizeBytes: input.sizeBytes ?? null,
+      })),
+    })
+    return { ok: true, creados: ids.length }
+  }
+
+  /**
+   * Borra el material. Primero el objeto del bucket y después la fila: al
+   * revés quedaría un archivo huérfano ocupando espacio sin nada que lo
+   * referencie.
+   *
+   * Ojo: el mismo archivo puede estar compartido con varios estudiantes (una
+   * fila por cada uno). Sólo se borra del bucket cuando ya no queda ninguna
+   * otra fila apuntando a esa clave.
+   */
+  async deleteStudentResource(teacherId: string, id: string, isAdmin = false) {
+    const r = await this.prisma.studentResource.findUnique({ where: { id } })
+    if (!r) throw new NotFoundException('Material no encontrado')
+    await this.assertOwnsStudent(teacherId, r.studentId, isAdmin)
+
+    if (r.storageKey) {
+      const otras = await this.prisma.studentResource.count({
+        where: { storageKey: r.storageKey, id: { not: id } },
+      })
+      if (otras === 0) await this.storage.delete(r.storageKey).catch(() => undefined)
+    }
+    await this.prisma.studentResource.delete({ where: { id } })
+    return { ok: true }
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Reportes de progreso
+  // ──────────────────────────────────────────────────────────────────────
+
+  async listStudentReports(teacherId: string, studentId: string, isAdmin = false) {
+    await this.assertOwnsStudent(teacherId, studentId, isAdmin)
+    return this.prisma.studentReport.findMany({
+      where: { studentId },
+      orderBy: { createdAt: 'desc' },
+      include: { teacher: { select: { id: true, fullName: true } } },
+    })
+  }
+
+  /**
+   * Datos con los que se precarga un reporte nuevo, para que el profe no tenga
+   * que contar clases a mano: nivel del estudiante y clases tomadas contra
+   * programadas en el periodo.
+   */
+  async reportDraft(teacherId: string, studentId: string, from: Date, to: Date, isAdmin = false) {
+    await this.assertOwnsStudent(teacherId, studentId, isAdmin)
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: studentId },
+      select: { englishLevel: true },
+    })
+    const rango = { startsAt: { gte: from, lte: to } }
+    const [taken, total] = await Promise.all([
+      this.prisma.class.count({ where: { studentId, status: 'validated', ...rango } }),
+      this.prisma.class.count({
+        where: { studentId, status: { notIn: ['cancelled'] }, ...rango },
+      }),
+    ])
+    return { level: user.englishLevel, classesTaken: taken, classesTotal: total }
+  }
+
+  async saveStudentReport(
+    teacherId: string,
+    input: {
+      id?: string
+      studentId: string
+      periodLabel: string
+      level?: 'beginner' | 'intermediate' | 'advanced' | null
+      classesTaken?: number | null
+      classesTotal?: number | null
+      strengths?: string | null
+      improvements?: string | null
+      recommendation?: string | null
+      comment?: string | null
+      publish?: boolean
+    },
+    isAdmin = false,
+  ) {
+    await this.assertOwnsStudent(teacherId, input.studentId, isAdmin)
+    const periodLabel = input.periodLabel?.trim()
+    if (!periodLabel) throw new BadRequestException('Indica el periodo del reporte')
+
+    const existing = input.id
+      ? await this.prisma.studentReport.findUnique({ where: { id: input.id } })
+      : null
+    if (input.id && !existing) throw new NotFoundException('Reporte no encontrado')
+    if (existing && existing.studentId !== input.studentId) {
+      throw new BadRequestException('El reporte no es de ese estudiante')
+    }
+
+    // Omitir un campo lo CONSERVA; para vaciarlo hay que mandarlo en null o en
+    // blanco. Sin esto, publicar mandando sólo el id borraba el reporte entero.
+    const texto = (nuevo: string | null | undefined, previo: string | null) =>
+      nuevo === undefined ? previo : (nuevo?.trim() || null)
+    const data = {
+      periodLabel,
+      level: input.level !== undefined ? input.level : (existing?.level ?? null),
+      classesTaken: input.classesTaken !== undefined ? input.classesTaken : (existing?.classesTaken ?? null),
+      classesTotal: input.classesTotal !== undefined ? input.classesTotal : (existing?.classesTotal ?? null),
+      strengths: texto(input.strengths, existing?.strengths ?? null),
+      improvements: texto(input.improvements, existing?.improvements ?? null),
+      recommendation: texto(input.recommendation, existing?.recommendation ?? null),
+      comment: texto(input.comment, existing?.comment ?? null),
+    }
+
+    // Publicar es de una sola vía: una vez que el estudiante lo leyó, quitarlo
+    // de su lista sería peor que dejarlo. Editar un publicado sigue siendo
+    // posible, y conserva la fecha original.
+    const yaPublicado = !!existing?.publishedAt
+    const publicaAhora = !!input.publish && !yaPublicado
+    const publishedAt = yaPublicado ? existing!.publishedAt : publicaAhora ? new Date() : null
+
+    const report = existing
+      ? await this.prisma.studentReport.update({
+          where: { id: existing.id },
+          data: { ...data, publishedAt },
+        })
+      : await this.prisma.studentReport.create({
+          data: { ...data, studentId: input.studentId, teacherId, publishedAt },
+        })
+
+    if (publicaAhora) await this.notifyReportPublished(report.id, input.studentId, teacherId, periodLabel)
+    return report
+  }
+
+  /** Aviso al estudiante: campana + correo, con el enlace directo al reporte. */
+  private async notifyReportPublished(
+    reportId: string,
+    studentId: string,
+    teacherId: string,
+    periodLabel: string,
+  ) {
+    const [student, teacher] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: studentId }, select: { email: true, fullName: true } }),
+      this.prisma.user.findUnique({ where: { id: teacherId }, select: { fullName: true } }),
+    ])
+    if (!student) return
+    await this.notifications.enqueue({
+      userId: studentId,
+      toEmail: student.email,
+      template: 'student_report',
+      subject: `Tu reporte de ${periodLabel} ya está listo`,
+      dedupeKey: `student-report:${reportId}`,
+      vars: {
+        fullName: student.fullName?.split(' ')[0],
+        teacherName: teacher?.fullName ?? 'Tu profesor',
+        periodLabel,
+      },
+      type: 'teacher',
+      title: 'Tienes un reporte nuevo',
+      body: `${teacher?.fullName ?? 'Tu profesor'} escribió tu reporte de ${periodLabel}.`,
+      linkUrl: `/app/reports/${reportId}`,
+    })
   }
 }

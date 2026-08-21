@@ -85,7 +85,7 @@ export function HowItWorks() {
 
         {/* Diorama */}
         <Reveal delay={200}>
-          <div className="shadow-hard relative mt-12 border-2 border-brand-ink bg-brand-ink px-5 py-16 [--hard-x:10px] lg:mt-14 lg:h-[640px] lg:px-0 lg:py-0">
+          <div className="shadow-hard relative mt-12 border-2 border-brand-ink bg-brand-ink px-4 py-10 [--hard-x:10px] lg:mt-14 lg:h-[560px] lg:px-0 lg:py-0">
             {/* Palabra fantasma */}
             <span
               aria-hidden
@@ -95,7 +95,7 @@ export function HowItWorks() {
             </span>
 
             {/* Ventana de la clase (video real del admin si existe) */}
-            <div className="relative mx-auto max-w-[660px] border-2 border-brand-cream lg:absolute lg:left-20 lg:top-1/2 lg:w-[660px] lg:max-w-none lg:-translate-y-1/2">
+            <div className="relative mx-auto max-w-[660px] border-2 border-brand-cream lg:absolute lg:left-16 lg:top-1/2 lg:w-[620px] lg:max-w-none lg:-translate-y-1/2">
               <div className="relative aspect-[3/2] overflow-hidden">
                 <MediaThumb
                   imageSlot="how-2-image"
@@ -126,17 +126,11 @@ export function HowItWorks() {
             </div>
 
             {/* Tarjetas flotantes del producto (parallax + flotación) */}
-            <FloatCard className="lg:right-[300px] lg:top-12" speed={0.06} rot={2}>
+            <FloatCard className="lg:right-24 lg:top-14" speed={0.06} rot={2}>
               <ProgressCard />
             </FloatCard>
-            <FloatCard className="lg:right-16 lg:top-[300px]" speed={-0.05} rot={-2}>
-              <VocabCard />
-            </FloatCard>
-            <FloatCard className="lg:bottom-14 lg:left-[420px]" speed={0.09} rot={1.5}>
+            <FloatCard className="lg:bottom-16 lg:right-32" speed={0.09} rot={-1.5}>
               <FeedbackCard />
-            </FloatCard>
-            <FloatCard className="lg:-top-8 lg:left-10" speed={-0.07} rot={-2.5}>
-              <ClaseEnVivoCard />
             </FloatCard>
           </div>
         </Reveal>
@@ -178,7 +172,7 @@ function FloatCard({
   return (
     <div
       ref={ref}
-      className={cn("mt-6 lg:absolute lg:mt-0", className)}
+      className={cn("hidden lg:absolute lg:block", className)}
       style={{ transform: "translateY(var(--parallax-y, 0px))" }}
     >
       <div
@@ -225,15 +219,6 @@ function ProgressCard() {
   );
 }
 
-function VocabCard() {
-  return (
-    <CardShell label="Nuevo Vocabulario">
-      <div className="mt-1.5 font-display text-[24px] font-bold">Adventure</div>
-      <div className="text-[13px] italic text-brand-ink/60">/əd&apos;ven.tʃər/</div>
-      <div className="mt-1 text-[13px] text-brand-ink/65">A fun or exciting experience.</div>
-    </CardShell>
-  );
-}
 
 function FeedbackCard() {
   const [ref, inView] = useInViewOnce<HTMLDivElement>(0.4);
@@ -261,32 +246,3 @@ function FeedbackCard() {
   );
 }
 
-function ClaseEnVivoCard() {
-  const { media } = useSiteContent();
-  const spheres = [
-    media["sphere-1"] ?? media["avatar-teacher"],
-    media["sphere-2"] ?? media["avatar-teacher"],
-    media["sphere-3"] ?? media["avatar-teacher"],
-  ];
-  return (
-    <CardShell
-      label="Clase en Vivo"
-      labelExtra={<span className="size-1.5 rounded-full bg-red-500 animate-pulse" />}
-    >
-      <div className="mt-1.5 font-display text-[18px] font-bold">Travel &amp; Adventures</div>
-      <div className="text-[13px] text-brand-ink/60">8:00 PM – 9:00 PM</div>
-      <div className="mt-2.5 flex -space-x-2">
-        {spheres.map((src, i) =>
-          src ? (
-            <img key={i} src={src} alt="" className="size-7 rounded-full border-2 border-white object-cover" />
-          ) : (
-            <span key={i} className="size-7 rounded-full border-2 border-white bg-gradient-to-br from-amber-200 to-amber-400" />
-          ),
-        )}
-        <span className="!ml-1 flex size-7 items-center justify-center rounded-full border-2 border-white bg-brand-yellow text-[11px] font-bold text-brand-ink">
-          +1
-        </span>
-      </div>
-    </CardShell>
-  );
-}

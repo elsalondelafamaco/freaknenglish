@@ -36,7 +36,7 @@ export function Hero() {
 
       {/* Copy — alineado a la derecha, estilo editorial */}
       <div className="relative mx-auto flex w-full max-w-[1440px] flex-1 flex-col items-center justify-center px-5 pt-28 text-center lg:items-end lg:px-16 lg:pt-24 lg:text-right">
-        <Reveal delay={950}>
+        <Reveal delay={1420}>
           <p className="flex items-center justify-center gap-3 text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-cream lg:justify-end lg:text-[13px]">
             <span className="inline-block size-2 bg-brand-yellow" />
             Real English. Real Results.
@@ -56,7 +56,7 @@ export function Hero() {
             <span key={i} className="block overflow-hidden pb-[0.06em] mb-[-0.06em]">
               <span
                 className="animate-line-up block"
-                style={{ "--line-delay": `${1000 + i * 130}ms` } as CSSProperties}
+                style={{ "--line-delay": `${1480 + i * 130}ms` } as CSSProperties}
               >
                 {line}
               </span>
@@ -64,7 +64,7 @@ export function Hero() {
           ))}
         </h1>
 
-        <Reveal delay={1300}>
+        <Reveal delay={1780}>
           <p className="mx-auto mt-7 max-w-md text-[16px] leading-relaxed text-white/85 lg:mx-0 lg:max-w-[470px] lg:text-[19px]">
             Clases <strong className="font-semibold text-white">1 a 1 en Vivo</strong> con
             profesores reales, conversaciones prácticas y feedback personalizado para que
@@ -72,7 +72,7 @@ export function Hero() {
           </p>
         </Reveal>
 
-        <Reveal delay={1420}>
+        <Reveal delay={1880}>
           <Link
             to="/"
             hash="precios"
@@ -85,8 +85,8 @@ export function Hero() {
       </div>
 
       {/* Fila inferior: rotador de testimonios + señal de scroll */}
-      <div className="relative mx-auto flex w-full max-w-[1440px] items-end justify-between px-5 pb-20 pt-10 lg:px-16 lg:pb-24">
-        <Reveal delay={1550} className="max-w-[440px]">
+      <div className="relative mx-auto flex w-full max-w-[1440px] shrink-0 items-end justify-between px-5 pb-16 pt-8 lg:px-16 lg:pb-20">
+        <Reveal delay={1980} className="max-w-[440px]">
           <TestimonialRotator />
         </Reveal>
         <div className="absolute bottom-20 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 lg:flex">
@@ -99,7 +99,7 @@ export function Hero() {
       </div>
 
       {/* Ticker inferior */}
-      <div className="relative border-t border-white/15">
+      <div className="relative shrink-0 border-t border-white/15 bg-brand-ink/85">
         <Marquee speed={36} className="py-4">
           {TICKER.map((t) => (
             <span key={t} className="flex items-center">

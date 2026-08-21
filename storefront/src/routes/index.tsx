@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Preloader } from "@/components/site/Preloader";
 import { Navbar } from "@/components/site/Navbar";
 import { Hero } from "@/components/site/Hero";
 import { HowItWorks } from "@/components/site/HowItWorks";
 import { Testimonials } from "@/components/site/Testimonials";
 import { Pricing } from "@/components/site/Pricing";
 import { Faq } from "@/components/site/Faq";
+import { CtaFinal } from "@/components/site/CtaFinal";
 import { Footer } from "@/components/site/Footer";
 
 import { DEFAULT_FAQS } from "@/lib/site-content";
@@ -45,12 +47,14 @@ export const Route = createFileRoute("/")({
 function Index() {
   return (
     <main className="min-h-screen bg-white">
+      <Preloader />
       <Navbar />
       <Hero />
       <HowItWorks />
       <Testimonials />
       <Pricing />
       <Faq />
+      <CtaFinal />
       <Footer />
     </main>
   );

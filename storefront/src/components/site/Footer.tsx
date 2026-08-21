@@ -81,10 +81,7 @@ export function Footer() {
           className="relative mt-10 h-[160px] sm:h-[220px] lg:h-[300px]"
           style={{ transform: "translateY(var(--parallax-y, 0px))" }}
         >
-          <span aria-hidden className="absolute left-[14px] top-[14px] w-full opacity-10">
-            <Logo className="h-auto w-full text-brand-cream" />
-          </span>
-          <Logo className="absolute left-0 top-0 h-auto w-full text-brand-yellow" />
+          <Logo className="absolute left-0 top-0 h-auto w-full" />
         </div>
       </div>
     </footer>

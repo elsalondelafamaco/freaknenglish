@@ -81,7 +81,7 @@ export function Footer() {
           className="relative mt-10 h-[160px] sm:h-[220px] lg:h-[300px]"
           style={{ transform: "translateY(var(--parallax-y, 0px))" }}
         >
-          <Logo className="absolute left-0 top-0 h-auto w-full" />
+          <Logo variant="dark" className="absolute left-0 top-0 h-auto w-full" />
         </div>
       </div>
     </footer>

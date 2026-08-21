@@ -35,7 +35,7 @@ export function Preloader() {
         {/* Wordmark enmascarado: sube y se asienta */}
         <div className="overflow-hidden px-2 pb-2">
           <div className="animate-preloader-logo text-white">
-            <Logo className="h-16 w-auto sm:h-20" />
+            <Logo variant="dark" className="h-16 w-auto sm:h-20" />
           </div>
         </div>
 

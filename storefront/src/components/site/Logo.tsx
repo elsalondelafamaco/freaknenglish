@@ -1,10 +1,12 @@
 import type { CSSProperties } from "react";
 
 /**
- * Wordmark oficial "freakn'" (vector del Figma de marca, dos capas) con los
- * colores canónicos definidos por Daniel: letras SIEMPRE en crema #FEF6C7 y
- * la sombra dura desplazada SIEMPRE en negro. Sobre fondos claros la sombra
- * negra es la que dibuja la silueta; sobre tinta las letras crema resaltan.
+ * Wordmark oficial "freakn'" (vector del Figma de marca, dos capas).
+ * Colores canónicos definidos por Daniel según el fondo:
+ * - `variant="light"` (fondos CLAROS, default): letras negras + sombra amarilla.
+ * - `variant="dark"` (fondos OSCUROS): letras crema #FEF6C7 + sombra negra.
+ * El default es "light" para que todas las páginas internas (checkout, login,
+ * portal) queden bien sin tocarlas; la landing marca "dark" donde aplica.
  */
 const PATHS = [
   "M6.33478 21.5238L2.18771 23.7355L0 20.3356L6.32108 16.7347L6.33021 8.22587C6.43983 5.88617 6.68189 3.28143 8.55446 1.6409C11.3999 -0.849602 17.0724 -0.200701 20.1736 1.56778L18.881 5.05448C17.1592 4.31419 15.1815 3.56932 13.309 4.25478C11.8977 4.77116 11.683 6.32487 11.6054 7.65466C11.4821 9.76587 11.6967 11.9913 11.6054 14.1162C11.7333 14.1482 11.7835 14.066 11.8749 14.0157C13.7885 13.0149 15.8255 11.4704 17.7529 10.3462C21.9913 7.87857 26.6225 5.49318 31.24 3.82523C36.9262 1.76885 47.2802 -1.0918 49.7282 6.82754C50.2352 8.47264 50.0343 9.81157 49.8105 11.4795L45.6908 11.7263V9.29976C45.6908 8.52747 44.7956 7.44902 44.1516 7.05145C40.8541 5.02706 33.2724 7.68207 29.8607 9.03014C23.4346 11.5709 17.319 15.1581 11.6419 19.0516L11.6145 29.6168L11.7424 29.7356L15.1861 29.9138L15.3916 30.0372V33.4553H3.61726V30.0783C4.25668 30.0646 5.59488 30.0737 6.08358 29.6213C6.13382 29.5756 6.33478 29.2375 6.33478 29.2146V21.5192V21.5238Z",
@@ -28,10 +30,15 @@ function Layer({ fill, style }: { fill: string; style?: CSSProperties }) {
 export function Logo({
   className = "h-8 w-auto",
   title = "FreaknEnglish",
+  variant = "light",
 }: {
   className?: string;
   title?: string;
+  /** "light" = para fondos claros (negro+amarillo) · "dark" = para fondos oscuros (crema+negro) */
+  variant?: "light" | "dark";
 }) {
+  const shadow = variant === "dark" ? "#141414" : "#EBD81A";
+  const letters = variant === "dark" ? "#FEF6C7" : "#141414";
   return (
     <svg
       viewBox="0 0 131.3 40.2"
@@ -43,8 +50,8 @@ export function Logo({
     >
       <title>{title}</title>
       {/* Sombra dura desplazada — el ADN de la marca, sin blur */}
-      <Layer fill="#141414" style={{ transform: "translate(2.6px, 3px)" }} />
-      <Layer fill="#FEF6C7" />
+      <Layer fill={shadow} style={{ transform: "translate(2.6px, 3px)" }} />
+      <Layer fill={letters} />
     </svg>
   );
 }

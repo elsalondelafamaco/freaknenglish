@@ -52,7 +52,7 @@ export function Navbar() {
         )}
       >
         <Link to="/" className="flex items-center text-white" aria-label="FreaknEnglish">
-          <Logo className={cn("w-auto transition-all duration-300", scrolled ? "h-7" : "h-8 md:h-9")} />
+          <Logo variant="dark" className={cn("w-auto transition-all duration-300", scrolled ? "h-7" : "h-8 md:h-9")} />
         </Link>
 
         {/* Links en la tipografía del botón (display bold) con índice amarillo */}

@@ -1,4 +1,11 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ConflictException,
+  HttpException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common'
 import { AppRole, Prisma } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { IS_TEACHER, hasRole } from '../../common/roles'
@@ -732,7 +739,7 @@ export class AdminService {
   }) {
     const email = input.email.toLowerCase()
     const exists = await this.prisma.user.findUnique({ where: { email } })
-    if (exists) throw new Error('User already exists')
+    if (exists) throw new ConflictException(`Ya existe un usuario con el correo ${email}`)
     if (input.classDurationMin !== undefined && input.classDurationMin !== null) {
       const dur = input.classDurationMin
       if (!Number.isInteger(dur) || dur < 25 || dur > 180) {
@@ -752,65 +759,91 @@ export class AdminService {
       },
     })
 
-    let planName: string | undefined
-    let planEndsAt: string | undefined
-    if (input.role === 'student' && input.plan?.planId && input.plan.endDate) {
-      const sub = await this.setUserSubscription(user.id, {
-        planId: input.plan.planId,
-        status: 'active',
-        currentPeriodEnd: input.plan.endDate,
-        startedAt: input.plan.startDate ?? undefined,
-      })
-      planName = sub.plan.name
-      planEndsAt = sub.currentPeriodEnd?.toISOString()
-
-      // Horario + profesor en el mismo paso. Se valida con las MISMAS reglas
-      // que el checkout (cantidad del plan, ventana y máximo por día) para no
-      // dejar entrar por el admin selecciones que la app rechazaría.
-      if (input.schedule?.length) {
-        await this.slotsSvc.validateSelection(input.schedule, sub.plan.daysPerWeek, input.classDurationMin ?? 50)
-        await this.prisma.user.update({
-          where: { id: user.id },
-          data: {
-            schedulePreferences: input.schedule as any,
-            // Sin profesor queda en la cola de asignación manual del admin.
-            scheduleAssignmentStatus: input.teacherId ? undefined : 'manual_pending',
-          },
+    // A partir de aquí el usuario ya existe en la BD, pero el alta todavía no
+    // está completa (suscripción, horario, profesor, invitación). Si algo falla
+    // a mitad, borramos el usuario para no dejar un registro huérfano invisible
+    // en el CRM: sin profe, sin clases y sin correo de invitación, que además
+    // bloquea el reintento con "correo duplicado".
+    try {
+      let planName: string | undefined
+      let planEndsAt: string | undefined
+      if (input.role === 'student' && input.plan?.planId && input.plan.endDate) {
+        const sub = await this.setUserSubscription(user.id, {
+          planId: input.plan.planId,
+          status: 'active',
+          currentPeriodEnd: input.plan.endDate,
+          startedAt: input.plan.startDate ?? undefined,
         })
-        if (input.teacherId) {
-          // Crea slots, valida cruces con la agenda del profe, notifica a ambos
-          // y materializa las clases. Si el profe está ocupado, lanza y el
-          // usuario queda creado sin asignar (el admin reintenta desde la ficha).
-          await this.schedulingSvc.assignRequest(user.id, input.teacherId)
+        planName = sub.plan.name
+        planEndsAt = sub.currentPeriodEnd?.toISOString()
+
+        // Horario + profesor en el mismo paso. Se valida con las MISMAS reglas
+        // que el checkout (cantidad del plan, ventana y máximo por día) para no
+        // dejar entrar por el admin selecciones que la app rechazaría.
+        if (input.schedule?.length) {
+          await this.slotsSvc.validateSelection(input.schedule, sub.plan.daysPerWeek, input.classDurationMin ?? 50)
+          await this.prisma.user.update({
+            where: { id: user.id },
+            data: {
+              schedulePreferences: input.schedule as any,
+              // Sin profesor queda en la cola de asignación manual del admin.
+              scheduleAssignmentStatus: input.teacherId ? undefined : 'manual_pending',
+            },
+          })
+          if (input.teacherId) {
+            // Crea slots, valida cruces con la agenda del profe, notifica a
+            // ambos y materializa las clases. Si el profe no tiene pintada esa
+            // disponibilidad, lanza y el alta entera se revierte.
+            await this.schedulingSvc.assignRequest(user.id, input.teacherId)
+          }
         }
       }
-    }
 
-    // Invitación: link para configurar contraseña (reusa el flujo de reset,
-    // TTL 7 días). Sin `plan`, un estudiante NO queda activo hasta pagar Wompi.
-    const token = randomBytes(32).toString('hex')
-    const tokenHash = createHash('sha256').update(token).digest('hex')
-    await this.prisma.passwordReset.create({
-      data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + INVITE_TTL_MS) },
-    })
-    const link = `${env.PUBLIC_SITE_URL}/reset-password?token=${token}`
-    await this.notificationsSvc.enqueue({
-      userId: user.id,
-      toEmail: user.email,
-      template: 'account_invite',
-      subject: `Tu invitación a ${env.BRAND_NAME} 💛`,
-      dedupeKey: `invite:${user.id}:${token.slice(0, 12)}`,
-      vars: {
-        fullName: user.fullName,
-        link,
-        role: input.role,
-        ...(planName ? { planName } : {}),
-        ...(planEndsAt ? { planEndsAt } : {}),
-      },
-      type: 'system',
-    })
-    // En dev devolvemos el link para poder probar sin SMTP.
-    return { user, link }
+      // Invitación: link para configurar contraseña (reusa el flujo de reset,
+      // TTL 7 días). Sin `plan`, un estudiante NO queda activo hasta pagar Wompi.
+      const token = randomBytes(32).toString('hex')
+      const tokenHash = createHash('sha256').update(token).digest('hex')
+      await this.prisma.passwordReset.create({
+        data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + INVITE_TTL_MS) },
+      })
+      const link = `${env.PUBLIC_SITE_URL}/reset-password?token=${token}`
+      await this.notificationsSvc.enqueue({
+        userId: user.id,
+        toEmail: user.email,
+        template: 'account_invite',
+        subject: `Tu invitación a ${env.BRAND_NAME} 💛`,
+        dedupeKey: `invite:${user.id}:${token.slice(0, 12)}`,
+        vars: {
+          fullName: user.fullName,
+          link,
+          role: input.role,
+          ...(planName ? { planName } : {}),
+          ...(planEndsAt ? { planEndsAt } : {}),
+        },
+        type: 'system',
+      })
+      // En dev devolvemos el link para poder probar sin SMTP.
+      return { user, link }
+    } catch (err) {
+      // Compensación: el borrado arrastra en cascada suscripción, slots, clases
+      // y notificaciones del usuario recién creado.
+      try {
+        await this.prisma.user.delete({ where: { id: user.id } })
+      } catch (cleanupErr) {
+        // Si ni siquiera se pudo limpiar, dejamos rastro: queda un usuario a
+        // medias y hay que borrarlo a mano.
+        this.log.error(
+          `No se pudo revertir el alta de ${email} (id ${user.id}); queda un registro incompleto`,
+          cleanupErr instanceof Error ? cleanupErr.stack : String(cleanupErr),
+        )
+      }
+      if (err instanceof HttpException) throw err
+      // Cualquier fallo no tipado salía como 500 opaco; lo convertimos en un
+      // mensaje que el admin pueda leer y accionar.
+      const detalle = err instanceof Error ? err.message : String(err)
+      this.log.error(`Falló el alta de ${email}: ${detalle}`, err instanceof Error ? err.stack : undefined)
+      throw new BadRequestException(`No se pudo crear el usuario: ${detalle}`)
+    }
   }
 
   /**

@@ -244,6 +244,36 @@
 
         // Freakn Activity tracking (extra-activity)
         var freaknAnswers = [];
+        /* Reporte progresivo (plataforma Freakn'). El resultado sólo se
+           mandaba en la pantalla final: una actividad empezada y no terminada
+           no dejaba constancia de nada. Se engancha en el push del array para
+           no depender de dónde apunte cada archivo sus respuestas. */
+        var __freaknTotal = 20;
+        function __freaknReportarParcial() {
+            try {
+                FreaknActivity.submit({
+                    activityId: "extra-activity",
+                    title: document.title,
+                    score: freaknAnswers.filter(function (a) { return a.correct; }).length,
+                    maxScore: __freaknTotal || freaknAnswers.length,
+                    answers: freaknAnswers.slice()
+                });
+            } catch (e) {}
+        }
+        /* OJO: tiene que ser NO enumerable. Como propiedad normal, el array
+           deja de ser clonable y `postMessage` revienta con DataCloneError —
+           que el puente se traga en silencio. Resultado: la actividad dejaría
+           de guardar resultados del todo, incluido el envío final. */
+        Object.defineProperty(freaknAnswers, "push", {
+            value: function () {
+                var n = Array.prototype.push.apply(this, arguments);
+                __freaknReportarParcial();
+                return n;
+            },
+            writable: true,
+            enumerable: false,
+            configurable: true
+        });
         function registrarRespuesta(id, pregunta, respuesta, acerto, esperada) {
             if (freaknAnswers.some(function (a) { return a.id === id; })) return; // 1er intento
             freaknAnswers.push({ id: id, question: pregunta, answer: respuesta, correct: acerto, expected: esperada });

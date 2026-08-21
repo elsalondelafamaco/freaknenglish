@@ -1333,5 +1333,50 @@
     };
   })();
 </script>
+
+<script>
+    /* Reporte de la actividad extra (plataforma Freakn').
+       Sin memoria de posición: restaurarla reiniciaba el marcador y la
+       actividad se calificaba solo sobre el nivel retomado. */
+    (function () {
+        if (typeof game === "undefined" || !game || !game.slides) return;
+        window.__freaknExtraA = true;
+
+        function respuestas() {
+            if (game.freaknAnswers) return game.freaknAnswers;
+            if (game.answers) return game.answers;
+            try { if (typeof freaknAnswers !== "undefined") return freaknAnswers; } catch (e) {}
+            return [];
+        }
+
+        /* Se manda el acumulado tras cada pregunta. El backend guarda sobre el
+           mismo intento mientras el número de respuestas no baje, así que esto
+           no crea un intento por pregunta. */
+        function reportar() {
+            try {
+                FreaknActivity.submit({
+                    activityId: "extra-activity",
+                    title: document.title,
+                    score: game.score,
+                    maxScore: game.maxScore,
+                    answers: respuestas()
+                });
+            } catch (e) {}
+        }
+
+        [1, 2, 3].forEach(function (n) {
+            var original = game["loadL" + n];
+            if (typeof original !== "function") return;
+            game["loadL" + n] = function () {
+                var r = original.apply(this, arguments);
+                try {
+                    reportar();
+                } catch (e) {}
+                return r;
+            };
+        });
+
+    })();
+</script>
 </body>
 </html>

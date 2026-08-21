@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 31: Sex for Sale</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;700;900&family=Montserrat:ital,wght@0,400;0,500;0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'bold-yellow': '#E4DF33',
+                        'bold-dark': '#1A1A1A',
+                        'bold-gray': '#F3F4F6',
+                        'bold-text': '#4B5563',
+                        'bold-border': '#E5E7EB',
+                        'bold-red': '#FF4545'
+                    },
+                    fontFamily: {
+                        urbanist: ['"Urbanist"', 'sans-serif'],
+                        montserrat: ['"Montserrat"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { background-color: #E5E7EB; color: #1A1A1A; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100dvh; margin: 0; }
+        h1, h2, h3, h4, h5, .font-urbanist { text-transform: uppercase; letter-spacing: -0.02em; }
+        .presentation-wrapper { width: 100vw; height: 100dvh; padding: 2rem; display: flex; justify-content: center; align-items: center; }
+        .slide-container { width: 100%; max-width: 1280px; aspect-ratio: 16 / 9; background-color: #FFFFFF; position: relative; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2); font-family: 'Montserrat', sans-serif; }
+        
+        /* STRICT PADDING AND OVERFLOW RULES TO PREVENT SCROLLING */
+        .slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 4rem 5rem; opacity: 0; z-index: 0; pointer-events: none; transform: translateY(15px) scale(0.98); transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; justify-content: center; }
+        .slide.active { opacity: 1; z-index: 10; pointer-events: all; transform: translateY(0) scale(1); }
+        
+        /* Custom Scrollbar */
+        .slide::-webkit-scrollbar { width: 8px; }
+        .slide::-webkit-scrollbar-thumb { background: #1A1A1A; }
+        .slide::-webkit-scrollbar-track { background: #F3F4F6; }
+
+        /* Split Layout */
+        .split-layout { display: flex; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        .split-left { flex: 1; background-color: #E4DF33; color: #1A1A1A; padding: 4rem 5rem; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
+        .split-right { flex: 1; background-color: #1A1A1A; color: #FFFFFF; padding: 4rem 5rem; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
+        
+        .mirrored-text { position: absolute; opacity: 0.1; font-weight: 900; font-size: 200px; font-family: 'Urbanist', sans-serif; white-space: nowrap; transform: scaleX(-1); pointer-events: none; z-index: 0; }
+
+        /* 3D Flip Cards */
+        .perspective { perspective: 1000px; }
+        .preserve-3d { transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        .group:hover .preserve-3d { transform: rotateY(180deg); }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+
+        /* Mobile-First Responsive Design via Custom Classes */
+        @media (max-width: 820px) {
+            .presentation-wrapper { padding: 0; }
+            .slide-container { aspect-ratio: auto; height: 100dvh; border-radius: 0; box-shadow: none; max-width: 100vw; }
+            
+            /* Reduced padding on mobile, increased bottom padding to clear nav buttons */
+            .slide { padding: 3rem 1.25rem 6.5rem 1.25rem !important; justify-content: flex-start; }
+            .slide.\!p-0 { padding: 0 !important; }
+            
+            /* Stacking the split layouts */
+            .split-layout { flex-direction: column; min-height: 100%; height: auto; position: static; }
+            .split-left { padding: 4rem 1.25rem 2.5rem 1.25rem; flex: none; min-height: 50vh; }
+            .split-right { padding: 2.5rem 1.25rem 6.5rem 1.25rem; flex: none; min-height: 50vh; }
+            
+            .mirrored-text { font-size: 90px !important; }
+
+            /* Fixes for 3D flip cards on mobile so they don't break flex layout or squish */
+            .perspective { height: 180px; min-height: 180px; }
+        }
+    </style>
+</head>
+<body class="font-montserrat antialiased selection:bg-bold-dark selection:text-bold-yellow">
+
+    <div class="presentation-wrapper">
+        <div class="slide-container" id="presentation">
+            
+            <div class="absolute top-0 left-0 w-full h-2 bg-bold-gray z-50">
+                <div id="progress-bar" class="h-full bg-bold-dark transition-all duration-500 ease-out" style="width: 0%;"></div>
+            </div>
+
+            <button onclick="nav(-1)" id="prev-btn" class="absolute bottom-6 left-6 z-50 bg-bold-dark text-bold-yellow w-12 h-12 flex items-center justify-center hover:bg-bold-yellow hover:text-bold-dark transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] min-h-[48px] min-w-[48px]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+            <button onclick="nav(1)" id="next-btn" class="absolute bottom-6 right-6 z-50 bg-bold-dark text-bold-yellow w-12 h-12 flex items-center justify-center hover:bg-bold-yellow hover:text-bold-dark transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] min-h-[48px] min-w-[48px]">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+
+            <!-- Slide 1: Title -->
+            <div class="slide active !p-0 flex flex-col justify-center">
+                <div class="split-layout">
+                    <div class="split-left" style="background-color: #E4DF33; color: #1A1A1A;">
+                        <div class="mirrored-text" style="top: 10%; right: -50px; color: #1A1A1A;">AUTONOMY</div>
+                        <h1 class="text-5xl md:text-6xl lg:text-7xl font-urbanist font-black leading-none relative z-10 text-bold-dark">SEX FOR<br><span class="text-white">SALE.</span></h1>
+                        <div class="inline-block bg-bold-red text-white px-4 py-2 font-urbanist font-bold tracking-widest text-sm md:text-base mt-6 relative z-10 self-start">MODULE 31 - TABOO</div>
+                    </div>
+                    <div class="split-right" style="background-color: #1A1A1A; color: #FFFFFF;">
+                        <div class="mirrored-text" style="bottom: 10%; left: -50px; color: #FFFFFF;">TABOO</div>
+                        <div class="relative z-10 border-l-4 md:border-l-8 border-bold-yellow pl-6 md:pl-8">
+                            <p class="text-2xl md:text-3xl font-bold font-montserrat mb-4 md:mb-6 leading-tight">"My body, my choice—unless my choice makes society uncomfortable."</p>
+                            <p class="font-urbanist font-black tracking-widest text-bold-gray text-lg md:text-xl">— Anonymous</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 2: Warm-Up -->
+            <div class="slide flex flex-col justify-center">
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-urbanist font-black text-bold-dark mb-6 md:mb-10 mt-4 md:mt-0">WARM-UP</h2>
+                <div class="space-y-4 md:space-y-6 max-w-5xl">
+                    <div class="flex gap-4 md:gap-6 items-start"><span class="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-bold-yellow text-bold-dark flex items-center justify-center font-urbanist font-black text-xl md:text-2xl border-2 border-bold-dark">1</span><p class="text-bold-dark font-bold text-lg md:text-xl lg:text-2xl leading-relaxed mt-1">Is it hypocritical for society to glorify sex in media and advertising, but criminalize the actual sale of it?</p></div>
+                    <div class="flex gap-4 md:gap-6 items-start"><span class="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-bold-yellow text-bold-dark flex items-center justify-center font-urbanist font-black text-xl md:text-2xl border-2 border-bold-dark">2</span><p class="text-bold-dark font-bold text-lg md:text-xl lg:text-2xl leading-relaxed mt-1">Where is the line drawn between empowering bodily autonomy and systemic human exploitation?</p></div>
+                    <div class="flex gap-4 md:gap-6 items-start"><span class="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-bold-yellow text-bold-dark flex items-center justify-center font-urbanist font-black text-xl md:text-2xl border-2 border-bold-dark">3</span><p class="text-bold-dark font-bold text-lg md:text-xl lg:text-2xl leading-relaxed mt-1">If sex work were completely legalized, taxed, and regulated like any other job, how would society change?</p></div>
+                    <div class="flex gap-4 md:gap-6 items-start"><span class="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 bg-bold-yellow text-bold-dark flex items-center justify-center font-urbanist font-black text-xl md:text-2xl border-2 border-bold-dark">4</span><p class="text-bold-dark font-bold text-lg md:text-xl lg:text-2xl leading-relaxed mt-1">Why do people feel more comfortable discussing violence than they do discussing consensual sex work?</p></div>
+                </div>
+            </div>
+
+            <!-- Slide 3: Reading & Check -->
+            <div class="slide flex flex-col justify-center">
+                <div class="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4 md:mb-6 shrink-0 mt-4 md:mt-0">
+                    <h2 class="text-3xl md:text-4xl lg:text-5xl font-urbanist font-black text-bold-dark">THE DECRIMINALIZATION DEBATE</h2>
+                    <div class="bg-bold-dark text-bold-yellow px-3 py-1 font-urbanist font-bold tracking-widest text-xs border-2 border-bold-dark">THE ARTICLE</div>
+                </div>
+                
+                <div class="w-full max-w-5xl bg-white border-2 border-bold-border p-5 md:p-8 lg:p-12 shadow-sm text-bold-text font-montserrat overflow-y-auto">
+                    <p class="mb-4 md:mb-8 text-base md:text-lg lg:text-xl leading-relaxed">For centuries, polite society has chosen to <strong class="text-bold-dark">look down on</strong> sex work, treating it as a moral failure rather than an economic transaction. However, advocates argue for complete decriminalization—a move that prioritizes bodily autonomy and worker safety.</p>
+                    <p class="mb-4 md:mb-8 text-base md:text-lg lg:text-xl leading-relaxed">When authorities try to <strong class="text-bold-dark">shut down</strong> the industry through criminalization, they simply force workers into dangerous, unregulated environments; <span class="bg-bold-dark text-white px-2 py-1 font-bold">not to mention</span>, they empower abusive syndicates.</p>
+                    <p class="text-base md:text-lg lg:text-xl leading-relaxed">Instead of forcing the government to <strong class="text-bold-dark">turn a blind eye</strong> to reality, we should listen when sex workers <strong class="text-bold-dark">speak out</strong> about their rights. A modern <strong class="text-bold-dark">hustler</strong> deserves the exact same legal protections<span class="text-red-500 font-black text-xl md:text-2xl mx-1">—</span>and basic human dignity<span class="text-red-500 font-black text-xl md:text-2xl mx-1">—</span>as any other independent contractor.</p>
+                </div>
+            </div>
+
+            <!-- Slide 4: Deconstructing the debate -->
+            <div class="slide flex flex-col justify-center">
+                <div class="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4 md:mb-6 shrink-0 mt-4 md:mt-0">
+                    <h2 class="text-3xl md:text-4xl lg:text-5xl font-urbanist font-black text-bold-dark">DECONSTRUCTING THE DEBATE</h2>
+                    <div class="bg-bold-dark text-bold-yellow px-3 py-1 font-urbanist font-bold tracking-widest text-xs border-2 border-bold-dark">GRAMMAR & ANALYSIS</div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8 h-auto pb-4 md:pb-0 overflow-y-auto lg:overflow-visible">
+                    <div class="border-2 border-bold-border p-5 md:p-6 lg:p-10 bg-white shadow-sm flex flex-col h-auto lg:h-full justify-center">
+                        <div class="inline-block bg-bold-dark text-white px-3 py-1 font-urbanist font-bold tracking-widest text-[10px] md:text-xs mb-4 md:mb-8 self-start">GRAMMAR: ADDITION & EMPHASIS</div>
+                        <div class="space-y-6 md:space-y-8 flex-1">
+                            <p class="text-bold-dark font-bold text-base md:text-lg lg:text-xl leading-relaxed"><span class="text-bold-yellow font-black mr-2 md:mr-3 text-xl md:text-2xl">/</span> <strong>NOT TO MENTION:</strong> Used to add an extra, often more severe point to an argument.</p>
+                            <p class="text-bold-dark font-bold text-base md:text-lg lg:text-xl leading-relaxed"><span class="text-bold-yellow font-black mr-2 md:mr-3 text-xl md:text-2xl">/</span> <strong>THE HYPHEN (-):</strong> Used to interrupt a sentence to add a crucial, dramatic clarification.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="border-2 border-bold-dark p-5 md:p-6 lg:p-10 bg-bold-dark text-white shadow-sm flex flex-col h-auto lg:h-full justify-center">
+                        <div class="inline-block bg-bold-yellow text-bold-dark px-3 py-1 font-urbanist font-bold tracking-widest text-[10px] md:text-xs mb-4 md:mb-8 self-start">CRITICAL ANALYSIS</div>
+                        <div class="space-y-6 md:space-y-8 flex-1">
+                            <p class="text-white font-bold text-base md:text-lg lg:text-xl leading-relaxed"><span class="text-bold-yellow font-black mr-2 md:mr-3 text-xl md:text-2xl">/</span> Does the author view sex work primarily as an ethical issue or an economic one?</p>
+                            <p class="text-white font-bold text-base md:text-lg lg:text-xl leading-relaxed"><span class="text-bold-yellow font-black mr-2 md:mr-3 text-xl md:text-2xl">/</span> According to the text, what is the direct, negative result of the government trying to ban the industry?</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 5: 3D Flip Card Vocabulary Section -->
+            <div class="slide flex flex-col justify-center">
+                <div class="flex flex-col md:flex-row items-start md:items-center gap-4 mb-4 md:mb-6 shrink-0 mt-4 md:mt-0">
+                    <h2 class="text-3xl md:text-4xl lg:text-5xl font-urbanist font-black text-bold-dark">THE LEXICON</h2>
+                    <p class="text-bold-text font-montserrat font-bold text-sm md:text-base">Tap/Hover over the cards to reveal the semantic data.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 h-auto lg:h-full pb-4 overflow-y-auto lg:overflow-visible">
+                    
+                    <!-- Card 1 -->
+                    <div class="group perspective w-full h-48 md:h-56 lg:h-auto min-h-[12rem] cursor-pointer">
+                        <div class="relative w-full h-full preserve-3d shadow-sm group-hover:shadow-md">
+                            <!-- Front -->
+                            <div class="absolute inset-0 backface-hidden bg-bold-yellow border-2 md:border-4 border-bold-dark flex flex-col items-center justify-center p-4 md:p-6 text-center">
+                                <span class="absolute top-2 left-2 md:top-4 md:left-4 font-urbanist font-bold text-[10px] md:text-xs uppercase tracking-widest border-2 border-bold-dark px-2 py-1">Phrasal Verb</span>
+                                <h3 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black text-bold-dark leading-none mt-4 md:mt-0">LOOK DOWN ON</h3>
+                            </div>
+                            <!-- Back -->
+                            <div class="absolute inset-0 backface-hidden rotate-y-180 bg-bold-dark border-2 md:border-4 border-bold-dark flex flex-col items-center justify-center p-4 md:p-8 text-center">
+                                <p class="text-white font-montserrat font-bold text-sm md:text-base lg:text-lg mb-2 md:mb-4 leading-tight">To think that you are better than someone or to judge them morally.</p>
+                                <div class="w-8 md:w-12 h-1 bg-bold-yellow mb-2 md:mb-4"></div>
+                                <p class="text-bold-gray italic text-xs md:text-sm leading-tight">"Society tends to look down on unconventional career paths."</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2 -->
+                    <div class="group perspective w-full h-48 md:h-56 lg:h-auto min-h-[12rem] cursor-pointer">
+                        <div class="relative w-full h-full preserve-3d shadow-sm group-hover:shadow-md">
+                            <!-- Front -->
+                            <div class="absolute inset-0 backface-hidden bg-bold-gray border-2 md:border-4 border-bold-dark flex flex-col items-center justify-center p-4 md:p-6 text-center">
+                                <span class="absolute top-2 left-2 md:top-4 md:left-4 font-urbanist font-bold text-[10px] md:text-xs uppercase tracking-widest border-2 border-bold-dark px-2 py-1 text-bold-dark">Phrasal Verb</span>
+                                <h3 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black text-bold-dark leading-none mt-4 md:mt-0">SHUT DOWN</h3>
+                            </div>
+                            <!-- Back -->
+                            <div class="absolute inset-0 backface-hidden rotate-y-180 bg-bold-dark border-2 md:border-4 border-bold-dark flex flex-col items-center justify-center p-4 md:p-8 text-center">
+                                <p class="text-white font-montserrat font-bold text-sm md:text-base lg:text-lg mb-2 md:mb-4 leading-tight">To force an operation, business, or activity to stop entirely.</p>
+                                <div class="w-8 md:w-12 h-1 bg-bold-yellow mb-2 md:mb-4"></div>
+                                <p class="text-bold-gray italic text-xs md:text-sm leading-tight">"The police raided the building and shut down the illegal rings."</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="group perspective w-full h-48 md:h-56 lg:h-auto min-h-[12rem] cursor-pointer">
+                        <div class="relative w-full h-full preserve-3d shadow-sm group-hover:shadow-md">
+                            <!-- Front -->
+                            <div class="absolute inset-0 backface-hidden bg-white border-2 md:border-4 border-bold-dark flex flex-col items-center justify-center p-4 md:p-6 text-center">
+                                <span class="absolute top-2 left-2 md:top-4 md:left-4 font-urbanist font-bold text-[10px] md:text-xs uppercase tracking-widest border-2 border-bold-dark px-2 py-1 text-bold-dark">Phrasal Verb</span>
+                                <h3 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black text-bold-dark leading-none mt-4 md:mt-0">SPEAK OUT</h3>
+                            </div>
+                            <!-- Back -->
+                            <div class="absolute inset-0 backface-hidden rotate-y-180 bg-bold-dark border-2 md:border-4 border-bold-dark flex flex-col items-center justify-center p-4 md:p-8 text-center">
+                                <p class="text-white font-montserrat font-bold text-sm md:text-base lg:text-lg mb-2 md:mb-4 leading-tight">To state your opinions publicly, especially in protest or defense.</p>
+                                <div class="w-8 md:w-12 h-1 bg-bold-yellow mb-2 md:mb-4"></div>
+                                <p class="text-bold-gray italic text-xs md:text-sm leading-tight">"Advocates continue to speak out against unfair labor laws."</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 4 -->
+                    <div class="group perspective w-full h-48 md:h-56 lg:h-auto min-h-[12rem] cursor-pointer">
+                        <div class="relative w-full h-full preserve-3d shadow-sm group-hover:shadow-md">
+                            <!-- Front -->
+                            <div class="absolute inset-0 backface-hidden bg-white border-2 md:border-4 border-bold-dark flex flex-col items-center justify-center p-4 md:p-6 text-center">
+                                <span class="absolute top-2 left-2 md:top-4 md:left-4 font-urbanist font-bold text-[10px] md:text-xs uppercase tracking-widest border-2 border-bold-dark px-2 py-1 text-bold-dark">Idiom</span>
+                                <h3 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black text-bold-dark leading-none mt-4 md:mt-0">TURN A<br>BLIND EYE</h3>
+                            </div>
+                            <!-- Back -->
+                            <div class="absolute inset-0 backface-hidden rotate-y-180 bg-bold-dark border-2 md:border-4 border-bold-dark flex flex-col items-center justify-center p-4 md:p-8 text-center">
+                                <p class="text-white font-montserrat font-bold text-sm md:text-base lg:text-lg mb-2 md:mb-4 leading-tight">To pretend not to notice something bad or illegal that is happening.</p>
+                                <div class="w-8 md:w-12 h-1 bg-bold-yellow mb-2 md:mb-4"></div>
+                                <p class="text-bold-gray italic text-xs md:text-sm leading-tight">"The manager turned a blind eye to the toxic behavior in the office."</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 5 -->
+                    <div class="group perspective w-full h-48 md:h-56 lg:h-auto min-h-[12rem] cursor-pointer">
+                        <div class="relative w-full h-full preserve-3d shadow-sm group-hover:shadow-md">
+                            <!-- Front -->
+                            <div class="absolute inset-0 backface-hidden bg-bold-yellow border-2 md:border-4 border-bold-dark flex flex-col items-center justify-center p-4 md:p-6 text-center">
+                                <span class="absolute top-2 left-2 md:top-4 md:left-4 font-urbanist font-bold text-[10px] md:text-xs uppercase tracking-widest border-2 border-bold-dark px-2 py-1 text-bold-dark">Slang</span>
+                                <h3 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black text-bold-dark leading-none mt-4 md:mt-0">HUSTLER</h3>
+                            </div>
+                            <!-- Back -->
+                            <div class="absolute inset-0 backface-hidden rotate-y-180 bg-bold-dark border-2 md:border-4 border-bold-dark flex flex-col items-center justify-center p-4 md:p-8 text-center">
+                                <p class="text-white font-montserrat font-bold text-sm md:text-base lg:text-lg mb-2 md:mb-4 leading-tight">An aggressively enterprising person; someone who works hard to make money.</p>
+                                <div class="w-8 md:w-12 h-1 bg-bold-yellow mb-2 md:mb-4"></div>
+                                <p class="text-bold-gray italic text-xs md:text-sm leading-tight">"She is a true hustler, working three different gigs just to survive."</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 6 -->
+                    <div class="group perspective w-full h-48 md:h-56 lg:h-auto min-h-[12rem] cursor-pointer">
+                        <div class="relative w-full h-full preserve-3d shadow-sm group-hover:shadow-md">
+                            <!-- Front -->
+                            <div class="absolute inset-0 backface-hidden bg-bold-gray border-2 md:border-4 border-bold-dark flex flex-col items-center justify-center p-4 md:p-6 text-center">
+                                <span class="absolute top-2 left-2 md:top-4 md:left-4 font-urbanist font-bold text-[10px] md:text-xs uppercase tracking-widest border-2 border-bold-dark px-2 py-1 text-bold-dark">Phrase</span>
+                                <h3 class="text-2xl md:text-3xl lg:text-4xl font-urbanist font-black text-bold-dark leading-none mt-4 md:mt-0">NOT TO<br>MENTION</h3>
+                            </div>
+                            <!-- Back -->
+                            <div class="absolute inset-0 backface-hidden rotate-y-180 bg-bold-dark border-2 md:border-4 border-bold-dark flex flex-col items-center justify-center p-4 md:p-8 text-center">
+                                <p class="text-white font-montserrat font-bold text-sm md:text-base lg:text-lg mb-2 md:mb-4 leading-tight">Used to add an extra, often more severe or surprising point to an argument.</p>
+                                <div class="w-8 md:w-12 h-1 bg-bold-yellow mb-2 md:mb-4"></div>
+                                <p class="text-bold-gray italic text-xs md:text-sm leading-tight">"The work is exhausting—not to mention, incredibly dangerous."</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+
+            <!-- Slide 6: Listening Section (Contrasting Perspectives) -->
+            <div class="slide flex flex-col justify-center">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 shrink-0 mt-4 md:mt-0 gap-4">
+                    <h2 class="text-3xl md:text-4xl lg:text-5xl font-urbanist font-black text-bold-dark">THE REBUTTAL</h2>
+                    <div class="flex flex-wrap items-center gap-4 w-full md:w-auto">
+                        <div id="audio-container" class="flex items-center bg-bold-gray border-2 border-bold-dark px-2 md:px-3 py-1 flex-1 md:flex-none">
+                            <audio id="audio-player" controls class="h-10 w-full md:w-56 lg:w-64" preload="metadata" src="https://minio-production-3d3d.up.railway.app/freakn-cms/audio/intermediate-2/module-31-decriminalization.mp3"></audio>
+                        </div>
+                        <label class="cursor-pointer bg-white text-bold-dark w-12 h-12 md:w-14 md:h-14 border-2 border-bold-dark flex items-center justify-center hover:bg-bold-yellow transition-colors shadow-sm shrink-0" title="Upload Audio File">
+                            <svg class="w-6 h-6 md:w-7 md:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+                            <input type="file" accept="audio/*" class="hidden" onchange="loadAudio(event)">
+                        </label>
+                        <button onclick="toggleScript()" id="toggleScriptBtn" class="bg-bold-dark text-bold-yellow px-4 md:px-6 py-3 font-urbanist font-black uppercase tracking-widest text-[11px] md:text-sm hover:bg-bold-text hover:text-white transition-colors border-2 border-transparent shadow-sm flex-1 md:flex-none min-h-[44px]">
+                            SHOW SCRIPT
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Contrast Questions View -->
+                <div id="listening-questions" class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0 overflow-y-auto lg:overflow-visible">
+                    <div class="col-span-1 lg:col-span-2 border-2 border-bold-border p-5 md:p-6 lg:p-8 bg-white shadow-sm flex flex-col justify-center h-auto lg:h-full">
+                        <div class="inline-block self-start bg-bold-dark text-white px-3 py-1 font-urbanist font-bold tracking-widest text-[10px] md:text-xs mb-4 md:mb-6">THE PARADIGM SHIFT</div>
+                        <ul class="space-y-4 md:space-y-6 text-base md:text-lg text-bold-dark font-bold leading-relaxed">
+                            <li class="flex items-start gap-3"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> The article portrays the industry as a victory for "bodily autonomy." How does the conversation completely deconstruct this narrative?</li>
+                            <li class="flex items-start gap-3"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> According to the article, attempting to shut down the trade causes extreme danger. According to the conversation, what happens when you actively <em>normalize</em> it?</li>
+                            <li class="flex items-start gap-3"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> In the article, a "hustler" is viewed as an empowered independent contractor. How does the conversation challenge this capitalist framing?</li>
+                        </ul>
+                    </div>
+
+                    <div class="col-span-1 border-2 border-bold-dark p-5 md:p-6 lg:p-8 bg-bold-dark text-white shadow-sm flex flex-col justify-center h-auto lg:h-full">
+                        <div class="inline-block self-start bg-white text-bold-dark px-3 py-1 font-urbanist font-bold tracking-widest text-[10px] md:text-xs mb-4 md:mb-6">CRITICAL BIAS</div>
+                        <ul class="space-y-4 md:space-y-8 text-base md:text-lg text-bold-gray">
+                            <li class="flex items-start gap-3 leading-snug"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> Do you think the author of the article and the speakers in the conversation are analyzing the exact same demographic of workers?</li>
+                            <li class="flex items-start gap-3 leading-snug"><span class="text-bold-yellow font-black mt-0.5 md:mt-1">/</span> Is it possible that the article speaks for the privileged, while the conversation speaks for the vulnerable?</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Hidden Script -->
+                <div id="listening-script" class="hidden bg-bold-gray border-4 border-bold-dark p-6 md:p-10 h-auto lg:h-[300px] flex-1 overflow-y-auto text-base md:text-xl leading-relaxed text-bold-dark shadow-[inset_0_0_20px_rgba(0,0,0,0.1)]">
+                    <p class="mb-4 md:mb-5"><span class="font-urbanist font-black uppercase text-xs md:text-sm tracking-widest text-bold-text block mb-1">MARCO</span> "Did you read that article on decriminalization? It makes it sound so empowering—like every <strong class="text-bold-yellow bg-bold-dark px-2">hustler</strong> is just an independent entrepreneur making a free choice."</p>
+                    <p class="mb-4 md:mb-5"><span class="font-urbanist font-black uppercase text-xs md:text-sm tracking-widest text-bold-text block mb-1">SOPHIA</span> "I saw it. It completely ignores the dark reality of human trafficking. You can't just legalize it and expect the violence to disappear—<strong class="text-bold-yellow bg-bold-dark px-2">not to mention</strong>, the inherent psychological damage. When governments normalize the purchase of human bodies, they aren't protecting the vulnerable; they are protecting the buyers."</p>
+                    <p class="mb-4 md:mb-5"><span class="font-urbanist font-black uppercase text-xs md:text-sm tracking-widest text-bold-text block mb-1">MARCO</span> "Exactly. If we stop trying to <strong class="text-bold-yellow bg-bold-dark px-2">shut down</strong> the illicit rings and just <strong class="text-bold-yellow bg-bold-dark px-2">turn a blind eye</strong> because it's suddenly 'legal', the exploitation actually increases."</p>
+                    <p><span class="font-urbanist font-black uppercase text-xs md:text-sm tracking-widest text-bold-text block mb-1">SOPHIA</span> "The advocates who <strong class="text-bold-yellow bg-bold-dark px-2">speak out</strong> for autonomy are ignoring the thousands of people who are coerced. Society shouldn't just <strong class="text-bold-yellow bg-bold-dark px-2">look down on</strong> the industry; it should actively dismantle it."</p>
+                </div>
+            </div>
+
+            <!-- Slide 7: Deep Discussion -->
+            <div class="slide flex flex-col justify-center">
+                <h2 class="text-4xl md:text-5xl font-urbanist font-black text-bold-dark mb-6 md:mb-8 mt-4 md:mt-0">DEEP DISCUSSION</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 h-auto pb-4 md:pb-0 overflow-y-auto md:overflow-visible">
+                    <div class="bg-bold-gray p-5 md:p-6 lg:p-8 border-t-8 border-bold-dark shadow-sm hover:shadow-md transition-shadow">
+                        <p class="text-lg md:text-xl lg:text-2xl text-bold-dark font-bold leading-snug">Does legalizing an immoral or controversial act naturally cause society's overall morals to decay?</p>
+                    </div>
+                    <div class="bg-bold-gray p-5 md:p-6 lg:p-8 border-t-8 border-bold-yellow shadow-sm hover:shadow-md transition-shadow">
+                        <p class="text-lg md:text-xl lg:text-2xl text-bold-dark font-bold leading-snug">Should the government have any right to dictate what two consenting adults do with money behind closed doors?</p>
+                    </div>
+                    <div class="bg-bold-gray p-5 md:p-6 lg:p-8 border-t-8 border-bold-yellow shadow-sm hover:shadow-md transition-shadow">
+                        <p class="text-lg md:text-xl lg:text-2xl text-bold-dark font-bold leading-snug">In countries where sex work is fully legalized and taxed, human trafficking still exists. Why doesn't legalization fix it?</p>
+                    </div>
+                    <div class="bg-bold-gray p-5 md:p-6 lg:p-8 border-t-8 border-bold-dark shadow-sm hover:shadow-md transition-shadow">
+                        <p class="text-lg md:text-xl lg:text-2xl text-bold-dark font-bold leading-snug">Would you lose respect for a friend or colleague if you found out they actively participated in this industry?</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 8: Final Reflection -->
+            <div class="slide flex items-center justify-center text-center bg-bold-dark">
+                <div class="mirrored-text hidden md:block" style="top: 20%; color: #FFFFFF;">BODY</div>
+                <div class="max-w-5xl relative z-10 w-full px-4">
+                    <div class="inline-block bg-bold-yellow text-bold-dark px-4 md:px-6 py-2 md:py-3 font-urbanist font-black tracking-widest text-base md:text-lg mb-8 md:mb-12">FINAL THOUGHT</div>
+                    <h2 class="text-4xl md:text-5xl lg:text-7xl font-urbanist font-black text-white leading-tight mb-8 md:mb-10">
+                        "Is it empowerment to sell your body, or is it the ultimate form of <span class="text-bold-yellow">capitalist exploitation</span>?"
+                    </h2>
+                    <div class="w-24 md:w-32 h-2 bg-bold-yellow mx-auto mb-8 md:mb-10"></div>
+                    <p class="text-lg md:text-xl lg:text-2xl font-bold text-bold-gray font-montserrat tracking-wide mb-10 md:mb-12">
+                        In a world where everything has a price tag, where do we draw the line?
+                    </p>
+                    
+                    <button onclick="submitFreaknActivity(this)" class="bg-bold-yellow text-bold-dark px-6 md:px-8 py-3 md:py-4 font-urbanist font-black uppercase tracking-widest text-sm md:text-base hover:bg-white transition-colors border-2 border-bold-dark w-full md:w-auto min-h-[44px]">
+                        SUBMIT MODULE
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- FreaknActivity v1 Exact Implementation ---
+        window.FreaknActivity = window.FreaknActivity || {
+            submit: function(data) {
+                console.log("FreaknActivity submitted:", data);
+            }
+        };
+
+        function submitFreaknActivity(btnElement) {
+            window.FreaknActivity.submit({
+                module: "Module 31: Sex for Sale",
+                completed: true,
+                timestamp: new Date().toISOString()
+            });
+            btnElement.innerText = "COMPLETED!";
+            btnElement.disabled = true;
+            btnElement.classList.add("opacity-50", "cursor-not-allowed");
+        }
+        // ----------------------------------------------
+
+        // Slide Navigation Logic
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const progressBar = document.getElementById('progress-bar');
+
+        function updateProgress() {
+            progressBar.style.width = `${((currentSlide + 1) / slides.length) * 100}%`;
+            document.getElementById('prev-btn').style.display = currentSlide === 0 ? 'none' : 'flex';
+            document.getElementById('next-btn').style.display = currentSlide === slides.length - 1 ? 'none' : 'flex';
+        }
+
+        function nav(d) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = Math.max(0, Math.min(slides.length - 1, currentSlide + d));
+            slides[currentSlide].classList.add('active');
+            updateProgress();
+        
+            if (window.__freaknSlide) window.__freaknSlide(currentSlide);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            // Prevent spacebar from changing slides if typing in an input field (good practice)
+            if (document.activeElement.tagName.toLowerCase() === 'input') {
+                return;
+            }
+            if (e.key === 'ArrowRight' || e.key === ' ') nav(1);
+            if (e.key === 'ArrowLeft') nav(-1);
+        });
+
+        // Script Toggle & Audio Logic
+        function toggleScript() {
+            const scriptDiv = document.getElementById('listening-script');
+            const questionsDiv = document.getElementById('listening-questions');
+            const btn = document.getElementById('toggleScriptBtn');
+            
+            if (scriptDiv.classList.contains('hidden')) {
+                scriptDiv.classList.remove('hidden');
+                questionsDiv.classList.add('hidden');
+                btn.innerText = 'HIDE SCRIPT';
+                btn.classList.add('bg-white', 'text-bold-dark');
+                btn.classList.remove('bg-bold-dark', 'text-bold-yellow');
+            } else {
+                scriptDiv.classList.add('hidden');
+                questionsDiv.classList.remove('hidden');
+                btn.innerText = 'SHOW SCRIPT';
+                btn.classList.remove('bg-white', 'text-bold-dark');
+                btn.classList.add('bg-bold-dark', 'text-bold-yellow');
+            }
+        }
+
+        function loadAudio(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const audioPlayer = document.getElementById('audio-player');
+                const audioContainer = document.getElementById('audio-container');
+                audioPlayer.src = URL.createObjectURL(file);
+                audioContainer.classList.remove('hidden');
+            }
+        }
+
+        // Initialize
+        updateProgress();
+    </script>
+
+<script>
+    /* Memoria de slide (plataforma Freakn'). Una lección interactiva puede
+       tomar dos o tres clases; sin esto cada clase volvía a empezar en el
+       primer slide. */
+    (function () {
+        window.__freaknSlide = function (posicion) {
+            try {
+                parent.postMessage({
+                    source: "freakn-lesson",
+                    type: "freakn:slide",
+                    payload: { slide: posicion }
+                }, "*");
+            } catch (e) {}
+        };
+        window.addEventListener("load", function () {
+            var guardado = window.__freaknSlideInicial;
+            if (guardado === undefined || guardado === null || guardado === "") return;
+            /* Llega como texto y nav() suma: hay que convertirlo o "5" se
+               concatenaría en vez de sumarse. */
+            var destino = parseInt(guardado, 10);
+            if (!destino || destino < 1) return;
+            try { nav(destino); } catch (e) {}
+        });
+    })();
+</script>
+</body>
+</html>

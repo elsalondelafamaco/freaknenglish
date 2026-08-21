@@ -1556,6 +1556,727 @@
         }
       ],
       "position": 50
+    },
+    {
+      "id": "3e8c47b6-2dc3-4120-be79-cbe0f9c328d7",
+      "level": "intermediate",
+      "unit": 1,
+      "title": "Modulo 1 - To tip or not to tip",
+      "lessons": [
+        {
+          "id": "3f98dafa-d39e-49d7-b69c-d8b24483105c",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u1-m01/lesson.html"
+        }
+      ],
+      "position": 1
+    },
+    {
+      "id": "9172572d-a3e3-4648-9eda-409386c3eba5",
+      "level": "intermediate",
+      "unit": 1,
+      "title": "Modulo 2 - Cancel Culture",
+      "lessons": [
+        {
+          "id": "34d812fd-fa93-4ebb-a337-2ca9d847217a",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u1-m02/lesson.html"
+        }
+      ],
+      "position": 2
+    },
+    {
+      "id": "123db00f-a798-47a5-bfa3-efb10f47b993",
+      "level": "intermediate",
+      "unit": 1,
+      "title": "Modulo 3 - The Dating App Dilemma",
+      "lessons": [
+        {
+          "id": "3ad462ab-00c9-48c0-89a2-69bf8e4696a7",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u1-m03/lesson.html"
+        }
+      ],
+      "position": 3
+    },
+    {
+      "id": "d3afd69c-1362-4b0a-aff4-a74bfe5682d3",
+      "level": "intermediate",
+      "unit": 1,
+      "title": "Modulo 4 - Beauty Privilege",
+      "lessons": [
+        {
+          "id": "3eece612-b9d8-45a2-b58f-3fd32252b323",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u1-m04/lesson.html"
+        }
+      ],
+      "position": 4
+    },
+    {
+      "id": "85f7e60e-cfe6-48f5-aa29-ba950a3e5885",
+      "level": "intermediate",
+      "unit": 1,
+      "title": "Modulo 5 - 99 Problems",
+      "lessons": [
+        {
+          "id": "1c85a23b-88d3-4a40-9270-6591ac9eb408",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u1-m05/lesson.html"
+        }
+      ],
+      "position": 5
+    },
+    {
+      "id": "543ec351-f7b5-4cdc-a19e-dbb9499bdbcb",
+      "level": "intermediate",
+      "unit": 1,
+      "title": "Modulo 6 - CHECKPOINT 1",
+      "lessons": [
+        {
+          "id": "7605fb04-0aa9-4cff-82b8-6905592b1a97",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u1-m06/lesson.html",
+          "isCheckpoint": true
+        }
+      ],
+      "position": 6
+    },
+    {
+      "id": "39f4ffc9-f83d-4d5e-91f3-f22e3adf5bb7",
+      "level": "intermediate",
+      "unit": 2,
+      "title": "Modulo 7 - F---k this job",
+      "lessons": [
+        {
+          "id": "a8f99b8b-153f-4fc8-a8d6-4f59c78b654d",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u2-m07/lesson.html"
+        }
+      ],
+      "position": 7
+    },
+    {
+      "id": "c70ba43e-08ed-45a2-9583-a7a63ed2adac",
+      "level": "intermediate",
+      "unit": 2,
+      "title": "Modulo 8 - Call the manager",
+      "lessons": [
+        {
+          "id": "137ded68-aea3-4fc6-b518-969945211d4d",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u2-m08/lesson.html"
+        }
+      ],
+      "position": 8
+    },
+    {
+      "id": "3e7845d2-5ad8-47ae-be0e-a717c839d29c",
+      "level": "intermediate",
+      "unit": 2,
+      "title": "Modulo 9 - The Hustle Culture Lie",
+      "lessons": [
+        {
+          "id": "fd1d67da-793f-459c-a3be-38044d9233e0",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u2-m09/lesson.html"
+        }
+      ],
+      "position": 9
+    },
+    {
+      "id": "a118dfcc-9055-48fb-870f-39de0e4cc49d",
+      "level": "intermediate",
+      "unit": 2,
+      "title": "Modulo 10 - Tattoos & Professionalism",
+      "lessons": [
+        {
+          "id": "8f8d8cf2-6029-4435-8c47-1a3d4d9b180e",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u2-m10/lesson.html"
+        }
+      ],
+      "position": 10
+    },
+    {
+      "id": "a52ef2f8-f6dd-4f4f-b489-5c527a250cfb",
+      "level": "intermediate",
+      "unit": 2,
+      "title": "Modulo 11 - The Wealth Gap",
+      "lessons": [
+        {
+          "id": "248f17e5-1dc8-4a5c-b4f7-ec643f72bb9e",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u2-m11/lesson.html"
+        }
+      ],
+      "position": 11
+    },
+    {
+      "id": "1b309554-7ba8-4408-b1f2-36d019233568",
+      "level": "intermediate",
+      "unit": 2,
+      "title": "Modulo 12 - CHECKPOINT 2",
+      "lessons": [
+        {
+          "id": "b651dafc-9833-4e13-8777-5ea1bc6f708d",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u2-m12/lesson.html",
+          "isCheckpoint": true
+        }
+      ],
+      "position": 12
+    },
+    {
+      "id": "7fd50613-2006-4deb-8851-1137bfd8fb92",
+      "level": "intermediate",
+      "unit": 3,
+      "title": "Modulo 13 - Battle of the sexes",
+      "lessons": [
+        {
+          "id": "0fc9b5c1-0631-4063-84ee-0ca4357d2dda",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u3-m13/lesson.html"
+        }
+      ],
+      "position": 13
+    },
+    {
+      "id": "287b3367-3eb0-4aef-b573-d793b30879e7",
+      "level": "intermediate",
+      "unit": 3,
+      "title": "Modulo 14 - Children and discipline",
+      "lessons": [
+        {
+          "id": "17a09098-75e5-4f4f-bb1c-5182de7a3039",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u3-m14/lesson.html"
+        }
+      ],
+      "position": 14
+    },
+    {
+      "id": "801d5c33-c657-4402-b25d-44b2c92cf06e",
+      "level": "intermediate",
+      "unit": 3,
+      "title": "Modulo 15 - Age Gaps in Relationships",
+      "lessons": [
+        {
+          "id": "396cdcd3-55ff-4606-acfd-981cc76a03b0",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u3-m15/lesson.html"
+        }
+      ],
+      "position": 15
+    },
+    {
+      "id": "abcddc46-bece-4c38-901b-56fd0c0131d1",
+      "level": "intermediate",
+      "unit": 3,
+      "title": "Modulo 16 - Polyamory & Open Relationships",
+      "lessons": [
+        {
+          "id": "9a009417-78cc-4f15-b720-273bae283511",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u3-m16/lesson.html"
+        }
+      ],
+      "position": 16
+    },
+    {
+      "id": "8a4b0d51-2aef-405e-b2c4-270ffa8f4e8e",
+      "level": "intermediate",
+      "unit": 3,
+      "title": "Modulo 17 - Vanity & Happiness",
+      "lessons": [
+        {
+          "id": "7317aff6-f622-4926-8a3a-a09dcb5b7970",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u3-m17/lesson.html"
+        }
+      ],
+      "position": 17
+    },
+    {
+      "id": "237ae063-9dea-437b-ad41-a39e0230a723",
+      "level": "intermediate",
+      "unit": 3,
+      "title": "Modulo 18 - CHECKPOINT 3",
+      "lessons": [
+        {
+          "id": "7d56497f-acc1-4c4f-97bb-bab83f5147cd",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u3-m18/lesson.html",
+          "isCheckpoint": true
+        }
+      ],
+      "position": 18
+    },
+    {
+      "id": "65936953-73de-483c-bb60-dc634316fa32",
+      "level": "intermediate",
+      "unit": 4,
+      "title": "Modulo 19 - Capital punishment",
+      "lessons": [
+        {
+          "id": "164c1e29-ab9d-45d2-96cc-bf870147b83f",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u4-m19/lesson.html"
+        }
+      ],
+      "position": 19
+    },
+    {
+      "id": "23255f3f-a968-4504-8c72-0429c0ae239e",
+      "level": "intermediate",
+      "unit": 4,
+      "title": "Modulo 20 - Corruption & Scams",
+      "lessons": [
+        {
+          "id": "3c4b71b5-9a29-4677-81a5-ee3cf8eafdf1",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u4-m20/lesson.html"
+        }
+      ],
+      "position": 20
+    },
+    {
+      "id": "65c6626e-b37e-47bf-af5a-286d8e3f2f6c",
+      "level": "intermediate",
+      "unit": 4,
+      "title": "Modulo 21 - Amnesty & Beyond Borders",
+      "lessons": [
+        {
+          "id": "ab155e02-5809-4a34-b8c5-a832f3c95efc",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u4-m21/lesson.html"
+        }
+      ],
+      "position": 21
+    },
+    {
+      "id": "50bc6f09-2530-4508-937b-bf05dc38d4ba",
+      "level": "intermediate",
+      "unit": 4,
+      "title": "Modulo 22 - Legalizing Drugs",
+      "lessons": [
+        {
+          "id": "c3cad911-8d93-471a-b56e-ef3b658c6a9a",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u4-m22/lesson.html"
+        }
+      ],
+      "position": 22
+    },
+    {
+      "id": "bcd10995-4a84-4253-8aaf-79d087552a37",
+      "level": "intermediate",
+      "unit": 4,
+      "title": "Modulo 23 - The freakn' News & Pride",
+      "lessons": [
+        {
+          "id": "aa65761f-0ac3-48bd-a6a1-7a1fbbbe16a5",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u4-m23/lesson.html"
+        }
+      ],
+      "position": 23
+    },
+    {
+      "id": "bc9cbd0a-f774-45da-b4d5-879fd0b635b3",
+      "level": "intermediate",
+      "unit": 4,
+      "title": "Modulo 24 - CHECKPOINT 4",
+      "lessons": [
+        {
+          "id": "e3986d04-4641-4ebd-9e5c-400f0030bd8d",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 50,
+          "kind": "html",
+          "file": "intermediate/u4-m24/lesson.html",
+          "isCheckpoint": true
+        }
+      ],
+      "position": 24
+    },
+    {
+      "id": "a1e81abb-0d25-4273-baf5-9a4c164cacc3",
+      "level": "intermediate",
+      "unit": 5,
+      "title": "Modulo 25 - Designer babies",
+      "lessons": [
+        {
+          "id": "d0c222ce-9400-4d00-9134-9c5b68f44660",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u5-m25/lesson.html"
+        }
+      ],
+      "position": 25
+    },
+    {
+      "id": "c0a2839e-0e74-466b-b68f-01d85679f7f5",
+      "level": "intermediate",
+      "unit": 5,
+      "title": "Modulo 26 - Artificial Intelligence",
+      "lessons": [
+        {
+          "id": "56579e2f-96f7-4a52-955d-225130e6a6b4",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u5-m26/lesson.html"
+        }
+      ],
+      "position": 26
+    },
+    {
+      "id": "588cd8ee-c83c-4844-8ed3-6b0ebf9183f9",
+      "level": "intermediate",
+      "unit": 5,
+      "title": "Modulo 27 - Climate Change Apathy",
+      "lessons": [
+        {
+          "id": "3a835174-2b2a-4c1b-bbad-567312be025e",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u5-m27/lesson.html"
+        }
+      ],
+      "position": 27
+    },
+    {
+      "id": "e52b06b4-f12a-4a44-a9e9-d3c517cf64e6",
+      "level": "intermediate",
+      "unit": 5,
+      "title": "Modulo 28 - Privacy in the Digital Age",
+      "lessons": [
+        {
+          "id": "f170df3e-c49a-4646-842f-02d0346887dc",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u5-m28/lesson.html"
+        }
+      ],
+      "position": 28
+    },
+    {
+      "id": "28455b78-20d5-49b9-ac40-79d5ac8e1dad",
+      "level": "intermediate",
+      "unit": 5,
+      "title": "Modulo 29 - Universal Basic Income",
+      "lessons": [
+        {
+          "id": "dc3b10f9-b480-4641-85bc-c3dfeb7b74d9",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u5-m29/lesson.html"
+        }
+      ],
+      "position": 29
+    },
+    {
+      "id": "49fc052e-b2d9-4354-ae61-ae033ac56b40",
+      "level": "intermediate",
+      "unit": 5,
+      "title": "Modulo 30 - CHECKPOINT 5",
+      "lessons": [
+        {
+          "id": "1b550557-731a-48d0-a120-2253a2518516",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u5-m30/lesson.html",
+          "isCheckpoint": true
+        }
+      ],
+      "position": 30
+    },
+    {
+      "id": "532cf94a-417a-43ba-b0ac-791faa9ac81a",
+      "level": "intermediate",
+      "unit": 6,
+      "title": "Modulo 31 - Sex for sale",
+      "lessons": [
+        {
+          "id": "7314c0e0-82a1-4ba8-a211-810e3f45c053",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u6-m31/lesson.html"
+        }
+      ],
+      "position": 31
+    },
+    {
+      "id": "d061aa7b-c405-4681-bcc6-ce808c72b823",
+      "level": "intermediate",
+      "unit": 6,
+      "title": "Modulo 32 - Bad Habits & Addictions",
+      "lessons": [
+        {
+          "id": "c44645ac-6160-42c6-b8fb-22787ee52900",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u6-m32/lesson.html"
+        }
+      ],
+      "position": 32
+    },
+    {
+      "id": "129c9aa9-89be-4085-a2c0-09e75f0b56bd",
+      "level": "intermediate",
+      "unit": 6,
+      "title": "Modulo 33 - Religion & Spirituality",
+      "lessons": [
+        {
+          "id": "e3ad8b1a-7410-41a5-868b-fa5b5c6bdde5",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u6-m33/lesson.html"
+        }
+      ],
+      "position": 33
+    },
+    {
+      "id": "1ecb73b9-b163-4d63-bd88-e684a7432352",
+      "level": "intermediate",
+      "unit": 6,
+      "title": "Modulo 34 - Euthanasia (Right to die)",
+      "lessons": [
+        {
+          "id": "2caf15fa-4191-4f36-ba96-589ace47a71a",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u6-m34/lesson.html"
+        }
+      ],
+      "position": 34
+    },
+    {
+      "id": "21e40cc9-dd72-4b80-a4a3-2af307cfbe1a",
+      "level": "intermediate",
+      "unit": 6,
+      "title": "Modulo 35 - So freakn' creepy",
+      "lessons": [
+        {
+          "id": "a4658803-05b0-4912-99ec-5530cd761711",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u6-m35/lesson.html"
+        }
+      ],
+      "position": 35
+    },
+    {
+      "id": "86c22c73-d10f-4bff-97aa-b13775f77326",
+      "level": "intermediate",
+      "unit": 6,
+      "title": "Modulo 36 - CHECKPOINT 6",
+      "lessons": [
+        {
+          "id": "3011e909-fe0e-481a-8d28-4773e5da25ab",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u6-m36/lesson.html",
+          "isCheckpoint": true
+        }
+      ],
+      "position": 36
+    },
+    {
+      "id": "d414289f-091f-4825-88d7-2c0a0a2412c5",
+      "level": "intermediate",
+      "unit": 7,
+      "title": "Modulo 37 - Death & Legacy",
+      "lessons": [
+        {
+          "id": "b799ba9b-c4a2-4234-938c-ec64f7547057",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u7-m37/lesson.html"
+        }
+      ],
+      "position": 37
+    },
+    {
+      "id": "31ddc03e-d7d6-4bbc-ab33-5bbd67e708e2",
+      "level": "intermediate",
+      "unit": 7,
+      "title": "Modulo 38 - The Education Scam",
+      "lessons": [
+        {
+          "id": "4175edad-01a7-4d66-9bd1-98b8bccab793",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u7-m38/lesson.html"
+        }
+      ],
+      "position": 38
+    },
+    {
+      "id": "9e679caa-48f2-4770-8b05-d7b422db4f5e",
+      "level": "intermediate",
+      "unit": 7,
+      "title": "Modulo 39 - Body Positivity vs. Health",
+      "lessons": [
+        {
+          "id": "ffce8fd6-7663-4b49-8c57-09d6af7cf8e1",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u7-m39/lesson.html"
+        }
+      ],
+      "position": 39
+    },
+    {
+      "id": "42e28dc9-7e8e-41cd-9563-397a5ce7d391",
+      "level": "intermediate",
+      "unit": 7,
+      "title": "Modulo 40 - Case study",
+      "lessons": [
+        {
+          "id": "5248715f-e0a8-40b2-a3d4-2e14d9ce0c99",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u7-m40/lesson.html"
+        }
+      ],
+      "position": 40
+    },
+    {
+      "id": "2734f78d-9e92-4046-a873-61cadeb28361",
+      "level": "intermediate",
+      "unit": 7,
+      "title": "Modulo 41 - The unthinkable pardon",
+      "lessons": [
+        {
+          "id": "4f0fb070-050d-4f53-94af-8c64e904a601",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u7-m41/lesson.html"
+        }
+      ],
+      "position": 41
+    },
+    {
+      "id": "88ce00e8-0d8d-493f-84bd-b1987db63247",
+      "level": "intermediate",
+      "unit": 7,
+      "title": "Modulo 42 - Final checkpoint",
+      "lessons": [
+        {
+          "id": "194970b3-b967-49ad-b771-c2ab01bb6771",
+          "title": "Lección Interactiva",
+          "position": 1,
+          "durationMin": 60,
+          "kind": "html",
+          "file": "intermediate/u7-m42/lesson.html",
+          "isCheckpoint": true
+        }
+      ],
+      "position": 42
     }
   ]
 }

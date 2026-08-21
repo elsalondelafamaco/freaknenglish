@@ -15,14 +15,19 @@ export function ImpersonationBanner() {
   if (!me?.impersonatorId) return null;
 
   async function exit() {
-    // La cookie de refresh sigue siendo la del admin → refresh restaura su token.
+    // Borra el vale de suplantación en el servidor y devuelve el token del
+    // admin. Un `refresh` normal ya no basta: mientras el vale exista, el
+    // backend sigue devolviendo la sesión del suplantado.
     try {
-      const r = await authApi.refresh();
+      const r = await authApi.stopImpersonation();
       setAccessToken(r.accessToken);
     } catch {
       /* ignore */
     }
-    await qc.invalidateQueries({ queryKey: ["me"] });
+    // Vaciar, no invalidar sólo ["me"]: al volver a ser admin, todo lo que se
+    // cacheó como el otro usuario (sus clases, sus alumnos, su progreso) sigue
+    // en memoria y se pinta bajo la sesión del admin hasta que caduque.
+    qc.clear();
     await refresh();
     router.navigate({ to: "/admin/users" });
   }

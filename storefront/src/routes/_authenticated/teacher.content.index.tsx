@@ -1,13 +1,22 @@
-import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { BookOpen } from "lucide-react";
 import { learningApi } from "@/lib/api/endpoints";
 import { BarraAlumnoEnClase, useAlumnoEnClase } from "@/components/learning/AlumnoEnClase";
 import type { EnglishLevel } from "@/lib/domain/types";
 
+const ES_NIVEL = (v: unknown): v is EnglishLevel =>
+  v === "beginner" || v === "intermediate" || v === "advanced";
+
 export const Route = createFileRoute("/_authenticated/teacher/content/")({
   head: () => ({ meta: [{ title: "Contenido — Profesor" }] }),
+  // El nivel va en la URL y no en estado local: entrar a un módulo y volver
+  // desmonta esta pantalla, y con `useState` el profe que estaba en intermedio
+  // aparecía de vuelta en básico cada vez.
+  validateSearch: (s: Record<string, unknown>) => ({
+    level: ES_NIVEL(s.level) ? s.level : undefined,
+    studentId: typeof s.studentId === "string" && s.studentId ? s.studentId : undefined,
+  }),
   component: TeacherContent,
 });
 
@@ -26,8 +35,23 @@ const LEVELS: Array<{ id: EnglishLevel; label: string }> = [
  * estudiante y deja habilitar/bloquear lección por lección sin salir de ahí.
  */
 function TeacherContent() {
-  const [level, setLevel] = useState<EnglishLevel>("beginner");
-  const { alumnoId: studentId, elegir } = useAlumnoEnClase();
+  const { level: levelUrl, studentId: studentIdUrl } = Route.useSearch();
+  const navigate = useNavigate();
+  const level: EnglishLevel = levelUrl ?? "beginner";
+  const { alumnoId: studentId, elegir: recordarAlumno } = useAlumnoEnClase(studentIdUrl);
+  const setLevel = (id: EnglishLevel) =>
+    navigate({ to: "/teacher/content", search: (s: any) => ({ ...s, level: id }), replace: true });
+  // Cambiar de alumno también tiene que tocar la URL, igual que en el visor del
+  // módulo: si no, se vuelve aquí desde un módulo con `?studentId=` puesto y la
+  // dirección seguiría anunciando al alumno anterior.
+  const elegir = (id: string) => {
+    recordarAlumno(id);
+    navigate({
+      to: "/teacher/content",
+      search: (s: any) => ({ ...s, studentId: id || undefined }),
+      replace: true,
+    });
+  };
 
   const modsQ = useQuery({
     queryKey: ["learning", "modules", level],
@@ -86,7 +110,9 @@ function TeacherContent() {
                   key={m.id}
                   to="/teacher/content/$moduleId"
                   params={{ moduleId: m.id }}
-                  search={studentId ? ({ studentId } as any) : undefined}
+                  // El nivel viaja con el enlace para que "Volver al contenido"
+                  // devuelva a la pestaña desde la que se entró.
+                  search={{ ...(studentId ? { studentId } : {}), level } as any}
                   className="rounded-3xl border border-brand-line bg-white p-5 transition hover:border-brand-ink/30 hover:shadow-soft"
                 >
                   <div className="flex items-start justify-between">

@@ -50,6 +50,9 @@ function TeacherMaterial() {
       !term ||
       r.title.toLowerCase().includes(term) ||
       (r.description ?? "").toLowerCase().includes(term) ||
+      // El objetivo también: es donde está el "para qué", que suele ser por lo
+      // que el profe busca ("irregulares", "soltar al alumno"…).
+      (r.objective ?? "").toLowerCase().includes(term) ||
       (r.category ?? "").toLowerCase().includes(term),
     );
     const map = new Map<string, typeof filtrados>();

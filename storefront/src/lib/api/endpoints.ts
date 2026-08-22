@@ -310,6 +310,14 @@ export const learningApi = {
     apiPost<ActivityResultRow>(`/learning/lessons/${lessonId}/activity-result`, body),
   myActivityResults: (lessonId?: string) =>
     apiGet<ActivityResultRow[]>("/learning/my/activity-results", lessonId ? { lessonId } : undefined),
+  /**
+   * Slide donde quedó la clase. Sólo lo usa el visor del profe: el alumno en su
+   * portal siempre empieza por el principio.
+   */
+  lastSlide: (lessonId: string, studentId?: string) =>
+    apiGet<{ slide: string | null }>(`/learning/lessons/${lessonId}/slide`, studentId ? { studentId } : undefined),
+  saveLastSlide: (lessonId: string, slide: string | number | null, studentId?: string) =>
+    apiPost<{ ok: boolean; slide: string | null }>(`/learning/lessons/${lessonId}/slide`, { slide, studentId }),
   /** Material (links y PDFs) que su profesor le dejó a este estudiante. */
   myResources: () => apiGet<StudentResource[]>("/learning/my/resources"),
   /** Reportes publicados. Los borradores del profe no llegan aquí. */
@@ -429,6 +437,12 @@ export type ActivityResultInput = {
   answers?: ActivityAnswer[];
   /** Alumno dueño del resultado cuando lo reporta el profe dando la clase. */
   studentId?: string;
+  /**
+   * `true` = la actividad se empezó de cero (se reemplaza y sube el contador de
+   * intentos); `false` = se viene retomando y el servidor mezcla con lo ya
+   * guardado. Lo sabe el visor, no el contenido de la lección.
+   */
+  nuevaCorrida?: boolean;
 };
 export type ActivityResultRow = {
   id: string;
@@ -525,12 +539,12 @@ export const teachersApi = {
    * tres.
    */
   resources: (level?: EnglishLevel) =>
-    apiGet<Array<{ id: string; title: string; description: string | null; category: string | null; level: EnglishLevel | null; updatedAt: string }>>(
+    apiGet<Array<{ id: string; title: string; description: string | null; objective: string | null; category: string | null; level: EnglishLevel | null; updatedAt: string }>>(
       "/teacher/resources",
       level ? { level } : undefined,
     ),
   resource: (id: string) =>
-    apiGet<{ id: string; title: string; description: string | null; category: string | null; level: EnglishLevel | null; contentHtml: string }>(
+    apiGet<{ id: string; title: string; description: string | null; objective: string | null; category: string | null; level: EnglishLevel | null; contentHtml: string }>(
       `/teacher/resources/${id}`,
     ),
 
@@ -785,16 +799,16 @@ export const adminApi = {
       {},
     ),
   resources: () =>
-    apiGet<Array<{ id: string; title: string; description: string | null; category: string | null; level: EnglishLevel | null; position: number; published: boolean; updatedAt: string }>>(
+    apiGet<Array<{ id: string; title: string; description: string | null; objective: string | null; category: string | null; level: EnglishLevel | null; position: number; published: boolean; updatedAt: string }>>(
       "/admin/resources",
     ),
   resource: (id: string) =>
-    apiGet<{ id: string; title: string; description: string | null; category: string | null; level: EnglishLevel | null; contentHtml: string; position: number; published: boolean }>(
+    apiGet<{ id: string; title: string; description: string | null; objective: string | null; category: string | null; level: EnglishLevel | null; contentHtml: string; position: number; published: boolean }>(
       `/admin/resources/${id}`,
     ),
-  createResource: (body: { title: string; description?: string | null; category?: string | null; level?: EnglishLevel | null; contentHtml: string; position?: number; published?: boolean }) =>
+  createResource: (body: { title: string; description?: string | null; objective?: string | null; category?: string | null; level?: EnglishLevel | null; contentHtml: string; position?: number; published?: boolean }) =>
     apiPost<any>("/admin/resources", body),
-  updateResource: (id: string, body: Partial<{ title: string; description: string | null; category: string | null; level: EnglishLevel | null; contentHtml: string; position: number; published: boolean }>) =>
+  updateResource: (id: string, body: Partial<{ title: string; description: string | null; objective: string | null; category: string | null; level: EnglishLevel | null; contentHtml: string; position: number; published: boolean }>) =>
     apiPatch<any>(`/admin/resources/${id}`, body),
   deleteResource: (id: string) => apiPatch<{ ok: boolean }>(`/admin/resources/${id}/delete`, {}),
   updateUser: (id: string, body: Partial<{ fullName: string; phone: string; role: "student" | "teacher" | "admin"; extraRoles: Array<"student" | "teacher" | "admin">; englishLevel: "beginner" | "intermediate" | "advanced" | null; classDurationMin: number | null }>) =>

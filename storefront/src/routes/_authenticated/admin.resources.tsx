@@ -16,6 +16,8 @@ type Borrador = {
   id?: string;
   title: string;
   description: string;
+  /** Para qué sirve la clase: lo lee el profe al lado del visor. */
+  objective: string;
   category: string;
   /** "" = sirve para los tres niveles. */
   level: EnglishLevel | "";
@@ -23,7 +25,7 @@ type Borrador = {
   published: boolean;
 };
 
-const VACIO: Borrador = { title: "", description: "", category: "", level: "", contentHtml: "", published: true };
+const VACIO: Borrador = { title: "", description: "", objective: "", category: "", level: "", contentHtml: "", published: true };
 
 const NIVELES: Array<{ id: EnglishLevel | ""; label: string }> = [
   { id: "", label: "Todos los niveles" },
@@ -52,6 +54,7 @@ function AdminResources() {
       const body = {
         title: b.title.trim(),
         description: b.description.trim() || null,
+        objective: b.objective.trim() || null,
         category: b.category.trim() || null,
         level: b.level || null,
         contentHtml: b.contentHtml,
@@ -82,6 +85,7 @@ function AdminResources() {
         id: r.id,
         title: r.title,
         description: r.description ?? "",
+        objective: r.objective ?? "",
         category: r.category ?? "",
         level: r.level ?? "",
         contentHtml: r.contentHtml,
@@ -286,6 +290,19 @@ function EditorMaterial({
               />
             </label>
           </div>
+
+          {/* A lo ancho y como textarea: es prosa, y es lo que el profe lee al
+              lado del visor para decidir si le sirve la clase. */}
+          <label className="text-xs font-semibold text-brand-ink/70">
+            ¿Para qué sirve esta clase? (objetivo)
+            <textarea
+              value={valor.objective}
+              onChange={(e) => onChange({ ...valor, objective: e.target.value })}
+              rows={3}
+              placeholder="Ej. Repasar el past simple con verbos irregulares y soltar al alumno contando anécdotas en pasado. Ideal si ya vio el presente perfecto y confunde los dos."
+              className="mt-1 w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm font-normal text-brand-ink focus:border-brand-ink focus:outline-none"
+            />
+          </label>
 
           <div className="flex flex-wrap items-center gap-2">
             <input

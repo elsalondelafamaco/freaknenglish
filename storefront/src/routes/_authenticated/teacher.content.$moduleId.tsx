@@ -283,6 +283,7 @@ function ContenidoLeccion({ lesson, studentId }: { lesson: any; studentId?: stri
         html={lesson.contentHtml ?? url ?? ""}
         lessonId={lesson.id}
         studentId={studentId}
+        recordarSlide={!!studentId}
       />
     );
   }

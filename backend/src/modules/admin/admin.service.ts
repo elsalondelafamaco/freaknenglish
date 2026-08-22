@@ -1291,6 +1291,7 @@ export class AdminService {
         id: true,
         title: true,
         description: true,
+        objective: true,
         category: true,
         level: true,
         position: true,
@@ -1309,9 +1310,10 @@ export class AdminService {
   async saveTeacherResource(
     input: {
       id?: string
-      title: string
+      title?: string
       description?: string | null
       category?: string | null
+      objective?: string | null
       level?: 'beginner' | 'intermediate' | 'advanced' | null
       contentHtml?: string
       position?: number
@@ -1319,17 +1321,25 @@ export class AdminService {
     },
     adminId?: string,
   ) {
-    const title = input.title?.trim()
-    if (!title) throw new BadRequestException('El título es obligatorio')
     const id = input.id ?? randomUUID()
     const existing = await this.prisma.teacherResource.findUnique({ where: { id } })
+
+    // Omitir un campo lo CONSERVA; para vaciarlo hay que mandarlo en null o en
+    // blanco. Sin esto, el botón de publicar/ocultar —que manda sólo
+    // `{ published }`— se estrellaba con "El título es obligatorio".
+    const texto = (nuevo: string | null | undefined, previo: string | null) =>
+      nuevo === undefined ? previo : (nuevo?.trim() || null)
+
+    const title = input.title !== undefined ? input.title.trim() : (existing?.title ?? '')
+    if (!title) throw new BadRequestException('El título es obligatorio')
     if (!existing && !input.contentHtml?.trim()) {
       throw new BadRequestException('Falta el contenido HTML del material')
     }
     const data = {
       title,
-      description: input.description ?? existing?.description ?? null,
-      category: input.category?.trim() || existing?.category || null,
+      description: texto(input.description, existing?.description ?? null),
+      category: texto(input.category, existing?.category ?? null),
+      objective: texto(input.objective, existing?.objective ?? null),
       // Omitirlo conserva lo que había; mandarlo en null lo pone en "todos los
       // niveles", que es el valor por defecto.
       level: (input.level !== undefined ? input.level : existing?.level) ?? null,

@@ -162,10 +162,20 @@ export class TeachersService {
     // `upcoming` incluye las congeladas: si no, una clase que el profe congeló
     // desaparecía de su agenda antes incluso de su hora original y se le
     // olvidaba ponerle fecha.
+    //
+    // Y `rescheduled`, que faltaba: desde que reprogramar "solo esta vez"
+    // escribe ese estado, la clase movida se caía de TODOS los filtros —ni
+    // próxima, ni pasada, ni pendiente, ni congelada— y el profe la daba por
+    // perdida aunque siguiera en el calendario.
+    const ACTIVAS = ['scheduled', 'rescheduled', 'pending_reschedule']
     if (status === 'upcoming') {
-      Object.assign(where, { startsAt: { gte: now }, status: { in: ['scheduled', 'pending_reschedule'] } })
+      Object.assign(where, { startsAt: { gte: now }, status: { in: ACTIVAS } })
     } else if (status === 'past') Object.assign(where, { startsAt: { lt: now } })
-    else if (status === 'pending') Object.assign(where, { status: 'scheduled', startsAt: { lt: now } })
+    // Pendientes de validar: ya pasó su hora y nadie las marcó. Una
+    // reprogramada vencida está en el mismo caso que una programada.
+    else if (status === 'pending') {
+      Object.assign(where, { status: { in: ['scheduled', 'rescheduled'] }, startsAt: { lt: now } })
+    }
     // Todas las congeladas, sin importar su hora original: son las que están
     // esperando fecha nueva.
     else if (status === 'frozen') Object.assign(where, { status: 'pending_reschedule' })
@@ -687,7 +697,7 @@ export class TeachersService {
         ...(nivel ? { OR: [{ level: nivel }, { level: null }] } : {}),
       },
       orderBy: [{ level: 'asc' }, { category: 'asc' }, { position: 'asc' }, { createdAt: 'asc' }],
-      select: { id: true, title: true, description: true, category: true, level: true, updatedAt: true },
+      select: { id: true, title: true, description: true, objective: true, category: true, level: true, updatedAt: true },
     })
   }
 

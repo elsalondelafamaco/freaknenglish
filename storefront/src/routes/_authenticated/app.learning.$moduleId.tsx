@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, Circle, Download, FileText, Lock, PlayCircle, Presentation, Trophy } from "lucide-react";
@@ -187,6 +187,15 @@ function LessonViewer({ lesson }: { lesson: any }) {
   const url = mediaUrl(lesson);
   const qc = useQueryClient();
 
+  // El estudiante SIEMPRE empieza la lección por el principio, así que abrirla
+  // es una corrida nueva: la primera entrega reemplaza lo anterior y suma un
+  // intento. Las siguientes son de esa misma corrida (varias lecciones reportan
+  // tras cada respuesta) y no deben volver a contar como intento.
+  const corridaNueva = useRef(true);
+  useEffect(() => {
+    corridaNueva.current = true;
+  }, [lesson.id]);
+
   // Bridge FreaknActivity: las lecciones HTML estandarizadas reportan sus
   // resultados por postMessage; aquí se guardan en la plataforma.
   useEffect(() => {
@@ -196,7 +205,9 @@ function LessonViewer({ lesson }: { lesson: any }) {
       if (!data || data.source !== "freakn-lesson") return;
       if (data.type === "freakn:activity:result" && data.payload?.activityId) {
         try {
-          await learningApi.saveActivityResult(lesson.id, data.payload);
+          const esNueva = corridaNueva.current;
+          corridaNueva.current = false;
+          await learningApi.saveActivityResult(lesson.id, { ...data.payload, nuevaCorrida: esNueva });
           qc.invalidateQueries({ queryKey: ["learning", "activity-results"] });
           const p = data.payload;
           toast.success(

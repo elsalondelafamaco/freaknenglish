@@ -46,9 +46,35 @@ export class LearningController {
       maxScore?: number
       answers?: unknown[]
       studentId?: string
+      nuevaCorrida?: boolean
     },
   ) {
     return this.svc.saveActivityResult(u.id, u.roles, lessonId, body)
+  }
+
+  /**
+   * @endpoint GET /api/v1/learning/lessons/:lessonId/slide?studentId=
+   * Slide donde quedó la última clase. `studentId` lo manda el profe (o admin)
+   * cuando abre la lección para dársela a ese estudiante; el alumno en su
+   * propio portal no retoma — empieza siempre por el principio.
+   */
+  @Get('lessons/:lessonId/slide')
+  getSlide(
+    @CurrentUser() u: AuthUser,
+    @Param('lessonId') lessonId: string,
+    @Query('studentId') studentId?: string,
+  ) {
+    return this.svc.getLastSlide(u.id, u.roles, lessonId, studentId)
+  }
+
+  /** @endpoint POST /api/v1/learning/lessons/:lessonId/slide  (`slide: null` la borra) */
+  @Post('lessons/:lessonId/slide')
+  setSlide(
+    @CurrentUser() u: AuthUser,
+    @Param('lessonId') lessonId: string,
+    @Body() body: { slide: string | number | null; studentId?: string },
+  ) {
+    return this.svc.setLastSlide(u.id, u.roles, lessonId, body?.slide ?? null, body?.studentId)
   }
 
   /** @endpoint GET /api/v1/learning/my/activity-results?lessonId= */

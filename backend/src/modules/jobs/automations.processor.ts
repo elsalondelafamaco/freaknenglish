@@ -39,9 +39,13 @@ export class AutomationsProcessor extends WorkerHost {
     // sobrevivido alguna clase: pausar borra las futuras, pero una clase de
     // hace un rato podría alcanzar a colarse en este mismo tick y quedaría
     // cobrada sin haberse dado, que es justo lo que la pausa evita.
+    // `rescheduled` SÍ entra: una clase que el profe movió a otra fecha se
+    // dicta igual que cualquiera. Faltaba, y por eso una clase reprogramada
+    // nunca se daba por tomada — es decir, el profe la dictaba y no entraba a
+    // nómina, porque la nómina cuenta `validated` + `no_show`.
     const auto = await this.prisma.class.updateMany({
       where: {
-        status: 'scheduled',
+        status: { in: ['scheduled', 'rescheduled'] },
         endsAt: { lt: now },
         NOT: { student: { subscription: { status: 'paused' } } },
       },
@@ -54,10 +58,11 @@ export class AutomationsProcessor extends WorkerHost {
     const in24 = new Date(now.getTime() + 24 * 60 * 60 * 1000)
     const in1 = new Date(now.getTime() + 60 * 60 * 1000)
 
-    // 24h reminders
+    // 24h reminders — también las reprogramadas: al estudiante hay que
+    // recordarle sobre todo la clase que cambió de fecha.
     const cls24 = await this.prisma.class.findMany({
       where: {
-        status: 'scheduled',
+        status: { in: ['scheduled', 'rescheduled'] },
         startsAt: { gte: new Date(in24.getTime() - 5 * 60 * 1000), lte: in24 },
       },
       include: { student: true },
@@ -76,7 +81,7 @@ export class AutomationsProcessor extends WorkerHost {
     // 1h reminders
     const cls1 = await this.prisma.class.findMany({
       where: {
-        status: 'scheduled',
+        status: { in: ['scheduled', 'rescheduled'] },
         startsAt: { gte: new Date(in1.getTime() - 5 * 60 * 1000), lte: in1 },
       },
       include: { student: true },

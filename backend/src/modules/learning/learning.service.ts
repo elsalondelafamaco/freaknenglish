@@ -218,6 +218,15 @@ export class LearningService {
       answers?: unknown[]
       /** Alumno dueño del resultado cuando reporta el profe dando la clase. */
       studentId?: string
+      /**
+       * `true` = el alumno empezó la actividad de cero (entró sin posición
+       * guardada, o el profe pulsó "Volver a empezar"): se reemplaza y sube el
+       * contador de intentos. `false` = viene retomando: se MEZCLA con lo ya
+       * guardado. Lo decide el visor, que es el único que lo sabe; antes se
+       * adivinaba comparando cuántas respuestas llegaban, y retomar rompía esa
+       * heurística por definición.
+       */
+      nuevaCorrida?: boolean
     },
   ) {
     const activityId = String(body.activityId ?? '').trim()
@@ -230,23 +239,44 @@ export class LearningService {
     // autorización ya la dio `resolverEstudiante` con la relación entre ambos:
     // puede estar dando una lección que aún no le abrió.
     if (objetivo === userId) await this.assertLessonAccess(userId, lessonId)
-    const answers = (Array.isArray(body.answers) ? body.answers : []) as any[]
-    const data = {
-      title: body.title ?? undefined,
-      score: typeof body.score === 'number' ? Math.round(body.score) : null,
-      maxScore: typeof body.maxScore === 'number' ? Math.round(body.maxScore) : null,
-      answers: answers as any,
-    }
-    // Las lecciones reportan PROGRESIVAMENTE (cada respuesta re-envía el
-    // acumulado). Solo cuenta como intento nuevo cuando el envío trae MENOS
-    // respuestas que lo guardado (el estudiante empezó la actividad de cero).
+    const entrantes = (Array.isArray(body.answers) ? body.answers : []) as any[]
     const key = { userId_lessonId_activityId: { userId: objetivo, lessonId, activityId } }
     const existing = await this.prisma.activityResult.findUnique({ where: key })
-    const prevCount = Array.isArray(existing?.answers) ? (existing!.answers as any[]).length : 0
-    const isNewRun = !!existing && answers.length < prevCount
+    const previas = Array.isArray(existing?.answers) ? (existing!.answers as any[]) : []
+
+    // Una lección puede darse en dos o tres clases, y la lección guarda sus
+    // respuestas en memoria: nunca las recarga del servidor. Así que al retomar
+    // sólo llegan las nuevas, y reemplazar borraba lo de la clase anterior.
+    // Por eso se MEZCLA salvo que el visor avise que es corrida nueva.
+    const nuevaCorrida = body.nuevaCorrida ?? true
+    const finales = nuevaCorrida ? entrantes : fusionarRespuestas(previas, entrantes)
+
+    // El puntaje se recalcula aquí y no se confía el que llega: el cliente lo
+    // computa sobre su arreglo en memoria, que al retomar está incompleto.
+    const aciertos = finales.filter((a) => a?.correct === true || a?.isCorrect === true).length
+    // `maxScore` no es homogéneo en el contenido: unas lecciones mandan el
+    // total de preguntas y otras cuántas van respondidas. Se toma el mayor para
+    // que una corrida parcial no encoja el denominador de una completa.
+    const maxScore = Math.max(
+      typeof body.maxScore === 'number' ? Math.round(body.maxScore) : 0,
+      nuevaCorrida ? 0 : (existing?.maxScore ?? 0),
+      finales.length,
+    )
+
+    const data = {
+      title: body.title ?? undefined,
+      score: aciertos,
+      maxScore: maxScore || null,
+      answers: finales as any,
+    }
     return this.prisma.activityResult.upsert({
       where: key,
-      update: { ...data, ...(isNewRun ? { attempts: { increment: 1 } } : {}) },
+      update: {
+        ...data,
+        // Sólo la PRIMERA entrega de una corrida nueva cuenta como intento; las
+        // siguientes de esa misma corrida llegan con `nuevaCorrida: false`.
+        ...(existing && nuevaCorrida ? { attempts: { increment: 1 } } : {}),
+      },
       create: { userId: objetivo, lessonId, activityId, ...data },
     })
   }
@@ -590,6 +620,44 @@ export class LearningService {
     throw new ForbiddenException('No puedes ver el avance de ese estudiante')
   }
 
+  async getLastSlide(userId: string, roles: string[], lessonId: string, studentId?: string) {
+    const objetivo = await this.resolverEstudiante(userId, roles, studentId)
+    const p = await this.prisma.lessonProgress.findUnique({
+      where: { userId_lessonId: { userId: objetivo, lessonId } },
+      select: { lastSlideRef: true },
+    })
+    return { slide: p?.lastSlideRef ?? null }
+  }
+
+  /**
+   * La posición llega tal cual la reporta la lección y se guarda sin
+   * interpretarla: unas navegan por índice ("8") y otras por id de slide
+   * ("slide-game"). Sólo se acota el largo, para que un HTML mal hecho no
+   * pueda escribir cualquier cosa en la base.
+   *
+   * `slide: null` la borra — es lo que manda el visor al "Volver a empezar",
+   * porque si no la lección volvería a retomar en cuanto se reabriera.
+   */
+  async setLastSlide(
+    userId: string,
+    roles: string[],
+    lessonId: string,
+    slide: unknown,
+    studentId?: string,
+  ) {
+    const objetivo = await this.resolverEstudiante(userId, roles, studentId)
+    const ref =
+      slide === null || slide === undefined || slide === ''
+        ? null
+        : String(slide).slice(0, 120)
+    await this.prisma.lessonProgress.upsert({
+      where: { userId_lessonId: { userId: objetivo, lessonId } },
+      update: { lastSlideRef: ref },
+      create: { userId: objetivo, lessonId, lastSlideRef: ref, secondsWatched: 0 },
+    })
+    return { ok: true, slide: ref }
+  }
+
   /**
    * Envío de checkpoint v2: valida gating (reintentos/cooldown), califica por
    * tipo de pregunta server-side y guarda el intento con feedback detallado
@@ -659,4 +727,43 @@ export class LearningService {
       remainingAttempts: after.remainingAttempts,
     }
   }
+}
+
+/**
+ * Une las respuestas guardadas con las que llegan, para que una lección dictada
+ * en dos clases sume en vez de pisarse.
+ *
+ * La clave es el `id` de la respuesta, que trae casi todo el contenido y con el
+ * que la propia lección ya deduplica. Hay material sin `id` (las más viejas
+ * mandan sólo `{ question, answer, isCorrect }`): ahí sirve el texto de la
+ * pregunta, que es estable porque sale del mismo slide. Si no hay ninguno de
+ * los dos, la respuesta se conserva sin deduplicar — es preferible una repetida
+ * a perderla.
+ *
+ * Ante la misma clave gana la entrante: si el alumno rehace esa pregunta, vale
+ * el último intento.
+ */
+function fusionarRespuestas(previas: any[], entrantes: any[]): any[] {
+  const claveDe = (a: any): string | null => {
+    if (a?.id !== undefined && a?.id !== null && a.id !== '') return `id:${String(a.id)}`
+    if (typeof a?.question === 'string' && a.question.trim()) return `q:${a.question.trim()}`
+    return null
+  }
+  const fusionadas: any[] = []
+  const porClave = new Map<string, number>()
+  for (const a of [...previas, ...entrantes]) {
+    const k = claveDe(a)
+    if (k === null) {
+      fusionadas.push(a)
+      continue
+    }
+    const yaEsta = porClave.get(k)
+    if (yaEsta === undefined) {
+      porClave.set(k, fusionadas.length)
+      fusionadas.push(a)
+    } else {
+      fusionadas[yaEsta] = a
+    }
+  }
+  return fusionadas
 }

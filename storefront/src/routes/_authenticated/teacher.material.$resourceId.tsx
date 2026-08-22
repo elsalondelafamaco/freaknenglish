@@ -50,7 +50,26 @@ function TeacherMaterialDetail() {
               <p className="mt-1 max-w-2xl text-[15px] text-brand-ink/65">{q.data.description}</p>
             ) : null}
           </header>
-          <LessonFrame title={q.data.title} html={q.data.contentHtml} />
+          {/* El objetivo va AL LADO del material, no encima: la idea es leerlo
+              mientras se hojea y decidir si sirve sin pasarse todos los slides.
+              Nada de `transform`/`filter`/`contain` en este contenedor — al
+              ampliar, `LessonFrame` se vuelve `fixed inset-0 z-50` y cualquiera
+              de esas propiedades lo dejaría atrapado dentro de la columna. */}
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+            <div className="min-w-0 flex-1">
+              <LessonFrame title={q.data.title} html={q.data.contentHtml} />
+            </div>
+            {q.data.objective ? (
+              <aside className="rounded-2xl border border-brand-line bg-white p-5 lg:h-[72vh] lg:w-80 lg:shrink-0 lg:overflow-y-auto">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-ink/60">
+                  ¿Para qué sirve?
+                </h2>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-brand-ink">
+                  {q.data.objective}
+                </p>
+              </aside>
+            ) : null}
+          </div>
         </>
       )}
     </div>

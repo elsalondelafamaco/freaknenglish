@@ -91,7 +91,9 @@ const STATUS_COLOR: Record<string, string> = {
   validated: "#059669",
   no_show: "#dc2626",
   cancelled: "#9ca3af",
-  rescheduled: "#d97706",
+  // Morado y no ámbar: el ámbar ya es el borde de "estudiante sin pago"
+  // (#f59e0b) y una clase movida se leía como una alerta de cobro.
+  rescheduled: "#7c3aed",
   // Congelada: sin este color se pintaba igual de negra que una programada y
   // no había forma de distinguir en el calendario cuál estaba por reprogramar.
   pending_reschedule: "#0284c7",
@@ -188,7 +190,9 @@ function TeacherCalendar() {
       end: c.endsAt,
       backgroundColor: STATUS_COLOR[c.status] ?? "#111827",
       borderColor: c.student.paymentActive ? (STATUS_COLOR[c.status] ?? "#111827") : "#f59e0b",
-      editable: c.status === "scheduled",
+      // Una clase ya movida se puede volver a mover: dejarla clavada era la
+      // mitad de por qué "reprogramada" se sentía como un error del sistema.
+      editable: c.status === "scheduled" || c.status === "rescheduled",
       extendedProps: c,
     }));
     const absenceEvents = data.absences.map((a) => ({
@@ -230,7 +234,7 @@ function TeacherCalendar() {
           </p>
         </div>
         <div className="flex items-center gap-3 text-[11px] text-brand-ink/60">
-          {Object.entries({ Programada: "scheduled", Tomada: "validated", "No tomada": "no_show", "Por reprogramar": "pending_reschedule" }).map(([label, st]) => (
+          {Object.entries({ Programada: "scheduled", Reprogramada: "rescheduled", Tomada: "validated", "No tomada": "no_show", "Por reprogramar": "pending_reschedule" }).map(([label, st]) => (
             <span key={st} className="inline-flex items-center gap-1">
               <span className="inline-block size-2.5 rounded-full" style={{ background: STATUS_COLOR[st] }} /> {label}
             </span>

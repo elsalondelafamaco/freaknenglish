@@ -15,20 +15,34 @@
  * estudiante como el del profesor; si se duplicara, el del profe cargaría el
  * CDN de terceros y vería los slides rotos.
  *
- * Hubo aquí una inyección de `window.__freaknSlideInicial` para que la lección
- * retomara donde se quedó. Se retiró: el puntaje no viajaba con la posición, y
- * el alumno terminaba calificado sólo sobre las preguntas que le faltaban. Los
- * bloques de "memoria de slide" siguen dentro de los HTML pero quedan inertes
- * sin ese marcador —cada uno comprueba que exista y si no, no hace nada—, así
- * que no hubo que tocar las 84 lecciones.
+ * `slideInicial` hace que la lección retome donde quedó la clase anterior. Se
+ * inyecta como variable ANTES del script de la lección —y no por postMessage—
+ * para que ya arranque en el slide correcto: por mensaje habría un parpadeo del
+ * primero y una carrera con su propio `onload`. Los bloques de "memoria de
+ * slide" ya viven dentro de los 84 HTML y comprueban que la variable exista, así
+ * que esto los enciende sin tocar contenido; sin ella arrancan por el principio.
+ *
+ * Va como texto porque las lecciones no navegan todas igual: unas usan un índice
+ * ("8") y otras el id del slide ("slide-game"). La lección lo interpreta; aquí
+ * sólo se le devuelve lo que ella misma reportó.
+ *
+ * OJO con quién la pasa: sólo el visor del PROFE, y contra el alumno que tenga
+ * seleccionado. El estudiante en su portal no retoma — se le calificaría sólo
+ * sobre las preguntas que le faltaban.
  */
-export function prepararHtmlLeccion(html: string): string {
+export function prepararHtmlLeccion(html: string, slideInicial?: string | null): string {
   if (!html) return html;
   const origen = typeof window !== "undefined" ? window.location.origin : "";
-  return html.replaceAll(
+  const conTailwind = html.replaceAll(
     "https://cdn.tailwindcss.com",
     `${origen}/vendor/tailwind-cdn.js`,
   );
+
+  if (!slideInicial) return conTailwind;
+  const marca = `<script>window.__freaknSlideInicial=${JSON.stringify(String(slideInicial))};</script>`;
+  return conTailwind.includes("</head>")
+    ? conTailwind.replace("</head>", `${marca}</head>`)
+    : marca + conTailwind;
 }
 
 /** URL del recurso de una lección (video, slides, pdf o descarga). */

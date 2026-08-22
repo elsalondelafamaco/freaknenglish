@@ -421,6 +421,10 @@ model TeacherResource {
   id          String   @id @default(uuid())
   title       String
   description String?
+  /// Para qué sirve este material: el objetivo de la clase, en prosa. Se le
+  /// muestra al profe AL LADO del visor para que decida si le sirve sin tener
+  /// que pasarse todos los slides.
+  objective   String?
   /// Agrupador libre ("Gramática", "Pronunciación"…). Sin categoría cae en
   /// "General" al listarse.
   category    String?

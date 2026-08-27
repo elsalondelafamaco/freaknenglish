@@ -2,8 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { usersApi, receiptsApi, subscriptionsApi } from "@/lib/api/endpoints";
+import { usersApi, receiptsApi, subscriptionsApi, exchangeApi } from "@/lib/api/endpoints";
 import { apiGetBlob } from "@/lib/api/client";
+import { copAcobrar } from "@/lib/domain/plans";
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
   head: () => ({ meta: [{ title: "Configuración — FreaknEnglish" }] }),
@@ -19,6 +20,14 @@ function SettingsPage() {
   const paymentsQ = useQuery({
     queryKey: ["me", "payments"],
     queryFn: () => usersApi.payments(),
+  });
+  // El precio real es `USD × TRM`, igual que en la home y el checkout. Esta
+  // pantalla mostraba `priceCop`, que quedó congelado en el valor de la semilla
+  // original: el alumno leía 280.000 mientras se le cobraban 620.000.
+  const trmQ = useQuery({
+    queryKey: ["trm"],
+    queryFn: () => exchangeApi.trm(),
+    staleTime: 60 * 60_000,
   });
   if (!user) return null;
   const sub = subQ.data as any;
@@ -84,7 +93,7 @@ function SettingsPage() {
                 style: "currency",
                 currency: "COP",
                 maximumFractionDigits: 0,
-              }).format(plan.priceCop ?? 0)}
+              }).format(copAcobrar(plan, trmQ.data?.valueCop))}
             />
           </dl>
         ) : (

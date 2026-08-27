@@ -259,7 +259,14 @@ export const checkoutApi = {
 
 // ─── Subscriptions ─────────────────────────────────────────────────────
 export const subscriptionsApi = {
-  mine: () => apiGet<Subscription & { plan?: { id: string; name: string; priceCop: number } } | null>("/subscriptions/mine"),
+  // `priceUsd` viaja porque el precio real es `USD × TRM`: `priceCop` es sólo
+  // el de respaldo cuando el plan no tiene precio en dólares o no hay TRM.
+  // Sin exponerlo, la pantalla de configuración mostraba el COP viejo de la
+  // semilla mientras el checkout cobraba otra cosa.
+  mine: () =>
+    apiGet<Subscription & { plan?: { id: string; name: string; priceCop: number; priceUsd?: number | null } } | null>(
+      "/subscriptions/mine",
+    ),
   cancel: () => apiPost<Subscription>("/subscriptions/cancel"),
   resume: () => apiPost<Subscription>("/subscriptions/resume"),
 };
@@ -272,8 +279,9 @@ export const classesApi = {
   confirm: (id: string) => apiPost<ClassSession>(`/classes/${id}/confirm`),
   validate: (id: string) => apiPost<ClassSession>(`/classes/${id}/validate`),
   noShow: (id: string) => apiPost<ClassSession>(`/classes/${id}/no-show`),
-  reschedule: (id: string, startsAt: string, endsAt: string) =>
-    apiPost<ClassSession>(`/classes/${id}/reschedule`, { startsAt, endsAt }),
+  /** `permitirCruce`: el profe ya confirmó que quiere dos clases a la misma hora. */
+  reschedule: (id: string, startsAt: string, endsAt: string, permitirCruce = false) =>
+    apiPost<ClassSession>(`/classes/${id}/reschedule`, { startsAt, endsAt, permitirCruce }),
   /** Congela la clase: no se auto-valida ni entra a nómina hasta tener fecha. */
   freeze: (id: string, reason?: string) =>
     apiPost<ClassSession>(`/classes/${id}/freeze`, { reason }),
@@ -363,6 +371,8 @@ export type StudentLessonPlan = {
     unlocked: boolean;
     unlockedAt: string | null;
     completedAt: string | null;
+    /** 0..1 — cuánto se recorrió de la lección con este estudiante. */
+    progreso?: number;
   }>;
 };
 
@@ -501,8 +511,8 @@ export const teachersApi = {
       }>;
       absences: Array<{ id: string; startsAt: string; endsAt: string; reason?: string | null }>;
     }>("/teacher/calendar", { from, to }),
-  rescheduleClass: (id: string, startsAt: string, scope: "once" | "forever") =>
-    apiPost<any>(`/teacher/classes/${id}/reschedule`, { startsAt, scope }),
+  rescheduleClass: (id: string, startsAt: string, scope: "once" | "forever", permitirCruce = false) =>
+    apiPost<any>(`/teacher/classes/${id}/reschedule`, { startsAt, scope, permitirCruce }),
   myAvailability: () =>
     apiGet<Array<{ id: string; weekday: number; startsAt: string; endsAt: string }>>(
       "/teacher/availability",
@@ -715,7 +725,12 @@ export const adminApi = {
         risk: number;
       }>
     >("/admin/at-risk"),
-  users: (q?: string) => apiGet<User[]>("/admin/users", q ? { q } : undefined),
+  /** `eliminados`: incluye las cuentas ocultas, para poder revisarlas o revertir. */
+  users: (q?: string, eliminados = false) =>
+    apiGet<User[]>("/admin/users", {
+      ...(q ? { q } : {}),
+      ...(eliminados ? { eliminados: "1" } : {}),
+    }),
   userDetail: (id: string) => apiGet<any>(`/admin/users/${id}`),
   payroll: (period: string) =>
     apiGet<
@@ -727,6 +742,8 @@ export const adminApi = {
         hours: number;
         hourlyRateCop: number;
         amountCop: number;
+        /** Pares de clases pagables que se pisan en el tiempo (reposiciones). */
+        clasesCruzadas?: number;
       }>
     >("/admin/payroll", { period }),
   payrollCsv: (period: string) =>
@@ -811,7 +828,7 @@ export const adminApi = {
   updateResource: (id: string, body: Partial<{ title: string; description: string | null; objective: string | null; category: string | null; level: EnglishLevel | null; contentHtml: string; position: number; published: boolean }>) =>
     apiPatch<any>(`/admin/resources/${id}`, body),
   deleteResource: (id: string) => apiPatch<{ ok: boolean }>(`/admin/resources/${id}/delete`, {}),
-  updateUser: (id: string, body: Partial<{ fullName: string; phone: string; role: "student" | "teacher" | "admin"; extraRoles: Array<"student" | "teacher" | "admin">; englishLevel: "beginner" | "intermediate" | "advanced" | null; classDurationMin: number | null }>) =>
+  updateUser: (id: string, body: Partial<{ fullName: string; phone: string; email: string; role: "student" | "teacher" | "admin"; extraRoles: Array<"student" | "teacher" | "admin">; englishLevel: "beginner" | "intermediate" | "advanced" | null; classDurationMin: number | null }>) =>
     apiPatch<User>(`/admin/users/${id}`, body),
   setUserStatus: (id: string, disabled: boolean) =>
     apiPatch<User>(`/admin/users/${id}/status`, { disabled }),

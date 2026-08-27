@@ -151,6 +151,18 @@ function AdminPayroll() {
                   <td className="px-4 py-3">
                     <div className="font-semibold text-brand-ink">{r.fullName}</div>
                     <div className="text-xs text-brand-ink/55">ID: {r.teacherId.slice(0, 8)}</div>
+                    {/* Dos clases pagables a la misma hora: pasa cuando el profe
+                        usa la hora de quien no entró para reponer con otro. Se
+                        paga igual, pero conviene mirarlo antes de aprobar. */}
+                    {r.clasesCruzadas ? (
+                      <div
+                        title="El profesor tiene clases que se pisan en el tiempo. Se están pagando las dos."
+                        className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900"
+                      >
+                        ⚠ {r.clasesCruzadas} hora{r.clasesCruzadas === 1 ? "" : "s"} cruzada
+                        {r.clasesCruzadas === 1 ? "" : "s"}
+                      </div>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3 text-brand-ink/80">{r.classes}</td>
                   <td className="px-4 py-3 text-brand-ink/80">{r.hours.toFixed(2)} h</td>

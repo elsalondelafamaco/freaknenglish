@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { copAcobrar } from "@/lib/domain/plans";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
@@ -89,7 +90,7 @@ function CheckoutSelect() {
         ) : (
           <div className={`mt-10 grid gap-8 ${plans.length > 3 ? "sm:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-3"}`}>
             {plans.map((plan: any) => {
-              const cop = plan.priceUsd && trm ? Math.round(plan.priceUsd * trm) : plan.priceCop;
+              const cop = copAcobrar(plan, trm);
               return (
                 <Link
                   key={plan.id}

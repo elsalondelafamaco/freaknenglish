@@ -9,6 +9,7 @@ import {
   Pencil,
   Power,
   KeyRound,
+  Trash2,
 } from "lucide-react";
 import {
   Dialog,
@@ -54,6 +55,7 @@ function AdminUserDetail() {
   const [tab, setTab] = useState<TabId>("overview");
   const [editing, setEditing] = useState(false);
   const [banConfirmOpen, setBanConfirmOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [verComoOpen, setVerComoOpen] = useState(false);
   const [entrando, setEntrando] = useState(false);
   const [resetInfo, setResetInfo] = useState<{ link: string | null } | null>(null);
@@ -179,6 +181,17 @@ function AdminUserDetail() {
       toast.error(`No se pudo entrar como ${user.fullName}: ${(err as Error).message}`);
     } finally {
       setEntrando(false);
+    }
+  }
+
+  async function onDelete() {
+    try {
+      await adminApi.softDeleteUser(user.id);
+      toast.success("Usuario eliminado — ya no aparece en el CRM.");
+      setDeleteConfirmOpen(false);
+      bump();
+    } catch (err) {
+      toast.error((err as Error).message);
     }
   }
 
@@ -308,6 +321,18 @@ function AdminUserDetail() {
           >
             <Power className="size-3.5" /> {isDisabled ? "Quitar ban" : "Banear"}
           </button>
+          {/* Eliminar existía en el backend desde siempre pero no estaba
+              cableado: por eso "no había manera de borrarlos". Es un borrado
+              suave — la cuenta desaparece del CRM y se puede volver a ver con
+              el interruptor del listado. */}
+          {!isDeleted ? (
+            <button
+              onClick={() => setDeleteConfirmOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 transition hover:-translate-y-0.5 hover:bg-red-50"
+            >
+              <Trash2 className="size-3.5" /> Eliminar
+            </button>
+          ) : null}
           {user.id !== me?.id ? (
             <button
               onClick={() => setVerComoOpen(true)}
@@ -372,6 +397,36 @@ function AdminUserDetail() {
               className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
             >
               Sí, banear
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmación de eliminado. Es suave: se puede revertir desde el
+          listado activando "ver eliminados". */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>¿Eliminar a {user.fullName}?</DialogTitle>
+            <DialogDescription>
+              Desaparece del CRM y pierde el acceso. No se borra de la base: su historial se
+              conserva y puedes volver a verlo activando «Ver eliminados» en el listado. Su correo
+              (<span className="font-medium">{user.email}</span>) sigue ocupado — si necesitas
+              liberarlo, cámbiaselo antes desde «Editar».
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <button
+              onClick={() => setDeleteConfirmOpen(false)}
+              className="rounded-full border border-brand-line bg-white px-4 py-2 text-sm font-semibold text-brand-ink"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => void onDelete()}
+              className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+            >
+              Sí, eliminar
             </button>
           </DialogFooter>
         </DialogContent>
@@ -855,6 +910,12 @@ function EditUserDialog({
       await adminApi.updateUser(user.id, {
         fullName,
         phone: phone || undefined,
+        // El campo de correo llevaba tiempo pintado en el formulario pero nunca
+        // se enviaba: el admin lo editaba, salía "guardado" y no cambiaba nada.
+        // Va sólo si de verdad cambió, para no chocar consigo mismo.
+        ...(email.trim() && email.trim().toLowerCase() !== user.email.toLowerCase()
+          ? { email: email.trim() }
+          : {}),
         role: principal,
         // "moderator" es legacy del tipo del cliente y no existe en el backend.
         extraRoles: (["admin", "teacher", "student"] as const).filter(

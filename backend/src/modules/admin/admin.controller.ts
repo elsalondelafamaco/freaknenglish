@@ -31,7 +31,9 @@ export class AdminController {
 
   /** @endpoint GET /api/v1/admin/users?q=foo */
   @Get('users')
-  users(@Query('q') q?: string) { return this.svc.users(q) }
+  users(@Query('q') q?: string, @Query('eliminados') eliminados?: string) {
+    return this.svc.users(q, eliminados === '1')
+  }
 
   /** @endpoint GET /api/v1/admin/payroll?period=YYYY-MM */
   @Get('payroll')
@@ -249,6 +251,7 @@ export class AdminController {
     @Body() body: {
       fullName?: string
       phone?: string
+      email?: string
       role?: 'student' | 'teacher' | 'admin'
       extraRoles?: Array<'student' | 'teacher' | 'admin'>
       englishLevel?: 'beginner' | 'intermediate' | 'advanced' | null

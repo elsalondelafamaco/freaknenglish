@@ -166,9 +166,15 @@ export class TeachersController {
   rescheduleClass(
     @CurrentUser() u: AuthUser,
     @Param('id') id: string,
-    @Body() body: { startsAt: string; scope: 'once' | 'forever' },
+    @Body() body: { startsAt: string; scope: 'once' | 'forever'; permitirCruce?: boolean },
   ) {
-    return this.svc.rescheduleClass(u.id, id, new Date(body.startsAt), body.scope === 'forever' ? 'forever' : 'once')
+    return this.svc.rescheduleClass(
+      u.id,
+      id,
+      new Date(body.startsAt),
+      body.scope === 'forever' ? 'forever' : 'once',
+      !!body.permitirCruce,
+    )
   }
 
   /** @endpoint GET /api/v1/teacher/absences (self) */

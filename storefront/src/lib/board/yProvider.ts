@@ -1,7 +1,7 @@
 import { io, Socket } from "socket.io-client";
 import * as Y from "yjs";
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from "y-protocols/awareness";
-import { getAccessToken } from "@/lib/api/client";
+import { getAccessToken, onAccessTokenChange, refreshAccessToken } from "@/lib/api/client";
 import { boardsApi } from "@/lib/api/endpoints";
 
 const API_URL: string =
@@ -18,6 +18,39 @@ function socketOrigin() {
 }
 
 let sharedSocket: Socket | null = null;
+let reautenticando = false;
+let intentosAuth = 0;
+
+/**
+ * Vuelve a conectar con un token fresco.
+ *
+ * Hace falta porque el token del socket se captura UNA vez al construirlo y
+ * dura 15 minutos, mientras una clase dura 50. Al vencerse, el servidor lo
+ * rechaza y desconecta — y socket.io **no reconecta solo** cuando el corte lo
+ * inicia el servidor. Sin esto, el board se moría a media clase y solo revivía
+ * recargando la página.
+ *
+ * Suscribirse a `onAccessTokenChange` no basta: la renovación periódica de la
+ * sesión se salta las pestañas en segundo plano, que es justo donde está el
+ * profe mientras comparte pantalla.
+ */
+async function recuperarSesion() {
+  if (reautenticando || !sharedSocket) return;
+  reautenticando = true;
+  try {
+    const espera = Math.min(15000, 1000 * 2 ** Math.min(intentosAuth, 4));
+    intentosAuth++;
+    if (intentosAuth > 1) await new Promise((r) => setTimeout(r, espera));
+    const fresco = await refreshAccessToken();
+    if (!fresco) return; // sesión de verdad vencida: hay que volver a entrar
+    intentosAuth = 0;
+    sharedSocket.auth = { token: fresco } as any;
+    if (!sharedSocket.connected) sharedSocket.connect();
+  } finally {
+    reautenticando = false;
+  }
+}
+
 function getSocket(): Socket {
   const token = getAccessToken();
   if (sharedSocket && sharedSocket.connected) return sharedSocket;
@@ -30,6 +63,19 @@ function getSocket(): Socket {
     auth: { token },
     transports: ["websocket"],
     autoConnect: true,
+  });
+  // Token nuevo por cualquier vía → el socket se entera.
+  onAccessTokenChange((t) => {
+    if (!sharedSocket) return;
+    sharedSocket.auth = { token: t } as any;
+    if (t && !sharedSocket.connected) sharedSocket.connect();
+  });
+  sharedSocket.on("auth:expired", () => void recuperarSesion());
+  sharedSocket.on("connect_error", () => void recuperarSesion());
+  sharedSocket.on("disconnect", (motivo) => {
+    // "io server disconnect" = lo cortó el servidor (token vencido); socket.io
+    // NO reintenta solo en ese caso, hay que reconectar a mano.
+    if (motivo === "io server disconnect") void recuperarSesion();
   });
   return sharedSocket;
 }
@@ -62,7 +108,12 @@ export type EstadoGuardado = {
 export interface BoardPageProvider {
   doc: Y.Doc;
   awareness: Awareness;
-  status: "connecting" | "connected" | "offline";
+  /**
+   * `degradado` = hay socket pero NO estamos en la sala, que es cuando el
+   * board parece vivo y no lo está. `sesion_expirada` = se venció la sesión y
+   * ni renovando se pudo volver.
+   */
+  status: "connecting" | "connected" | "degradado" | "offline" | "sesion_expirada";
   destroy(): void;
   onStatus(cb: (s: BoardPageProvider["status"]) => void): () => void;
   onPresence(cb: (users: Array<{ id: string; email?: string; role?: string }>) => void): () => void;
@@ -88,8 +139,18 @@ export function createPageProvider(pageId: string, user: { id: string; name: str
   let joined = false;
   const seenClientOpIds = new Set<string>();
 
-  async function bootstrap() {
-    // Prefer snapshot from REST; then socket join for live ops
+  /**
+   * Trae el estado completo del servidor y lo aplica.
+   *
+   * Pide las operaciones desde 0 y NO desde `localLastSeq`, aunque parezca
+   * derroche: el `seq` del servidor **no es monótono**. Cada 50 operaciones se
+   * compacta la página, se borran las anteriores y el contador vuelve a 1. Con
+   * un "desde mi último seq" el cliente pediría desde un número más alto que el
+   * que existe y recibiría CERO filas, sin error — y se quedaría desincronizado
+   * en silencio. Reaplicar de más es inofensivo: Yjs integra por
+   * `(clientID, clock)` y descarta lo que ya tiene.
+   */
+  async function resync() {
     try {
       const st = await boardsApi.pageState(pageId);
       if (st.snapshot) Y.applyUpdate(doc, b64ToBytes(st.snapshot), "server");
@@ -100,23 +161,55 @@ export function createPageProvider(pageId: string, user: { id: string; name: str
           if (op.seq <= 0) continue;
           seenClientOpIds.add(op.clientOpId);
           Y.applyUpdate(doc, b64ToBytes(op.update), "server");
-          localLastSeq = Math.max(localLastSeq, op.seq);
+          localLastSeq = op.seq;
         }
       }
-    } catch (e) {
-      // ignore; may still work via socket
+    } catch {
+      // Sin red todavía: el socket lo reintentará al conectar.
     }
+  }
+
+  async function bootstrap() {
+    await resync();
     joinRoom();
   }
 
+  let reintentoJoin: ReturnType<typeof setTimeout> | null = null;
+  let intentosJoin = 0;
+
+  /**
+   * Entra a la sala de la página.
+   *
+   * Con tiempo de espera y reintento porque antes no los tenía: si el servidor
+   * lanzaba una excepción al validar el acceso, la confirmación **nunca
+   * llegaba**, `joined` se quedaba en false para siempre y el cliente jamás
+   * reintentaba. El socket quedaba conectado pero FUERA de la sala: lo que
+   * escribía sí salía, pero no le entraba nada — y el indicador seguía en
+   * verde. Esa asimetría es justo lo que reportaban los profes.
+   */
   function joinRoom() {
+    if (reintentoJoin) { clearTimeout(reintentoJoin); reintentoJoin = null; }
     if (!socket.connected) {
-      socket.once("connect", () => joinRoom());
-      return;
+      setStatus("degradado");
+      return; // al conectar, `onConnect` vuelve a llamar aquí
     }
-    socket.emit("page:join", { pageId }, (_ack: any) => {
+    socket.timeout(8000).emit("page:join", { pageId }, async (err: unknown, ack: any) => {
+      if (err || !ack?.ok) {
+        intentosJoin++;
+        setStatus("degradado");
+        const espera = Math.min(15000, 1000 * 2 ** Math.min(intentosJoin, 4));
+        reintentoJoin = setTimeout(() => joinRoom(), espera);
+        return;
+      }
+      const reconexion = joined;
       joined = true;
+      intentosJoin = 0;
+      // Verde sólo AQUÍ: estar en la sala es lo que de verdad significa "en
+      // vivo". Antes se pintaba al conectar el socket, que no garantiza nada.
       setStatus("connected");
+      // Al volver de una caída hay que recuperar lo que se escribió mientras
+      // tanto; antes sólo se volvía a entrar a la sala y lo perdido se perdía.
+      if (reconexion) await resync();
     });
   }
 
@@ -125,7 +218,10 @@ export function createPageProvider(pageId: string, user: { id: string; name: str
     if (seenClientOpIds.has(payload.clientOpId)) return;
     seenClientOpIds.add(payload.clientOpId);
     Y.applyUpdate(doc, b64ToBytes(payload.update), "server");
-    localLastSeq = Math.max(localLastSeq, payload.seq);
+    // Asignación y no `Math.max`: el `seq` del servidor se reinicia al
+    // compactar la página, así que quedarse con el mayor dejaba el marcador
+    // por encima del real para siempre.
+    localLastSeq = payload.seq;
   };
   const onAwareness = (payload: { userId: string; update: string }) => {
     applyAwarenessUpdate(awareness, b64ToBytes(payload.update), "remote");
@@ -134,8 +230,10 @@ export function createPageProvider(pageId: string, user: { id: string; name: str
     presenceListeners.forEach((cb) => cb(payload.users ?? []));
   };
   const onConnect = () => {
-    setStatus("connected");
-    if (joined) joinRoom(); // rejoin after reconnect
+    // Conectar NO es estar sincronizado: hasta que la sala confirme, esto está
+    // degradado. Lo pone en verde el `ack` del join.
+    setStatus("degradado");
+    joinRoom(); // siempre, no sólo `if (joined)`
   };
   const onDisconnect = () => setStatus("offline");
 

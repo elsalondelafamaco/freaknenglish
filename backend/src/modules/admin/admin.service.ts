@@ -74,9 +74,17 @@ export class AdminService {
     }
   }
 
-  users(q?: string) {
+  /**
+   * Listado del CRM. Los eliminados quedan FUERA salvo que se pidan: hasta
+   * ahora no se filtraban, así que una cuenta borrada seguía apareciendo y
+   * parecía que no se podía eliminar a nadie.
+   */
+  users(q?: string, incluirEliminados = false) {
     return this.prisma.user.findMany({
-      where: q ? { OR: [{ email: { contains: q } }, { fullName: { contains: q } }] } : undefined,
+      where: {
+        ...(incluirEliminados ? {} : { deletedAt: null }),
+        ...(q ? { OR: [{ email: { contains: q } }, { fullName: { contains: q } }] } : {}),
+      },
       orderBy: { createdAt: 'desc' },
       include: { subscription: { include: { plan: true } } },
       take: 500,
@@ -342,6 +350,30 @@ export class AdminService {
       minutes.set(tid, (minutes.get(tid) ?? 0) + durMin)
       counts.set(tid, (counts.get(tid) ?? 0) + 1)
     }
+
+    // Horas cruzadas: desde que se puede poner una reposición encima de una
+    // clase que no se tomó, el mismo profe puede tener dos clases pagables a la
+    // misma hora — y esto suma las dos, o sea 100 minutos por 50 de reloj. No
+    // se cambia el cálculo (una no_show se paga porque el profe estuvo), pero
+    // se avisa para poder revisarlo antes de aprobar el pago.
+    const cruces = new Map<string, number>()
+    const porProfe = new Map<string, typeof classes>()
+    for (const c of classes) {
+      const tid = c.teacherId!
+      porProfe.set(tid, [...(porProfe.get(tid) ?? []), c])
+    }
+    for (const [tid, lista] of porProfe) {
+      const orden = [...lista].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+      let n = 0
+      for (let i = 0; i < orden.length; i++) {
+        for (let j = i + 1; j < orden.length; j++) {
+          if (orden[j].startsAt.getTime() >= orden[i].endsAt.getTime()) break
+          n++
+        }
+      }
+      if (n > 0) cruces.set(tid, n)
+    }
+
     const teacherIds = Array.from(minutes.keys())
     const teachers = await this.prisma.user.findMany({ where: { id: { in: teacherIds } } })
     const classRate = await this.getClassRateCop()
@@ -356,6 +388,8 @@ export class AdminService {
         hours: Number((mins / 60).toFixed(2)),
         hourlyRateCop: classRate,
         amountCop: Math.round((mins / 50) * classRate),
+        /** Pares de clases pagables que se pisan en el tiempo. 0 = sin cruces. */
+        clasesCruzadas: cruces.get(t.id) ?? 0,
       }
     })
   }
@@ -1115,6 +1149,13 @@ export class AdminService {
     data: {
       fullName?: string
       phone?: string
+      /**
+       * Cambiar el correo. Hace falta de verdad: si alguien pierde el acceso a
+       * su buzón no puede establecer contraseña ni recuperarla, y la cuenta
+       * queda muerta. Después de cambiarlo, "Resetear clave" ya manda el enlace
+       * al nuevo, porque lee el correo del registro.
+       */
+      email?: string
       role?: 'student' | 'teacher' | 'admin'
       /** Roles adicionales: así un admin puede además dar clases. */
       extraRoles?: AppRole[]
@@ -1131,6 +1172,24 @@ export class AdminService {
       }
     }
     const patch: Prisma.UserUpdateInput = { ...(data as any) }
+    if (data.email !== undefined) {
+      const email = normalizarEmail(data.email)
+      if (!email || !email.includes('@')) throw new BadRequestException('Correo inválido')
+      // El correo es único: sin este aviso saldría un error crudo de la base.
+      // Se busca incluyendo eliminados, porque una cuenta oculta sigue
+      // ocupando la dirección.
+      const ocupado = await this.prisma.user.findUnique({
+        where: { email },
+        select: { id: true, fullName: true, deletedAt: true },
+      })
+      if (ocupado && ocupado.id !== resolvedId) {
+        throw new BadRequestException(
+          `Ese correo ya lo usa ${ocupado.fullName}${ocupado.deletedAt ? ' (cuenta eliminada)' : ''}. ` +
+            'Cámbialo en esa cuenta primero o usa otra dirección.',
+        )
+      }
+      patch.email = email
+    }
     if (data.extraRoles) {
       const current = await this.prisma.user.findUniqueOrThrow({
         where: { id: resolvedId },

@@ -37,6 +37,18 @@ export class ApiError extends Error {
 
 let refreshing: Promise<string | null> | null = null;
 
+/**
+ * Renueva el token desde fuera del ciclo HTTP.
+ *
+ * Lo usa el socket del board: su token se captura al conectar y dura 15
+ * minutos, mucho menos que una clase. Pasa por aquí y no por `authApi.refresh`
+ * para reutilizar la cola de `doRefresh` — si no, varias renovaciones a la vez
+ * se pisarían y chocarían con el límite de peticiones de `/auth/refresh`.
+ */
+export function refreshAccessToken(): Promise<string | null> {
+  return doRefresh();
+}
+
 async function doRefresh(): Promise<string | null> {
   if (refreshing) return refreshing;
   refreshing = (async () => {

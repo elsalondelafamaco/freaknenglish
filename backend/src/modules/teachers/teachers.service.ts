@@ -3,6 +3,7 @@ import { PrismaService } from '../../prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { SlotsService, availabilityCovers } from '../scheduling/slots.service'
 import { assertDentroDeLaVentana } from '../scheduling/class-window'
+import { assertSinCruce } from '../scheduling/class-clash'
 import { LearningService } from '../learning/learning.service'
 import { StorageService } from '../storage/storage.service'
 
@@ -481,7 +482,13 @@ export class TeachersService {
    *  - 'once'   → mueve SOLO esa clase; no toca el slot recurrente (AC-18).
    *  - 'forever'→ mueve el ScheduleSlot + todas las clases futuras (AC-19).
    */
-  async rescheduleClass(teacherId: string, classId: string, newStartsAt: Date, scope: 'once' | 'forever') {
+  async rescheduleClass(
+    teacherId: string,
+    classId: string,
+    newStartsAt: Date,
+    scope: "once" | "forever",
+    permitirCruce = false,
+  ) {
     const c = await this.prisma.class.findUnique({ where: { id: classId } })
     if (!c) throw new NotFoundException('Clase no encontrada')
     if (c.teacherId !== teacherId) throw new ForbiddenException('La clase no es tuya')
@@ -497,18 +504,14 @@ export class TeachersService {
     // invisible e imposible de volver a mover desde su portal.
     assertDentroDeLaVentana(newStartsAt, newEndsAt, await this.slots.getConfig())
 
-    // AC-20: no soltar sobre otra clase del profe.
-    const clash = await this.prisma.class.findFirst({
-      where: {
-        teacherId,
-        id: { not: classId },
-        status: { in: ['scheduled', 'rescheduled'] },
-        startsAt: { lt: newEndsAt },
-        endsAt: { gt: newStartsAt },
-      },
-      select: { id: true },
+    // Cruce con otra clase del profe: ya no bloquea, avisa. Ver `class-clash.ts`.
+    await assertSinCruce(this.prisma, {
+      teacherId,
+      classId,
+      startsAt: newStartsAt,
+      endsAt: newEndsAt,
+      permitirCruce,
     })
-    if (clash) throw new BadRequestException('Ya tienes una clase en ese horario')
 
     const student = await this.prisma.user.findUnique({
       where: { id: c.studentId },

@@ -19,7 +19,13 @@ function AdminCRM() {
   const [role, setRole] = useState<"all" | "student" | "teacher" | "admin">("all");
   const [showCreate, setShowCreate] = useState(false);
 
-  const usersQ = useQuery({ queryKey: ["admin", "users", q], queryFn: () => adminApi.users(q.trim() || undefined) });
+  // Los eliminados quedan fuera por defecto; el interruptor los trae de vuelta
+  // para poder revisarlos o revertir un borrado.
+  const [verEliminados, setVerEliminados] = useState(false);
+  const usersQ = useQuery({
+    queryKey: ["admin", "users", q, verEliminados],
+    queryFn: () => adminApi.users(q.trim() || undefined, verEliminados),
+  });
   const rows = (usersQ.data ?? []) as any[];
   // Filtra por roles EFECTIVOS: un admin que además da clases debe salir tanto
   // en "admin" como en "teacher".
@@ -38,8 +44,17 @@ function AdminCRM() {
               <button key={r} onClick={() => setRole(r)} className={`rounded-full px-3 py-1.5 font-medium capitalize transition ${role === r ? "bg-brand-ink text-white" : "text-brand-ink/70 hover:text-brand-ink"}`}>
                 {r === "all" ? "Todos" : r}
               </button>
+
             ))}
           </div>
+          <label className="inline-flex items-center gap-1.5 rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-medium text-brand-ink/70">
+            <input
+              type="checkbox"
+              checked={verEliminados}
+              onChange={(e) => setVerEliminados(e.target.checked)}
+            />
+            Ver eliminados
+          </label>
           <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5">
             <Plus className="size-3.5" /> Invitar usuario
           </button>
@@ -78,6 +93,7 @@ function AdminCRM() {
                       <span key={r} className="mr-1 rounded-full bg-brand-cream px-2 py-0.5 text-[10px] font-semibold capitalize text-brand-ink">{r}</span>
                     ))}
                     {u.disabledAt ? <span className="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">inactivo</span> : null}
+                    {u.deletedAt ? <span className="ml-1 rounded-full bg-zinc-200 px-2 py-0.5 text-[10px] font-semibold text-zinc-700">eliminado</span> : null}
                   </td>
                   <td className="px-4 py-3 capitalize text-brand-ink/70">{u.englishLevel ?? "—"}</td>
                   <td className="px-4 py-3 text-brand-ink/70">{u.subscription?.plan?.name ?? "—"}</td>

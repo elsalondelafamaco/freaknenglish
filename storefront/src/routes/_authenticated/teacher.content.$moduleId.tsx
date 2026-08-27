@@ -97,10 +97,14 @@ function TeacherModuleViewer() {
 
   /** lessonId → estado de ese estudiante. Vacío si no se eligió estudiante. */
   const estado = useMemo(() => {
-    const m = new Map<string, { unlocked: boolean; completedAt: string | null }>();
+    const m = new Map<string, { unlocked: boolean; completedAt: string | null; progreso: number }>();
     for (const mod of planQ.data ?? []) {
       for (const l of mod.lessons) {
-        m.set(l.lessonId, { unlocked: l.unlocked, completedAt: (l.completedAt as any) ?? null });
+        m.set(l.lessonId, {
+          unlocked: l.unlocked,
+          completedAt: (l.completedAt as any) ?? null,
+          progreso: l.progreso ?? 0,
+        });
       }
     }
     return m;
@@ -225,10 +229,29 @@ function TeacherModuleViewer() {
               const st = estado.get(l.id);
               const isActive = l.id === (activeId || lessons[0]?.id);
               return (
-                <li key={l.id}>
+                <li key={l.id} className="relative">
+                  {/* Barra de avance al pie, estilo miniatura de video: dice
+                      hasta dónde llegaron con ESTE alumno, para no tener que
+                      acordarse de en qué módulo iban. */}
+                  {studentId && (st?.progreso ?? 0) > 0 ? (
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-3 bottom-0.5 h-1 overflow-hidden rounded-full bg-brand-ink/10"
+                    >
+                      <span
+                        className={`block h-full rounded-full ${st?.completedAt ? "bg-brand-success" : "bg-brand-yellow"}`}
+                        style={{ width: `${Math.round((st?.progreso ?? 0) * 100)}%` }}
+                      />
+                    </span>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => setActiveId(l.id)}
+                    title={
+                      studentId && (st?.progreso ?? 0) > 0
+                        ? `Trabajada al ${Math.round((st?.progreso ?? 0) * 100)}%`
+                        : undefined
+                    }
                     className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm transition ${
                       isActive ? "bg-brand-cream text-brand-ink" : "text-brand-ink/75 hover:bg-brand-cream/50"
                     }`}

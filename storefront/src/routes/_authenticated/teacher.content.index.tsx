@@ -1,7 +1,8 @@
+import { useMemo } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { BookOpen } from "lucide-react";
-import { learningApi } from "@/lib/api/endpoints";
+import { learningApi, teachersApi } from "@/lib/api/endpoints";
 import { BarraAlumnoEnClase, useAlumnoEnClase } from "@/components/learning/AlumnoEnClase";
 import type { EnglishLevel } from "@/lib/domain/types";
 
@@ -57,6 +58,24 @@ function TeacherContent() {
     queryKey: ["learning", "modules", level],
     queryFn: () => learningApi.modules(level),
   });
+
+  // Avance del alumno por módulo: promedio de lo recorrido en sus lecciones.
+  // Sirve para saber de un vistazo en qué módulo iban, sin abrirlos uno a uno.
+  const planQ = useQuery({
+    queryKey: ["teacher", "lesson-plan", studentId],
+    queryFn: () => teachersApi.lessonPlan(studentId!),
+    enabled: !!studentId,
+  });
+  const avancePorModulo = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const mod of planQ.data ?? []) {
+      const ls = mod.lessons ?? [];
+      if (ls.length === 0) continue;
+      const suma = ls.reduce((a: number, l: { progreso?: number }) => a + (l.progreso ?? 0), 0);
+      m.set(mod.moduleId, suma / ls.length);
+    }
+    return m;
+  }, [planQ.data]);
 
   const mods = (modsQ.data ?? []) as any[];
   const grupos = groupByUnit(mods);
@@ -123,6 +142,21 @@ function TeacherContent() {
                   </div>
                   <h3 className="mt-3 text-lg font-bold text-brand-ink">{m.title}</h3>
                   <p className="mt-1 text-sm text-brand-ink/65">{m.summary ?? m.description}</p>
+                  {/* Barra de avance del alumno seleccionado, al pie de la
+                      tarjeta — como la franja roja de una miniatura de video. */}
+                  {studentId && (avancePorModulo.get(m.id) ?? 0) > 0 ? (
+                    <div className="mt-4">
+                      <div className="h-1.5 overflow-hidden rounded-full bg-brand-ink/10">
+                        <div
+                          className="h-full rounded-full bg-brand-yellow"
+                          style={{ width: `${Math.round((avancePorModulo.get(m.id) ?? 0) * 100)}%` }}
+                        />
+                      </div>
+                      <div className="mt-1 text-[11px] text-brand-ink/50">
+                        Trabajado al {Math.round((avancePorModulo.get(m.id) ?? 0) * 100)}%
+                      </div>
+                    </div>
+                  ) : null}
                 </Link>
               ))}
             </div>

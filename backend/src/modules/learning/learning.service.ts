@@ -333,30 +333,38 @@ export class LearningService {
         orderBy: [{ level: 'asc' }, { position: 'asc' }],
         include: { lessons: { orderBy: { position: 'asc' } } },
       }),
+      // SIN filtrar por `completedAt`: una lección empezada y no terminada no
+      // aparecía en absoluto, y es justo la que hay que poder mostrar a medias
+      // en la barra de progreso del profe.
       this.prisma.lessonProgress.findMany({
-        where: { userId: studentId, completedAt: { not: null } },
-        select: { lessonId: true, completedAt: true },
+        where: { userId: studentId },
+        select: { lessonId: true, completedAt: true, lastSlideRef: true },
       }),
       this.prisma.checkpointUnlock.findMany({
         where: { userId: studentId, revokedAt: null },
         select: { lessonId: true, createdAt: true },
       }),
     ])
-    const done = new Map(progress.map((p) => [p.lessonId, p.completedAt]))
+    const avance = new Map(progress.map((p) => [p.lessonId, p]))
     const open = new Map(unlocks.map((u) => [u.lessonId, u.createdAt]))
     return modules.map((m) => ({
       moduleId: m.id,
       title: m.title,
       unit: m.unit,
       level: m.level,
-      lessons: m.lessons.map((l) => ({
-        lessonId: l.id,
-        title: l.title,
-        isCheckpoint: l.isCheckpoint,
-        unlocked: open.has(l.id),
-        unlockedAt: open.get(l.id) ?? null,
-        completedAt: done.get(l.id) ?? null,
-      })),
+      lessons: m.lessons.map((l) => {
+        const p = avance.get(l.id)
+        return {
+          lessonId: l.id,
+          title: l.title,
+          isCheckpoint: l.isCheckpoint,
+          unlocked: open.has(l.id),
+          unlockedAt: open.get(l.id) ?? null,
+          completedAt: p?.completedAt ?? null,
+          /** 0..1 — cuánto de la lección se recorrió con este estudiante. */
+          progreso: porcentajeDeAvance(p?.lastSlideRef ?? null, l.slideCount, l.slideRefs as any),
+        }
+      }),
     }))
   }
 
@@ -766,4 +774,28 @@ function fusionarRespuestas(previas: any[], entrantes: any[]): any[] {
     }
   }
   return fusionadas
+}
+
+/**
+ * Cuánto se recorrió de una lección, de 0 a 1, a partir de la última posición
+ * guardada.
+ *
+ * La posición es opaca a propósito: unas lecciones reportan un índice ("8") y
+ * otras el id del slide ("slide-game"). Por eso la sincronización de contenido
+ * guarda `slideRefs` en orden — con esa lista, un id se traduce a su posición.
+ * Sin lista y sin número, no hay porcentaje posible y se devuelve 0.
+ */
+function porcentajeDeAvance(
+  ref: string | null,
+  total: number | null,
+  refs: string[] | null,
+): number {
+  if (!ref || !total || total <= 0) return 0
+  // Las lecciones con juego reportan "juego:2"; cuenta como llegar al final.
+  if (ref.startsWith('juego:')) return 1
+  const enLista = Array.isArray(refs) ? refs.indexOf(ref) : -1
+  const indice = enLista >= 0 ? enLista : Number(ref)
+  if (!Number.isFinite(indice) || indice < 0) return 0
+  // +1 porque estar EN el slide 0 ya es haber visto el primero.
+  return Math.min(1, (indice + 1) / total)
 }

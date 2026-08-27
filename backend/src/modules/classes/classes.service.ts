@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { SlotsService } from '../scheduling/slots.service'
 import { assertDentroDeLaVentana } from '../scheduling/class-window'
+import { assertSinCruce } from '../scheduling/class-clash'
 import { env } from '../../config/env'
 
 @Injectable()
@@ -224,7 +225,13 @@ export class ClassesService {
     })
   }
 
-  async reschedule(classId: string, actor: { id: string; role: string }, newStartsAt: Date, newEndsAt: Date) {
+  async reschedule(
+    classId: string,
+    actor: { id: string; role: string },
+    newStartsAt: Date,
+    newEndsAt: Date,
+    permitirCruce = false,
+  ) {
     const c = await this.prisma.class.findUnique({ where: { id: classId } })
     if (!c) throw new NotFoundException('Class not found')
     const isOwnerTeacher = c.teacherId === actor.id
@@ -245,17 +252,13 @@ export class ClassesService {
     assertDentroDeLaVentana(newStartsAt, newEndsAt, await this.slots.getConfig())
     // Cruce con otra clase del profesor en el destino.
     if (c.teacherId) {
-      const clash = await this.prisma.class.findFirst({
-        where: {
-          teacherId: c.teacherId,
-          id: { not: c.id },
-          status: { in: ['scheduled', 'rescheduled'] },
-          startsAt: { lt: newEndsAt },
-          endsAt: { gt: newStartsAt },
-        },
-        select: { id: true },
+      await assertSinCruce(this.prisma, {
+        teacherId: c.teacherId,
+        classId: c.id,
+        startsAt: newStartsAt,
+        endsAt: newEndsAt,
+        permitirCruce,
       })
-      if (clash) throw new BadRequestException('El profesor ya tiene una clase en ese horario')
     }
     const updated = await this.prisma.class.update({
       where: { id: classId },

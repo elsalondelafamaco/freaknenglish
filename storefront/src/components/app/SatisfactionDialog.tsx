@@ -61,9 +61,17 @@ export function SatisfactionDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="survey-title"
-      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-brand-ink/60 px-4 py-6 backdrop-blur-sm md:items-center"
+      // `items-start` y no `items-end`: con el hijo más alto que la ventana, un
+      // flex alineado al final empuja el desbordamiento hacia ARRIBA, y arriba
+      // no se puede llegar (`scrollTop` no baja de cero). Por eso en el celular
+      // se veía el botón de enviar y la Pregunta 1 quedaba cortada e
+      // inalcanzable. Alineado al inicio, el desbordamiento sale por abajo, que
+      // sí se recorre.
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-brand-ink/60 px-4 py-6 backdrop-blur-sm md:items-center"
     >
-      <div className="w-full max-w-xl rounded-3xl border border-brand-line bg-white p-6 shadow-soft md:p-8">
+      {/* Y el panel scrollea por su cuenta: `dvh` y no `vh` porque en el móvil
+          la barra del navegador se come parte de la ventana. */}
+      <div className="max-h-[92dvh] w-full max-w-xl overflow-y-auto overscroll-contain rounded-3xl border border-brand-line bg-white p-6 shadow-soft md:p-8">
         <div className="inline-flex items-center gap-1.5 rounded-full bg-brand-cream px-3 py-1 text-xs font-medium text-brand-ink">
           <Star className="size-3.5" /> Encuesta de calidad
         </div>

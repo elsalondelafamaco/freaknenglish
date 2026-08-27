@@ -57,11 +57,11 @@ export class ClassesController {
   reschedule(
     @Param('id') id: string,
     @CurrentUser() u: AuthUser,
-    @Body() body: { startsAt: string; endsAt: string },
+    @Body() body: { startsAt: string; endsAt: string; permitirCruce?: boolean },
   ) {
     // SDD-scheduling-v2 AC-25: el estudiante coordina cambios con su profesor.
     if (u.role === 'student') throw new ForbiddenException('Coordina el cambio de horario con tu profesor')
-    return this.svc.reschedule(id, u, new Date(body.startsAt), new Date(body.endsAt))
+    return this.svc.reschedule(id, u, new Date(body.startsAt), new Date(body.endsAt), !!body.permitirCruce)
   }
 
   /**

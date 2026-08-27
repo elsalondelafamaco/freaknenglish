@@ -28,6 +28,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { boardsApi } from "@/lib/api/endpoints";
 import { colorFor, createPageProvider, type BoardPageProvider, type EstadoGuardado } from "@/lib/board/yProvider";
+
+type EstadoConexion = BoardPageProvider["status"];
 import { DrawLayer } from "@/components/board/DrawLayer";
 import { VersionHistory } from "@/components/board/VersionHistory";
 import { htmlToMarkdown, downloadFile } from "@/lib/board/exportPage";
@@ -42,7 +44,7 @@ function BoardPage() {
   const { boardId, pageId } = useParams({ from: "/_authenticated/boards/$boardId/pages/$pageId" });
   const { user } = useAuth();
   const providerRef = useRef<BoardPageProvider | null>(null);
-  const [status, setStatus] = useState<"connecting" | "connected" | "offline">("connecting");
+  const [status, setStatus] = useState<EstadoConexion>("connecting");
   const [peers, setPeers] = useState<any[]>([]);
   const [drawMode, setDrawMode] = useState(false);
   const [guardado, setGuardado] = useState<EstadoGuardado>({ pendientes: 0, error: null });
@@ -187,11 +189,18 @@ function BoardPage() {
   );
 }
 
-function StatusPill({ status }: { status: "connecting" | "connected" | "offline" }) {
+/**
+ * Verde SOLO cuando estamos dentro de la sala de la página. Antes bastaba con
+ * que hubiera socket, así que el profe veía "En vivo" mientras no le entraba
+ * ni una letra del alumno: la señal mentía justo cuando más importaba.
+ */
+function StatusPill({ status }: { status: EstadoConexion }) {
   const cfg = {
     connecting: { c: "bg-amber-100 text-amber-800", t: "Conectando…" },
     connected: { c: "bg-emerald-100 text-emerald-800", t: "En vivo" },
+    degradado: { c: "bg-amber-100 text-amber-800", t: "Sin sincronizar" },
     offline: { c: "bg-red-100 text-red-800", t: "Offline" },
+    sesion_expirada: { c: "bg-red-100 text-red-800", t: "Sesión expirada · recarga" },
   }[status];
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${cfg.c}`}>{cfg.t}</span>;
 }

@@ -148,15 +148,17 @@ function ContactCard() {
 function PlanCard({ plan, trm, onSaved }: { plan: any; trm: number; onSaved: () => void }) {
   const [name, setName] = useState(plan.name ?? "");
   const [priceUsd, setPriceUsd] = useState<number>(plan.priceUsd ?? 0);
+  const [priceCop, setPriceCop] = useState<number>(plan.priceCop ?? 0);
   const [isActive, setIsActive] = useState<boolean>(plan.isActive ?? true);
   useEffect(() => {
     setName(plan.name ?? "");
     setPriceUsd(plan.priceUsd ?? 0);
+    setPriceCop(plan.priceCop ?? 0);
     setIsActive(plan.isActive ?? true);
   }, [plan.id]);
 
   const saveM = useMutation({
-    mutationFn: () => adminApi.updatePlan(plan.id, { name, priceUsd, isActive }),
+    mutationFn: () => adminApi.updatePlan(plan.id, { name, priceUsd, priceCop, isActive }),
     onSuccess: () => { toast.success("Plan actualizado"); onSaved(); },
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });
@@ -190,6 +192,25 @@ function PlanCard({ plan, trm, onSaved }: { plan: any; trm: number; onSaved: () 
       <div className="mt-2 text-xs text-brand-ink/55">
         ≈ {cop != null ? copFmt.format(cop) : "—"} <span className="opacity-60">(TRM en vivo)</span>
       </div>
+
+      {/* El COP de respaldo: es lo que se cobra y se muestra cuando el plan no
+          tiene precio en dólares o no hay TRM. Hasta ahora no se podía editar
+          desde aquí, así que arrastraba el valor de la semilla original y no
+          coincidía con lo que pagaba el alumno. */}
+      <label className="mt-3 block text-xs font-semibold text-brand-ink/70">
+        Precio de respaldo (COP)
+        <input
+          type="number"
+          min={0}
+          step="1000"
+          value={priceCop}
+          onChange={(e) => setPriceCop(Number(e.target.value))}
+          className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+        />
+        <span className="mt-1 block font-normal text-[11px] text-brand-ink/50">
+          Solo se usa si el plan no tiene precio en USD o si falla la TRM.
+        </span>
+      </label>
 
       <button
         onClick={() => saveM.mutate()}

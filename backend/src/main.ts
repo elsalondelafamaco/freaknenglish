@@ -98,17 +98,26 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }))
 
   out('conectando Redis (timeout 8s)...')
+  const ioAdapter = new RedisIoAdapter(app)
   try {
-    const ioAdapter = new RedisIoAdapter(app)
     await Promise.race([
       ioAdapter.connectToRedis(),
       new Promise((_r, rej) => setTimeout(() => rej(new Error('redis timeout 8s')), 8000)),
     ])
-    app.useWebSocketAdapter(ioAdapter)
     out('Redis OK')
   } catch (e) {
-    berr('Redis omitido: ' + ((e as Error)?.message ?? String(e)))
+    berr(
+      'Redis omitido — TIEMPO REAL SOLO DENTRO DE ESTA INSTANCIA: con más de una ' +
+        'réplica, lo que escribe un usuario NO le llega a otro conectado a otra. ' +
+        ((e as Error)?.message ?? String(e)),
+    )
   }
+  // FUERA del try a propósito. Antes estaba dentro, así que al fallar Redis se
+  // perdía también el `createIOServer` del adaptador —y con él el
+  // `maxHttpBufferSize` de 8 MB—, volviendo al de 1 MB de Socket.IO, que ante
+  // un frame grande CIERRA la conexión sin dar error. El adaptador ya no hace
+  // nada con Redis si no se conectó, así que aplicarlo siempre es seguro.
+  app.useWebSocketAdapter(ioAdapter)
 
   out('Swagger...')
   const config = new DocumentBuilder()

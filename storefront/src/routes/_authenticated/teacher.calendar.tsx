@@ -120,6 +120,12 @@ function TeacherCalendar() {
   const qc = useQueryClient();
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
+  // Cruce pendiente de confirmar: el backend avisó de otra clase a esa hora y
+  // el profe decide si pone las dos.
+  const [cruce, setCruce] = useState<{
+    mensaje: string;
+    reintentar: { id: string; startsAt: string; scope: "once" | "forever"; permitirCruce: boolean };
+  } | null>(null);
   const [selected, setSelected] = useState<Selected | null>(null);
   // Mover a otra fecha/semana (one-off) sin depender del drag de la semana visible.
   const [moveDraft, setMoveDraft] = useState<string | null>(null);
@@ -137,14 +143,25 @@ function TeacherCalendar() {
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["teacher", "calendar"] });
   const moveM = useMutation({
-    mutationFn: (v: { id: string; startsAt: string; scope: "once" | "forever" }) =>
-      teachersApi.rescheduleClass(v.id, v.startsAt, v.scope),
+    mutationFn: (v: { id: string; startsAt: string; scope: "once" | "forever"; permitirCruce?: boolean }) =>
+      teachersApi.rescheduleClass(v.id, v.startsAt, v.scope, !!v.permitirCruce),
     onSuccess: (_r, v) => {
       toast.success(v.scope === "forever" ? "Horario actualizado para siempre" : "Clase movida (solo esta semana)");
       setPendingMove(null);
+      setCruce(null);
+      setSelected(null);
+      setMoveDraft(null);
       invalidate();
     },
-    onError: (e: any) => {
+    onError: (e: any, v) => {
+      // Cruce de horario: no es un error, es una pregunta. El profe puede
+      // querer dos clases a la misma hora —el que no entró y una reposición—,
+      // así que se le pregunta con el nombre del otro alumno en vez de
+      // rechazarlo. Ver `class-clash.ts` en el backend.
+      if (e?.code === "clash") {
+        setCruce({ mensaje: e.message, reintentar: { ...v, permitirCruce: true } });
+        return;
+      }
       toast.error(e?.message ?? "No se pudo mover la clase");
       pendingMove?.revert();
       setPendingMove(null);
@@ -192,7 +209,9 @@ function TeacherCalendar() {
       borderColor: c.student.paymentActive ? (STATUS_COLOR[c.status] ?? "#111827") : "#f59e0b",
       // Una clase ya movida se puede volver a mover: dejarla clavada era la
       // mitad de por qué "reprogramada" se sentía como un error del sistema.
-      editable: c.status === "scheduled" || c.status === "rescheduled",
+      // Y las no tomadas también: es justo la que el profe quiere correr para
+      // reponerla con otro alumno.
+      editable: ["scheduled", "rescheduled", "no_show", "validated"].includes(c.status),
       extendedProps: c,
     }));
     const absenceEvents = data.absences.map((a) => ({
@@ -397,6 +416,36 @@ function TeacherCalendar() {
         </div>
       ) : null}
 
+      {/* Confirmación de cruce: dos clases a la misma hora es válido (una
+          reposición encima de la que no se tomó), pero nunca por accidente. */}
+      {cruce ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-brand-line bg-white p-6">
+            <h3 className="text-lg font-bold text-brand-ink">Ya tienes clase a esa hora</h3>
+            <p className="mt-2 text-sm text-brand-ink/70">{cruce.mensaje}</p>
+            <p className="mt-2 text-xs text-brand-ink/55">
+              Se verán las dos en el calendario, una al lado de la otra. Útil cuando el alumno no
+              entró y quieres usar esa hora de reposición con otro.
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                onClick={() => { cruce.reintentar && pendingMove?.revert(); setCruce(null); setPendingMove(null); invalidate(); }}
+                className="rounded-full border border-brand-line px-4 py-2 text-sm font-semibold text-brand-ink hover:bg-brand-cream/40"
+              >
+                No, dejar como estaba
+              </button>
+              <button
+                disabled={moveM.isPending}
+                onClick={() => moveM.mutate(cruce.reintentar)}
+                className="rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-60"
+              >
+                Sí, poner las dos
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {/* Modal detalle de clase */}
       {selected ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/40 px-4 backdrop-blur-sm" onClick={() => setSelected(null)}>
@@ -490,10 +539,11 @@ function TeacherCalendar() {
                   />
                   <button
                     disabled={moveM.isPending || moveDraft === null || !!errorDestino}
+                    // No se cierra aquí: si hay cruce hay que preguntar, y
+                    // cerrando el modal antes se perdía el contexto. Lo cierra
+                    // `onSuccess`.
                     onClick={() => {
                       moveM.mutate({ id: selected.id, startsAt: new Date(moveDraft!).toISOString(), scope: "once" });
-                      setSelected(null);
-                      setMoveDraft(null);
                     }}
                     className="rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-50"
                   >

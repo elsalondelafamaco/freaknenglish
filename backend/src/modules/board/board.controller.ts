@@ -4,13 +4,17 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { ActiveSubscriptionGuard } from '../../common/guards/active-subscription.guard'
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator'
 import { BoardService, MAX_UPDATE_BYTES } from './board.service'
+import { BoardGateway } from './board.gateway'
 
 @ApiTags('boards')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, ActiveSubscriptionGuard)
 @Controller('boards')
 export class BoardController {
-  constructor(private svc: BoardService) {}
+  // El gateway se inyecta aquí y no en el servicio: `BoardGateway` ya depende
+  // de `BoardService`, así que al revés habría ciclo — y `BoardService` lo usa
+  // `SchedulingService`, que no tiene por qué arrastrar el websocket.
+  constructor(private svc: BoardService, private gateway: BoardGateway) {}
 
   /** @endpoint GET /api/v1/boards */
   @Get()
@@ -130,6 +134,9 @@ export class BoardController {
       })
     }
     const op = await this.svc.appendPageOp({ pageId, userId: u.id, update: buf, clientOpId: body.clientOpId })
+    // Y se reemite: guardar sin avisar era la mitad de por qué el board "no
+    // iba en tiempo real" — lo escrito por esta vía solo salía al recargar.
+    this.gateway.broadcastPageOp(pageId, op, body.update)
     return { ok: true, seq: op.seq }
   }
 

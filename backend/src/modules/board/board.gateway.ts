@@ -45,16 +45,56 @@ export class BoardGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (!token) return socket.disconnect(true)
       const payload = this.jwt.verify(token, { secret: env.JWT_SECRET }) as { sub: string; email: string; role: string }
       socket.data.user = { id: payload.sub, email: payload.email, role: payload.role }
+      this.registrarSalida(socket)
     } catch (e) {
       this.log.warn(`Socket auth failed: ${(e as Error).message}`)
+      // Se avisa ANTES de cortar para que el cliente distinga "se me venció la
+      // sesión" (hay que renovar el token y reconectar) de "me sacaron". El
+      // token dura 15 minutos y una clase dura 50, así que esto pasa en toda
+      // clase larga; sin la señal, el socket quedaba muerto hasta recargar.
+      socket.emit('auth:expired')
       socket.disconnect(true)
     }
   }
 
+  /**
+   * `disconnecting` y no `disconnect`: socket.io VACÍA `socket.rooms` antes de
+   * emitir `disconnect`, así que este bucle no recorría nada y la presencia
+   * nunca se refrescaba al irse alguien — los puntitos seguían mostrando a
+   * quien ya había cerrado.
+   */
   handleDisconnect(socket: Socket) {
-    for (const room of socket.rooms) {
-      if (room.startsWith('board:')) this.broadcastPresence(room)
-    }
+    void socket
+  }
+
+  private registrarSalida(socket: Socket) {
+    socket.on('disconnecting', () => {
+      for (const room of socket.rooms) {
+        if (room.startsWith('board:')) this.broadcastPresence(room)
+        // Las salas de página también: antes ni siquiera se contemplaban.
+        if (room.startsWith('page:')) this.broadcastPagePresence(room)
+      }
+    })
+  }
+
+  /**
+   * Reemite a la sala una operación que llegó por el camino REST.
+   *
+   * El fallback REST guardaba pero no avisaba a nadie, así que todo lo escrito
+   * cuando el socket no respondía solo aparecía al recargar la página — que es
+   * exactamente lo que reportaban los profes.
+   */
+  broadcastPageOp(pageId: string, op: { seq: number; userId: string; clientOpId: string }, updateB64: string) {
+    if (!this.server) return
+    // `server.to` incluye al autor, pero el cliente ya descarta sus propias
+    // operaciones por `clientOpId` y aplicar un update de Yjs dos veces es
+    // idempotente, así que no hace daño.
+    this.server.to(`page:${pageId}`).emit('page:update', {
+      seq: op.seq,
+      userId: op.userId,
+      clientOpId: op.clientOpId,
+      update: updateB64,
+    })
   }
 
   @SubscribeMessage('board:join')

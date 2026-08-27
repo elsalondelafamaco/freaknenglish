@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common'
 import * as crypto from 'crypto'
 import { PrismaService } from '../../prisma/prisma.service'
+import { normalizarEmail } from '../../common/email'
 import { SubscriptionsService } from '../subscriptions/subscriptions.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { SchedulingService } from '../scheduling/scheduling.service'
@@ -186,7 +187,7 @@ export class WompiService {
     if (tx.status === 'APPROVED') {
       let userId = intent.userId
       if (!userId) {
-        const email = intent.customerEmail.toLowerCase()
+        const email = normalizarEmail(intent.customerEmail)
         let user = await this.prisma.user.findUnique({ where: { email } })
         const token = crypto.randomBytes(24).toString('hex')
         const expires = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7)

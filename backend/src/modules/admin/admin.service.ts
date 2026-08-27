@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { AppRole, Prisma } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
+import { normalizarEmail } from '../../common/email'
 import { IS_TEACHER, hasRole } from '../../common/roles'
 import { InjectQueue } from '@nestjs/bullmq'
 import { Queue } from 'bullmq'
@@ -730,7 +731,7 @@ export class AdminService {
     /** Minutos por clase (planes internos tipo 2×75); vacío = 50. */
     classDurationMin?: number | null
   }) {
-    const email = input.email.toLowerCase()
+    const email = normalizarEmail(input.email)
     const exists = await this.prisma.user.findUnique({ where: { email } })
     if (exists) throw new Error('User already exists')
     if (input.classDurationMin !== undefined && input.classDurationMin !== null) {

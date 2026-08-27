@@ -1,7 +1,31 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { createHash } from 'node:crypto'
 import { PrismaService } from '../../prisma/prisma.service'
+
+const hashDe = (s: string) => createHash('sha256').update(s, 'utf8').digest('hex')
+
+/**
+ * Slides de una lección, en orden. Las 84 los marcan con `class="slide"`; se
+ * queda con el `id` cuando lo tiene (hay lecciones que navegan por id, como
+ * "slide-game") y con la posición cuando no. Es el denominador de la barra de
+ * progreso y el que traduce una posición guardada a un porcentaje.
+ */
+function leerSlides(html: string): { total: number; refs: string[] } {
+  const refs: string[] = []
+  // Cada apertura de etiqueta que lleve `class="… slide …"`, en orden de
+  // aparición; de ahí se saca el `id` si está en la misma etiqueta.
+  const re = /<[a-zA-Z][^>]*\bclass\s*=\s*"[^"]*\bslide\b[^"]*"[^>]*>/g
+  let match: RegExpExecArray | null
+  let i = 0
+  while ((match = re.exec(html)) !== null) {
+    const id = /\bid\s*=\s*"([^"]+)"/.exec(match[0])?.[1]
+    refs.push(id ?? String(i))
+    i++
+  }
+  return { total: refs.length, refs }
+}
 
 /**
  * Sincroniza el contenido versionado del repo (backend/content) con la DB al
@@ -72,6 +96,7 @@ export class ContentSyncService implements OnModuleInit {
 
     let modules = 0
     let lessons = 0
+    const preservadas: string[] = []
     for (const m of manifest.modules ?? []) {
       const modData = {
         title: m.title,
@@ -93,24 +118,66 @@ export class ContentSyncService implements OnModuleInit {
           continue
         }
         const contentHtml = fs.readFileSync(file, 'utf8')
-        const data = {
+        const hashArchivo = hashDe(contentHtml)
+        const slides = leerSlides(contentHtml)
+        // Metadatos: siempre se sincronizan desde el manifiesto, editada o no.
+        const meta = {
           moduleId: m.id,
           title: l.title,
           position: l.position,
           durationMin: l.durationMin ?? 25,
           kind: l.kind ?? 'html',
           isCheckpoint: l.isCheckpoint ?? false,
-          contentHtml,
+          slideCount: slides.total,
+          slideRefs: slides.refs as any,
         }
-        await this.prisma.lesson.upsert({
+
+        const previa = await this.prisma.lesson.findUnique({
           where: { id: l.id },
-          update: data,
-          create: { id: l.id, ...data },
+          select: { contentHtml: true, contentSourceHash: true },
         })
+
+        if (!previa) {
+          await this.prisma.lesson.create({
+            data: { id: l.id, ...meta, contentHtml, contentSourceHash: hashArchivo },
+          })
+          lessons++
+          continue
+        }
+
+        // ¿La tocaron desde el CMS? Se compara lo que hay en la base contra el
+        // hash del archivo con el que se sincronizó la última vez.
+        //
+        // Cuando no hay hash guardado (primera vez tras añadir la columna) se
+        // compara el contenido directamente: si difiere del archivo, es una
+        // lección editada en plataforma y hay que conservarla. Este es el caso
+        // que rescata lo que se editó antes de existir esta protección.
+        const hashEnBase = hashDe(previa.contentHtml ?? '')
+        const editadaEnPlataforma = previa.contentSourceHash
+          ? hashEnBase !== previa.contentSourceHash
+          : hashEnBase !== hashArchivo
+
+        if (editadaEnPlataforma) {
+          // Se respeta el contenido de la base y se deja constancia de que
+          // diverge, para que el CMS lo pueda mostrar y no sorprenda a nadie.
+          await this.prisma.lesson.update({ where: { id: l.id }, data: meta })
+          preservadas.push(l.id)
+        } else {
+          await this.prisma.lesson.update({
+            where: { id: l.id },
+            data: { ...meta, contentHtml, contentSourceHash: hashArchivo },
+          })
+        }
         lessons++
       }
     }
     this.log.log(`content sync OK: ${modules} módulo(s), ${lessons} lección(es)`)
-    return { modules, lessons }
+    if (preservadas.length > 0) {
+      this.log.warn(
+        `${preservadas.length} lección(es) editada(s) desde el CMS: se conservó la versión de la ` +
+          `plataforma y NO se pisó con la del repositorio → ${preservadas.join(', ')}`,
+      )
+    }
+    return { modules, lessons, preservadas }
   }
 }

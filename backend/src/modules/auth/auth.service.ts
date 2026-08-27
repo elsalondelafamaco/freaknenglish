@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt'
 import * as argon2 from 'argon2'
 import * as crypto from 'crypto'
 import { PrismaService } from '../../prisma/prisma.service'
+import { normalizarEmail } from '../../common/email'
 import { NotificationsService } from '../notifications/notifications.service'
 import { env } from '../../config/env'
 import { PASSWORD_RESET_TTL_MS, resetTtlMs, ttlLabel } from '../../common/password-reset-ttl'
@@ -31,7 +32,7 @@ export class AuthService {
   ) {}
 
   async signup(input: { email: string; password: string; fullName: string; phone: string; documentNumber: string }) {
-    const email = input.email.trim().toLowerCase()
+    const email = normalizarEmail(input.email)
     const existing = await this.prisma.user.findUnique({ where: { email } })
     if (existing) throw new ConflictException('Email already registered')
     const passwordHash = await argon2.hash(input.password)
@@ -65,7 +66,9 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<Tokens & { user: { id: string; role: string } }> {
-    const user = await this.prisma.user.findUnique({ where: { email } })
+    // Normalizado: el registro guarda en minúsculas, así que buscar tal cual se
+    // escribe hacía que una sola mayúscula diera "credenciales inválidas".
+    const user = await this.prisma.user.findUnique({ where: { email: normalizarEmail(email) } })
     if (!user || !user.passwordHash) throw new UnauthorizedException('Invalid credentials')
     if (user.disabledAt || user.deletedAt) throw new UnauthorizedException('User disabled')
     const ok = await argon2.verify(user.passwordHash, password)
@@ -76,11 +79,15 @@ export class AuthService {
   }
 
   async loginOrCreateGoogle(profile: { email: string; fullName: string; googleSub: string; avatarUrl?: string }) {
-    let user = await this.prisma.user.findUnique({ where: { email: profile.email } })
+    // Aquí normalizar no es cosmético: si no encuentra, CREA. Sin esto, una
+    // diferencia de mayúsculas dejaba una cuenta duplicada sin plan ni profesor
+    // —y sin forma de borrarla— en vez de entrar a la que ya existía.
+    const email = normalizarEmail(profile.email)
+    let user = await this.prisma.user.findUnique({ where: { email } })
     if (!user) {
       user = await this.prisma.user.create({
         data: {
-          email: profile.email,
+          email,
           fullName: profile.fullName,
           googleSub: profile.googleSub,
           avatarUrl: profile.avatarUrl,
@@ -121,7 +128,7 @@ export class AuthService {
   }
 
   async forgotPassword(email: string): Promise<string | null> {
-    const user = await this.prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } })
+    const user = await this.prisma.user.findUnique({ where: { email: normalizarEmail(email) } })
     if (!user) return null
 
     // Tope POR CUENTA, no solo por IP: rotando IPs se podría inundar el buzón

@@ -373,6 +373,18 @@ model Lesson {
   downloadUrls  Json     @default("[]") @map("download_urls")
   /// Contenido HTML enriquecido (sanitizado en cliente).
   contentHtml   String?  @map("content_html")
+  /// Hash del archivo del repo la última vez que se sincronizó. Sirve para NO
+  /// pisar una lección editada desde el CMS: si lo que hay en `contentHtml` ya
+  /// no coincide con este hash, alguien la cambió en plataforma y la
+  /// sincronización de arranque la respeta. Nulo = nunca sincronizada (o
+  /// anterior a esta columna); ver `content-sync.service.ts`.
+  contentSourceHash String? @map("content_source_hash")
+  /// Número de slides de la lección y sus identificadores EN ORDEN, calculados
+  /// al sincronizar. Son el denominador de la barra de progreso: la posición
+  /// guardada es opaca (unas lecciones reportan un índice, otras el id del
+  /// slide), así que sin la lista no hay porcentaje posible para las segundas.
+  slideCount    Int?     @map("slide_count")
+  slideRefs     Json?    @map("slide_refs")
   /// Notas internas / instrucciones para el estudiante.
   notes         String?
   /// Tipo dominante de la lección (video/pdf/slides/download/html).

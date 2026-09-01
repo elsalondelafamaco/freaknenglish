@@ -256,6 +256,7 @@ export class AdminController {
       extraRoles?: Array<'student' | 'teacher' | 'admin'>
       englishLevel?: 'beginner' | 'intermediate' | 'advanced' | null
       classDurationMin?: number | null
+      timezone?: string | null
     },
   ) {
     return this.svc.updateUser(id, body)

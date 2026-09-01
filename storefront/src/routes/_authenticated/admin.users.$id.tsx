@@ -33,6 +33,7 @@ type PaymentIntent = Record<string, any>;
 import { adminApi, classesApi, scheduleApi } from "@/lib/api/endpoints";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SchedulePickerGrid } from "@/components/schedule/SchedulePickerGrid";
+import { etiquetaDeZona, franjaEnZona, nombreDeZona, zonaDe } from "@/lib/domain/zona-horaria";
 import type { SlotRef } from "@/lib/api/endpoints";
 import { homePathFor, rolesOfRow } from "@/lib/roles";
 import { ActivityResultsSection, CheckpointAttemptsSection, CheckpointGatesSection, LessonPlanSection, StudentReportsSection, StudentResourcesSection } from "./teacher.students.$studentId";
@@ -894,6 +895,7 @@ function EditUserDialog({
   const [durationMin, setDurationMin] = useState<string>(
     user.classDurationMin ? String(user.classDurationMin) : "",
   );
+  const [zona, setZona] = useState<string>(user.timezone ?? "");
   const [error, setError] = useState<string | null>(null);
 
   function toggleRole(r: AppRole) {
@@ -928,6 +930,9 @@ function EditUserDialog({
             ? null
             : Number(durationMin)
           : undefined,
+        // Vacío = borrarla, y entonces vuelve a capturarse sola la próxima vez
+        // que el estudiante entre. Es la forma de corregir una mal detectada.
+        ...(roles.includes("student") ? { timezone: zona.trim() || null } : {}),
       });
       onSaved();
     } catch (err) {
@@ -1009,6 +1014,27 @@ function EditUserDialog({
                 <p className="mt-1 text-[11px] text-brand-ink/50">
                   Vacío = 50 min. Aplica a las clases futuras ya programadas y a las nuevas.
                   Una clase larga puede ocupar la hora siguiente del profe: revisa su agenda.
+                </p>
+              </Field>
+              <Field label="Zona horaria">
+                <input
+                  value={zona}
+                  onChange={(e) => setZona(e.target.value)}
+                  placeholder="America/Bogota"
+                  className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                />
+                <p className="mt-1 text-[11px] text-brand-ink/50">
+                  {zona.trim() && zonaDe(zona) === zona.trim() ? (
+                    <>
+                      {nombreDeZona(zona)} ({etiquetaDeZona(zona)}) · sus clases de las 11:00 de
+                      Colombia son sus{" "}
+                      {String(franjaEnZona(1, 11, zona).hour).padStart(2, "0")}:00.
+                    </>
+                  ) : zona.trim() ? (
+                    <span className="text-red-700">Zona desconocida. Usa el formato America/Bogota.</span>
+                  ) : (
+                    <>Vacía: se detecta sola la próxima vez que el estudiante entre.</>
+                  )}
                 </p>
               </Field>
             </>
@@ -1340,6 +1366,7 @@ function adaptAdminUser(u: any): User {
     roles: rolesOfRow(u),
     level: (u.englishLevel ?? undefined) as EnglishLevel | undefined,
     classDurationMin: u.classDurationMin ?? undefined,
+    timezone: u.timezone ?? undefined,
     onboardedAt: u.onboardedAt ?? undefined,
     assignedTeacherId: u.assignedTeacherId ?? undefined,
     disabledAt: u.disabledAt ?? undefined,

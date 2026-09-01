@@ -83,6 +83,17 @@ model User {
   assignedTeacherId String?     @map("assigned_teacher_id")
   // Duración de cada clase del estudiante en minutos. null = estándar (50).
   classDurationMin Int?         @map("class_duration_min")
+  /// Zona horaria IANA del estudiante ("America/Los_Angeles"), NUNCA un desfase
+  /// en horas: Colombia no cambia de hora y Estados Unidos sí, así que una clase
+  /// fija a las 11:00 de Bogotá son sus 09:00 en verano y sus 08:00 en invierno.
+  /// Un número se equivocaría medio año y no dejaría rastro para recuperarlo.
+  ///
+  /// Opcional y sin valor por defecto a propósito: `null` significa "nunca se
+  /// capturó", y es lo que dispara la captura automática la primera vez que
+  /// entra. Con un default, los alumnos que ya existen serían indistinguibles
+  /// de los que de verdad están en Bogotá — y son justo los que tienen el
+  /// problema hoy. Todo lo que lo lee cae a Bogotá si viene vacío.
+  timezone        String?       @map("timezone")
   disabledAt      DateTime?     @map("disabled_at")
   deletedAt       DateTime?     @map("deleted_at")
   // Admin pidió la encuesta NPS explícitamente (pending=true hasta responder).
@@ -213,6 +224,11 @@ model PaymentIntent {
   scheduleJson   Json?   @map("schedule_json") // franjas elegidas [{weekday,hour}]
   passwordHash   String? @map("password_hash") // credenciales elegidas en checkout (argon2)
   assignmentMode String? @map("assignment_mode") // auto | manual
+  /// Una renovación no vuelve a elegir horario ni profesor. Se congela AQUÍ y no
+  /// se recalcula en el webhook: ese corre minutos después y en otro proceso, y
+  /// si para entonces el estado cambió (por ejemplo se le liberó la franja),
+  /// recalcular contradiría lo que se le mostró al pagar.
+  esRenovacion Boolean @default(false) @map("es_renovacion")
   wompiId         String?       @unique @map("wompi_id")
   approvedAt      DateTime?     @map("approved_at")
   createdAt       DateTime      @default(now()) @map("created_at")
@@ -710,6 +726,15 @@ model Board {
   id          String   @id @default(uuid())
   classId     String?  @unique @map("class_id")
   ownerId     String   @map("owner_id")
+  /// De quién es el aula. Antes esto solo se sabía mirando `BoardMember`, y esa
+  /// consulta no puede servir de clave: `ensureClassroom` buscaba y luego creaba
+  /// sin transacción, así que dos ejecuciones a la vez —el trabajo diario
+  /// cruzándose con una compra o una reasignación— creaban dos aulas iguales.
+  /// Falta el único [ownerId, studentId] que cerraría el caso del todo; no se
+  /// puede añadir hasta que la conciliación haya limpiado los duplicados de
+  /// producción, porque `db push` corre ANTES de que arranque la aplicación y
+  /// un índice único sobre datos sucios impide que el contenedor levante.
+  studentId   String?  @map("student_id")
   name        String   @default("Untitled")
   snapshot    Json     @default("{}") // last persisted state
   version     Int      @default(0)
@@ -720,6 +745,7 @@ model Board {
   ops     BoardOp[]
   pages   BoardPage[]
 
+  @@index([studentId])
   @@map("boards")
 }
 

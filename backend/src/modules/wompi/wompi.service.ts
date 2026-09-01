@@ -222,6 +222,9 @@ export class WompiService {
         await this.scheduling.materializePurchase(userId, {
           id: intent.id,
           scheduleJson: (intent as any).scheduleJson ?? undefined,
+          // La marca viene congelada del checkout a propósito: recalcularla aquí
+          // podría contradecir lo que se le mostró al estudiante al pagar.
+          esRenovacion: (intent as any).esRenovacion === true,
         })
       } catch (e) {
         this.log.error(`materializePurchase failed for intent ${intent.id}: ${(e as Error).message}`)

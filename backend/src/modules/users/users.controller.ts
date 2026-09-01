@@ -29,7 +29,7 @@ export class UsersController {
   @Patch()
   update(
     @CurrentUser() user: AuthUser,
-    @Body() body: { fullName?: string; phone?: string; avatarUrl?: string; documentNumber?: string },
+    @Body() body: { fullName?: string; phone?: string; avatarUrl?: string; documentNumber?: string; timezone?: string },
   ) {
     return this.users.update(user.id, body)
   }

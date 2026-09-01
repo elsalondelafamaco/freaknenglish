@@ -143,8 +143,12 @@ function BoardPage() {
           return true;
         },
         attributes: {
+          // Aquí había `prose prose-sm sm:prose-base`, clases de
+          // @tailwindcss/typography — que no está instalado, así que no
+          // generaban nada y hacían creer que la tipografía estaba resuelta.
+          // Los estilos del documento (listas incluidas) viven en styles.css.
           class:
-            "prose prose-sm sm:prose-base max-w-none min-h-[60vh] focus:outline-none text-brand-ink [&_table]:border-collapse [&_th]:border [&_th]:border-brand-line [&_th]:bg-brand-cream/40 [&_th]:p-2 [&_td]:border [&_td]:border-brand-line [&_td]:p-2 [&_img]:rounded-lg [&_img]:max-w-full",
+            "max-w-none min-h-[60vh] focus:outline-none text-brand-ink [&_table]:border-collapse [&_th]:border [&_th]:border-brand-line [&_th]:bg-brand-cream/40 [&_th]:p-2 [&_td]:border [&_td]:border-brand-line [&_td]:p-2 [&_img]:rounded-lg [&_img]:max-w-full",
         },
       },
     },

@@ -95,7 +95,7 @@ export const notificationsApi = {
 // ─── Me / Users ────────────────────────────────────────────────────────
 export const usersApi = {
   me: () => apiGet<any>("/me"),
-  updateMe: (body: Partial<{ fullName: string; phone: string; avatarUrl: string; documentNumber: string }>) =>
+  updateMe: (body: Partial<{ fullName: string; phone: string; avatarUrl: string; documentNumber: string; timezone: string }>) =>
     apiPatch<any>("/me", body),
   payments: () =>
     apiGet<Array<{
@@ -851,7 +851,7 @@ export const adminApi = {
   updateResource: (id: string, body: Partial<{ title: string; description: string | null; objective: string | null; category: string | null; level: EnglishLevel | null; contentHtml: string; position: number; published: boolean }>) =>
     apiPatch<any>(`/admin/resources/${id}`, body),
   deleteResource: (id: string) => apiPatch<{ ok: boolean }>(`/admin/resources/${id}/delete`, {}),
-  updateUser: (id: string, body: Partial<{ fullName: string; phone: string; email: string; role: "student" | "teacher" | "admin"; extraRoles: Array<"student" | "teacher" | "admin">; englishLevel: "beginner" | "intermediate" | "advanced" | null; classDurationMin: number | null }>) =>
+  updateUser: (id: string, body: Partial<{ fullName: string; phone: string; email: string; role: "student" | "teacher" | "admin"; extraRoles: Array<"student" | "teacher" | "admin">; englishLevel: "beginner" | "intermediate" | "advanced" | null; classDurationMin: number | null; timezone: string | null }>) =>
     apiPatch<User>(`/admin/users/${id}`, body),
   setUserStatus: (id: string, disabled: boolean) =>
     apiPatch<User>(`/admin/users/${id}/status`, { disabled }),

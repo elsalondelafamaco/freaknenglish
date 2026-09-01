@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { usersApi, receiptsApi, subscriptionsApi, exchangeApi } from "@/lib/api/endpoints";
 import { apiGetBlob } from "@/lib/api/client";
 import { copAcobrar } from "@/lib/domain/plans";
+import { ZONA_BOGOTA, etiquetaDeZona, nombreDeZona, zonaDe } from "@/lib/domain/zona-horaria";
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
   head: () => ({ meta: [{ title: "Configuración — FreaknEnglish" }] }),
@@ -69,6 +72,7 @@ function SettingsPage() {
           <Row label="Rol" value={user.roles.join(", ")} />
           <Row label="Nivel" value={user.level ?? "Por definir"} />
         </dl>
+        <ZonaHoraria actual={user.timezone} />
       </section>
 
       <section className="rounded-3xl border border-brand-line bg-white p-6 md:p-8">
@@ -163,3 +167,89 @@ function Row({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+
+/**
+ * Zona horaria del estudiante.
+ *
+ * Se captura sola la primera vez que entra, así que casi nadie la va a tocar;
+ * está aquí para quien se muda, para quien entró desde un equipo prestado y
+ * para poder corregir un caso raro sin pedirle nada al admin.
+ *
+ * La lista es corta a propósito: el selector completo de zonas IANA tiene
+ * cientos de entradas y nadie sabe si le toca "America/Bogota" o
+ * "America/Lima". "Detectar automáticamente" cubre lo que falte.
+ */
+function ZonaHoraria({ actual }: { actual?: string }) {
+  const { refresh } = useAuth();
+  const [guardando, setGuardando] = useState(false);
+  const zona = zonaDe(actual);
+
+  const guardar = async (valor: string) => {
+    const elegida = valor === "auto" ? detectarZona() : valor;
+    if (!elegida) return;
+    setGuardando(true);
+    try {
+      await usersApi.updateMe({ timezone: elegida });
+      await refresh();
+      toast.success("Zona horaria actualizada");
+    } catch (e: any) {
+      toast.error(e?.message ?? "No se pudo guardar");
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <div className="mt-6 border-t border-brand-line pt-5">
+      <label className="block text-sm font-semibold text-brand-ink" htmlFor="zona">
+        Zona horaria
+      </label>
+      <p className="mt-1 text-xs text-brand-ink/60">
+        Tus clases se muestran en esta hora. Tus profesores están en Colombia
+        ({etiquetaDeZona(ZONA_BOGOTA)}).
+      </p>
+      <select
+        id="zona"
+        value={ZONAS.some((z) => z.id === zona) ? zona : "auto"}
+        disabled={guardando}
+        onChange={(e) => void guardar(e.target.value)}
+        className="mt-2 w-full max-w-sm rounded-xl border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink disabled:opacity-50"
+      >
+        {ZONAS.map((z) => (
+          <option key={z.id} value={z.id}>
+            {z.label}
+          </option>
+        ))}
+        <option value="auto">Detectar automáticamente</option>
+      </select>
+      <p className="mt-1.5 text-xs text-brand-ink/55">
+        Ahora mismo: {nombreDeZona(zona)} ({etiquetaDeZona(zona)}).
+      </p>
+    </div>
+  );
+}
+
+function detectarZona(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return undefined;
+  }
+}
+
+const ZONAS = [
+  { id: "America/Bogota", label: "Colombia (Bogotá)" },
+  { id: "America/Mexico_City", label: "México (Ciudad de México)" },
+  { id: "America/Lima", label: "Perú (Lima)" },
+  { id: "America/Santiago", label: "Chile (Santiago)" },
+  { id: "America/Argentina/Buenos_Aires", label: "Argentina (Buenos Aires)" },
+  { id: "America/New_York", label: "EE.UU. Este (Nueva York)" },
+  { id: "America/Chicago", label: "EE.UU. Centro (Chicago)" },
+  { id: "America/Denver", label: "EE.UU. Montaña (Denver)" },
+  { id: "America/Los_Angeles", label: "EE.UU. Pacífico (Los Ángeles)" },
+  { id: "Europe/Madrid", label: "España (Madrid)" },
+  { id: "Europe/London", label: "Reino Unido (Londres)" },
+  { id: "Asia/Tokyo", label: "Japón (Tokio)" },
+  { id: "Australia/Sydney", label: "Australia (Sídney)" },
+];

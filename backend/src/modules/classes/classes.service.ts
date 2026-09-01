@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { ClassStatus } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
+import { formatearInstante } from '../../common/zona-horaria'
 import { NotificationsService } from '../notifications/notifications.service'
 import { SlotsService } from '../scheduling/slots.service'
 import { assertDentroDeLaVentana } from '../scheduling/class-window'
@@ -138,7 +139,7 @@ export class ClassesService {
         vars: {
           fullName: student.fullName?.split(' ')[0],
           nextClass: next
-            ? next.startsAt.toLocaleString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit', timeZone: 'America/Bogota' })
+            ? formatearInstante(next.startsAt, student.timezone, { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' })
             : undefined,
         },
         type: 'class',
@@ -288,7 +289,7 @@ export class ClassesService {
         vars: { startsAt: newStartsAt.toISOString() },
         type: 'class',
         title: 'Clase reprogramada',
-        body: newStartsAt.toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }),
+        body: formatearInstante(newStartsAt, student?.timezone, { dateStyle: 'medium', timeStyle: 'short' }),
         linkUrl: '/app/calendar',
       })
     }

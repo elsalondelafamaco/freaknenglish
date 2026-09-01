@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
+import { zonaDe, ZONA_BOGOTA } from '../../common/zona-horaria'
 import { PrismaService } from '../../prisma/prisma.service'
 import { ResendTransport } from './resend.transport'
 import { WhatsAppTransport } from './whatsapp.transport'
@@ -43,6 +44,17 @@ export class NotificationsService {
     const existing = await this.prisma.notification.findUnique({ where: { dedupeKey: input.dedupeKey } })
     if (existing && existing.status === 'sent') return existing
 
+    // Cada correo se lee en la zona de QUIEN lo recibe, y se resuelve aquí
+    // porque `enqueue` es el único sitio por el que pasan todos: así las
+    // plantillas nuevas lo heredan sin que nadie tenga que acordarse. Los
+    // correos dirigidos al admin llevan su userId, así que salen en hora de
+    // Colombia sin ningún caso especial.
+    const zona = input.userId
+      ? zonaDe(
+          (await this.prisma.user.findUnique({ where: { id: input.userId }, select: { timezone: true } }))?.timezone,
+        )
+      : ZONA_BOGOTA
+
     const record =
       existing ??
       (await this.prisma.notification.create({
@@ -53,7 +65,7 @@ export class NotificationsService {
           template: input.template,
           subject: input.subject,
           dedupeKey: input.dedupeKey,
-          vars: input.vars ?? {},
+          vars: { ...(input.vars ?? {}), zona },
           type: input.type ?? 'system',
           title: input.title ?? input.subject,
           body: input.body,

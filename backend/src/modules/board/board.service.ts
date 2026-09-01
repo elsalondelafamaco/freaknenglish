@@ -48,33 +48,34 @@ export class BoardService {
       select: { id: true, role: true, fullName: true },
     })
     if (!student || student.role !== 'student') throw new BadRequestException('Estudiante inválido')
-    return this.prisma.board.create({
-      data: {
-        name: name?.trim() || `Aula · ${student.fullName}`,
-        ownerId: userId,
-        members: {
-          create: [
-            { userId, role: 'owner' },
-            ...(userId !== studentId ? [{ userId: studentId, role: 'editor' }] : []),
-          ],
-        },
-        pages: { create: { title: 'Clase 1', position: 1 } },
-      },
+
+    // Sin esta comprobación, darle a "+ Crear" para un estudiante que ya tiene
+    // aula creaba otra con el mismo nombre por defecto — la otra mitad de las
+    // tarjetas duplicadas que se veían en el listado. Se reutiliza la suya y,
+    // si le pusieron nombre, se le hace caso.
+    const suya = await this.ensureClassroom(userId, studentId)
+    if (name?.trim() && name.trim() !== suya.name) {
+      await this.prisma.board.update({ where: { id: suya.id }, data: { name: name.trim() } })
+    }
+    return this.prisma.board.findUniqueOrThrow({
+      where: { id: suya.id },
       include: { members: { include: { user: { select: { id: true, fullName: true, role: true } } } } },
     })
   }
 
   /**
-   * Aula persistente compartida entre profesor y estudiante (se reutiliza en
-   * todas sus clases). Idempotente: si ya existe un board del profesor con el
-   * estudiante como miembro, lo devuelve; si no, lo crea con una página inicial.
+   * Aula persistente del estudiante (una sola, a lo largo de todos sus profes).
+   *
+   * Antes buscaba por `ownerId + miembro`, así que al cambiar de profesor creaba
+   * una SEGUNDA aula y la anterior quedaba para siempre en la lista del profe
+   * viejo: el listado se resuelve solo por `BoardMember` y en todo el backend no
+   * había un solo borrado de esa tabla. Ahora el aula es del estudiante y
+   * cambia de dueño con él.
    */
   async ensureClassroom(teacherId: string, studentId: string) {
-    const existing = await this.prisma.board.findFirst({
-      where: { ownerId: teacherId, members: { some: { userId: studentId } } },
-      orderBy: { createdAt: 'asc' },
-    })
-    if (existing) return existing
+    const suya = await this.aulaDelEstudiante(studentId)
+    if (suya) return suya.ownerId === teacherId ? suya : this.moverAula(suya, teacherId, studentId)
+
     const student = await this.prisma.user.findUnique({
       where: { id: studentId },
       select: { fullName: true },
@@ -83,6 +84,7 @@ export class BoardService {
       data: {
         name: `Aula · ${student?.fullName ?? 'Estudiante'}`,
         ownerId: teacherId,
+        studentId,
         members: {
           create: [
             { userId: teacherId, role: 'owner' },
@@ -91,6 +93,74 @@ export class BoardService {
         },
         pages: { create: { title: 'Clase 1', position: 1 } },
       },
+    })
+  }
+
+  /**
+   * El aula del estudiante, mirando primero la columna y cayendo al vínculo por
+   * miembro para las que son anteriores a que existiera `studentId`.
+   *
+   * Si hay varias (duplicados que ya están en producción) las fusiona: gana la
+   * de actividad más reciente y las páginas de las otras se le cuelgan. Fusionar
+   * y no borrar porque las dos tienen contenido de clases reales.
+   */
+  private async aulaDelEstudiante(studentId: string) {
+    const candidatas = await this.prisma.board.findMany({
+      where: { OR: [{ studentId }, { members: { some: { userId: studentId } } }] },
+      orderBy: { updatedAt: 'desc' },
+      include: { _count: { select: { pages: true } } },
+    })
+    // Un estudiante puede ser miembro de un aula ajena por invitación; la suya
+    // es aquella cuyo dueño no es él.
+    const propias = candidatas.filter((b) => b.ownerId !== studentId)
+    if (propias.length === 0) return null
+
+    const principal = propias[0]
+    for (const sobrante of propias.slice(1)) await this.fusionarAulas(principal.id, sobrante.id)
+    if (!principal.studentId) {
+      await this.prisma.board.update({ where: { id: principal.id }, data: { studentId } })
+    }
+    return this.prisma.board.findUniqueOrThrow({ where: { id: principal.id } })
+  }
+
+  /** Cuelga las páginas del aula sobrante en la principal y la deja vacía. */
+  private async fusionarAulas(principalId: string, sobranteId: string) {
+    const ultima = await this.prisma.boardPage.findFirst({
+      where: { boardId: principalId },
+      orderBy: { position: 'desc' },
+      select: { position: true },
+    })
+    const paginas = await this.prisma.boardPage.findMany({
+      where: { boardId: sobranteId },
+      orderBy: { position: 'asc' },
+      select: { id: true },
+    })
+    let pos = (ultima?.position ?? 0) + 1
+    for (const p of paginas) {
+      await this.prisma.boardPage.update({
+        where: { id: p.id },
+        data: { boardId: principalId, position: pos++ },
+      })
+    }
+    // Solo se borra una vez vacía: si algo falló arriba, el contenido sigue en
+    // pie y la fusión se reintenta sola en la siguiente pasada.
+    const quedan = await this.prisma.boardPage.count({ where: { boardId: sobranteId } })
+    if (quedan === 0) await this.prisma.board.delete({ where: { id: sobranteId } }).catch(() => null)
+  }
+
+  /** Pasa el aula al profesor nuevo: dueño, membresías y nombre. */
+  private async moverAula(aula: { id: string; ownerId: string }, nuevoProfeId: string, studentId: string) {
+    await this.prisma.boardMember.deleteMany({
+      where: { boardId: aula.id, userId: aula.ownerId, NOT: { userId: studentId } },
+    })
+    await this.prisma.boardMember.upsert({
+      where: { boardId_userId: { boardId: aula.id, userId: nuevoProfeId } },
+      update: { role: 'owner' },
+      create: { boardId: aula.id, userId: nuevoProfeId, role: 'owner' },
+    })
+    return this.prisma.board.update({
+      where: { id: aula.id },
+      data: { ownerId: nuevoProfeId, studentId },
     })
   }
 

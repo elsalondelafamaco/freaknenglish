@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { scheduleApi, subscriptionsApi, type SlotRef } from "@/lib/api/endpoints";
 import { SchedulePickerGrid, slotKey } from "@/components/schedule/SchedulePickerGrid";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { ZONA_BOGOTA, etiquetaDeZona, nombreDeZona, zonaDe } from "@/lib/domain/zona-horaria";
 
 export const Route = createFileRoute("/_authenticated/onboarding/schedule")({
   head: () => ({ meta: [{ title: "Elige tu horario — FreaknEnglish" }] }),
@@ -22,7 +23,8 @@ export const Route = createFileRoute("/_authenticated/onboarding/schedule")({
  * el backend rechazaba la selección recién al enviarla.
  */
 function OnboardingSchedule() {
-  const { refresh } = useAuth();
+  const { refresh, user } = useAuth();
+  const zonaPropia = zonaDe(user?.timezone);
   const navigate = useNavigate();
   const [selected, setSelected] = useState<SlotRef[]>([]);
 
@@ -99,6 +101,21 @@ function OnboardingSchedule() {
         </div>
       ) : null}
 
+      {/* La grilla es hora de COLOMBIA, y quien está fuera piensa en la suya.
+          Sin decirlo, una alumna en San Francisco eligió "9:00" creyendo que
+          eran sus 9:00. La segunda frase no es adorno: evita el reclamo de
+          noviembre, cuando su país cambie la hora y Colombia no. */}
+      {zonaPropia !== ZONA_BOGOTA ? (
+        <div className="mt-4 rounded-2xl border border-brand-line bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink">
+          Las horas se muestran en <b>tu zona horaria</b> ({nombreDeZona(zonaPropia)},{" "}
+          {etiquetaDeZona(zonaPropia)}). Los días son días de Colombia.
+          <span className="mt-1 block text-xs text-brand-ink/70">
+            Tu hora local puede cambiar cuando tu país cambie de horario; la hora en Colombia es
+            siempre la misma.
+          </span>
+        </div>
+      ) : null}
+
       {configQ.isLoading || !cfg ? (
         <p className="mt-6 text-sm text-brand-ink/60">Cargando disponibilidad…</p>
       ) : (
@@ -109,6 +126,7 @@ function OnboardingSchedule() {
             selected={selected}
             onChange={setSelected}
             autoMap={autoMap}
+            zona={zonaPropia}
           />
         </div>
       )}

@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { ZONA_BOGOTA, etiquetaDeZona, franjaEnZona, nombreDeZona, zonaDe } from "@/lib/domain/zona-horaria";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Eye, Pin, PinOff, Trash2, Video } from "lucide-react";
@@ -73,6 +74,15 @@ function TeacherStudentDetail() {
           <h1 className="text-2xl font-bold tracking-tight text-brand-ink">{student.fullName}</h1>
           <p className="text-sm text-brand-ink/65">{student.email}</p>
           <p className="mt-1 text-xs uppercase tracking-wide text-brand-ink/55">Nivel actual: {student.englishLevel ?? "sin nivelar"}</p>
+          {/* Que el profe sepa dónde está su alumno: si le escribe "nos vemos a
+              las 11" y ella está en San Francisco, para ella son las 9. Todas
+              las horas del portal del profe siguen siendo de Colombia. */}
+          {student.timezone && zonaDe(student.timezone) !== ZONA_BOGOTA ? (
+            <p className="mt-1 text-xs text-brand-ink/60">
+              📍 {nombreDeZona(student.timezone)} ({etiquetaDeZona(student.timezone)}) — tu clase de
+              las 11:00 son sus {String(franjaEnZona(1, 11, student.timezone).hour).padStart(2, "0")}:00
+            </p>
+          ) : null}
         </div>
         <div className="flex gap-2">
           <Mini label="Clases" value={classes.length} />

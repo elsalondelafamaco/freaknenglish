@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useRenovacion } from "@/lib/domain/renovacion";
 import { copAcobrar } from "@/lib/domain/plans";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
@@ -25,6 +26,7 @@ function CheckoutSelect() {
   const end = sub?.currentPeriodEnd ? new Date(sub.currentPeriodEnd) : null;
   const daysLeft = end ? Math.ceil((end.getTime() - Date.now()) / 86400000) : null;
   const activeFar = sub?.status === "active" && daysLeft != null && daysLeft > 5;
+  const { esRenovacion, cargando: cargandoRenovacion } = useRenovacion();
   const renewalWindow = sub?.status === "active" && daysLeft != null && daysLeft <= 5;
 
   if (activeFar) {
@@ -85,7 +87,10 @@ function CheckoutSelect() {
           </p>
         </header>
 
-        {q.isLoading ? (
+        {/* Se espera también a saber si renueva: si no, las tarjetas nacen
+            apuntando al selector de horario y el estudiante llega allí antes de
+            que la respuesta corrija el destino. */}
+        {q.isLoading || cargandoRenovacion ? (
           <p className="mt-8 text-sm text-brand-ink/60">Cargando planes…</p>
         ) : (
           <div className={`mt-10 grid gap-8 ${plans.length > 3 ? "sm:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-3"}`}>
@@ -94,7 +99,10 @@ function CheckoutSelect() {
               return (
                 <Link
                   key={plan.id}
-                  to="/checkout/schedule/$planId"
+                  // Renovar no vuelve a preguntar el horario: el banner de
+                  // arriba lleva prometiendo "conservas tu horario y profesor"
+                  // desde siempre, y hasta ahora nadie sostenía esa promesa.
+                  to={esRenovacion ? "/checkout/$planId" : "/checkout/schedule/$planId"}
                   params={{ planId: plan.id }}
                   className="shadow-hard group flex flex-col border-2 border-brand-ink bg-white p-7 transition-transform duration-300 hover:-translate-y-1.5"
                 >

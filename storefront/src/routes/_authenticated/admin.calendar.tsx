@@ -175,6 +175,11 @@ function AdminCalendar() {
               plugins={[timeGridPlugin]}
               initialView="timeGridWeek"
               headerToolbar={{ left: "prev,next today", center: "title", right: "" }}
+              // Los profes y el admin trabajan SIEMPRE en hora de Colombia: es la
+              // agenda del colegio. Sin fijarlo, el calendario usaba la del
+              // navegador — inofensivo mientras todos estén aquí, y un desastre
+              // silencioso el día que uno viaje o alguien lo abra desde fuera.
+              timeZone="America/Bogota"
               locale="es"
               buttonText={{ today: "Hoy" }}
               allDaySlot={false}

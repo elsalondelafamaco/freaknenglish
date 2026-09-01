@@ -9,6 +9,7 @@ import {
 } from "react";
 import type { AppRole, User } from "@/lib/domain/types";
 import * as session from "@/lib/auth/session";
+import { usersApi } from "@/lib/api/endpoints";
 
 export interface AuthContextValue {
   user: User | null;
@@ -41,6 +42,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Captura de zona horaria, una sola vez por cuenta.
+  //
+  // Es lo que arregla a los alumnos que YA existen: nadie se vuelve a
+  // registrar, así que sin esto la funcionalidad solo serviría para los que
+  // lleguen a partir de ahora — y los que tienen el problema son los de ahora.
+  //
+  // Solo cuando está vacía: si se sobreescribiera en cada carga, una alumna de
+  // viaje en Miami quedaría anclada a Miami para siempre. A partir de aquí solo
+  // se cambia a mano, desde Configuración o desde el panel.
+  useEffect(() => {
+    if (!user || user.timezone) return;
+    let zona: string | undefined;
+    try {
+      zona = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch {
+      return;
+    }
+    if (!zona) return;
+    usersApi
+      .updateMe({ timezone: zona })
+      .then(() => refresh())
+      .catch(() => null);
+  }, [user, refresh]);
   // Arranque: restaura sesión desde la cookie de refresh.
   useEffect(() => {
     let cancelled = false;

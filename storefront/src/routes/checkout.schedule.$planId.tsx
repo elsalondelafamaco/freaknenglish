@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ZONA_BOGOTA, etiquetaDeZona, nombreDeZona, zonaDe } from "@/lib/domain/zona-horaria";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, Sparkles, Zap } from "lucide-react";
@@ -6,6 +7,7 @@ import { Logo } from "@/components/site/Logo";
 import { ActivePlanScreen, useActivePlanGate } from "@/components/site/ActivePlanGate";
 import { plansApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
 import { SchedulePickerGrid } from "@/components/schedule/SchedulePickerGrid";
+import { useRenovacion } from "@/lib/domain/renovacion";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/checkout/schedule/$planId")({
@@ -26,10 +28,21 @@ function SchedulePicker() {
   const { planId } = Route.useParams();
   const nav = useNavigate();
   const { user } = useAuth();
+  const zonaPropia = zonaDe(user?.timezone);
   const [selected, setSelected] = useState<SlotRef[]>([]);
   const preloaded = useRef(false);
   const [renewalNotice, setRenewalNotice] = useState(false);
   const gate = useActivePlanGate();
+
+  // Quitar los enlaces al selector no basta mientras la ruta siga accesible:
+  // se llega por marcador, por el botón de atrás y por los correos viejos de
+  // renovación. Quien renueva se va derecho a pagar.
+  const { esRenovacion, cargando: cargandoRenovacion } = useRenovacion();
+  useEffect(() => {
+    if (!cargandoRenovacion && esRenovacion) {
+      nav({ to: "/checkout/$planId", params: { planId }, replace: true });
+    }
+  }, [esRenovacion, cargandoRenovacion, planId, nav]);
 
   const configQ = useQuery({ queryKey: ["schedule", "config"], queryFn: () => scheduleApi.config() });
   const plansQ = useQuery({ queryKey: ["plans"], queryFn: () => plansApi.list() });
@@ -140,6 +153,21 @@ function SchedulePicker() {
           </div>
         ) : null}
 
+        {/* Aviso de zona: la grilla es hora de COLOMBIA, y quien está fuera
+            piensa en la suya. Sin decirlo, una alumna en San Francisco eligió
+            "9:00" creyendo que eran sus 9:00. La segunda frase no es adorno:
+            es lo que evita el reclamo de noviembre, cuando su país cambie la
+            hora y Colombia no. */}
+        {zonaPropia !== ZONA_BOGOTA ? (
+          <div className="mt-4 border-2 border-brand-ink bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink">
+            Las horas se muestran en <b>tu zona horaria</b> ({nombreDeZona(zonaPropia)},{" "}
+            {etiquetaDeZona(zonaPropia)}). Los días son días de Colombia.
+            <span className="mt-1 block text-xs text-brand-ink/70">
+              Tu hora local puede cambiar cuando tu país cambie de horario; la hora en Colombia
+              es siempre la misma.
+            </span>
+          </div>
+        ) : null}
         <div className="mt-4">
           <SchedulePickerGrid
             cfg={cfg}
@@ -147,6 +175,7 @@ function SchedulePicker() {
             selected={selected}
             onChange={setSelected}
             autoMap={autoMap}
+            zona={zonaPropia}
           />
         </div>
 

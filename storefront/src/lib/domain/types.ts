@@ -49,6 +49,12 @@ export interface User {
   deletedAt?: string;
   /** Último login exitoso (ISO). */
   lastLoginAt?: string;
+  /**
+   * Zona horaria IANA del estudiante. Ausente = nunca se capturó (y todo lo
+   * que la usa cae a Bogotá). Nunca un desfase en horas: el de Estados Unidos
+   * cambia dos veces al año y el de Colombia no.
+   */
+  timezone?: string;
   createdAt: string;
 }
 

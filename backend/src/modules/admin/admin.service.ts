@@ -13,6 +13,7 @@ import { NotificationsService } from '../notifications/notifications.service'
 import { SchedulingService } from '../scheduling/scheduling.service'
 import { ADMIN_RESET_TTL_MS, INVITE_TTL_MS, resetTtlMs, ttlLabel } from '../../common/password-reset-ttl'
 import { SlotsService, SlotRef, MOTIVO_HOLD_VENCIDO } from '../scheduling/slots.service'
+import { esZonaValida } from '../../common/zona-horaria'
 import { AuthService, IMPERSONATION_TTL } from '../auth/auth.service'
 import { validateQuestion } from '../learning/checkpoint-questions'
 
@@ -1348,6 +1349,8 @@ export class AdminService {
       englishLevel?: 'beginner' | 'intermediate' | 'advanced' | null
       /** Minutos por clase del estudiante; null = estándar (50). */
       classDurationMin?: number | null
+      /** Zona IANA del estudiante ("America/Los_Angeles"); null la borra. */
+      timezone?: string | null
     },
   ) {
     const resolvedId = await this.resolveExistingUserId(id)
@@ -1356,6 +1359,9 @@ export class AdminService {
       if (!Number.isInteger(dur) || dur < 25 || dur > 180) {
         throw new BadRequestException('La duración debe ser un entero entre 25 y 180 minutos')
       }
+    }
+    if (data.timezone && !esZonaValida(data.timezone)) {
+      throw new BadRequestException(`Zona horaria desconocida: ${data.timezone}`)
     }
     const patch: Prisma.UserUpdateInput = { ...(data as any) }
     if (data.email !== undefined) {

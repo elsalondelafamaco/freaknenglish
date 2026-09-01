@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
+import { franjaEnZona, zonaDe, ZONA_BOGOTA } from '../../common/zona-horaria'
 import { IS_ACTIVE_TEACHER, IS_TEACHER, hasRole } from '../../common/roles'
 import { NotificationsService } from '../notifications/notifications.service'
 import { BoardService } from '../board/board.service'
@@ -46,25 +47,48 @@ export class SchedulingService {
     private subscriptions: SubscriptionsService,
   ) {}
 
-  /** Horario semanal legible ("lunes 7:00, miércoles 7:00") para los correos. */
-  private async scheduleSummary(studentId: string): Promise<string | undefined> {
+  /**
+   * Horario semanal legible ("lunes 7:00, miércoles 7:00") para los correos.
+   *
+   * Devuelve DOS versiones porque el mismo horario se le manda al estudiante y
+   * a su profesor en el mismo momento: si se traduce a la zona del estudiante
+   * y se manda tal cual a los dos, al profe se le dice una hora que no es.
+   */
+  private async scheduleSummary(
+    studentId: string,
+    zonaEstudiante?: string | null,
+  ): Promise<{ paraEstudiante?: string; paraProfesor?: string }> {
     const slots = await this.prisma.scheduleSlot.findMany({
       where: { studentId, status: { in: ['active', 'held'] } },
       orderBy: [{ weekday: 'asc' }, { hour: 'asc' }],
       select: { weekday: true, hour: true },
     })
-    if (slots.length === 0) return undefined
-    return slots.map((s) => `${SchedulingService.DAY_NAMES[s.weekday]} ${s.hour}:00`).join(', ')
+    if (slots.length === 0) return {}
+    const enBogota = slots
+      .map((s) => `${SchedulingService.DAY_NAMES[s.weekday]} ${s.hour}:00`)
+      .join(', ')
+    const zona = zonaDe(zonaEstudiante)
+    if (zona === ZONA_BOGOTA) return { paraEstudiante: enBogota, paraProfesor: enBogota }
+    const suyo = slots
+      .map((s) => {
+        const l = franjaEnZona(s.weekday, s.hour, zona)
+        return `${SchedulingService.DAY_NAMES[l.weekday]} ${l.hour}:${String(l.minuto).padStart(2, '0')}`
+      })
+      .join(', ')
+    return {
+      paraEstudiante: `${suyo} (tu hora) — ${enBogota} en Colombia`,
+      paraProfesor: enBogota,
+    }
   }
 
   /** Notifica asignación a AMBOS: estudiante (wording cálido) y profesor. */
   private async notifyTeacherAssigned(studentId: string, teacherId: string, dedupeSuffix: string) {
-    const [student, teacher, schedule] = await Promise.all([
+    const [student, teacher] = await Promise.all([
       this.prisma.user.findUnique({ where: { id: studentId } }),
       this.prisma.user.findUnique({ where: { id: teacherId } }),
-      this.scheduleSummary(studentId),
     ])
     if (!student || !teacher) return
+    const schedule = await this.scheduleSummary(studentId, student.timezone)
     // El mes del estudiante no corre mientras espera profesor. Aquí ya lo
     // tiene, así que se arranca el período si estaba pendiente. Va en este
     // punto porque TODAS las asignaciones (onboarding, manual, reasignación y
@@ -76,7 +100,7 @@ export class SchedulingService {
       template: 'teacher_assigned',
       subject: `¡Ya tienes profe! Te presentamos a ${teacher.fullName}`,
       dedupeKey: `teacher-assigned:${student.id}:${teacher.id}:${dedupeSuffix}`,
-      vars: { teacherName: teacher.fullName, schedule },
+      vars: { teacherName: teacher.fullName, schedule: schedule.paraEstudiante },
       type: 'teacher',
       title: 'Nuevo profesor asignado',
       body: teacher.fullName,
@@ -88,7 +112,7 @@ export class SchedulingService {
       template: 'student_assigned',
       subject: `Nuevo estudiante: ${student.fullName}`,
       dedupeKey: `student-assigned:${student.id}:${teacher.id}:${dedupeSuffix}`,
-      vars: { studentName: student.fullName, schedule },
+      vars: { studentName: student.fullName, schedule: schedule.paraProfesor },
       type: 'teacher',
       title: 'Nuevo estudiante asignado',
       body: student.fullName,
@@ -867,7 +891,9 @@ export class SchedulingService {
       })
     }
 
-    // Aula nueva con el nuevo profe y migración de clases futuras.
+    // El aula del estudiante se MUDA al profe nuevo (antes se creaba una
+    // segunda y la vieja seguía apareciendo para siempre en la lista del profe
+    // anterior, duplicada). `meetingUrl` no cambia de id porque es la misma aula.
     const classroom = await this.boards.ensureClassroom(newTeacherId, studentId)
     const meetingUrl = `/boards/${classroom.id}`
     const future = await this.prisma.class.findMany({
@@ -910,6 +936,98 @@ export class SchedulingService {
     return { unassigned: false, movedSlots: slots.length, movedClasses: moved }
   }
 
+  /**
+   * Avisa al admin de una renovación que no pudo recuperar todo su horario.
+   *
+   * El estudiante ya pagó y sigue con su profe: lo que falta es una franja que
+   * otro tomó mientras tanto. Se avisa por dentro y no se le manda correo a él,
+   * porque lo que necesita es que alguien lo llame, no otro correo.
+   */
+  private async avisarRenovacionIncompleta(userId: string, intentId: string, faltantes: number) {
+    const [student, admins] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId }, select: { fullName: true } }),
+      this.prisma.user.findMany({ where: { role: 'admin', deletedAt: null }, select: { id: true, email: true } }),
+    ])
+    for (const a of admins) {
+      await this.notifications.enqueue({
+        userId: a.id,
+        toEmail: a.email,
+        template: 'welcome',
+        subject: 'Renovación sin horario completo',
+        dedupeKey: `renovacion-incompleta:${intentId}:${a.id}`,
+        inAppOnly: true,
+        type: 'system',
+        title: 'Renovó pero le falta horario',
+        body: `${student?.fullName ?? 'Un estudiante'} renovó y ${faltantes} de sus franjas ya las tomó alguien. Sigue con su profe; hay que reubicar esas horas.`,
+        linkUrl: '/admin/schedule-health',
+      })
+    }
+  }
+
+  /**
+   * Renovación: mismo profesor y mismo horario, sin excepción.
+   *
+   * Las únicas salidas posibles son "sigue con lo suyo" o "que lo mire una
+   * persona". Nunca "otro profe en silencio", que es lo que hacía la rama
+   * general al no encontrar el conjunto exacto.
+   */
+  private async materializarRenovacion(
+    userId: string,
+    intent: { id: string; scheduleJson?: unknown },
+  ): Promise<{ mode: 'auto' | 'manual' | 'none' }> {
+    // Defensivo: una renovación no debería haber creado reservas (el checkout
+    // se las salta), pero un intento antiguo o reintentado sí podría traerlas.
+    await this.slots.releasePendingForIntent(intent.id).catch(() => null)
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { assignedTeacherId: true },
+    })
+    if (!user?.assignedTeacherId) {
+      // La marca y el estado se contradicen. Inventar un profesor es peor que
+      // no hacer nada: que lo resuelva el admin.
+      this.log.warn(`Renovación sin profesor asignado (user ${userId}, intent ${intent.id}); no se toca nada`)
+      return { mode: 'none' }
+    }
+    const teacherId = user.assignedTeacherId
+
+    const reactivadas = await this.prisma.scheduleSlot.updateMany({
+      where: { studentId: userId, status: { in: ['active', 'held'] } },
+      data: { status: 'active', holdExpiresAt: null },
+    })
+
+    // Si no quedaba ninguna, el hold se liberó entre el pago y el webhook. Se
+    // recrean SOLO con su profe, desde la foto que se guardó al pagar; la que
+    // ya se llevó otro estudiante choca contra el único y se salta.
+    let faltantes = 0
+    if (reactivadas.count === 0) {
+      const foto = (intent.scheduleJson as SlotRef[] | null) ?? []
+      for (const s of foto) {
+        const creada = await this.prisma.scheduleSlot
+          .create({ data: { teacherId, studentId: userId, weekday: s.weekday, hour: s.hour, status: 'active' } })
+          .catch(() => null)
+        if (!creada) faltantes++
+      }
+    }
+
+    if (faltantes > 0) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { scheduleAssignmentStatus: 'manual_pending' },
+      })
+      await this.avisarRenovacionIncompleta(userId, intent.id, faltantes)
+      this.log.warn(`Renovación con ${faltantes} franja(s) ya tomada(s) (user ${userId}); queda para coordinar`)
+    }
+
+    // El periodo arranca al tener profe; aquí ya lo tiene, así que esto es
+    // idempotente. No se manda `notifyTeacherAssigned`: "te presentamos a tu
+    // profe" no tiene sentido para quien lleva meses con él.
+    await this.subscriptions.startPeriodOnTeacherAssigned(userId).catch(() => null)
+    await this.ensureUpcomingClasses(userId)
+    this.log.log(`Renovación materializada: user=${userId} profe=${teacherId} franjas=${reactivadas.count}`)
+    return { mode: faltantes > 0 ? 'manual' : 'auto' }
+  }
+
   // ── Compra: materialización del horario tras pago aprobado ─────────
   /**
    * Idempotente (la llama finalizeTransaction). Orden de resolución:
@@ -918,7 +1036,17 @@ export class SchedulingService {
    * 3) recomputar candidatos → crear slots con el mejor profe.
    * 4) sin candidatos → manual_pending + notificación a admins y estudiante.
    */
-  async materializePurchase(userId: string, intent: { id: string; scheduleJson?: unknown }) {
+  async materializePurchase(
+    userId: string,
+    intent: { id: string; scheduleJson?: unknown; esRenovacion?: boolean },
+  ) {
+    // Una renovación jamás recalcula profesor. `sameSet` no basta como garantía:
+    // es solo el camino feliz. Si entre el pago y el webhook cambió algo (se le
+    // liberó el hold, el admin le tocó el horario), el conjunto deja de
+    // coincidir, cae en la rama de reasignación y le cambia el profe a alguien
+    // que solo quería pagar otro mes. Eso fue exactamente lo que pasó.
+    if (intent.esRenovacion) return this.materializarRenovacion(userId, intent)
+
     const slots = (intent.scheduleJson as SlotRef[] | null) ?? []
     if (!Array.isArray(slots) || slots.length === 0) return { mode: 'none' as const }
 

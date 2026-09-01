@@ -1,6 +1,7 @@
 import { Zap } from "lucide-react";
 import { toast } from "sonner";
 import type { ScheduleConfig, SlotRef } from "@/lib/api/endpoints";
+import { ZONA_BOGOTA, franjaEnZona, zonaDe } from "@/lib/domain/zona-horaria";
 
 /**
  * Grilla de selección de horario, ÚNICA en toda la app.
@@ -84,6 +85,7 @@ export function SchedulePickerGrid({
   selected,
   onChange,
   autoMap,
+  zona,
 }: {
   cfg: ScheduleConfig;
   need: number;
@@ -91,6 +93,16 @@ export function SchedulePickerGrid({
   onChange: (next: SlotRef[]) => void;
   /** "weekday:hour" → hay profe libre ⇒ inicio inmediato. Opcional. */
   autoMap?: Map<string, boolean>;
+  /**
+   * Zona del estudiante. Las CASILLAS siguen significando hora de Colombia
+   * —los profes están aquí, `maxPerDay` cuenta por día colombiano y la ventana
+   * del admin también—; lo único que cambia es la etiqueta.
+   *
+   * Sin esto, la grilla pintaba el entero pelado y el backend lo leía como hora
+   * de Bogotá: una alumna en San Francisco eligió "9:00" pensando en su hora y
+   * acabó con una clase a las 9:00 de Colombia y con otra profesora.
+   */
+  zona?: string;
 }) {
   const days = daysFromConfig(cfg);
   const hours = hoursFromConfig(cfg);
@@ -120,6 +132,7 @@ export function SchedulePickerGrid({
               selected={selected}
               onToggle={toggle}
               durationMin={cfg.durationMin}
+              zona={zona}
             />
           ))}
         </div>
@@ -135,6 +148,7 @@ function HourRow({
   selected,
   onToggle,
   durationMin,
+  zona,
 }: {
   h: number;
   days: number[];
@@ -142,11 +156,31 @@ function HourRow({
   selected: SlotRef[];
   onToggle: (s: SlotRef) => void;
   durationMin: number;
+  zona?: string;
 }) {
+  // El desfase no cambia entre columnas, así que basta calcularlo UNA vez por
+  // fila: dentro de una misma hora de Bogotá, todos los días se corren igual.
+  const propia = zonaDe(zona) !== ZONA_BOGOTA ? franjaEnZona(days[0] ?? 1, h, zona) : null;
+  const horaLocal = propia
+    ? `${propia.hour}:${String(propia.minuto).padStart(2, "0")}`
+    : `${h}:00`;
+
   return (
     <>
-      <div className="flex items-start justify-end pr-3 pt-2 text-[11px] font-medium text-brand-ink/55">
-        {h}:00
+      <div className="flex flex-col items-end justify-start pr-3 pt-2 text-[11px] font-medium text-brand-ink/55">
+        <span className={propia ? "text-[12px] font-bold text-brand-ink" : undefined}>{horaLocal}</span>
+        {propia ? (
+          <>
+            <span className="text-[10px] leading-tight">{h}:00 Colombia</span>
+            {/* Sin esta marca la cabecera del día estaría mintiendo: en Tokio,
+                el lunes a las 20:00 de Colombia es MARTES a las 10:00. */}
+            {propia.cruzaDia !== 0 ? (
+              <span className="mt-0.5 rounded bg-brand-yellow/70 px-1 text-[9px] font-bold text-brand-ink">
+                {propia.cruzaDia === 1 ? "+1 día" : "−1 día"}
+              </span>
+            ) : null}
+          </>
+        ) : null}
       </div>
       {days.map((d) => {
         const k = `${d}:${h}`;
@@ -157,7 +191,7 @@ function HourRow({
             key={k}
             type="button"
             onClick={() => onToggle({ weekday: d, hour: h })}
-            title={slotTimeRange(h, durationMin)}
+            title={propia ? `${horaLocal} · ${h}:00 en Colombia` : slotTimeRange(h, durationMin)}
             className={`m-0.5 flex h-11 items-center justify-center gap-1 rounded-xl border text-[11px] font-semibold transition ${
               isSel
                 ? "border-brand-ink bg-brand-ink text-brand-cream"
@@ -168,7 +202,7 @@ function HourRow({
           >
             {/* El rayito marca inicio inmediato, pero la hora siempre se ve. */}
             {!isSel && isAuto ? <Zap className="size-3.5 shrink-0" /> : null}
-            {h}:00
+            {horaLocal}
           </button>
         );
       })}

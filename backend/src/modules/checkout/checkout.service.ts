@@ -59,12 +59,28 @@ export class CheckoutService {
       }
     }
 
+    // ¿Es una renovación? Se decide AQUÍ y con el estado del servidor, nunca con
+    // lo que mande el navegador: fue justo el horario enviado desde el cliente
+    // lo que permitió que una estudiante en San Francisco "eligiera" las 9:00
+    // pensando en su hora y acabara con otra profesora.
+    //
+    // Las dos condiciones son necesarias: sin profe (pago manual pendiente) sí
+    // hay que elegir horario, y sin franjas (se le liberaron al vencer) también.
+    const propias = buyer?.id ? await this.slots.slotsOfStudent(buyer.id) : []
+    const esRenovacion = !!buyer?.assignedTeacherId && propias.length > 0
+
     // Selección de horario (SDD-scheduling-v2): validar contra ventana + plan.
     // Un estudiante interno con clase larga (classDurationMin) que renueva por
     // aquí valida con SU duración: sus reglas de separación siguen aplicando.
     let assignmentMode: 'auto' | 'manual' | null = null
-    const slots = input.slots ?? []
-    if (slots.length > 0) {
+    const slots = esRenovacion
+      ? propias.map((s) => ({ weekday: s.weekday, hour: s.hour }))
+      : (input.slots ?? [])
+    // Una renovación NO se valida contra las reglas de hoy: su horario puede ser
+    // anterior a que se estrechara la ventana del admin o cambiara `maxPerDay`,
+    // y no tiene sentido rechazarle el pago por una regla que no se le está
+    // pidiendo cumplir —y menos con un error que no le dice qué hacer.
+    if (slots.length > 0 && !esRenovacion) {
       let durationMin = 50
       if (input.userId) {
         const u = await this.prisma.user.findUnique({
@@ -88,12 +104,19 @@ export class CheckoutService {
         customerPhone: input.customerPhone,
         customerDocument: input.customerDocument,
         scheduleJson: slots.length > 0 ? (slots as any) : undefined,
+        esRenovacion,
+        ...(esRenovacion ? { assignmentMode: 'auto' } : {}),
         // Credenciales elegidas en el checkout: solo se guarda el hash.
         passwordHash: input.password ? await argon2.hash(input.password) : undefined,
       },
     })
 
-    if (slots.length > 0) {
+    // En una renovación no hay nada que reservar: las franjas ya son suyas. Y
+    // reservar haría daño: `reserveForIntent` recorre a los profes por MENOR
+    // CARGA, y el suyo no suele ser el primero — para un candidato anterior sus
+    // horas están libres, así que crearía reservas de 20 minutos a nombre de
+    // otro profe y bloquearía esas franjas para compradores reales.
+    if (slots.length > 0 && !esRenovacion) {
       // Un intento nuevo del mismo comprador reemplaza sus reservas anteriores
       // (los pendings abandonados no deben bloquear su propia recompra).
       await this.slots.releasePreviousPendings(input.customerEmail, input.userId ?? buyer?.id)

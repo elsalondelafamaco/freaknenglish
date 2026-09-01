@@ -21,6 +21,7 @@
  * se usan los defaults declarados en `config/env.ts`.
  */
 import { env } from '../../config/env'
+import { zonaDe } from '../../common/zona-horaria'
 
 function cta(href: string, label: string) {
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px auto 4px"><tr><td style="background:${env.BRAND_ACCENT};border-radius:999px">
@@ -67,8 +68,8 @@ const money = (cents: number, currency = 'COP') =>
  * contenedor es UTC. El recordatorio "tu clase es mañana" le decía 16:00 a
  * quien tenía clase a las 11:00 — a todos, también a los de Colombia.
  */
-const fmtDate = (iso: string, zona = 'America/Bogota') =>
-  new Date(iso).toLocaleString('es-CO', { dateStyle: 'full', timeStyle: 'short', timeZone: zona })
+const fmtDate = (iso: string, zona?: string) =>
+  new Date(iso).toLocaleString('es-CO', { dateStyle: 'full', timeStyle: 'short', timeZone: zonaDe(zona) })
 
 export const templates = {
   /**
@@ -136,16 +137,16 @@ export const templates = {
       { preheader: `Pago por ${money(v.amountInCents, v.currency)} confirmado` },
     ),
 
-  reminder_24h: (v: { startsAt: string }) =>
-    wrap('Tu clase es mañana', `<p>Te esperamos el <b>${fmtDate(v.startsAt)}</b>.</p>${cta(`${env.PUBLIC_SITE_URL}/app/calendar`, 'Ver mi calendario')}`),
+  reminder_24h: (v: { startsAt: string; zona?: string }) =>
+    wrap('Tu clase es mañana', `<p>Te esperamos el <b>${fmtDate(v.startsAt, v.zona)}</b>.</p>${cta(`${env.PUBLIC_SITE_URL}/app/calendar`, 'Ver mi calendario')}`),
 
   reminder_1h: () =>
     wrap('Tu clase comienza en 1 hora', `<p>¡Prepárate! Entra 5 minutos antes.</p>${cta(`${env.PUBLIC_SITE_URL}/app`, 'Ir a mi clase')}`),
 
   // Acepta `startsAt` (ISO) o `newDate` (texto ya formateado) — distintos
   // callers usan uno u otro; antes esto producía "Invalid Date" en el correo.
-  class_rescheduled: (v: { startsAt?: string; newDate?: string; fullName?: string }) => {
-    const when = v.newDate ?? (v.startsAt ? fmtDate(v.startsAt) : '')
+  class_rescheduled: (v: { startsAt?: string; newDate?: string; fullName?: string; zona?: string }) => {
+    const when = v.newDate ?? (v.startsAt ? fmtDate(v.startsAt, v.zona) : '')
     return wrap(
       'Tu clase fue reprogramada',
       `<p>${v.fullName ? `Hola ${String(v.fullName).split(' ')[0]}, tu` : 'Tu'} clase cambió de horario.</p>
@@ -296,14 +297,14 @@ export const templates = {
       { preheader: 'Enlace para restablecer tu contraseña' },
     ),
 
-  account_invite: (v: { fullName: string; link: string; role?: 'student' | 'teacher' | 'admin'; planName?: string; planEndsAt?: string }) => {
+  account_invite: (v: { fullName: string; link: string; role?: 'student' | 'teacher' | 'admin'; planName?: string; planEndsAt?: string; zona?: string }) => {
     const firstName = v.fullName.split(' ')[0] || v.fullName
     const isTeacher = v.role === 'teacher'
     const isAdmin = v.role === 'admin'
     const planBlock = v.planName
       ? `<div style="background:${env.BRAND_COLOR};border-radius:16px;padding:14px 18px;margin:18px 0">
            <p style="margin:0;font-size:14px"><b>Tu plan ya está activo</b> ✅</p>
-           <p style="margin:4px 0 0;font-size:14px;color:#444">${v.planName}${v.planEndsAt ? ` · vigente hasta el <b>${new Date(v.planEndsAt).toLocaleDateString('es-CO', { dateStyle: 'long', timeZone: 'America/Bogota' })}</b>` : ''}. No tienes que pagar nada por ahora.</p>
+           <p style="margin:4px 0 0;font-size:14px;color:#444">${v.planName}${v.planEndsAt ? ` · vigente hasta el <b>${new Date(v.planEndsAt).toLocaleDateString('es-CO', { dateStyle: 'long', timeZone: zonaDe(v.zona) })}</b>` : ''}. No tienes que pagar nada por ahora.</p>
          </div>`
       : ''
     const intro = isAdmin

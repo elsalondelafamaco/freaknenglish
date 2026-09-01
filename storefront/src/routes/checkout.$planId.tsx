@@ -11,6 +11,8 @@ import { PhoneInput, validatePhone } from "@/components/app/PhoneInput";
 import { checkoutApi, plansApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
 import { slotTimeRange } from "@/components/schedule/SchedulePickerGrid";
 import { copAcobrar } from "@/lib/domain/plans";
+import { useRenovacion } from "@/lib/domain/renovacion";
+import { ZONA_BOGOTA, franjaEnZona, zonaDe } from "@/lib/domain/zona-horaria";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/checkout/$planId")({
@@ -36,10 +38,20 @@ function CheckoutPage() {
   const nav = useNavigate();
   const selSlots = useMemo(() => decodeSlots(slotsRaw), [slotsRaw]);
 
-  // El horario es un paso obligatorio antes del pago (SDD-scheduling-v2).
+  const { esRenovacion, cargando: cargandoRenovacion, profesor, slots: slotsPropios } = useRenovacion();
+  const zonaPropia = zonaDe(user?.timezone);
+
+  // El horario es un paso obligatorio antes del pago (SDD-scheduling-v2)…
+  // salvo al renovar, que no vuelve a elegirlo.
+  //
+  // `cargandoRenovacion` no es una precaución de más: sin él este efecto corre
+  // en el primer pintado, antes de que responda la consulta del horario, y
+  // devuelve al selector justo a quien queríamos ahorrarle ese paso. Solo se
+  // reproduce con caché frío — es decir, con quien llega desde el correo.
   useEffect(() => {
+    if (cargandoRenovacion || esRenovacion) return;
     if (selSlots.length === 0) nav({ to: "/checkout/schedule/$planId", params: { planId }, replace: true });
-  }, [selSlots.length, planId, nav]);
+  }, [selSlots.length, planId, nav, esRenovacion, cargandoRenovacion]);
 
   const availQ = useQuery({
     queryKey: ["schedule", "hints", "confirm", !!user, slotsRaw],
@@ -121,7 +133,11 @@ function CheckoutPage() {
         customerDocument: form.document.trim(),
         customerPhone: form.phone.trim(),
         userId: user?.id, // si hay sesión, la suscripción se asocia a esta cuenta
-        slots: selSlots,
+        // En una renovación el horario NO viaja desde el navegador: el
+        // servidor usa el que ya tiene. Mandarlo desde aquí fue lo que dejó
+        // que una estudiante "eligiera" una hora en su zona y se le
+        // reasignara el profesor.
+        slots: esRenovacion ? undefined : selSlots,
         password: loggedIn ? undefined : password,
       });
       window.location.href = created.checkoutUrl;
@@ -142,7 +158,9 @@ function CheckoutPage() {
           </Link>
           <div className="flex items-center gap-4 text-sm font-medium text-brand-ink/60">
             <Link to="/checkout" className="hover:text-brand-ink">← Plan</Link>
-            <Link to="/checkout/schedule/$planId" params={{ planId }} className="hover:text-brand-ink">← Horario</Link>
+            {esRenovacion ? null : (
+              <Link to="/checkout/schedule/$planId" params={{ planId }} className="hover:text-brand-ink">← Horario</Link>
+            )}
           </div>
         </div>
 
@@ -239,18 +257,44 @@ function CheckoutPage() {
               <span className="text-sm text-brand-ink/60">USD / mes</span>
             </div>
             <p className="mt-1 text-xs text-brand-ink/60">Se cobra {copFmt.format(cop)} (TRM en vivo).</p>
-            {selSlots.length > 0 ? (
+            {(esRenovacion ? slotsPropios : selSlots).length > 0 ? (
               <div className="mt-4 rounded-2xl bg-white/70 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-brand-ink/60">Tu horario semanal</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-brand-ink/60">
+                  {esRenovacion ? "Sigues con lo mismo" : "Tu horario semanal"}
+                </p>
+                {esRenovacion && profesor ? (
+                  <p className="mt-1 text-sm font-semibold text-brand-ink">{profesor.fullName}</p>
+                ) : null}
                 <ul className="mt-1.5 space-y-1 text-sm text-brand-ink/85">
-                  {[...selSlots]
+                  {[...(esRenovacion ? slotsPropios : selSlots)]
                     .sort((a, b) => ((a.weekday + 6) % 7) - ((b.weekday + 6) % 7) || a.hour - b.hour)
-                    .map((sl) => (
-                      <li key={`${sl.weekday}-${sl.hour}`}>
-                        {DAY_NAMES[sl.weekday]} · {slotTimeRange(sl.hour, cfgQ.data?.durationMin ?? 50)}
-                      </li>
-                    ))}
+                    .map((sl) => {
+                      // Se muestran las DOS horas: la suya, que es como piensa,
+                      // y la de Colombia, que es la que rige. Enseñar solo una
+                      // de las dos es lo que produjo el enredo original.
+                      const suya = franjaEnZona(sl.weekday, sl.hour, zonaPropia);
+                      const propia = zonaPropia !== ZONA_BOGOTA;
+                      return (
+                        <li key={`${sl.weekday}-${sl.hour}`}>
+                          {DAY_NAMES[propia ? suya.weekday : sl.weekday]} ·{" "}
+                          {propia
+                            ? `${suya.hour}:${String(suya.minuto).padStart(2, "0")}`
+                            : slotTimeRange(sl.hour, cfgQ.data?.durationMin ?? 50)}
+                          {propia ? (
+                            <span className="text-brand-ink/55">
+                              {" "}
+                              ({DAY_NAMES[sl.weekday].toLowerCase()} {sl.hour}:00 en Colombia)
+                            </span>
+                          ) : null}
+                        </li>
+                      );
+                    })}
                 </ul>
+                {esRenovacion ? (
+                  <p className="mt-2 text-xs text-brand-ink/55">
+                    ¿Necesitas cambiar tu horario? Coordínalo directamente con tu profe.
+                  </p>
+                ) : null}
               </div>
             ) : null}
             <ul className="mt-5 space-y-2 text-sm text-brand-ink/85">

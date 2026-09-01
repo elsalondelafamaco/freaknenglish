@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
+import { formatearInstante } from '../../common/zona-horaria'
 import { NotificationsService } from '../notifications/notifications.service'
 import {
   CheckpointQuestion,
@@ -675,12 +676,17 @@ export class LearningService {
     const cp = await this.prisma.checkpoint.findUniqueOrThrow({ where: { id: checkpointId } })
     const state = await this.attemptState(userId, cp)
     if (!state.canAttempt) {
+      // La hora de reintento se la lee el estudiante, así que va en SU zona.
+      const alumno = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { timezone: true },
+      })
       const msg =
         state.blockReason === 'already_passed'
           ? 'Ya aprobaste este checkpoint.'
           : state.blockReason === 'max_attempts'
             ? 'Alcanzaste el máximo de intentos permitidos.'
-            : `Debes esperar para volver a intentarlo (disponible ${state.retryAt?.toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota' })}).`
+            : `Debes esperar para volver a intentarlo (disponible ${state.retryAt && formatearInstante(state.retryAt, alumno?.timezone, { dateStyle: 'medium', timeStyle: 'short' })}).`
       throw new ForbiddenException({ statusCode: 403, message: msg, code: state.blockReason })
     }
     const questions = (Array.isArray(cp.questions) ? (cp.questions as CheckpointQuestion[]) : [])

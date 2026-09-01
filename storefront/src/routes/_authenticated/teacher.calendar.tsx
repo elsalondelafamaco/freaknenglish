@@ -271,11 +271,15 @@ function TeacherCalendar() {
           plugins={[timeGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
           headerToolbar={{ left: "prev,next today", center: "title", right: "" }}
-          // Los profes y el admin trabajan SIEMPRE en hora de Colombia: es la
-          // agenda del colegio. Sin fijarlo, el calendario usaba la del
-          // navegador — inofensivo mientras todos estén aquí, y un desastre
-          // silencioso el día que uno viaje o alguien lo abra desde fuera.
-          timeZone="America/Bogota"
+          // OJO: aquí NO se puede poner timeZone="America/Bogota". FullCalendar
+          // solo resuelve nombres de zona con un plugin (@fullcalendar/luxon3 o
+          // moment-timezone), y sin él NO avisa: se comporta como UTC. Lo puse
+          // así y corrió TODAS las clases +5 horas — las de la tarde se salieron
+          // de la franja visible y parecía que habían desaparecido.
+          //
+          // 'local' es la hora del navegador, que para profes y admin en
+          // Colombia es la correcta. Para fijarlo de verdad hay que instalar el
+          // plugin primero.
           locale="es"
           buttonText={{ today: "Hoy" }}
           allDaySlot={false}

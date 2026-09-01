@@ -1166,6 +1166,22 @@ function ScheduleEditor({ userId, onSaved }: { userId: string; onSaved: () => vo
   );
 }
 
+/**
+ * Fecha del plan en formato del input, leída en hora de Colombia.
+ *
+ * Con `toISOString()` un plan que vence el 31 a las 23:59 (Colombia) se
+ * mostraba como el 1, porque en UTC ya es el día siguiente. Y como el campo se
+ * reenvía tal cual al guardar, cada guardado alargaba el plan un día más.
+ */
+function aFechaBogota(iso: string | Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(iso));
+}
+
 function SubscriptionEditor({
   userId,
   sub,
@@ -1179,11 +1195,12 @@ function SubscriptionEditor({
   const [planId, setPlanId] = useState<string>(sub?.planId ?? "");
   const [status, setStatus] = useState<string>(sub?.status ?? "active");
   const [endDate, setEndDate] = useState<string>(
-    sub?.currentPeriodEnd ? new Date(sub.currentPeriodEnd).toISOString().slice(0, 10) : "",
+    sub?.currentPeriodEnd ? aFechaBogota(sub.currentPeriodEnd) : "",
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
+  const [efecto, setEfecto] = useState<string | null>(null);
 
   useEffect(() => {
     adminApi
@@ -1195,7 +1212,7 @@ function SubscriptionEditor({
   useEffect(() => {
     setPlanId(sub?.planId ?? "");
     setStatus(sub?.status ?? "active");
-    setEndDate(sub?.currentPeriodEnd ? new Date(sub.currentPeriodEnd).toISOString().slice(0, 10) : "");
+    setEndDate(sub?.currentPeriodEnd ? aFechaBogota(sub.currentPeriodEnd) : "");
   }, [sub?.planId, sub?.status, sub?.currentPeriodEnd]);
 
   async function onSave(e: React.FormEvent) {
@@ -1204,11 +1221,21 @@ function SubscriptionEditor({
     setError(null);
     setOk(false);
     try {
-      await adminApi.setSubscription(userId, {
+      const r: any = await adminApi.setSubscription(userId, {
         planId,
         status: status as any,
         currentPeriodEnd: endDate || null,
       });
+      // Ampliar el plan también rehace el horario. Decirlo importa: antes salía
+      // un "guardado" mudo y nadie sabía si al alumno le habían vuelto las
+      // clases o si seguía sin ellas.
+      const franjas = (r?.slotsReactivados ?? 0) + (r?.slotsRestaurados ?? 0);
+      const partes = [
+        franjas ? `${franjas} franja(s) reactivada(s)` : null,
+        r?.clasesRevividas ? `${r.clasesRevividas} clase(s) recuperada(s)` : null,
+        r?.clasesCreadas ? `${r.clasesCreadas} clase(s) generada(s)` : null,
+      ].filter(Boolean);
+      setEfecto(partes.length ? partes.join(" · ") : null);
       setOk(true);
       onSaved();
     } catch (err) {
@@ -1270,7 +1297,11 @@ function SubscriptionEditor({
         </Field>
         <div className="md:col-span-3 flex items-center justify-end gap-3">
           {error ? <p className="text-xs text-red-700">{error}</p> : null}
-          {ok ? <p className="text-xs text-green-700">Suscripción guardada ✓</p> : null}
+          {ok ? (
+            <p className="text-xs text-green-700">
+              Suscripción guardada ✓{efecto ? ` — ${efecto}` : ""}
+            </p>
+          ) : null}
           <button
             type="submit"
             disabled={saving || !planId}

@@ -423,6 +423,19 @@ export class AdminController {
   @Patch('plans/:id')
   updatePlan(@Param('id') id: string, @Body() body: any) { return this.svc.updatePlan(id, body) }
 
+  /** @endpoint GET /api/v1/admin/schedule-health  (estudiantes al día con el horario roto) */
+  @Get('schedule-health')
+  scheduleHealth() { return this.svc.diagnosticarHorarios() }
+
+  /**
+   * @endpoint POST /api/v1/admin/schedule-health/repair  body: { ids?: string[] }
+   * Sin `ids` repara todos los afectados que tengan profesor.
+   */
+  @Post('schedule-health/repair')
+  repairSchedules(@Body() body: { ids?: string[] }) {
+    return this.svc.repararHorarios(body?.ids)
+  }
+
   /** @endpoint GET /api/v1/admin/cleanup  (conteos de lo que se puede borrar) */
   @Get('cleanup')
   cleanupPreview() { return this.svc.cleanupPreview() }

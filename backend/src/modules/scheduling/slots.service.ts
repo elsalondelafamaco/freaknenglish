@@ -28,6 +28,13 @@ const DEFAULT_CONFIG: ScheduleConfig = {
 export const PENDING_HOLD_MINUTES = 20
 const HOLD_BUSINESS_DAYS = 5
 
+/**
+ * Marca en `Class.cancelReason` las clases que canceló el sistema al vencer el
+ * hold, no una persona. Es lo que permite regenerarlas después sin resucitar
+ * las que un profe canceló a propósito.
+ */
+export const MOTIVO_HOLD_VENCIDO = 'hold_expired'
+
 const key = (s: SlotRef) => `${s.weekday}:${s.hour}`
 
 /**
@@ -400,19 +407,84 @@ export class SlotsService {
     }
   }
 
-  /** Libera holds vencidos y cancela las clases futuras de esos estudiantes. */
+  /**
+   * Devuelve a `active` las franjas retenidas de quien tiene el plan al día.
+   *
+   * Es el reverso de `holdSlotsForExpired`, y existe porque la retención se
+   * pone por un lado y no la quitaba nadie por el otro: sólo un pago por Wompi
+   * lo hacía. Ampliar un plan a mano dejaba las franjas retenidas para siempre.
+   */
+  async reactivarFranjasDePlanesAlDia(): Promise<number> {
+    const retenidas = await this.prisma.scheduleSlot.findMany({
+      where: { status: 'held', studentId: { not: null } },
+      select: { studentId: true },
+      distinct: ['studentId'],
+    })
+    if (retenidas.length === 0) return 0
+    const alDia = await this.prisma.subscription.findMany({
+      where: { userId: { in: retenidas.map((r) => r.studentId!) }, status: 'active' },
+      select: { userId: true },
+    })
+    if (alDia.length === 0) return 0
+    const r = await this.prisma.scheduleSlot.updateMany({
+      where: { studentId: { in: alDia.map((s) => s.userId) }, status: 'held' },
+      data: { status: 'active', holdExpiresAt: null },
+    })
+    if (r.count > 0) {
+      this.log.warn(`Reactivadas ${r.count} franja(s) retenida(s) de ${alDia.length} estudiante(s) con el plan al día`)
+    }
+    return r.count
+  }
+
+  /**
+   * Libera holds vencidos y cancela las clases futuras de esos estudiantes.
+   *
+   * El filtro por suscripción NO es una optimización: sin él esto le borraba la
+   * franja y le cancelaba las clases a estudiantes que SÍ tenían el plan al día.
+   * Pasa siempre que un plan se amplía a mano después de haber vencido: el tick
+   * ya había pasado las franjas a `held` con un vencimiento, y `holdExpiresAt`
+   * se sigue cumpliendo aunque la suscripción vuelva a estar activa.
+   *
+   * Y como ese estado no debería existir, no basta con saltárselo: se repara.
+   * Dejarlo pasar en silencio es lo que hizo que nadie lo viera hasta que las
+   * clases desaparecieron.
+   */
   async releaseExpiredHolds(): Promise<string[]> {
     const expired = await this.prisma.scheduleSlot.findMany({
       where: { status: 'held', holdExpiresAt: { lt: new Date() } },
       select: { id: true, studentId: true },
     })
     if (expired.length === 0) return []
-    const ids = expired.map((e) => e.id)
-    const studentIds = Array.from(new Set(expired.map((e) => e.studentId).filter(Boolean))) as string[]
+
+    const candidatos = Array.from(new Set(expired.map((e) => e.studentId).filter(Boolean))) as string[]
+    const alDia = await this.prisma.subscription.findMany({
+      where: { userId: { in: candidatos }, status: 'active' },
+      select: { userId: true },
+    })
+    const protegidos = new Set(alDia.map((s) => s.userId))
+
+    if (protegidos.size > 0) {
+      const rescatadas = await this.prisma.scheduleSlot.updateMany({
+        where: { id: { in: expired.filter((e) => e.studentId && protegidos.has(e.studentId)).map((e) => e.id) } },
+        data: { status: 'active', holdExpiresAt: null },
+      })
+      this.log.warn(
+        `Rescatadas ${rescatadas.count} franja(s) de ${protegidos.size} estudiante(s) con plan ACTIVO que estaban a punto de liberarse. ` +
+          `Suele venir de ampliar el plan a mano sin reactivar las franjas.`,
+      )
+    }
+
+    const aLiberar = expired.filter((e) => e.studentId && !protegidos.has(e.studentId))
+    if (aLiberar.length === 0) return []
+    const ids = aLiberar.map((e) => e.id)
+    const studentIds = Array.from(new Set(aLiberar.map((e) => e.studentId))) as string[]
     await this.prisma.scheduleSlot.deleteMany({ where: { id: { in: ids } } })
+    // `cancelReason` marca de quién fue la decisión: sin él no hay forma de
+    // distinguir después una cancelación del sistema de una del profe, y por
+    // tanto tampoco de saber cuáles se pueden regenerar sin pisar a nadie.
     await this.prisma.class.updateMany({
       where: { studentId: { in: studentIds }, status: 'scheduled', startsAt: { gt: new Date() } },
-      data: { status: 'cancelled' },
+      data: { status: 'cancelled', cancelledAt: new Date(), cancelReason: MOTIVO_HOLD_VENCIDO },
     })
     this.log.log(`Released holds of ${studentIds.length} student(s); future classes cancelled`)
     return studentIds

@@ -681,6 +681,29 @@ export const adminApi = {
     }>("/admin/carts"),
   sendCartReminder: (body: { intentId?: string; userId?: string }) =>
     apiPost<any>("/admin/carts/remind", body),
+  scheduleHealth: () =>
+    apiGet<{
+      revisados: number;
+      afectados: Array<{
+        id: string;
+        fullName: string;
+        email: string;
+        profesor: string | null;
+        vigenteHasta: string | null;
+        franjasActivas: number;
+        franjasRetenidas: number;
+        clasesFuturas: number;
+        clasesRecuperables: number;
+        reparable: boolean;
+        problemas: string[];
+      }>;
+    }>("/admin/schedule-health"),
+  repairSchedules: (ids?: string[]) =>
+    apiPost<{
+      reparados: number;
+      resultados: Array<{ id: string; fullName: string; ok: boolean; detalle: string }>;
+    }>("/admin/schedule-health/repair", { ids }),
+
   cleanupPreview: () => apiGet<Record<string, number>>("/admin/cleanup"),
   cleanup: (targets: string[]) =>
     apiPost<{ ok: boolean; deleted: Record<string, number> }>("/admin/cleanup", { targets }),

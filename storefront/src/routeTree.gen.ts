@@ -42,6 +42,7 @@ import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminSurveysRouteImport } from './routes/_authenticated/admin.surveys'
 import { Route as AuthenticatedAdminStorageRouteImport } from './routes/_authenticated/admin.storage'
 import { Route as AuthenticatedAdminSiteRouteImport } from './routes/_authenticated/admin.site'
+import { Route as AuthenticatedAdminScheduleHealthRouteImport } from './routes/_authenticated/admin.schedule-health'
 import { Route as AuthenticatedAdminScheduleRouteImport } from './routes/_authenticated/admin.schedule'
 import { Route as AuthenticatedAdminResourcesRouteImport } from './routes/_authenticated/admin.resources'
 import { Route as AuthenticatedAdminPayrollRouteImport } from './routes/_authenticated/admin.payroll'
@@ -246,6 +247,12 @@ const AuthenticatedAdminSiteRoute = AuthenticatedAdminSiteRouteImport.update({
   path: '/site',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminScheduleHealthRoute =
+  AuthenticatedAdminScheduleHealthRouteImport.update({
+    id: '/schedule-health',
+    path: '/schedule-health',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminScheduleRoute =
   AuthenticatedAdminScheduleRouteImport.update({
     id: '/schedule',
@@ -420,6 +427,7 @@ export interface FileRoutesByFullPath {
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/admin/resources': typeof AuthenticatedAdminResourcesRoute
   '/admin/schedule': typeof AuthenticatedAdminScheduleRoute
+  '/admin/schedule-health': typeof AuthenticatedAdminScheduleHealthRoute
   '/admin/site': typeof AuthenticatedAdminSiteRoute
   '/admin/storage': typeof AuthenticatedAdminStorageRoute
   '/admin/surveys': typeof AuthenticatedAdminSurveysRoute
@@ -476,6 +484,7 @@ export interface FileRoutesByTo {
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/admin/resources': typeof AuthenticatedAdminResourcesRoute
   '/admin/schedule': typeof AuthenticatedAdminScheduleRoute
+  '/admin/schedule-health': typeof AuthenticatedAdminScheduleHealthRoute
   '/admin/site': typeof AuthenticatedAdminSiteRoute
   '/admin/storage': typeof AuthenticatedAdminStorageRoute
   '/admin/surveys': typeof AuthenticatedAdminSurveysRoute
@@ -536,6 +545,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/payroll': typeof AuthenticatedAdminPayrollRoute
   '/_authenticated/admin/resources': typeof AuthenticatedAdminResourcesRoute
   '/_authenticated/admin/schedule': typeof AuthenticatedAdminScheduleRoute
+  '/_authenticated/admin/schedule-health': typeof AuthenticatedAdminScheduleHealthRoute
   '/_authenticated/admin/site': typeof AuthenticatedAdminSiteRoute
   '/_authenticated/admin/storage': typeof AuthenticatedAdminStorageRoute
   '/_authenticated/admin/surveys': typeof AuthenticatedAdminSurveysRoute
@@ -597,6 +607,7 @@ export interface FileRouteTypes {
     | '/admin/payroll'
     | '/admin/resources'
     | '/admin/schedule'
+    | '/admin/schedule-health'
     | '/admin/site'
     | '/admin/storage'
     | '/admin/surveys'
@@ -653,6 +664,7 @@ export interface FileRouteTypes {
     | '/admin/payroll'
     | '/admin/resources'
     | '/admin/schedule'
+    | '/admin/schedule-health'
     | '/admin/site'
     | '/admin/storage'
     | '/admin/surveys'
@@ -712,6 +724,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/payroll'
     | '/_authenticated/admin/resources'
     | '/_authenticated/admin/schedule'
+    | '/_authenticated/admin/schedule-health'
     | '/_authenticated/admin/site'
     | '/_authenticated/admin/storage'
     | '/_authenticated/admin/surveys'
@@ -996,6 +1009,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSiteRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/schedule-health': {
+      id: '/_authenticated/admin/schedule-health'
+      path: '/schedule-health'
+      fullPath: '/admin/schedule-health'
+      preLoaderRoute: typeof AuthenticatedAdminScheduleHealthRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/schedule': {
       id: '/_authenticated/admin/schedule'
       path: '/schedule'
@@ -1200,6 +1220,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminPayrollRoute: typeof AuthenticatedAdminPayrollRoute
   AuthenticatedAdminResourcesRoute: typeof AuthenticatedAdminResourcesRoute
   AuthenticatedAdminScheduleRoute: typeof AuthenticatedAdminScheduleRoute
+  AuthenticatedAdminScheduleHealthRoute: typeof AuthenticatedAdminScheduleHealthRoute
   AuthenticatedAdminSiteRoute: typeof AuthenticatedAdminSiteRoute
   AuthenticatedAdminStorageRoute: typeof AuthenticatedAdminStorageRoute
   AuthenticatedAdminSurveysRoute: typeof AuthenticatedAdminSurveysRoute
@@ -1218,6 +1239,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminPayrollRoute: AuthenticatedAdminPayrollRoute,
   AuthenticatedAdminResourcesRoute: AuthenticatedAdminResourcesRoute,
   AuthenticatedAdminScheduleRoute: AuthenticatedAdminScheduleRoute,
+  AuthenticatedAdminScheduleHealthRoute: AuthenticatedAdminScheduleHealthRoute,
   AuthenticatedAdminSiteRoute: AuthenticatedAdminSiteRoute,
   AuthenticatedAdminStorageRoute: AuthenticatedAdminStorageRoute,
   AuthenticatedAdminSurveysRoute: AuthenticatedAdminSurveysRoute,

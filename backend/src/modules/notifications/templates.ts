@@ -62,8 +62,13 @@ function wrap(title: string, body: string, opts: { preheader?: string } = {}) {
 const money = (cents: number, currency = 'COP') =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency, maximumFractionDigits: 0 }).format(cents / 100)
 
-const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleString('es-CO', { dateStyle: 'full', timeStyle: 'short' })
+/**
+ * OJO con la zona: sin `timeZone` esto usa la del SERVIDOR, que en el
+ * contenedor es UTC. El recordatorio "tu clase es mañana" le decía 16:00 a
+ * quien tenía clase a las 11:00 — a todos, también a los de Colombia.
+ */
+const fmtDate = (iso: string, zona = 'America/Bogota') =>
+  new Date(iso).toLocaleString('es-CO', { dateStyle: 'full', timeStyle: 'short', timeZone: zona })
 
 export const templates = {
   /**
@@ -298,7 +303,7 @@ export const templates = {
     const planBlock = v.planName
       ? `<div style="background:${env.BRAND_COLOR};border-radius:16px;padding:14px 18px;margin:18px 0">
            <p style="margin:0;font-size:14px"><b>Tu plan ya está activo</b> ✅</p>
-           <p style="margin:4px 0 0;font-size:14px;color:#444">${v.planName}${v.planEndsAt ? ` · vigente hasta el <b>${new Date(v.planEndsAt).toLocaleDateString('es-CO', { dateStyle: 'long' })}</b>` : ''}. No tienes que pagar nada por ahora.</p>
+           <p style="margin:4px 0 0;font-size:14px;color:#444">${v.planName}${v.planEndsAt ? ` · vigente hasta el <b>${new Date(v.planEndsAt).toLocaleDateString('es-CO', { dateStyle: 'long', timeZone: 'America/Bogota' })}</b>` : ''}. No tienes que pagar nada por ahora.</p>
          </div>`
       : ''
     const intro = isAdmin

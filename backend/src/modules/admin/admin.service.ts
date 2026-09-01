@@ -12,7 +12,7 @@ import { StorageService } from '../storage/storage.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { SchedulingService } from '../scheduling/scheduling.service'
 import { ADMIN_RESET_TTL_MS, INVITE_TTL_MS, resetTtlMs, ttlLabel } from '../../common/password-reset-ttl'
-import { SlotsService, SlotRef } from '../scheduling/slots.service'
+import { SlotsService, SlotRef, MOTIVO_HOLD_VENCIDO } from '../scheduling/slots.service'
 import { AuthService, IMPERSONATION_TTL } from '../auth/auth.service'
 import { validateQuestion } from '../learning/checkpoint-questions'
 
@@ -903,7 +903,69 @@ export class AdminService {
     this.log.log(
       `Suscripción ${existing ? 'actualizada' : 'creada'} manualmente: user=${user.email} plan=${plan.id} status=${status} hasta=${sub.currentPeriodEnd?.toISOString() ?? '—'}`,
     )
-    return sub
+
+    // Antes esto solo tocaba la suscripción y se daba por terminado. Como el
+    // horizonte de generación lo marca `currentPeriodEnd`, ampliar el plan sin
+    // regenerar dejaba al estudiante con el plan al día y SIN clases, y sus
+    // franjas seguían en `held` con un vencimiento corriendo que después se las
+    // borraba. Ampliar a mano tiene que dejar el horario tan sano como lo deja
+    // un pago.
+    const reparacion = status === 'active' ? await this.reactivarHorario(userId) : null
+    return { ...sub, ...(reparacion ?? {}) }
+  }
+
+  /**
+   * Devuelve el horario del estudiante al estado que corresponde a un plan
+   * activo: franjas `active`, sin vencimiento pendiente, y clases generadas
+   * hasta el final de la vigencia.
+   *
+   * Es idempotente a propósito: la usan tanto la ampliación manual como la
+   * reparación masiva, y ambas se pueden ejecutar varias veces sin daño.
+   */
+  private async reactivarHorario(userId: string): Promise<{
+    slotsReactivados: number
+    slotsRestaurados: number
+    clasesRevividas: number
+    clasesCreadas: number
+  }> {
+    // Primero desbloquear las franjas propias. `restoreSlotsFromPreferences` NO
+    // sirve para esto: se salta la franja si ya está ocupada, y aquí lo está
+    // por el propio estudiante en `held`, así que restauraría cero.
+    const reactivados = await this.prisma.scheduleSlot.updateMany({
+      where: { studentId: userId, status: 'held' },
+      data: { status: 'active', holdExpiresAt: null },
+    })
+    // Y solo entonces rellenar las que falten desde las preferencias.
+    const restaurados = await this.restoreSlotsFromPreferences(userId)
+
+    // Resucitar lo que canceló el sistema, y SOLO eso: `ensureUpcomingClasses`
+    // comprueba si ya existe una clase a esa hora sin mirar el estado, así que
+    // una cancelada bloquea para siempre que se cree otra. Se revive en vez de
+    // borrarla para no perder las notas de clase que cuelgan de ella.
+    const revividas = await this.prisma.class.updateMany({
+      where: {
+        studentId: userId,
+        status: 'cancelled',
+        cancelReason: MOTIVO_HOLD_VENCIDO,
+        startsAt: { gt: new Date() },
+      },
+      data: { status: 'scheduled', cancelledAt: null, cancelReason: null },
+    })
+
+    const { created } = await this.schedulingSvc
+      .ensureUpcomingClasses(userId)
+      .catch(() => ({ created: 0 }))
+    if (reactivados.count || restaurados || revividas.count || created) {
+      this.log.log(
+        `Horario reactivado: user=${userId} franjasReactivadas=${reactivados.count} franjasRestauradas=${restaurados} clasesRevividas=${revividas.count} clasesCreadas=${created}`,
+      )
+    }
+    return {
+      slotsReactivados: reactivados.count,
+      slotsRestaurados: restaurados,
+      clasesRevividas: revividas.count,
+      clasesCreadas: created,
+    }
   }
 
   /**
@@ -941,6 +1003,130 @@ export class AdminService {
       `Plan pausado: user=${userId} clasesLiberadas=${canceladas.count} franjasLiberadas=${franjas.count}`,
     )
     return { subscription: updated, classesRemoved: canceladas.count, slotsFreed: franjas.count }
+  }
+
+  /**
+   * Estudiantes con el plan al día cuyo horario NO está sano.
+   *
+   * Existe porque los desajustes de horario son invisibles desde el panel: el
+   * plan se ve activo, el profe asignado y la ficha correcta, y sin embargo el
+   * estudiante no tiene clases. Sólo se notaba cuando un profe reportaba que
+   * alguien había desaparecido de su calendario.
+   *
+   * Es de solo lectura: enumera y explica, nunca toca nada.
+   */
+  async diagnosticarHorarios() {
+    const ahora = new Date()
+    const estudiantes = await this.prisma.user.findMany({
+      where: { role: 'student', deletedAt: null, subscription: { status: 'active' } },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        assignedTeacherId: true,
+        assignedTeacher: { select: { fullName: true } },
+        subscription: { select: { currentPeriodEnd: true } },
+        studentSlots: { select: { status: true } },
+        _count: {
+          select: {
+            classesAsStudent: {
+              where: { status: { in: ['scheduled', 'rescheduled'] }, startsAt: { gt: ahora } },
+            },
+          },
+        },
+      },
+      orderBy: { fullName: 'asc' },
+    })
+
+    // Las canceladas por el sistema van aparte: son las únicas recuperables sin
+    // riesgo de resucitar algo que un profe canceló a propósito.
+    const canceladas = await this.prisma.class.groupBy({
+      by: ['studentId'],
+      where: {
+        status: 'cancelled',
+        cancelReason: MOTIVO_HOLD_VENCIDO,
+        startsAt: { gt: ahora },
+        studentId: { in: estudiantes.map((e) => e.id) },
+      },
+      _count: { _all: true },
+    })
+    const porSistema = new Map(canceladas.map((c) => [c.studentId, c._count._all]))
+
+    const afectados = estudiantes
+      .map((e) => {
+        const enHold = e.studentSlots.filter((s) => s.status === 'held').length
+        const activas = e.studentSlots.filter((s) => s.status === 'active').length
+        const clasesFuturas = e._count.classesAsStudent
+        const revivibles = porSistema.get(e.id) ?? 0
+
+        // Un plan que vence hoy o mañana no tiene por qué tener clases futuras:
+        // sin este matiz, la lista se llenaba de gente a la que no le pasa nada.
+        const finVigencia = e.subscription?.currentPeriodEnd
+        const leQuedaPlan = !finVigencia || finVigencia.getTime() > ahora.getTime() + 86_400_000
+
+        const problemas: string[] = []
+        if (!e.assignedTeacherId) problemas.push('Sin profesor asignado')
+        if (enHold > 0) problemas.push(`${enHold} franja(s) retenida(s) a punto de liberarse`)
+        if (activas === 0 && enHold === 0) problemas.push('Sin franjas de horario')
+        if (revivibles > 0) problemas.push(`${revivibles} clase(s) canceladas por el sistema`)
+        if (clasesFuturas === 0 && leQuedaPlan) problemas.push('Sin clases programadas')
+
+        return {
+          id: e.id,
+          fullName: e.fullName,
+          email: e.email,
+          profesor: e.assignedTeacher?.fullName ?? null,
+          vigenteHasta: e.subscription?.currentPeriodEnd ?? null,
+          franjasActivas: activas,
+          franjasRetenidas: enHold,
+          clasesFuturas,
+          clasesRecuperables: revivibles,
+          // Sin profesor no hay nada que reparar automáticamente: hay que
+          // asignarle uno a mano antes, y decirlo es más útil que ofrecer un
+          // botón que no va a hacer nada.
+          reparable: !!e.assignedTeacherId,
+          problemas,
+        }
+      })
+      .filter((e) => e.problemas.length > 0)
+
+    return { revisados: estudiantes.length, afectados }
+  }
+
+  /**
+   * Repara el horario de los estudiantes indicados (o de todos los afectados).
+   *
+   * No recupera las clases de hoy ni de días pasados: `ensureUpcomingClasses`
+   * genera a partir de mañana a propósito, y forzarlo aquí crearía clases en
+   * horas que ya pasaron. Esas hay que reponerlas a mano.
+   */
+  async repararHorarios(ids?: string[]) {
+    const objetivo = ids?.length
+      ? ids
+      : (await this.diagnosticarHorarios()).afectados.filter((a) => a.reparable).map((a) => a.id)
+
+    const resultados: Array<{ id: string; fullName: string; ok: boolean; detalle: string }> = []
+    for (const id of objetivo) {
+      const u = await this.prisma.user.findUnique({ where: { id }, select: { fullName: true, assignedTeacherId: true } })
+      if (!u) continue
+      if (!u.assignedTeacherId) {
+        resultados.push({ id, fullName: u.fullName, ok: false, detalle: 'Necesita un profesor asignado primero' })
+        continue
+      }
+      try {
+        const r = await this.reactivarHorario(id)
+        resultados.push({
+          id,
+          fullName: u.fullName,
+          ok: true,
+          detalle: `${r.slotsReactivados + r.slotsRestaurados} franja(s), ${r.clasesRevividas} clase(s) recuperada(s), ${r.clasesCreadas} creada(s)`,
+        })
+      } catch (e) {
+        resultados.push({ id, fullName: u.fullName, ok: false, detalle: (e as Error).message })
+      }
+    }
+    this.log.log(`Reparación de horarios: ${resultados.filter((r) => r.ok).length}/${resultados.length} correctos`)
+    return { reparados: resultados.filter((r) => r.ok).length, resultados }
   }
 
   /**

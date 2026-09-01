@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   LayoutGrid,
   HardDrive,
+  HeartPulse,
   LogOut,
   Mail,
   Menu,
@@ -69,6 +70,7 @@ const ADMIN_NAV = [
   { to: "/boards", label: "Boards", tKey: "nav.boards", icon: LayoutGrid, end: false },
   { to: "/admin/surveys", label: "Encuestas", tKey: "nav.surveys", icon: Smile, end: false },
   { to: "/admin/notifications", label: "Notificaciones", tKey: "nav.notifications", icon: Mail, end: false },
+  { to: "/admin/schedule-health", label: "Salud del horario", tKey: "nav.scheduleHealth", icon: HeartPulse, end: false },
   { to: "/admin/cleanup", label: "Cleanup", tKey: "nav.cleanup", icon: Trash2, end: false },
 ] as const;
 

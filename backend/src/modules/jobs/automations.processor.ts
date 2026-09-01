@@ -175,6 +175,13 @@ export class AutomationsProcessor extends WorkerHost {
     }
     // Migración perezosa de horarios legacy a ScheduleSlots (idempotente).
     await this.slots.backfillFromPreferences()
+    // Un plan activo con la franja retenida es siempre una incoherencia: las
+    // franjas solo se retienen cuando la suscripción NO está activa. Se daba al
+    // ampliar un plan a mano después de vencido, y el efecto era mudo — el
+    // alumno se quedaba sin clases porque la generación solo mira las `active`.
+    // Se reconcilia aquí para que el sistema se cure solo aunque el desajuste
+    // entre por un camino que todavía no conocemos.
+    await this.slots.reactivarFranjasDePlanesAlDia()
     // Mantiene el horizonte de clases generado para estudiantes activos.
     const activeStudents = await this.prisma.user.findMany({
       where: {

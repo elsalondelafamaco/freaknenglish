@@ -23,6 +23,19 @@ function BoardsIndex() {
   const isTeacher = !!user?.roles.includes("teacher");
 
   const listQ = useQuery({ queryKey: ["boards"], queryFn: () => boardsApi.list() });
+  const aulasQ = useQuery({
+    queryKey: ["boards", "health"],
+    queryFn: () => boardsApi.health(),
+    enabled: isAdmin,
+  });
+  const fusionar = useMutation({
+    mutationFn: () => boardsApi.repairHealth(),
+    onSuccess: (r) => {
+      toast.success(`${r.aulasFusionadas} aula(s) fusionada(s) de ${r.estudiantes} estudiante(s)`);
+      qc.invalidateQueries({ queryKey: ["boards"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo fusionar"),
+  });
   const studentsQ = useQuery({
     queryKey: ["teacher", "students"],
     queryFn: () => teachersApi.students(),
@@ -110,6 +123,28 @@ function BoardsIndex() {
           </form>
         ) : null}
       </header>
+
+      {/* Un aula por estudiante: al reasignar profesor se MUDA. Las que quedan
+          duplicadas son de antes de ese cambio, y se fusionan sin perder
+          páginas. Mientras queden, no se puede poner la restricción en base que
+          impediría que vuelva a pasar. */}
+      {isAdmin && (aulasQ.data?.duplicadas.length ?? 0) > 0 ? (
+        <div className="flex flex-col gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-amber-900">
+            <b>{aulasQ.data!.duplicadas.length}</b> estudiante(s) con el aula duplicada:{" "}
+            {aulasQ.data!.duplicadas.slice(0, 3).map((d) => d.nombre).join(", ")}
+            {aulasQ.data!.duplicadas.length > 3 ? "…" : ""}. Al fusionar se conservan todas las
+            páginas.
+          </p>
+          <button
+            onClick={() => fusionar.mutate()}
+            disabled={fusionar.isPending}
+            className="shrink-0 rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white hover:bg-brand-ink/90 disabled:opacity-50"
+          >
+            {fusionar.isPending ? "Fusionando…" : "Fusionar duplicadas"}
+          </button>
+        </div>
+      ) : null}
 
       {listQ.isLoading ? (
         <p className="text-sm text-brand-ink/60">Cargando…</p>

@@ -66,8 +66,14 @@ export class CheckoutService {
     //
     // Las dos condiciones son necesarias: sin profe (pago manual pendiente) sí
     // hay que elegir horario, y sin franjas (se le liberaron al vencer) también.
+    //
+    // La tercera condición es el número de franjas: si compra un plan de más
+    // días de los que tiene, NO es una renovación — se quedaría con 3 clases a
+    // la semana pagando 5. Ahí sí toca elegir las horas nuevas, y ahora el
+    // selector ya le habla en su hora, que era lo que fallaba.
     const propias = buyer?.id ? await this.slots.slotsOfStudent(buyer.id) : []
-    const esRenovacion = !!buyer?.assignedTeacherId && propias.length > 0
+    const esRenovacion =
+      !!buyer?.assignedTeacherId && propias.length > 0 && propias.length === plan.daysPerWeek
 
     // Selección de horario (SDD-scheduling-v2): validar contra ventana + plan.
     // Un estudiante interno con clase larga (classDurationMin) que renueva por

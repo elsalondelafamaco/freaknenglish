@@ -239,8 +239,21 @@ export class SlotsService {
     return free
   }
 
-  /** Profes que cubren TODA la selección, ordenados por menor carga. */
-  async candidateTeachers(slots: SlotRef[], excludeStudentId?: string): Promise<string[]> {
+  /**
+   * Profes que cubren TODA la selección, ordenados por menor carga.
+   *
+   * `preferirTeacherId` va PRIMERO si cubre la selección. Sin eso, un alumno que
+   * solo cambia de plan (de 3 días a 5) o que mueve una hora acababa con otro
+   * profesor, porque el reparto por menor carga no tiene ningún término que
+   * favorezca al suyo. La renovación pura ya no pasa por aquí, pero esos otros
+   * caminos sí — y perder al profe con quien llevas meses no es aceptable en
+   * ninguno de ellos.
+   */
+  async candidateTeachers(
+    slots: SlotRef[],
+    excludeStudentId?: string,
+    preferirTeacherId?: string | null,
+  ): Promise<string[]> {
     const free = await this.freeSlotsByTeacher(excludeStudentId)
     const loads = await this.prisma.scheduleSlot.groupBy({
       by: ['teacherId'],
@@ -253,6 +266,9 @@ export class SlotsService {
       if (slots.every((s) => set.has(key(s)))) out.push(tid)
     }
     out.sort((a, b) => (load.get(a) ?? 0) - (load.get(b) ?? 0) || a.localeCompare(b))
+    if (preferirTeacherId && out.includes(preferirTeacherId)) {
+      return [preferirTeacherId, ...out.filter((t) => t !== preferirTeacherId)]
+    }
     return out
   }
 
@@ -325,7 +341,14 @@ export class SlotsService {
    * el profe reservado. Conflicto → siguiente candidato → manual.
    */
   async reserveForIntent(intentId: string, slots: SlotRef[], studentId?: string): Promise<{ mode: 'auto' | 'manual'; teacherId?: string }> {
-    const candidates = await this.candidateTeachers(slots, studentId)
+    // Si ya tiene profe, se le prueba a él primero. Un alumno que solo sube de
+    // plan o mueve una hora no tiene por qué cambiar de profesor, y el reparto
+    // por menor carga se lo cambiaba sin que nadie lo pidiera.
+    const suyo = studentId
+      ? (await this.prisma.user.findUnique({ where: { id: studentId }, select: { assignedTeacherId: true } }))
+          ?.assignedTeacherId
+      : null
+    const candidates = await this.candidateTeachers(slots, studentId, suyo)
     const holdExpiresAt = new Date(Date.now() + PENDING_HOLD_MINUTES * 60 * 1000)
     const own = studentId
       ? await this.prisma.scheduleSlot.findMany({

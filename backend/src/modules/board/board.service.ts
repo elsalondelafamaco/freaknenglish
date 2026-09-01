@@ -123,6 +123,99 @@ export class BoardService {
     return this.prisma.board.findUniqueOrThrow({ where: { id: principal.id } })
   }
 
+  /**
+   * Aulas duplicadas que quedan en la base, sin tocar nada.
+   *
+   * La fusión de `aulaDelEstudiante` es perezosa: solo corre cuando alguien pide
+   * el aula de ese estudiante. El trabajo diario cubre a los que tienen plan
+   * activo y profesor, pero un estudiante pausado o sin profe conserva sus
+   * duplicados indefinidamente — y siguen apareciendo en la lista del profe.
+   *
+   * Existe además para poder confirmar que la base está limpia: hasta que lo
+   * esté no se puede añadir el único de [studentId], porque `db push` corre
+   * ANTES de que arranque la aplicación y un índice único sobre datos sucios
+   * impide levantar el contenedor.
+   */
+  async diagnosticarAulas() {
+    const boards = await this.prisma.board.findMany({
+      select: {
+        id: true,
+        name: true,
+        ownerId: true,
+        studentId: true,
+        updatedAt: true,
+        _count: { select: { pages: true } },
+        members: { select: { userId: true, user: { select: { role: true, fullName: true } } } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    })
+
+    // El dueño de un aula es el profe; el estudiante es el miembro que no lo es.
+    const porEstudiante = new Map<string, Array<(typeof boards)[number]>>()
+    for (const b of boards) {
+      const alumno = b.studentId
+        ? b.members.find((m) => m.userId === b.studentId)
+        : b.members.find((m) => m.userId !== b.ownerId && m.user.role === 'student')
+      const id = alumno?.userId ?? b.studentId
+      if (!id) continue
+      const lista = porEstudiante.get(id) ?? []
+      lista.push(b)
+      porEstudiante.set(id, lista)
+    }
+
+    const duplicadas = [...porEstudiante.entries()]
+      .filter(([, bs]) => bs.length > 1)
+      .map(([studentId, bs]) => ({
+        studentId,
+        nombre: bs[0].members.find((m) => m.userId === studentId)?.user.fullName ?? 'Estudiante',
+        aulas: bs.length,
+        paginas: bs.reduce((n, b) => n + b._count.pages, 0),
+      }))
+
+    return {
+      totalAulas: boards.length,
+      sinEstudiante: boards.filter((b) => !b.studentId).length,
+      duplicadas,
+    }
+  }
+
+  /** Fusiona todas las aulas duplicadas de una pasada. Idempotente. */
+  async repararAulas() {
+    // Antes de fusionar, poner dueño a las aulas antiguas: `studentId` es una
+    // columna nueva y solo se rellena cuando alguien pasa por esa aula, así que
+    // la mayoría están vacías. Sin esto el único de [studentId] no protegería
+    // nada — con la columna en nulo, Postgres deja repetir cuantas quiera.
+    const huerfanas = await this.prisma.board.findMany({
+      where: { studentId: null },
+      select: {
+        id: true,
+        ownerId: true,
+        members: { select: { userId: true, user: { select: { role: true } } } },
+      },
+    })
+    let conDueno = 0
+    for (const b of huerfanas) {
+      const alumnos = b.members.filter((m) => m.userId !== b.ownerId && m.user.role === 'student')
+      // Solo cuando no hay ambigüedad: un aula con dos estudiantes no es un
+      // aula 1-a-1 y adivinar de quién es sería peor que dejarla como está.
+      if (alumnos.length !== 1) continue
+      await this.prisma.board.update({ where: { id: b.id }, data: { studentId: alumnos[0].userId } })
+      conDueno++
+    }
+
+    const { duplicadas } = await this.diagnosticarAulas()
+    let fusionadas = 0
+    for (const d of duplicadas) {
+      // Reutiliza la MISMA fusión que usa el camino normal: si algún día cambia
+      // la regla de cuál gana, cambia en un solo sitio.
+      const antes = await this.prisma.board.count({ where: { members: { some: { userId: d.studentId } } } })
+      await this.aulaDelEstudiante(d.studentId).catch(() => null)
+      const despues = await this.prisma.board.count({ where: { members: { some: { userId: d.studentId } } } })
+      fusionadas += Math.max(0, antes - despues)
+    }
+    return { estudiantes: duplicadas.length, aulasFusionadas: fusionadas, aulasConDueno: conDueno }
+  }
+
   /** Cuelga las páginas del aula sobrante en la principal y la deja vacía. */
   private async fusionarAulas(principalId: string, sobranteId: string) {
     const ultima = await this.prisma.boardPage.findFirst({

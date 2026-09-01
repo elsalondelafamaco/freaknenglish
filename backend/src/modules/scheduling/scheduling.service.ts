@@ -1099,8 +1099,14 @@ export class SchedulingService {
       }
       if (!teacherId) {
         await this.slots.releasePendingForIntent(intent.id)
-        // Pago tardío o carrera: recomputar candidatos.
-        const candidates = await this.slots.candidateTeachers(slots)
+        // Pago tardío o carrera: recomputar candidatos, empezando por el
+        // profe que ya tenía. Antes se recalculaba desde cero y el reparto por
+        // menor carga se lo cambiaba.
+        const previo = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { assignedTeacherId: true },
+        })
+        const candidates = await this.slots.candidateTeachers(slots, userId, previo?.assignedTeacherId)
         for (const tid of candidates) {
           try {
             await this.prisma.$transaction(

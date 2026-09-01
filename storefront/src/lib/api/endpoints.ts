@@ -900,6 +900,15 @@ export const surveysApi = {
 // ─── Boards (realtime) ─────────────────────────────────────────────────
 export const boardsApi = {
   list: () => apiGet<any[]>("/boards"),
+  /** Aulas duplicadas pendientes de fusionar (solo admin). */
+  health: () =>
+    apiGet<{
+      totalAulas: number;
+      sinEstudiante: number;
+      duplicadas: Array<{ studentId: string; nombre: string; aulas: number; paginas: number }>;
+    }>("/boards/health"),
+  repairHealth: () =>
+    apiPost<{ estudiantes: number; aulasFusionadas: number }>("/boards/health/repair"),
   create: (name: string, studentId: string) => apiPost<any>("/boards", { name, studentId }),
   get: (id: string) => apiGet<any>(`/boards/${id}`),
   opsSince: (id: string, since: number) =>

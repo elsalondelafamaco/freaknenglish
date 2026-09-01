@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { ActiveSubscriptionGuard } from '../../common/guards/active-subscription.guard'
@@ -19,6 +19,23 @@ export class BoardController {
   /** @endpoint GET /api/v1/boards */
   @Get()
   list(@CurrentUser() u: AuthUser) { return this.svc.list(u.id, u.role) }
+
+  /**
+   * @endpoint GET /api/v1/boards/health  (aulas duplicadas; solo admin)
+   * Va ANTES de `@Get(':id')`: si no, Nest lo tomaría por el id de un board.
+   */
+  @Get('health')
+  aulasHealth(@CurrentUser() u: AuthUser) {
+    if (u.role !== 'admin') throw new ForbiddenException('Solo administradores')
+    return this.svc.diagnosticarAulas()
+  }
+
+  /** @endpoint POST /api/v1/boards/health/repair  (fusiona las duplicadas) */
+  @Post('health/repair')
+  aulasRepair(@CurrentUser() u: AuthUser) {
+    if (u.role !== 'admin') throw new ForbiddenException('Solo administradores')
+    return this.svc.repararAulas()
+  }
 
   /** @endpoint POST /api/v1/boards */
   @Post()

@@ -12,7 +12,7 @@ import { StorageService } from '../storage/storage.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { SchedulingService } from '../scheduling/scheduling.service'
 import { ADMIN_RESET_TTL_MS, INVITE_TTL_MS, resetTtlMs, ttlLabel } from '../../common/password-reset-ttl'
-import { SlotsService, SlotRef, MOTIVO_HOLD_VENCIDO } from '../scheduling/slots.service'
+import { SlotsService, SlotRef, MOTIVO_HOLD_VENCIDO, DIAS_SEMANA } from '../scheduling/slots.service'
 import { esZonaValida } from '../../common/zona-horaria'
 import { AuthService, IMPERSONATION_TTL } from '../auth/auth.service'
 import { validateQuestion } from '../learning/checkpoint-questions'
@@ -912,7 +912,27 @@ export class AdminService {
     // borraba. Ampliar a mano tiene que dejar el horario tan sano como lo deja
     // un pago.
     const reparacion = status === 'active' ? await this.reactivarHorario(userId) : null
-    return { ...sub, ...(reparacion ?? {}) }
+
+    // Y el reverso, que faltaba por completo: cancelar o dar por vencido un plan
+    // dejaba la franja ocupada y las clases futuras pintadas en la agenda del
+    // profesor. El único control que liberaba era "Congelar plan", que es otra
+    // cosa — de ahí que cancelar pareciera no hacer nada.
+    //
+    // `paused` NO entra aquí: lo gestiona `pauseSubscription`, que además guarda
+    // el motivo y permite reanudar.
+    const liberado =
+      status === 'canceled' || status === 'expired' ? await this.liberarHorario(userId) : null
+    if (liberado && (liberado.franjas || liberado.clases)) {
+      this.log.log(
+        `Plaza liberada por ${status}: user=${userId} franjas=${liberado.franjas} clases=${liberado.clases}`,
+      )
+    }
+
+    return {
+      ...sub,
+      ...(reparacion ?? {}),
+      ...(liberado ? { franjasLiberadas: liberado.franjas, clasesLiberadas: liberado.clases } : {}),
+    }
   }
 
   /**
@@ -1091,7 +1111,47 @@ export class AdminService {
       })
       .filter((e) => e.problemas.length > 0)
 
-    return { revisados: estudiantes.length, afectados }
+    // Franjas que siguen reservando la hora de un profesor sin que haya nadie
+    // detrás: alumnos eliminados o con el plan cancelado/vencido. Van aparte de
+    // `afectados` porque el problema no es del alumno —ya no está— sino del
+    // profesor, que no puede recibir a nadie a esa hora.
+    const fantasmas = await this.prisma.scheduleSlot.findMany({
+      where: {
+        studentId: { not: null },
+        OR: [
+          // Eliminado: no hay nada que esperar, la franja sobra siempre.
+          { student: { deletedAt: { not: null } } },
+          // Plan caído: la franja sobra SALVO que esté dentro de su retención.
+          // Esos 5 días hábiles son a propósito —le guardan el horario por si
+          // renueva— y barrerlos aquí rompería esa promesa. `releaseExpiredHolds`
+          // ya se encarga de soltarlos cuando toca.
+          {
+            student: { deletedAt: null, subscription: { status: { in: ['canceled', 'expired'] } } },
+            NOT: { status: 'held', holdExpiresAt: { gt: ahora } },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        weekday: true,
+        hour: true,
+        teacher: { select: { fullName: true } },
+        student: { select: { fullName: true, deletedAt: true } },
+      },
+      orderBy: [{ weekday: 'asc' }, { hour: 'asc' }],
+    })
+
+    return {
+      revisados: estudiantes.length,
+      afectados,
+      franjasFantasma: fantasmas.map((f) => ({
+        id: f.id,
+        profesor: f.teacher?.fullName ?? '—',
+        alumno: f.student?.fullName ?? '—',
+        motivo: f.student?.deletedAt ? 'eliminado' : 'plan cancelado',
+        cuando: `${DIAS_SEMANA[f.weekday] ?? f.weekday} ${f.hour}:00`,
+      })),
+    }
   }
 
   /**
@@ -1102,9 +1162,22 @@ export class AdminService {
    * horas que ya pasaron. Esas hay que reponerlas a mano.
    */
   async repararHorarios(ids?: string[]) {
+    const diagnostico = await this.diagnosticarHorarios()
+
+    // Primero soltar las franjas fantasma. Va antes que nada porque son las que
+    // impiden asignar a otro alumno: mientras la fila exista, el único
+    // [teacherId, weekday, hour] rechaza la nueva por más que la ignoremos en
+    // las comprobaciones. Solo se pueden liberar borrándolas.
+    const fantasmas = await this.prisma.scheduleSlot.deleteMany({
+      where: { id: { in: diagnostico.franjasFantasma.map((f) => f.id) } },
+    })
+    if (fantasmas.count > 0) {
+      this.log.log(`Liberadas ${fantasmas.count} franja(s) de alumnos eliminados o sin plan`)
+    }
+
     const objetivo = ids?.length
       ? ids
-      : (await this.diagnosticarHorarios()).afectados.filter((a) => a.reparable).map((a) => a.id)
+      : diagnostico.afectados.filter((a) => a.reparable).map((a) => a.id)
 
     const resultados: Array<{ id: string; fullName: string; ok: boolean; detalle: string }> = []
     for (const id of objetivo) {
@@ -1127,7 +1200,11 @@ export class AdminService {
       }
     }
     this.log.log(`Reparación de horarios: ${resultados.filter((r) => r.ok).length}/${resultados.length} correctos`)
-    return { reparados: resultados.filter((r) => r.ok).length, resultados }
+    return {
+      reparados: resultados.filter((r) => r.ok).length,
+      franjasLiberadas: fantasmas.count,
+      resultados,
+    }
   }
 
   /**
@@ -1449,9 +1526,52 @@ export class AdminService {
     })
   }
 
+  /**
+   * Oculta a un usuario del CRM y, si es estudiante, LIBERA su horario.
+   *
+   * Antes esto solo escribía dos fechas. La franja seguía viva y, como
+   * `ScheduleSlot` tiene único [teacherId, weekday, hour], reservaba esa hora
+   * del profesor PARA SIEMPRE: al admin le decía que el profe estaba ocupado
+   * con una estudiante que ella misma había eliminado, y no había forma de
+   * soltarla desde ninguna pantalla. Sus clases futuras seguían pintadas en la
+   * agenda del profe por el mismo motivo.
+   */
   async softDeleteUser(id: string) {
     const resolvedId = await this.resolveExistingUserId(id)
-    return this.prisma.user.update({ where: { id: resolvedId }, data: { deletedAt: new Date(), disabledAt: new Date() } })
+    const liberado = await this.liberarHorario(resolvedId)
+    const user = await this.prisma.user.update({
+      where: { id: resolvedId },
+      data: { deletedAt: new Date(), disabledAt: new Date() },
+    })
+    this.log.log(
+      `Usuario eliminado: ${user.email} franjasLiberadas=${liberado.franjas} clasesQuitadas=${liberado.clases}`,
+    )
+    return { ...user, ...liberado }
+  }
+
+  /**
+   * Suelta la franja del estudiante y le quita las clases futuras de la agenda
+   * del profesor. Es el reverso de `reactivarHorario`.
+   *
+   * Las clases futuras se BORRAN, no se cancelan. Cancelarlas no serviría: el
+   * calendario del profe pinta las canceladas en gris y no las filtra
+   * (`teacher.calendar.tsx`), así que el alumno seguiría ahí ocupando el hueco
+   * visualmente. Es además lo que ya hace `pauseSubscription`, cuyo texto
+   * promete exactamente esto.
+   *
+   * Las clases PASADAS no se tocan nunca: sostienen la nómina del profesor que
+   * sí las dio.
+   */
+  private async liberarHorario(userId: string): Promise<{ franjas: number; clases: number }> {
+    const clases = await this.prisma.class.deleteMany({
+      where: {
+        studentId: userId,
+        status: { in: ['scheduled', 'rescheduled', 'pending_reschedule'] },
+        startsAt: { gte: new Date() },
+      },
+    })
+    const franjas = await this.prisma.scheduleSlot.deleteMany({ where: { studentId: userId } })
+    return { franjas: franjas.count, clases: clases.count }
   }
 
   /**

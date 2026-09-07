@@ -581,7 +581,9 @@ function AdminUserDetail() {
         </>
       ) : null}
 
-      {tab === "schedule" && isStudent ? <ScheduleEditor userId={user.id} onSaved={bump} /> : null}
+      {tab === "schedule" && isStudent ? (
+        <ScheduleEditor userId={user.id} teachers={teachers} onSaved={bump} />
+      ) : null}
 
       {tab === "payments" && isStudent ? (
         <Card title={`Historial de pagos (${payments.length})`}>
@@ -1079,7 +1081,15 @@ function EditUserDialog({
  * Al guardar, el backend rehace las clases futuras: quita las que ya no
  * corresponden y crea las que faltan, sin tocar las pasadas ni las validadas.
  */
-function ScheduleEditor({ userId, onSaved }: { userId: string; onSaved: () => void }) {
+function ScheduleEditor({
+  userId,
+  teachers,
+  onSaved,
+}: {
+  userId: string;
+  teachers: Array<{ id: string; fullName: string }>;
+  onSaved: () => void;
+}) {
   const qc = useQueryClient();
   const cfgQ = useQuery({ queryKey: ["schedule", "config"], queryFn: () => scheduleApi.config() });
   const schQ = useQuery({
@@ -1088,22 +1098,35 @@ function ScheduleEditor({ userId, onSaved }: { userId: string; onSaved: () => vo
   });
 
   const [selected, setSelected] = useState<SlotRef[] | null>(null);
+  // El profesor se edita AQUÍ, junto al horario, y no solo en la tarjeta de la
+  // pestaña Resumen. Antes eran dos guardados separados y cada uno validaba
+  // contra el estado viejo del otro: cambiar de profe comprobaba las horas
+  // VIEJAS contra el profe NUEVO, y cambiar de horario comprobaba las horas
+  // NUEVAS contra el profe VIEJO. Con las dos cosas a la vez no había forma de
+  // mover a una alumna de "11:00 con Dahyana" a "10:00 con Liliana".
+  const [profesor, setProfesor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Arranca desde lo guardado; a partir del primer clic manda la selección local.
   const actual = schQ.data?.blocks ?? [];
   const sel = selected ?? actual;
   const need = schQ.data?.daysPerWeek ?? 0;
-  const dirty =
+  const profeActual = schQ.data?.teacherId ?? "";
+  const profeSel = profesor ?? profeActual;
+  const horarioCambiado =
     selected !== null &&
     JSON.stringify([...sel].sort((a, b) => a.weekday - b.weekday || a.hour - b.hour)) !==
       JSON.stringify([...actual].sort((a, b) => a.weekday - b.weekday || a.hour - b.hour));
+  const dirty = horarioCambiado || profeSel !== profeActual;
 
   const saveM = useMutation({
-    mutationFn: () => scheduleApi.adminSetStudentSchedule(userId, sel),
+    // El profesor viaja en la MISMA llamada que el horario: así el backend
+    // valida el conjunto nuevo contra el profe nuevo, que es lo correcto.
+    mutationFn: () => scheduleApi.adminSetStudentSchedule(userId, sel, profeSel || null),
     onSuccess: (r) => {
       setError(null);
       setSelected(null);
+      setProfesor(null);
       qc.invalidateQueries({ queryKey: ["admin", "student-schedule", userId] });
       qc.invalidateQueries({ queryKey: ["admin", "schedule", "audit"] });
       toast.success(
@@ -1149,6 +1172,32 @@ function ScheduleEditor({ userId, onSaved }: { userId: string; onSaved: () => vo
         tocan.
       </p>
 
+      <div className="mb-4 max-w-sm">
+        <label className="block text-xs font-semibold text-brand-ink/70" htmlFor="profe-horario">
+          Profesor
+        </label>
+        <select
+          id="profe-horario"
+          value={profeSel}
+          onChange={(e) => {
+            setProfesor(e.target.value);
+            setError(null);
+          }}
+          className="mt-1 w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+        >
+          <option value="">— Sin asignar —</option>
+          {teachers.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.fullName}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-[11px] text-brand-ink/50">
+          Puedes cambiar profesor y horario a la vez: se guardan juntos y el horario nuevo se
+          comprueba contra el profesor nuevo.
+        </p>
+      </div>
+
       <SchedulePickerGrid
         cfg={cfgQ.data}
         need={need}
@@ -1177,6 +1226,7 @@ function ScheduleEditor({ userId, onSaved }: { userId: string; onSaved: () => vo
           <button
             onClick={() => {
               setSelected(null);
+              setProfesor(null);
               setError(null);
             }}
             className="text-sm text-brand-ink/60 hover:text-brand-ink"
@@ -1260,6 +1310,10 @@ function SubscriptionEditor({
         franjas ? `${franjas} franja(s) reactivada(s)` : null,
         r?.clasesRevividas ? `${r.clasesRevividas} clase(s) recuperada(s)` : null,
         r?.clasesCreadas ? `${r.clasesCreadas} clase(s) generada(s)` : null,
+        // Cancelar o dar por vencido suelta la plaza. Decirlo importa: es
+        // exactamente lo que antes no pasaba y no había forma de notarlo.
+        r?.franjasLiberadas ? `${r.franjasLiberadas} franja(s) liberada(s)` : null,
+        r?.clasesLiberadas ? `${r.clasesLiberadas} clase(s) quitada(s) del calendario` : null,
       ].filter(Boolean);
       setEfecto(partes.length ? partes.join(" · ") : null);
       setOk(true);
@@ -1304,8 +1358,8 @@ function SubscriptionEditor({
             <option value="active">Activa</option>
             <option value="pending">Pendiente</option>
             <option value="past_due">En mora</option>
-            <option value="canceled">Cancelada</option>
-            <option value="expired">Vencida</option>
+            <option value="canceled">Cancelada (libera la franja)</option>
+            <option value="expired">Vencida (libera la franja)</option>
             {/* Se congela desde el bloque de arriba, que además libera la
                 franja y quita las clases; aquí solo se muestra el estado. */}
             <option value="paused" disabled>

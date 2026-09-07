@@ -35,6 +35,9 @@ const HOLD_BUSINESS_DAYS = 5
  */
 export const MOTIVO_HOLD_VENCIDO = 'hold_expired'
 
+/** 0=domingo … 6=sábado, como los guarda `ScheduleSlot.weekday`. */
+export const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+
 const key = (s: SlotRef) => `${s.weekday}:${s.hour}`
 
 /**
@@ -192,6 +195,13 @@ export class SlotsService {
       }),
       this.prisma.scheduleSlot.findMany({
         // Las franjas del propio estudiante (renovación) cuentan como libres para él.
+        //
+        // NO añadir aquí un filtro de `student.deletedAt`: parece el arreglo
+        // obvio para las franjas de alumnos eliminados, pero mentiría en la
+        // dirección peligrosa. La hora se pintaría libre y al crear la franja
+        // saltaría igual el único [teacherId, weekday, hour]. La única forma de
+        // soltarlas es BORRARLAS — lo hace `softDeleteUser` al eliminar, y el
+        // barrido de "Salud del horario" con las que ya quedaron sueltas.
         where: {
           status: { in: ['pending', 'active', 'held'] },
           ...(excludeStudentId

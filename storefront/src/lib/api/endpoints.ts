@@ -697,10 +697,19 @@ export const adminApi = {
         reparable: boolean;
         problemas: string[];
       }>;
+      /** Franjas que reservan la hora de un profe sin nadie detrás. */
+      franjasFantasma: Array<{
+        id: string;
+        profesor: string;
+        alumno: string;
+        motivo: string;
+        cuando: string;
+      }>;
     }>("/admin/schedule-health"),
   repairSchedules: (ids?: string[]) =>
     apiPost<{
       reparados: number;
+      franjasLiberadas: number;
       resultados: Array<{ id: string; fullName: string; ok: boolean; detalle: string }>;
     }>("/admin/schedule-health/repair", { ids }),
 

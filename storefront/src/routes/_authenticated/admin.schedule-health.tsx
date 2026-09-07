@@ -30,8 +30,12 @@ function AdminScheduleHealth() {
     mutationFn: (ids?: string[]) => adminApi.repairSchedules(ids),
     onSuccess: (r) => {
       const fallidos = r.resultados.filter((x) => !x.ok);
+      const liberadas = r.franjasLiberadas
+        ? `${r.franjasLiberadas} franja(s) liberada(s)`
+        : "";
       if (fallidos.length === 0) {
-        toast.success(`${r.reparados} estudiante(s) reparado(s)`);
+        const arreglados = r.reparados ? `${r.reparados} estudiante(s) reparado(s)` : "";
+        toast.success([liberadas, arreglados].filter(Boolean).join(" · ") || "Nada que reparar");
       } else {
         toast.warning(`${r.reparados} reparado(s), ${fallidos.length} sin resolver: ${fallidos[0].detalle}`);
       }
@@ -42,6 +46,7 @@ function AdminScheduleHealth() {
   });
 
   const afectados = q.data?.afectados ?? [];
+  const fantasmas = q.data?.franjasFantasma ?? [];
   const reparables = afectados.filter((a) => a.reparable);
   const alternar = (id: string) =>
     setSeleccion((prev) => {
@@ -68,6 +73,34 @@ function AdminScheduleHealth() {
           <RefreshCw className={`size-4 ${q.isFetching ? "animate-spin" : ""}`} /> Revisar
         </button>
       </header>
+
+      {/* Franjas que reservan la hora de un profe sin nadie detrás. Van aparte
+          porque el problema no es del alumno —ya no está— sino del profesor,
+          que no puede recibir a nadie a esa hora hasta soltarlas. */}
+      {fantasmas.length > 0 ? (
+        <div className="rounded-2xl border border-red-300 bg-red-50 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-red-900">
+              <b>{fantasmas.length}</b> franja(s) siguen ocupando la hora de un profesor sin nadie
+              detrás. Mientras existan, no puedes asignar a nadie más a esa hora.
+            </p>
+            <button
+              onClick={() => reparar.mutate(undefined)}
+              disabled={reparar.isPending}
+              className="shrink-0 rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white hover:bg-brand-ink/90 disabled:opacity-50"
+            >
+              {reparar.isPending ? "Liberando…" : "Liberar franjas"}
+            </button>
+          </div>
+          <ul className="mt-3 flex flex-col gap-1 text-sm text-red-900/85">
+            {fantasmas.map((f) => (
+              <li key={f.id}>
+                · <b>{f.profesor}</b>, {f.cuando} — la reserva {f.alumno} ({f.motivo})
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {q.isLoading ? (
         <div className="text-sm text-brand-ink/60">Revisando…</div>

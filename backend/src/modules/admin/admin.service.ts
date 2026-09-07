@@ -767,8 +767,6 @@ export class AdminService {
     classDurationMin?: number | null
   }) {
     const email = normalizarEmail(input.email)
-    const exists = await this.prisma.user.findUnique({ where: { email } })
-    if (exists) throw new Error('User already exists')
     if (input.classDurationMin !== undefined && input.classDurationMin !== null) {
       const dur = input.classDurationMin
       if (!Number.isInteger(dur) || dur < 25 || dur > 180) {
@@ -776,17 +774,44 @@ export class AdminService {
       }
     }
     const extraRoles = (input.extraRoles ?? []).filter((r) => r !== input.role)
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        fullName: input.fullName,
-        role: input.role,
-        extraRoles,
-        englishLevel: input.level,
-        classDurationMin: input.role === 'student' ? (input.classDurationMin ?? null) : null,
-        passwordHash: null,
-      },
-    })
+
+    // El correo es único y el borrado es LÓGICO, así que una cuenta eliminada
+    // lo sigue ocupando. Aquí había un `throw new Error('User already exists')`
+    // pelado, que Nest convierte en un 500 sin mensaje: al admin le salía
+    // "internal server error" y no tenía forma de saber que el correo era el
+    // problema, ni de resolverlo desde ninguna pantalla.
+    const exists = await this.prisma.user.findUnique({ where: { email } })
+    if (exists && !exists.deletedAt) {
+      throw new BadRequestException(
+        `Ese correo ya lo usa ${exists.fullName}. Usa otra dirección o edita esa cuenta.`,
+      )
+    }
+
+    const datosBase = {
+      fullName: input.fullName,
+      role: input.role,
+      extraRoles,
+      englishLevel: input.level,
+      classDurationMin: input.role === 'student' ? (input.classDurationMin ?? null) : null,
+    }
+
+    // Volver a crear a alguien que se eliminó por error es una operación real y
+    // frecuente: se reutiliza SU cuenta en vez de pedir otro correo. Se le suelta
+    // antes el horario viejo para que no arrastre franjas ni clases del intento
+    // anterior — que es justo lo que dejó una franja bloqueada la primera vez.
+    let user: Awaited<ReturnType<typeof this.prisma.user.create>>
+    let reactivado = false
+    if (exists) {
+      await this.liberarHorario(exists.id)
+      user = await this.prisma.user.update({
+        where: { id: exists.id },
+        data: { ...datosBase, deletedAt: null, disabledAt: null },
+      })
+      reactivado = true
+      this.log.log(`Cuenta reactivada al recrearla: ${email}`)
+    } else {
+      user = await this.prisma.user.create({ data: { ...datosBase, email, passwordHash: null } })
+    }
 
     let planName: string | undefined
     let planEndsAt: string | undefined
@@ -846,7 +871,7 @@ export class AdminService {
       type: 'system',
     })
     // En dev devolvemos el link para poder probar sin SMTP.
-    return { user, link }
+    return { user, link, reactivado }
   }
 
   /**

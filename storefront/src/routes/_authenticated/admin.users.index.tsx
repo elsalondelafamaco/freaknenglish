@@ -164,11 +164,15 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
         classDurationMin:
           userRole === "student" && withPlan && durationMin !== 50 ? durationMin : undefined,
       }),
-    onSuccess: () => {
+    onSuccess: (r: any) => {
+      // Recrear a alguien que se eliminó por error reutiliza SU cuenta: hay que
+      // decirlo, porque conserva su historial y su progreso anteriores.
       toast.success(
-        withPlan && userRole === "student"
-          ? "Usuario invitado con plan activo. Le llegó el correo de invitación."
-          : "Usuario invitado. Le llegó el correo para crear su contraseña.",
+        r?.reactivado
+          ? "Se reactivó su cuenta anterior (conserva su historial) y se le envió la invitación."
+          : withPlan && userRole === "student"
+            ? "Usuario invitado con plan activo. Le llegó el correo de invitación."
+            : "Usuario invitado. Le llegó el correo para crear su contraseña.",
       );
       qc.invalidateQueries({ queryKey: ["admin", "users"] });
       onClose();

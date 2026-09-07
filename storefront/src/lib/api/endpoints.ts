@@ -837,7 +837,8 @@ export const adminApi = {
     teacherId?: string;
     /** Minutos por clase (planes internos tipo 2×75); ausente = 50. */
     classDurationMin?: number;
-  }) => apiPost<{ user: User; link?: string }>("/admin/users", body),
+    /** `true` si se reutilizó una cuenta que estaba eliminada. */
+  }) => apiPost<{ user: User; link?: string; reactivado?: boolean }>("/admin/users", body),
   setSubscription: (
     id: string,
     body: {

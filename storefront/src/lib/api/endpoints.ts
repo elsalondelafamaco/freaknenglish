@@ -163,14 +163,26 @@ export const scheduleApi = {
       subscriptionStatus: string | null;
     }>(`/admin/users/${studentId}/schedule`),
   /** Cambia el horario de un estudiante ya creado y rehace sus clases futuras. */
-  adminSetStudentSchedule: (studentId: string, blocks: SlotRef[], teacherId?: string | null) =>
+  adminSetStudentSchedule: (
+    studentId: string,
+    blocks: SlotRef[],
+    teacherId?: string | null,
+    durationMin?: number | null,
+  ) =>
     apiPatch<{
       ok: boolean;
       blocks: SlotRef[];
       teacherId: string | null;
+      durationMin: number;
       eliminadas: number;
       creadas: number;
-    }>(`/admin/users/${studentId}/schedule`, teacherId === undefined ? { blocks } : { blocks, teacherId }),
+      /** Cosas que no cuadran pero no impiden guardar (ver `comprobarEncaje`). */
+      avisos: string[];
+    }>(`/admin/users/${studentId}/schedule`, {
+      blocks,
+      ...(teacherId === undefined ? {} : { teacherId }),
+      ...(durationMin == null ? {} : { durationMin }),
+    }),
   /** Horarios asignados que no caben en la disponibilidad de su profesor. */
   adminScheduleAudit: () =>
     apiGet<{

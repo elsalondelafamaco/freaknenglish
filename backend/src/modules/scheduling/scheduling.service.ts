@@ -514,6 +514,81 @@ export class SchedulingService {
     return { total: slots.length, problemas, sinProblemas: slots.length - problemas.length }
   }
 
+  /**
+   * Comprueba si el horario cabe en la agenda del profesor y separa los
+   * problemas en dos clases, porque NO son equivalentes:
+   *
+   * - **duros**: la hora de inicio ya la tiene otro estudiante. Lo prohíbe la
+   *   base (`@@unique [teacherId, weekday, hour]`), así que permitirlo no es una
+   *   opción: la inserción fallaría igual, y con un error ilegible.
+   * - **blandos**: la clase larga invade la hora siguiente, o el profe no tiene
+   *   pintada esa disponibilidad. Son comprobaciones de aplicación, sin nada que
+   *   las respalde en base, así que se pueden avisar y dejar guardar.
+   *
+   * La distinción existe por las clases de 75 min: ocupan dos casillas, y
+   * bloquear por la segunda impedía cambios que el admin sí quiere hacer.
+   */
+  private async comprobarEncaje(
+    teacherId: string,
+    blocks: ScheduleBlock[],
+    durationMin: number,
+    excludeStudentId: string,
+  ): Promise<{ duros: string[]; blandos: string[] }> {
+    const span = Math.max(1, Math.ceil(durationMin / 60))
+    const inicios = new Set(blocks.map((b) => `${b.weekday}:${b.hour}`))
+    const existing = await this.prisma.scheduleSlot.findMany({
+      where: {
+        teacherId,
+        status: { in: ['pending', 'active', 'held'] },
+        NOT: { studentId: excludeStudentId },
+      },
+      select: {
+        weekday: true,
+        hour: true,
+        student: { select: { fullName: true, classDurationMin: true } },
+      },
+    })
+
+    const duros: string[] = []
+    const blandos: string[] = []
+    const ocupadoPor = new Map<string, string>()
+    for (const s of existing) {
+      const ownerSpan = Math.max(1, Math.ceil((s.student?.classDurationMin ?? 50) / 60))
+      for (let i = 0; i < ownerSpan; i++) {
+        ocupadoPor.set(`${s.weekday}:${s.hour + i}`, s.student?.fullName ?? 'otro estudiante')
+      }
+      // La casilla de INICIO es la que protege la base de datos.
+      const clave = `${s.weekday}:${s.hour}`
+      if (inicios.has(clave)) {
+        duros.push(
+          `${SchedulingService.DAY_NAMES[s.weekday]} ${s.hour}:00 ya es de ${s.student?.fullName ?? 'otro estudiante'}`,
+        )
+      }
+    }
+
+    for (const b of blocks) {
+      for (let i = 1; i < span; i++) {
+        const quien = ocupadoPor.get(`${b.weekday}:${b.hour + i}`)
+        if (quien) {
+          blandos.push(
+            `la clase de ${durationMin} min del ${SchedulingService.DAY_NAMES[b.weekday]} a las ${b.hour}:00 se mete en las ${b.hour + i}:00, que tiene ${quien}`,
+          )
+        }
+      }
+    }
+
+    const avail = await this.prisma.teacherAvailability.findMany({ where: { teacherId } })
+    for (const b of blocks) {
+      if (availabilityCovers(avail, b.weekday, b.hour, durationMin)) continue
+      blandos.push(
+        `el profesor no tiene pintada disponibilidad para ${durationMin} min el ${SchedulingService.DAY_NAMES[b.weekday]} a las ${b.hour}:00` +
+          (span > 1 ? ` (necesita ${b.hour}:00 y ${b.hour + span - 1}:00 seguidas)` : ''),
+      )
+    }
+
+    return { duros, blandos }
+  }
+
   private async assertBlocksFitTeacher(
     teacherId: string,
     blocks: ScheduleBlock[],
@@ -606,7 +681,12 @@ export class SchedulingService {
    * faltan. No toca las clases pasadas ni las validadas —son historial y
    * alimentan la nómina—, ni las canceladas.
    */
-  async setStudentSchedule(studentId: string, blocks: ScheduleBlock[], teacherIdNuevo?: string | null) {
+  async setStudentSchedule(
+    studentId: string,
+    blocks: ScheduleBlock[],
+    teacherIdNuevo?: string | null,
+    duracionNueva?: number | null,
+  ) {
     const user = await this.prisma.user.findUnique({
       where: { id: studentId },
       include: { subscription: { include: { plan: true } } },
@@ -616,18 +696,34 @@ export class SchedulingService {
       throw new BadRequestException('El estudiante no tiene plan: asígnale uno antes de fijar el horario')
     }
 
-    const durationMin = user.classDurationMin ?? CLASS_DURATION_MIN
+    // La duración se puede cambiar EN EL MISMO guardado que el horario. Antes
+    // solo se podía tocar desde otro formulario, en otra pantalla, y validaba
+    // contra el horario viejo: pasar a "2 días de 75 min" no había forma de
+    // hacerlo de una sola pieza.
+    if (duracionNueva != null) {
+      if (!Number.isInteger(duracionNueva) || duracionNueva < 25 || duracionNueva > 180) {
+        throw new BadRequestException('La duración debe ser un entero entre 25 y 180 minutos')
+      }
+    }
+    const durationMin = duracionNueva ?? user.classDurationMin ?? CLASS_DURATION_MIN
     // Mismas reglas que el checkout y el alta admin: cantidad según el plan,
     // ventana horaria, máximo por día y separación de las clases largas.
     await this.slots.validateSelection(blocks, user.subscription.plan.daysPerWeek, durationMin)
 
+    const avisos: string[] = []
+    const profeAnterior = user.assignedTeacherId
     const teacherId = teacherIdNuevo === undefined ? user.assignedTeacherId : teacherIdNuevo
     if (teacherId) {
       const t = await this.prisma.user.findUnique({ where: { id: teacherId } })
       if (!t || !hasRole(t, 'teacher')) throw new BadRequestException('Profesor inválido')
-      // Disponibilidad pintada + horas libres, contando lo que invaden las
-      // clases largas de otros estudiantes.
-      await this.assertBlocksFitTeacher(teacherId, blocks, durationMin, studentId)
+      // Aquí se AVISA en vez de bloquear, salvo lo que la base no permite.
+      // Es un cambio que hace el admin a sabiendas; frenarlo porque el profe no
+      // tiene pintada la media hora extra le impedía resolver un caso real.
+      const encaje = await this.comprobarEncaje(teacherId, blocks, durationMin, studentId)
+      if (encaje.duros.length > 0) {
+        throw new BadRequestException(`No se puede: ${encaje.duros.join('; ')}.`)
+      }
+      avisos.push(...encaje.blandos)
     }
 
     // Espejo de lectura + franjas semanales.
@@ -635,6 +731,7 @@ export class SchedulingService {
       where: { id: studentId },
       data: {
         schedulePreferences: blocks as any,
+        ...(duracionNueva != null ? { classDurationMin: duracionNueva } : {}),
         ...(teacherIdNuevo !== undefined ? { assignedTeacherId: teacherIdNuevo } : {}),
         ...(teacherId ? { scheduleAssignmentStatus: 'auto' } : {}),
       },
@@ -650,8 +747,14 @@ export class SchedulingService {
       )
     }
 
+    // Si además cambió de profesor, esto es una mudanza: las clases futuras que
+    // sobrevivieron al recálculo y el aula tienen que irse con él. Antes este
+    // camino cambiaba `assignedTeacherId` por su cuenta y no tocaba nada más,
+    // así que el alumno quedaba a medio camino entre los dos profes.
+    const cambioDeProfe = !!teacherId && teacherId !== profeAnterior
     const recalculo = await this.recalcularClasesFuturas(studentId, blocks, durationMin)
-    return { ok: true, blocks, teacherId, ...recalculo }
+    if (cambioDeProfe) await this.mudarClasesYAula(studentId, teacherId!, profeAnterior)
+    return { ok: true, blocks, teacherId, durationMin, avisos, ...recalculo }
   }
 
   /**
@@ -705,7 +808,7 @@ export class SchedulingService {
     if (!t || !hasRole(t, 'teacher')) throw new BadRequestException('Invalid teacher')
     const student = await this.prisma.user.findUnique({
       where: { id: studentId },
-      select: { schedulePreferences: true, classDurationMin: true },
+      select: { schedulePreferences: true, classDurationMin: true, assignedTeacherId: true },
     })
     const blocks = (student?.schedulePreferences as any as ScheduleBlock[] | null) ?? []
     if (blocks.length > 0) {
@@ -719,6 +822,10 @@ export class SchedulingService {
         ),
       )
     }
+    // Si venía de otro profesor, esto es una mudanza y hay que moverlo entero.
+    // Antes este camino no tocaba ninguna clase existente: el alumno quedaba
+    // con el profe nuevo pero sus clases futuras seguían en la agenda del viejo.
+    await this.mudarClasesYAula(studentId, teacherId, student?.assignedTeacherId)
     const updated = await this.prisma.user.update({
       where: { id: studentId },
       data: { assignedTeacherId: teacherId, scheduleAssignmentStatus: 'auto_assigned' },
@@ -789,7 +896,7 @@ export class SchedulingService {
 
     const pending = await this.prisma.user.findMany({
       where: { scheduleAssignmentStatus: 'manual_pending', deletedAt: null },
-      select: { id: true, fullName: true, schedulePreferences: true, classDurationMin: true },
+      select: { id: true, fullName: true, schedulePreferences: true, classDurationMin: true, assignedTeacherId: true },
     })
 
     const reassigned: Array<{ id: string; fullName: string }> = []
@@ -821,6 +928,7 @@ export class SchedulingService {
       } catch {
         continue // franja ocupada por otro slot: sigue pendiente
       }
+      await this.mudarClasesYAula(s.id, teacherId, s.assignedTeacherId)
       await this.prisma.user.update({
         where: { id: s.id },
         data: {
@@ -837,6 +945,72 @@ export class SchedulingService {
 
   // ── Admin: cambio de profesor con migración completa ────────────────
   private static readonly DAY_NAMES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+
+  /**
+   * Lo que SIEMPRE debe pasar cuando un estudiante cambia de profesor, sea por
+   * donde sea: se le mudan las clases futuras y el aula, y deja de pertenecer al
+   * anterior.
+   *
+   * Existe porque había CUATRO caminos que cambiaban de profesor y cada uno
+   * hacía algo distinto: reasignar movía las clases, cambiar el horario no las
+   * tocaba, y asignar desde solicitudes o al pintar disponibilidad tampoco. El
+   * alumno acababa a medio camino entre los dos profes según por dónde hubieras
+   * entrado. Las franjas las resuelve cada camino a su manera —unos las mueven,
+   * otros las recrean porque cambian las horas—, así que eso queda fuera.
+   *
+   * Las clases PASADAS no se tocan nunca: son de quien las dio y sostienen su
+   * nómina, que se calcula por el profesor de la clase.
+   */
+  private async mudarClasesYAula(
+    studentId: string,
+    nuevoProfeId: string,
+    profeAnterior?: string | null,
+  ): Promise<{ movidas: number; canceladas: number }> {
+    const aula = await this.boards.ensureClassroom(nuevoProfeId, studentId)
+    const meetingUrl = `/boards/${aula.id}`
+
+    // También las `rescheduled` y las `pending_reschedule`: antes solo se movían
+    // las `scheduled`, así que una clase corrida "solo esta semana" o congelada
+    // a la espera de fecha se quedaba en la agenda del profesor anterior.
+    const futuras = await this.prisma.class.findMany({
+      where: {
+        studentId,
+        status: { in: ['scheduled', 'rescheduled', 'pending_reschedule'] },
+        startsAt: { gt: new Date() },
+      },
+    })
+
+    let movidas = 0
+    let canceladas = 0
+    for (const f of futuras) {
+      if (f.teacherId === nuevoProfeId) continue
+      const cruce = await this.prisma.class.findFirst({
+        where: {
+          teacherId: nuevoProfeId,
+          id: { not: f.id },
+          status: { in: ['scheduled', 'rescheduled'] },
+          startsAt: { lt: f.endsAt },
+          endsAt: { gt: f.startsAt },
+        },
+        select: { id: true },
+      })
+      if (cruce) {
+        await this.prisma.class.update({ where: { id: f.id }, data: { status: 'cancelled' } })
+        canceladas++
+        continue
+      }
+      await this.prisma.class.update({
+        where: { id: f.id },
+        data: { teacherId: nuevoProfeId, meetingUrl },
+      })
+      movidas++
+    }
+
+    if (profeAnterior && profeAnterior !== nuevoProfeId) {
+      await this.notifyStudentUnassigned(studentId, profeAnterior)
+    }
+    return { movidas, canceladas }
+  }
 
   /**
    * Reasigna al estudiante a otro profesor moviendo TODO su estado:
@@ -891,49 +1065,15 @@ export class SchedulingService {
       })
     }
 
-    // El aula del estudiante se MUDA al profe nuevo (antes se creaba una
-    // segunda y la vieja seguía apareciendo para siempre en la lista del profe
-    // anterior, duplicada). `meetingUrl` no cambia de id porque es la misma aula.
-    const classroom = await this.boards.ensureClassroom(newTeacherId, studentId)
-    const meetingUrl = `/boards/${classroom.id}`
-    const future = await this.prisma.class.findMany({
-      where: { studentId, status: 'scheduled', startsAt: { gt: new Date() } },
-    })
-    let moved = 0
-    for (const f of future) {
-      // Cruce puntual (clase movida "solo esta semana" del nuevo profe).
-      const clash = await this.prisma.class.findFirst({
-        where: {
-          teacherId: newTeacherId,
-          id: { not: f.id },
-          status: { in: ['scheduled', 'rescheduled'] },
-          startsAt: { lt: f.endsAt },
-          endsAt: { gt: f.startsAt },
-        },
-        select: { id: true },
-      })
-      if (clash) {
-        await this.prisma.class.update({ where: { id: f.id }, data: { status: 'cancelled' } })
-        continue
-      }
-      await this.prisma.class.update({
-        where: { id: f.id },
-        data: { teacherId: newTeacherId, meetingUrl },
-      })
-      moved++
-    }
+    const { movidas } = await this.mudarClasesYAula(studentId, newTeacherId, prev?.assignedTeacherId)
 
     await this.prisma.user.update({
       where: { id: studentId },
       data: { assignedTeacherId: newTeacherId, scheduleAssignmentStatus: 'auto_assigned' },
     })
-    // Baja para el profe anterior (si había y es distinto al nuevo).
-    if (prev?.assignedTeacherId && prev.assignedTeacherId !== newTeacherId) {
-      await this.notifyStudentUnassigned(studentId, prev.assignedTeacherId)
-    }
     await this.notifyTeacherAssigned(studentId, newTeacherId, `admin-reassign:${Date.now()}`)
     await this.ensureUpcomingClasses(studentId)
-    return { unassigned: false, movedSlots: slots.length, movedClasses: moved }
+    return { unassigned: false, movedSlots: slots.length, movedClasses: movidas }
   }
 
   /**

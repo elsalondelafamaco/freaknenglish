@@ -97,9 +97,9 @@ export class SchedulingController {
   @Patch('admin/users/:id/schedule')
   setStudentSchedule(
     @Param('id') id: string,
-    @Body() body: { blocks: ScheduleBlock[]; teacherId?: string | null },
+    @Body() body: { blocks: ScheduleBlock[]; teacherId?: string | null; durationMin?: number | null },
   ) {
-    return this.svc.setStudentSchedule(id, body?.blocks ?? [], body?.teacherId)
+    return this.svc.setStudentSchedule(id, body?.blocks ?? [], body?.teacherId, body?.durationMin)
   }
 
   /** @endpoint GET /api/v1/admin/teachers/:id/availability */

@@ -363,8 +363,20 @@ export class BoardService {
     return pages
   }
 
-  async createPage(boardId: string, userId: string, input: { title?: string; kind?: string }) {
+  /**
+   * La estructura del cuaderno la maneja el profesor.
+   *
+   * `role` es el rol de aplicación, no el de miembro del board: `ensureMember`
+   * solo comprueba pertenencia y a todos los estudiantes se les da `editor`, así
+   * que por ahí no se distingue. Mismo criterio que `create`, que ya prohíbe a
+   * los estudiantes crear aulas. Renombrar y reordenar se les dejan: eso es
+   * organizar lo suyo, no cambiar la estructura.
+   */
+  async createPage(boardId: string, userId: string, input: { title?: string; kind?: string }, role?: string) {
     await this.ensureMember(boardId, userId)
+    if (role === 'student') {
+      throw new ForbiddenException('Solo el profesor puede crear páginas en el aula')
+    }
     const last = await this.prisma.boardPage.findFirst({
       where: { boardId },
       orderBy: { position: 'desc' },
@@ -394,10 +406,14 @@ export class BoardService {
     return this.prisma.boardPage.update({ where: { id: pageId }, data: { position } })
   }
 
-  async deletePage(pageId: string, userId: string) {
+  /** Borrar una página se lleva su contenido por delante: solo el profesor. */
+  async deletePage(pageId: string, userId: string, role?: string) {
     const page = await this.prisma.boardPage.findUnique({ where: { id: pageId } })
     if (!page) throw new NotFoundException()
     await this.ensureMember(page.boardId, userId)
+    if (role === 'student') {
+      throw new ForbiddenException('Solo el profesor puede eliminar páginas del aula')
+    }
     await this.prisma.boardPage.delete({ where: { id: pageId } })
     return { ok: true }
   }

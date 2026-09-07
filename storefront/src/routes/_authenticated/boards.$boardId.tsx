@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Plus, Trash2, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import { boardsApi } from "@/lib/api/endpoints";
+import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/_authenticated/boards/$boardId")({
   head: () => ({ meta: [{ title: "Board" }] }),
@@ -12,6 +13,12 @@ export const Route = createFileRoute("/_authenticated/boards/$boardId")({
 
 function BoardLayout() {
   const { boardId } = useParams({ from: "/_authenticated/boards/$boardId" });
+  const { user } = useAuth();
+  // La estructura del cuaderno la maneja el profe: el alumno escribe dentro de
+  // las páginas y las puede renombrar y reordenar, pero no crearlas ni
+  // borrarlas. El backend lo rechaza igualmente; esto es para no ofrecer un
+  // botón que va a fallar.
+  const esEstudiante = !!user?.roles.includes("student");
   const qc = useQueryClient();
   const nav = useNavigate();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -68,13 +75,15 @@ function BoardLayout() {
             <Link to="/boards" className="text-xs text-brand-ink/55 hover:text-brand-ink">← Boards</Link>
             <h2 className="truncate text-sm font-semibold text-brand-ink lg:mt-1">{boardQ.data?.name ?? "…"}</h2>
           </div>
-          <button
-            onClick={() => createPageM.mutate()}
-            disabled={createPageM.isPending}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand-ink px-3 py-1.5 text-xs font-semibold text-white shadow-soft disabled:opacity-60 lg:mt-3 lg:w-full lg:justify-center"
-          >
-            <Plus className="size-3.5" /> <span className="hidden sm:inline">Nueva página</span><span className="sm:hidden">Página</span>
-          </button>
+          {esEstudiante ? null : (
+            <button
+              onClick={() => createPageM.mutate()}
+              disabled={createPageM.isPending}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand-ink px-3 py-1.5 text-xs font-semibold text-white shadow-soft disabled:opacity-60 lg:mt-3 lg:w-full lg:justify-center"
+            >
+              <Plus className="size-3.5" /> <span className="hidden sm:inline">Nueva página</span><span className="sm:hidden">Página</span>
+            </button>
+          )}
         </header>
 
         <ul className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0 lg:space-y-1">
@@ -115,13 +124,15 @@ function BoardLayout() {
                   >
                     <Pencil className="size-3" />
                   </button>
-                  <button
-                    onClick={() => { setConfirmDeleteId(p.id); setEditingId(null); }}
-                    className="rounded p-1 text-red-500/70 hover:bg-red-50 hover:text-red-600 lg:opacity-0 lg:group-hover:opacity-100"
-                    aria-label="Eliminar"
-                  >
-                    <Trash2 className="size-3" />
-                  </button>
+                  {esEstudiante ? null : (
+                    <button
+                      onClick={() => { setConfirmDeleteId(p.id); setEditingId(null); }}
+                      className="rounded p-1 text-red-500/70 hover:bg-red-50 hover:text-red-600 lg:opacity-0 lg:group-hover:opacity-100"
+                      aria-label="Eliminar"
+                    >
+                      <Trash2 className="size-3" />
+                    </button>
+                  )}
                 </>
               )}
             </li>

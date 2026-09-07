@@ -1105,6 +1105,11 @@ function ScheduleEditor({
   // NUEVAS contra el profe VIEJO. Con las dos cosas a la vez no había forma de
   // mover a una alumna de "11:00 con Dahyana" a "10:00 con Liliana".
   const [profesor, setProfesor] = useState<string | null>(null);
+  // La duración también se edita aquí. Estaba en el modal "Editar usuario", que
+  // se abre desde la cabecera y no desde esta pestaña, así que quien venía a
+  // cambiar el horario no la encontraba — y es justo aquí donde se decide, con
+  // la grilla delante.
+  const [duracion, setDuracion] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Arranca desde lo guardado; a partir del primer clic manda la selección local.
@@ -1113,25 +1118,32 @@ function ScheduleEditor({
   const need = schQ.data?.daysPerWeek ?? 0;
   const profeActual = schQ.data?.teacherId ?? "";
   const profeSel = profesor ?? profeActual;
+  const durActual = schQ.data?.durationMin ?? 50;
+  const durSel = duracion ?? durActual;
   const horarioCambiado =
     selected !== null &&
     JSON.stringify([...sel].sort((a, b) => a.weekday - b.weekday || a.hour - b.hour)) !==
       JSON.stringify([...actual].sort((a, b) => a.weekday - b.weekday || a.hour - b.hour));
-  const dirty = horarioCambiado || profeSel !== profeActual;
+  const dirty = horarioCambiado || profeSel !== profeActual || durSel !== durActual;
 
   const saveM = useMutation({
     // El profesor viaja en la MISMA llamada que el horario: así el backend
     // valida el conjunto nuevo contra el profe nuevo, que es lo correcto.
-    mutationFn: () => scheduleApi.adminSetStudentSchedule(userId, sel, profeSel || null),
+    mutationFn: () => scheduleApi.adminSetStudentSchedule(userId, sel, profeSel || null, durSel),
     onSuccess: (r) => {
       setError(null);
       setSelected(null);
       setProfesor(null);
+      setDuracion(null);
       qc.invalidateQueries({ queryKey: ["admin", "student-schedule", userId] });
       qc.invalidateQueries({ queryKey: ["admin", "schedule", "audit"] });
       toast.success(
         `Horario actualizado. ${r.creadas} clase(s) creada(s), ${r.eliminadas} eliminada(s).`,
       );
+      // Lo que no cuadra pero tampoco impide guardar: el profe sin la
+      // disponibilidad pintada, o la clase larga metiéndose en la hora
+      // siguiente. Se avisa y se deja la decisión al admin.
+      for (const a of r.avisos ?? []) toast.warning(a, { duration: 8000 });
       onSaved();
     },
     onError: (e: unknown) =>
@@ -1193,13 +1205,37 @@ function ScheduleEditor({
           ))}
         </select>
         <p className="mt-1 text-[11px] text-brand-ink/50">
-          Puedes cambiar profesor y horario a la vez: se guardan juntos y el horario nuevo se
+          Puedes cambiar profesor, duración y horario a la vez: se guardan juntos y lo nuevo se
           comprueba contra el profesor nuevo.
         </p>
+
+        <label className="mt-3 block text-xs font-semibold text-brand-ink/70" htmlFor="dur-horario">
+          Duración de cada clase
+        </label>
+        <select
+          id="dur-horario"
+          value={durSel}
+          onChange={(e) => {
+            setDuracion(Number(e.target.value));
+            setError(null);
+          }}
+          className="mt-1 w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+        >
+          {[50, 60, 75, 90].map((d) => (
+            <option key={d} value={d}>
+              {d} min
+            </option>
+          ))}
+        </select>
+        {durSel > 60 ? (
+          <p className="mt-1 text-[11px] text-brand-ink/50">
+            Una clase de {durSel} min ocupa también la hora siguiente del profesor.
+          </p>
+        ) : null}
       </div>
 
       <SchedulePickerGrid
-        cfg={cfgQ.data}
+        cfg={{ ...cfgQ.data, durationMin: durSel }}
         need={need}
         selected={sel}
         onChange={(next) => {
@@ -1227,6 +1263,7 @@ function ScheduleEditor({
             onClick={() => {
               setSelected(null);
               setProfesor(null);
+              setDuracion(null);
               setError(null);
             }}
             className="text-sm text-brand-ink/60 hover:text-brand-ink"

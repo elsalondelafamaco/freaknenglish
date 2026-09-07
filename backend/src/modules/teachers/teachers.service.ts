@@ -17,14 +17,25 @@ export class TeachersService {
     private storage: StorageService,
   ) {}
 
-  /** El profe solo opera sobre sus estudiantes; el admin sobre todos. */
+  /**
+   * El profe solo opera sobre SUS estudiantes actuales; el admin sobre todos.
+   *
+   * Antes bastaba con tener UNA clase histórica con él, de cualquier tipo —valía
+   * una cancelada— y no caducaba nunca. Como este guard gobierna trece endpoints,
+   * muchos de escritura, un profesor que tuvo a un alumno hace meses conservaba
+   * para siempre el poder de escribirle notas y reportes, mandarle material,
+   * desbloquearle checkpoints, cambiarle el link de clase e incluso borrar el
+   * material que hubiera subido su profesor nuevo.
+   *
+   * La pertenencia es ahora el profesor asignado. Validar la asistencia de una
+   * clase pasada NO pasa por aquí —se autoriza por el profesor de la clase
+   * (`classes.service.ts`)—, así que el anterior puede cerrar lo que dio y su
+   * nómina no se toca.
+   */
   private async assertOwnsStudent(teacherId: string, studentId: string, isAdmin = false) {
     if (isAdmin) return
     const rel = await this.prisma.user.findFirst({
-      where: {
-        id: studentId,
-        OR: [{ assignedTeacherId: teacherId }, { classesAsStudent: { some: { teacherId } } }],
-      },
+      where: { id: studentId, assignedTeacherId: teacherId },
       select: { id: true },
     })
     if (!rel) throw new ForbiddenException('No autorizado sobre este estudiante')
@@ -65,24 +76,15 @@ export class TeachersService {
     })
   }
 
+  /**
+   * Los estudiantes que tiene AHORA. Antes incluía a cualquiera con una clase
+   * histórica, así que un alumno reasignado seguía en la lista de su profesor
+   * anterior para siempre. Sus clases pasadas siguen en la agenda del anterior
+   * —las dio él y las cobra él—, pero el alumno ya no es suyo.
+   */
   async students(teacherId: string) {
-    // Incluye estudiantes explícitamente asignados (aún sin clases) Y
-    // estudiantes con historial de clases con este profesor.
-    const classes = await this.prisma.class.findMany({
-      where: { teacherId },
-      select: { studentId: true },
-      distinct: ['studentId'],
-    })
-    const classStudentIds = classes.map((c) => c.studentId)
     return this.prisma.user.findMany({
-      where: {
-        deletedAt: null,
-        role: 'student',
-        OR: [
-          { assignedTeacherId: teacherId },
-          ...(classStudentIds.length ? [{ id: { in: classStudentIds } }] : []),
-        ],
-      },
+      where: { deletedAt: null, role: 'student', assignedTeacherId: teacherId },
       include: { _count: { select: { classesAsStudent: true } } },
       orderBy: { fullName: 'asc' },
     })
@@ -91,10 +93,9 @@ export class TeachersService {
   async studentDetail(teacherId: string, studentId: string, isAdmin = false) {
     if (!isAdmin) {
       const rel = await this.prisma.user.findFirst({
-        where: {
-          id: studentId,
-          OR: [{ assignedTeacherId: teacherId }, { classesAsStudent: { some: { teacherId } } }],
-        },
+        // Su profesor ACTUAL, no cualquiera que le haya dado una clase alguna
+        // vez (ver `assertOwnsStudent`).
+        where: { id: studentId, assignedTeacherId: teacherId },
         select: { id: true },
       })
       if (!rel) throw new ForbiddenException('No autorizado sobre este estudiante')
@@ -127,10 +128,9 @@ export class TeachersService {
     if (!notes || !notes.trim()) throw new BadRequestException('notes requerido')
     if (!isAdmin) {
       const rel = await this.prisma.user.findFirst({
-        where: {
-          id: studentId,
-          OR: [{ assignedTeacherId: teacherId }, { classesAsStudent: { some: { teacherId } } }],
-        },
+        // Su profesor ACTUAL, no cualquiera que le haya dado una clase alguna
+        // vez (ver `assertOwnsStudent`).
+        where: { id: studentId, assignedTeacherId: teacherId },
         select: { id: true },
       })
       if (!rel) throw new ForbiddenException('No autorizado sobre este estudiante')
@@ -310,10 +310,9 @@ export class TeachersService {
   async studentActivityResults(teacherId: string, studentId: string, isAdmin = false) {
     if (!isAdmin) {
       const rel = await this.prisma.user.findFirst({
-        where: {
-          id: studentId,
-          OR: [{ assignedTeacherId: teacherId }, { classesAsStudent: { some: { teacherId } } }],
-        },
+        // Su profesor ACTUAL, no cualquiera que le haya dado una clase alguna
+        // vez (ver `assertOwnsStudent`).
+        where: { id: studentId, assignedTeacherId: teacherId },
         select: { id: true },
       })
       if (!rel) throw new ForbiddenException('No autorizado sobre este estudiante')
@@ -368,10 +367,9 @@ export class TeachersService {
   async studentCheckpointAttempts(teacherId: string, studentId: string, isAdmin = false) {
     if (!isAdmin) {
       const rel = await this.prisma.user.findFirst({
-        where: {
-          id: studentId,
-          OR: [{ assignedTeacherId: teacherId }, { classesAsStudent: { some: { teacherId } } }],
-        },
+        // Su profesor ACTUAL, no cualquiera que le haya dado una clase alguna
+        // vez (ver `assertOwnsStudent`).
+        where: { id: studentId, assignedTeacherId: teacherId },
         select: { id: true },
       })
       if (!rel) throw new ForbiddenException('No autorizado sobre este estudiante')
@@ -397,10 +395,9 @@ export class TeachersService {
   async setStudentMeetingUrl(teacherId: string, studentId: string, url: string | null, isAdmin = false) {
     if (!isAdmin) {
       const rel = await this.prisma.user.findFirst({
-        where: {
-          id: studentId,
-          OR: [{ assignedTeacherId: teacherId }, { classesAsStudent: { some: { teacherId } } }],
-        },
+        // Su profesor ACTUAL, no cualquiera que le haya dado una clase alguna
+        // vez (ver `assertOwnsStudent`).
+        where: { id: studentId, assignedTeacherId: teacherId },
         select: { id: true },
       })
       if (!rel) throw new ForbiddenException('No autorizado sobre este estudiante')

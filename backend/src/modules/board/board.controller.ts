@@ -101,7 +101,7 @@ export class BoardController {
     @Param('id') id: string,
     @Body() body: { title?: string; kind?: string },
   ) {
-    return this.svc.createPage(id, u.id, body ?? {})
+    return this.svc.createPage(id, u.id, body ?? {}, u.role)
   }
 
   /** @endpoint PATCH /api/v1/boards/pages/:pageId */
@@ -120,7 +120,7 @@ export class BoardController {
   /** @endpoint DELETE /api/v1/boards/pages/:pageId */
   @Delete('pages/:pageId')
   deletePage(@CurrentUser() u: AuthUser, @Param('pageId') pageId: string) {
-    return this.svc.deletePage(pageId, u.id)
+    return this.svc.deletePage(pageId, u.id, u.role)
   }
 
   /** @endpoint GET /api/v1/boards/pages/:pageId/state */

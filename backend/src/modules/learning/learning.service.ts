@@ -620,7 +620,9 @@ export class LearningService {
       const suyo = await this.prisma.user.findFirst({
         where: {
           id: studentId,
-          OR: [{ assignedTeacherId: userId }, { classesAsStudent: { some: { teacherId: userId } } }],
+          // Solo su profesor actual: uno anterior no debe seguir escribiendo
+          // el avance de un alumno que ya no es suyo.
+          assignedTeacherId: userId,
         },
         select: { id: true },
       })

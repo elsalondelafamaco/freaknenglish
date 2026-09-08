@@ -584,18 +584,25 @@ export class TeachersService {
         `No tienes disponibilidad para una clase de ${durMin} min en ese horario: ${detalle} en tu disponibilidad primero.`,
       )
     }
+    // `hour: { in: spanHours }` solo casaba contra la hora de INICIO de las
+    // franjas ajenas: mover una clase a las 7:00 no veía la de 75 min que
+    // empieza a las 6:00 y se queda con esa hora. La ocupación expandida sí.
     const spanHours = Array.from({ length: span }, (_, i) => newParts.hour + i)
-    const occupied = await this.prisma.scheduleSlot.findFirst({
-      where: {
-        teacherId,
-        weekday: newParts.weekday,
-        hour: { in: spanHours },
-        status: { in: ['pending', 'active', 'held'] },
-        NOT: { studentId: c.studentId },
-      },
-      select: { id: true },
-    })
-    if (occupied) throw new BadRequestException('Esa franja recurrente ya está ocupada')
+    const ocupadas =
+      (await this.slots.celdasOcupadasPorProfe({
+        teacherIds: [teacherId],
+        excludeStudentId: c.studentId,
+      })).get(teacherId) ?? new Map()
+    const choque = spanHours
+      .map((h) => ocupadas.get(`${newParts.weekday}:${h}`))
+      .find((o) => !!o)
+    if (choque) {
+      throw new BadRequestException(
+        choque.esInicio
+          ? `Esa franja recurrente ya es de ${choque.quien}`
+          : `Esa franja la ocupa la clase de ${choque.durationMin} min de ${choque.quien}, que empieza a las ${choque.horaInicio}:00`,
+      )
+    }
 
     // Mover (o crear, legacy) el slot recurrente.
     const slot = await this.prisma.scheduleSlot.findFirst({

@@ -41,7 +41,11 @@ function AuditoriaHorarios() {
   if (problemas.length === 0) {
     return (
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-        ✓ Las {total} franjas asignadas caben en la disponibilidad de su profesor.
+        {/* Este aviso solo mira si cada clase cae dentro de horas que su profe
+            pintó. NO comprueba si dos alumnos se pisan — eso vive en Salud del
+            horario. Decirlo evita que un tick verde se lea como "todo bien". */}
+        ✓ Las {total} franjas asignadas caben en la disponibilidad de su profesor.{" "}
+        <span className="opacity-70">Los cruces entre alumnos se revisan en Salud del horario.</span>
       </div>
     );
   }
@@ -98,35 +102,67 @@ function AdminCalendar() {
     () =>
       (calQ.data?.classes ?? [])
         .filter((c) => c.teacher && visible(c.teacher.id) && c.status !== "cancelled")
-        .map((c) => {
+        .flatMap((c) => {
           // Congelada: se marca en el título y se atenúa. El color del bloque
           // identifica al profesor, así que el estado no puede ir por color
           // sin perder esa lectura.
           const congelada = c.status === "pending_reschedule";
-          return {
-            id: c.id,
-            title: `${congelada ? "❄ " : ""}${c.student.fullName} · ${c.teacher!.fullName}`,
-            start: c.startsAt,
-            end: c.endsAt,
-            backgroundColor: colorFor(c.teacher!.id),
-            borderColor: c.student.paymentActive ? colorFor(c.teacher!.id) : "#f59e0b",
-            classNames: congelada ? ["opacity-60"] : [],
-            extendedProps: c,
-          };
+          const eventos: any[] = [
+            {
+              id: c.id,
+              title: `${congelada ? "❄ " : ""}${c.student.fullName} · ${c.teacher!.fullName}`,
+              start: c.startsAt,
+              end: c.endsAt,
+              backgroundColor: colorFor(c.teacher!.id),
+              borderColor: c.student.paymentActive ? colorFor(c.teacher!.id) : "#f59e0b",
+              classNames: congelada ? ["opacity-60"] : [],
+              extendedProps: c,
+            },
+          ];
+
+          // Una clase de 75 min que empieza a las 6:00 termina a las 7:15, así
+          // que la hora de las 7 ya no se le puede dar a nadie. FullCalendar
+          // solo pinta el cuarto real, de modo que el resto de esa casilla
+          // quedaba vacío y se leía como hora libre. Esta "cola" la tapa y
+          // repite el nombre para que se vea de quién es.
+          //
+          // Se deriva de la CLASE y no de la franja recurrente a propósito: una
+          // semana en que esté cancelada o movida no debe mostrar una cola sobre
+          // una casilla en la que no hay nadie.
+          const fin = new Date(c.endsAt);
+          if (fin.getMinutes() !== 0) {
+            const finDeHora = new Date(fin);
+            finDeHora.setMinutes(0, 0, 0);
+            finDeHora.setHours(fin.getHours() + 1);
+            eventos.push({
+              id: `${c.id}-cola`,
+              start: c.endsAt,
+              end: finDeHora.toISOString(),
+              backgroundColor: colorFor(c.teacher!.id),
+              borderColor: colorFor(c.teacher!.id),
+              classNames: ["opacity-70"],
+              extendedProps: { ...c, cola: true },
+            });
+          }
+          return eventos;
         }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [calQ.data, hidden],
   );
 
-  // Disponibilidad como eventos de FONDO recurrentes: FullCalendar entiende
+  // Horas LIBRES como eventos de FONDO recurrentes: FullCalendar entiende
   // `daysOfWeek` + `startTime`/`endTime` sin plugins extra, así que no hay que
   // proyectar las franjas a fechas concretas semana por semana.
+  //
+  // El backend ya devuelve lo declarado MENOS lo ocupado: antes pintaba la
+  // disponibilidad cruda y las 7:00 de una clase de 75 min que empieza a las
+  // 6:00 se veían verdes, así que esa hora se le ofrecía a otro alumno.
   const disponibilidad = useMemo(() => {
     if (!verDisponibilidad) return [];
     return (dispQ.data ?? [])
       .filter((a) => visible(a.teacherId))
       .map((a) => ({
-        id: `disp-${a.id}`,
+        id: `disp-${a.teacherId}-${a.weekday}-${a.startsAt}`,
         daysOfWeek: [a.weekday],
         startTime: a.startsAt,
         endTime: a.endsAt,
@@ -203,6 +239,15 @@ function AdminCalendar() {
                 // Los eventos de fondo (disponibilidad) no llevan contenido.
                 if (arg.event.display === "background") return null;
                 const c: any = arg.event.extendedProps;
+                // La cola de una clase larga: solo el nombre, para que se lea
+                // de quién es esa hora sin repetir la ficha entera.
+                if (c.cola) {
+                  return (
+                    <div className="truncate px-1 text-[10px] italic leading-tight opacity-90">
+                      ↳ {c.student?.fullName}
+                    </div>
+                  );
+                }
                 return (
                   <div className="overflow-hidden px-1 py-0.5 text-[10px] leading-tight">
                     <div className="truncate font-semibold">

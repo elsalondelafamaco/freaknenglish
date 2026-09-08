@@ -4,7 +4,7 @@ import { franjaEnZona, zonaDe, ZONA_BOGOTA } from '../../common/zona-horaria'
 import { IS_ACTIVE_TEACHER, IS_TEACHER, hasRole } from '../../common/roles'
 import { NotificationsService } from '../notifications/notifications.service'
 import { BoardService } from '../board/board.service'
-import { SlotsService, SlotRef, availabilityCovers } from './slots.service'
+import { SlotsService, SlotRef, availabilityCovers, celdasARangos } from './slots.service'
 import { SubscriptionsService } from '../subscriptions/subscriptions.service'
 
 /**
@@ -320,7 +320,7 @@ export class SchedulingService {
     // mismo profe acumulaba alumnos mientras otros seguían vacíos. La lista
     // ordenada ya existía —el checkout la usa desde siempre— y aquí se estaba
     // resolviendo por otro camino.
-    const candidatos = await this.slots.candidateTeachers(blocks, userId)
+    const candidatos = await this.slots.candidateTeachers(blocks, userId, null, durationMin)
 
     // Se prueban EN ORDEN hasta que uno encaje de verdad. Antes, si el primero
     // fallaba la validación de encaje, el código se rendía y mandaba al alumno
@@ -518,15 +518,15 @@ export class SchedulingService {
    * Comprueba si el horario cabe en la agenda del profesor y separa los
    * problemas en dos clases, porque NO son equivalentes:
    *
-   * - **duros**: la hora de inicio ya la tiene otro estudiante. Lo prohíbe la
-   *   base (`@@unique [teacherId, weekday, hour]`), así que permitirlo no es una
-   *   opción: la inserción fallaría igual, y con un error ilegible.
-   * - **blandos**: la clase larga invade la hora siguiente, o el profe no tiene
-   *   pintada esa disponibilidad. Son comprobaciones de aplicación, sin nada que
-   *   las respalde en base, así que se pueden avisar y dejar guardar.
-   *
-   * La distinción existe por las clases de 75 min: ocupan dos casillas, y
-   * bloquear por la segunda impedía cambios que el admin sí quiere hacer.
+   * - **duros**: alguna hora del tramo choca con la de otro estudiante. Incluye
+   *   las horas INVADIDAS: una clase de 75 min que empieza a las 6:00 se queda
+   *   con las 7:00, y esa hora ya no se le puede dar a nadie más. La base no lo
+   *   ve —su único índice es sobre la hora de inicio—, así que si no se frena
+   *   aquí queda una doble reserva real que solo aparece cuando dos personas se
+   *   presentan a la misma clase.
+   * - **blandos**: el profesor no tiene pintada esa disponibilidad. Es una
+   *   comprobación de aplicación, sin nada que la respalde en base, y frenarla
+   *   impedía cambios que el admin sí quiere hacer a sabiendas.
    */
   private async comprobarEncaje(
     teacherId: string,
@@ -535,106 +535,66 @@ export class SchedulingService {
     excludeStudentId: string,
   ): Promise<{ duros: string[]; blandos: string[] }> {
     const span = Math.max(1, Math.ceil(durationMin / 60))
-    const inicios = new Set(blocks.map((b) => `${b.weekday}:${b.hour}`))
-    const existing = await this.prisma.scheduleSlot.findMany({
-      where: {
+    const ocupadas =
+      (await this.slots.celdasOcupadasPorProfe({ teacherIds: [teacherId], excludeStudentId })).get(
         teacherId,
-        status: { in: ['pending', 'active', 'held'] },
-        NOT: { studentId: excludeStudentId },
-      },
-      select: {
-        weekday: true,
-        hour: true,
-        student: { select: { fullName: true, classDurationMin: true } },
-      },
-    })
+      ) ?? new Map()
 
+    // Desde i = 0: antes empezaba en 1, así que la hora de INICIO del bloque
+    // nuevo nunca se buscaba entre las ocupadas y meter a alguien a las 7:00
+    // sobre una clase de 75 min que empieza a las 6:00 no daba ni error.
     const duros: string[] = []
-    const blandos: string[] = []
-    const ocupadoPor = new Map<string, string>()
-    for (const s of existing) {
-      const ownerSpan = Math.max(1, Math.ceil((s.student?.classDurationMin ?? 50) / 60))
-      for (let i = 0; i < ownerSpan; i++) {
-        ocupadoPor.set(`${s.weekday}:${s.hour + i}`, s.student?.fullName ?? 'otro estudiante')
-      }
-      // La casilla de INICIO es la que protege la base de datos.
-      const clave = `${s.weekday}:${s.hour}`
-      if (inicios.has(clave)) {
-        duros.push(
-          `${SchedulingService.DAY_NAMES[s.weekday]} ${s.hour}:00 ya es de ${s.student?.fullName ?? 'otro estudiante'}`,
-        )
-      }
-    }
-
     for (const b of blocks) {
-      for (let i = 1; i < span; i++) {
-        const quien = ocupadoPor.get(`${b.weekday}:${b.hour + i}`)
-        if (quien) {
-          blandos.push(
-            `la clase de ${durationMin} min del ${SchedulingService.DAY_NAMES[b.weekday]} a las ${b.hour}:00 se mete en las ${b.hour + i}:00, que tiene ${quien}`,
-          )
-        }
+      for (let i = 0; i < span; i++) {
+        const o = ocupadas.get(`${b.weekday}:${b.hour + i}`)
+        if (!o) continue
+        const cuando = `${SchedulingService.DAY_NAMES[b.weekday]} ${b.hour + i}:00`
+        const deQuien = o.esInicio
+          ? `ya es de ${o.quien}`
+          : `la ocupa la clase de ${o.durationMin} min de ${o.quien}, que empieza a las ${o.horaInicio}:00`
+        const invade =
+          i > 0 ? ` — la clase de ${durationMin} min de las ${b.hour}:00 se mete ahí` : ''
+        duros.push(`${cuando} ${deQuien}${invade}`)
       }
     }
 
     const avail = await this.prisma.teacherAvailability.findMany({ where: { teacherId } })
-    for (const b of blocks) {
-      if (availabilityCovers(avail, b.weekday, b.hour, durationMin)) continue
-      blandos.push(
-        `el profesor no tiene pintada disponibilidad para ${durationMin} min el ${SchedulingService.DAY_NAMES[b.weekday]} a las ${b.hour}:00` +
+    const blandos = blocks
+      .filter((b) => !availabilityCovers(avail, b.weekday, b.hour, durationMin))
+      .map(
+        (b) =>
+          `el profesor no tiene pintada disponibilidad para ${durationMin} min el ${SchedulingService.DAY_NAMES[b.weekday]} a las ${b.hour}:00` +
           (span > 1 ? ` (necesita ${b.hour}:00 y ${b.hour + span - 1}:00 seguidas)` : ''),
       )
-    }
 
     return { duros, blandos }
   }
 
+  /**
+   * Igual que `comprobarEncaje`, pero cortando por lo blando también.
+   *
+   * Un cálculo, dos políticas: el emparejamiento automático necesita descartar
+   * al profesor y probar el siguiente, así que para él la disponibilidad sin
+   * pintar también es motivo de rechazo. El admin, en cambio, decide a sabiendas
+   * y solo recibe el aviso.
+   */
   private async assertBlocksFitTeacher(
     teacherId: string,
     blocks: ScheduleBlock[],
     durationMin: number,
     excludeStudentId: string,
   ) {
-    const span = Math.max(1, Math.ceil(durationMin / 60))
-    const cells: ScheduleBlock[] = blocks.flatMap((b) =>
-      Array.from({ length: span }, (_, i) => ({ weekday: b.weekday, hour: b.hour + i })),
+    const { duros, blandos } = await this.comprobarEncaje(
+      teacherId,
+      blocks,
+      durationMin,
+      excludeStudentId,
     )
-    // Franjas ocupadas del profe expandidas según la duración de CADA dueño:
-    // un estudiante largo ya asignado invade la hora siguiente aunque su slot
-    // solo viva en la hora de inicio.
-    const existing = await this.prisma.scheduleSlot.findMany({
-      where: {
-        teacherId,
-        status: { in: ['pending', 'active', 'held'] },
-        NOT: { studentId: excludeStudentId },
-      },
-      select: { weekday: true, hour: true, student: { select: { classDurationMin: true } } },
-    })
-    const occupied = new Set<string>()
-    for (const s of existing) {
-      const ownerSpan = Math.max(1, Math.ceil((s.student?.classDurationMin ?? 50) / 60))
-      for (let i = 0; i < ownerSpan; i++) occupied.add(`${s.weekday}:${s.hour + i}`)
+    if (duros.length > 0) {
+      throw new BadRequestException(`El profesor ya tiene ocupadas: ${duros.join('; ')}.`)
     }
-    const conflicts = cells.filter((c) => occupied.has(`${c.weekday}:${c.hour}`))
-    if (conflicts.length > 0) {
-      throw new BadRequestException(
-        `El profesor ya tiene ocupadas: ${conflicts
-          .map((c) => `${SchedulingService.DAY_NAMES[c.weekday]} ${c.hour}:00`)
-          .join(', ')} (las clases largas ocupan también la hora siguiente)`,
-      )
-    }
-    const avail = await this.prisma.teacherAvailability.findMany({ where: { teacherId } })
-    for (const b of blocks) {
-      const covered = availabilityCovers(avail, b.weekday, b.hour, durationMin)
-      if (!covered) {
-        const detalle =
-          span > 1
-            ? `necesita tener pintadas las horas seguidas (${b.hour}:00 y ${b.hour + span - 1}:00)`
-            : `necesita tener pintada esa hora`
-        throw new BadRequestException(
-          `El profesor no tiene disponibilidad para una clase de ${durationMin} min el ${SchedulingService.DAY_NAMES[b.weekday]} a las ${b.hour}:00: ${detalle} en su disponibilidad.`,
-        )
-      }
+    if (blandos.length > 0) {
+      throw new BadRequestException(`No encaja: ${blandos.join('; ')}.`)
     }
   }
 
@@ -840,6 +800,20 @@ export class SchedulingService {
    * parámetro (checkout de un plan nuevo) o, si no, el de su suscripción
    * (renovación / cambio de horario). `undefined` si no hay ninguno.
    */
+  /**
+   * Duración de clase del estudiante, para que el selector sepa cuántas horas
+   * ocuparía cada franja que le ofrece. Sin esto, a un alumno de 75 min le
+   * marcaba libres las 6:00 sin mirar si las 7:00 lo estaban, y el choque solo
+   * aparecía al final, sin explicación.
+   */
+  async duracionDe(userId: string): Promise<number> {
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { classDurationMin: true },
+    })
+    return u?.classDurationMin ?? CLASS_DURATION_MIN
+  }
+
   async diasPorSemanaDe(userId: string, planId?: string): Promise<number | undefined> {
     if (planId) {
       const plan = await this.prisma.plan.findUnique({ where: { id: planId }, select: { daysPerWeek: true } })
@@ -862,24 +836,63 @@ export class SchedulingService {
    * porque el calendario la necesita completa: pedir una por profesor serían
    * N requests cada vez que se cambia de semana.
    */
+  /**
+   * Disponibilidad REAL de cada profesor para el calendario global: lo declarado
+   * MENOS lo que ya ocupa un estudiante, incluidas las horas que invade una
+   * clase larga.
+   *
+   * Antes devolvía `teacher_availability` en crudo, sin cruzar nada, así que las
+   * 7:00 de una clase de 75 min que empieza a las 6:00 se pintaban de verde. El
+   * bloque de la clase solo cubre el primer cuarto de esa casilla, de modo que
+   * el resto se leía como hora libre y se le ofrecía a otro alumno.
+   */
   async allTeachersAvailability() {
-    const profes = await this.prisma.user.findMany({
-      where: IS_ACTIVE_TEACHER,
-      select: { id: true },
-    })
-    return this.prisma.teacherAvailability.findMany({
-      where: { teacherId: { in: profes.map((p) => p.id) } },
-      orderBy: [{ weekday: 'asc' }, { startsAt: 'asc' }],
-    })
+    const libres = await this.slots.freeSlotsByTeacher()
+    return [...libres].flatMap(([teacherId, celdas]) =>
+      celdasARangos(celdas).map((r) => ({ teacherId, ...r })),
+    )
   }
 
-  async setTeacherAvailability(teacherId: string, slots: Array<{ weekday: number; startsAt: string; endsAt: string }>) {
-    await this.prisma.teacherAvailability.deleteMany({ where: { teacherId } })
-    if (slots.length === 0) return []
-    await this.prisma.teacherAvailability.createMany({
-      data: slots.map((s) => ({ teacherId, weekday: s.weekday, startsAt: s.startsAt, endsAt: s.endsAt })),
+  /**
+   * Guarda la disponibilidad y devuelve las clases que dejan de estar cubiertas.
+   *
+   * No bloquea a propósito: despintar una hora NO desasigna a nadie, así que
+   * frenar el guardado dejaría al profe sin poder arreglar su propia agenda. Lo
+   * que faltaba era decirlo — esto borraba y recreaba en silencio.
+   *
+   * `availabilityCovers` compara el intervalo completo, así que una clase de 75
+   * min que empieza a las 6:00 solo queda cubierta si quedan pintadas las 6 Y
+   * las 7. No hace falta lógica de tramo aparte.
+   */
+  async setTeacherAvailability(
+    teacherId: string,
+    slots: Array<{ weekday: number; startsAt: string; endsAt: string }>,
+  ) {
+    const ocupadas = await this.prisma.scheduleSlot.findMany({
+      where: { teacherId, status: { in: ['pending', 'active', 'held'] }, studentId: { not: null } },
+      select: {
+        weekday: true,
+        hour: true,
+        student: { select: { fullName: true, classDurationMin: true } },
+      },
+      orderBy: [{ weekday: 'asc' }, { hour: 'asc' }],
     })
-    return this.getTeacherAvailability(teacherId)
+    const avisos = ocupadas
+      .filter((o) => !availabilityCovers(slots, o.weekday, o.hour, o.student?.classDurationMin ?? 50))
+      .map((o) => ({
+        weekday: o.weekday,
+        hour: o.hour,
+        durationMin: o.student?.classDurationMin ?? 50,
+        studentName: o.student?.fullName ?? null,
+      }))
+
+    await this.prisma.teacherAvailability.deleteMany({ where: { teacherId } })
+    if (slots.length > 0) {
+      await this.prisma.teacherAvailability.createMany({
+        data: slots.map((s) => ({ teacherId, weekday: s.weekday, startsAt: s.startsAt, endsAt: s.endsAt })),
+      })
+    }
+    return { availability: await this.getTeacherAvailability(teacherId), avisos }
   }
 
   /**
@@ -1244,9 +1257,14 @@ export class SchedulingService {
         // menor carga se lo cambiaba.
         const previo = await this.prisma.user.findUnique({
           where: { id: userId },
-          select: { assignedTeacherId: true },
+          select: { assignedTeacherId: true, classDurationMin: true },
         })
-        const candidates = await this.slots.candidateTeachers(slots, userId, previo?.assignedTeacherId)
+        const candidates = await this.slots.candidateTeachers(
+          slots,
+          userId,
+          previo?.assignedTeacherId,
+          previo?.classDurationMin ?? 50,
+        )
         for (const tid of candidates) {
           try {
             await this.prisma.$transaction(

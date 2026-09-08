@@ -79,7 +79,19 @@ function AvailabilityEditor() {
       qc.invalidateQueries({ queryKey: ["teacher", "availability"] });
       qc.invalidateQueries({ queryKey: ["schedule"] });
       const n = r?.reassigned?.length ?? 0;
-      toast.success(n > 0 ? `Disponibilidad guardada. ${n} estudiante(s) pendiente(s) asignados.` : "Disponibilidad guardada.");
+      // Un "guardada" a secas daba por buena una agenda que no cuadra: si alguna
+      // clase quedó fuera de lo pintado hay que decirlo aquí, aunque el panel
+      // ámbar de arriba ya la liste. No se bloquea el guardado: quitar una hora
+      // no desasigna a nadie y el profe tiene que poder arreglar su agenda.
+      const fuera = r?.avisos?.length ?? 0;
+      if (fuera > 0) {
+        toast.warning(
+          `Disponibilidad guardada, pero ${fuera} clase(s) tuya(s) quedan fuera de tu disponibilidad.`,
+          { duration: 8000 },
+        );
+      } else {
+        toast.success(n > 0 ? `Disponibilidad guardada. ${n} estudiante(s) pendiente(s) asignados.` : "Disponibilidad guardada.");
+      }
     },
     onError: (e: any) => toast.error(e?.message ?? "No se pudo guardar"),
   });

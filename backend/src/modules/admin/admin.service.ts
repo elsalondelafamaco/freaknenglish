@@ -1166,9 +1166,50 @@ export class AdminService {
       orderBy: [{ weekday: 'asc' }, { hour: 'asc' }],
     })
 
+    // Cruces reales: dos alumnos ocupando la misma hora del mismo profesor,
+    // contando las que invade una clase larga. La base no los ve —su único
+    // índice cubre solo la hora de inicio— así que hasta ahora solo salían a la
+    // luz cuando dos personas se presentaban a la misma clase.
+    //
+    // NO se tocan: resolverlos implica mover a alguien y esa decisión es del
+    // admin. Se listan para poder verlos antes de chocar contra el bloqueo.
+    const franjasVivas = await this.prisma.scheduleSlot.findMany({
+      where: { status: { in: ['pending', 'active', 'held'] }, studentId: { not: null } },
+      select: {
+        weekday: true,
+        hour: true,
+        teacher: { select: { fullName: true } },
+        teacherId: true,
+        student: { select: { fullName: true, classDurationMin: true } },
+      },
+    })
+    const duenosPorCelda = new Map<string, { profesor: string; alumnos: Set<string> }>()
+    for (const sl of franjasVivas) {
+      const span = Math.max(1, Math.ceil((sl.student?.classDurationMin ?? 50) / 60))
+      for (let i = 0; i < span; i++) {
+        const k = `${sl.teacherId}|${sl.weekday}:${sl.hour + i}`
+        if (!duenosPorCelda.has(k)) {
+          duenosPorCelda.set(k, { profesor: sl.teacher?.fullName ?? '—', alumnos: new Set() })
+        }
+        duenosPorCelda.get(k)!.alumnos.add(sl.student?.fullName ?? 'sin nombre')
+      }
+    }
+    const cruces = [...duenosPorCelda.entries()]
+      .filter(([, v]) => v.alumnos.size > 1)
+      .map(([k, v]) => {
+        const [, celda] = k.split('|')
+        const [d, h] = celda.split(':').map(Number)
+        return {
+          profesor: v.profesor,
+          cuando: `${DIAS_SEMANA[d] ?? d} ${h}:00`,
+          alumnos: [...v.alumnos],
+        }
+      })
+
     return {
       revisados: estudiantes.length,
       afectados,
+      cruces,
       franjasFantasma: fantasmas.map((f) => ({
         id: f.id,
         profesor: f.teacher?.fullName ?? '—',

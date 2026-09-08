@@ -150,9 +150,12 @@ export class TeachersController {
     @CurrentUser() u: AuthUser,
     @Body() body: { slots: Array<{ weekday: number; startsAt: string; endsAt: string }> },
   ) {
-    const availability = await this.scheduling.setTeacherAvailability(u.id, body.slots ?? [])
+    const { availability, avisos } = await this.scheduling.setTeacherAvailability(u.id, body.slots ?? [])
     const reassigned = await this.scheduling.reassignPendingForTeacher(u.id)
-    return { availability, reassigned }
+    // `avisos`: clases suyas que quedan fuera de las horas que acaba de pintar.
+    // No se bloquea el guardado —despintar no desasigna a nadie— pero el
+    // "guardado" a secas daba por buena una agenda que no cuadra.
+    return { availability, reassigned, avisos }
   }
 
   /** @endpoint GET /api/v1/teacher/calendar?from=ISO&to=ISO */

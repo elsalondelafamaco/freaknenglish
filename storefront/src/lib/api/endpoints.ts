@@ -147,9 +147,13 @@ export const scheduleApi = {
   adminPending: () => apiGet<any[]>("/admin/schedule/requests"),
   adminAssign: (userId: string, teacherId: string) =>
     apiPost<any>(`/admin/schedule/requests/${userId}/assign`, { teacherId }),
-  /** Disponibilidad de todos los profes, para el calendario global del admin. */
+  /**
+   * Horas que cada profe tiene REALMENTE libres, para el calendario global:
+   * lo que declaró menos lo ya ocupado, incluidas las horas que invade una
+   * clase larga. Ya no son filas de `teacher_availability`, así que no traen id.
+   */
   adminAllAvailability: () =>
-    apiGet<Array<{ id: string; teacherId: string; weekday: number; startsAt: string; endsAt: string }>>(
+    apiGet<Array<{ teacherId: string; weekday: number; startsAt: string; endsAt: string }>>(
       "/admin/availability",
     ),
   /** Horario semanal vigente de un estudiante (para precargar el editor). */
@@ -545,6 +549,8 @@ export const teachersApi = {
     apiPost<{
       availability: Array<{ id: string; weekday: number; startsAt: string; endsAt: string }>;
       reassigned: Array<{ id: string; fullName: string }>;
+      /** Clases suyas que quedan fuera de las horas que acaba de pintar. */
+      avisos: Array<{ weekday: number; hour: number; durationMin: number; studentName: string | null }>;
     }>("/teacher/availability", { slots }),
   absences: () =>
     apiGet<Array<{ id: string; teacherId: string; startsAt: string; endsAt: string; reason?: string }>>(
@@ -709,6 +715,8 @@ export const adminApi = {
         reparable: boolean;
         problemas: string[];
       }>;
+      /** Dos alumnos ocupando la misma hora del mismo profe. */
+      cruces: Array<{ profesor: string; cuando: string; alumnos: string[] }>;
       /** Franjas que reservan la hora de un profe sin nadie detrás. */
       franjasFantasma: Array<{
         id: string;

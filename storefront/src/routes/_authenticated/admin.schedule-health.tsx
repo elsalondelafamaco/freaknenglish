@@ -47,6 +47,7 @@ function AdminScheduleHealth() {
 
   const afectados = q.data?.afectados ?? [];
   const fantasmas = q.data?.franjasFantasma ?? [];
+  const cruces = q.data?.cruces ?? [];
   const reparables = afectados.filter((a) => a.reparable);
   const alternar = (id: string) =>
     setSeleccion((prev) => {
@@ -96,6 +97,27 @@ function AdminScheduleHealth() {
             {fantasmas.map((f) => (
               <li key={f.id}>
                 · <b>{f.profesor}</b>, {f.cuando} — la reserva {f.alumno} ({f.motivo})
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {/* Dos alumnos en la misma hora del mismo profe. No hay botón: resolverlo
+          implica mover a alguien y esa decisión no la puede tomar el sistema.
+          Se listan porque la base no los detecta —su único índice cubre solo la
+          hora de inicio— y hasta ahora solo aparecían cuando dos personas se
+          presentaban a la misma clase. */}
+      {cruces.length > 0 ? (
+        <div className="rounded-2xl border border-red-300 bg-red-50 p-4">
+          <p className="text-sm text-red-900">
+            <b>{cruces.length}</b> hora(s) con dos estudiantes a la vez. Hay que mover a uno de
+            los dos desde su ficha; el sistema no puede decidir a cuál.
+          </p>
+          <ul className="mt-3 flex flex-col gap-1 text-sm text-red-900/85">
+            {cruces.map((c, i) => (
+              <li key={i}>
+                · <b>{c.profesor}</b>, {c.cuando} — {c.alumnos.join(" y ")}
               </li>
             ))}
           </ul>

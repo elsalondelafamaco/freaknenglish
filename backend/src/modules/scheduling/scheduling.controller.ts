@@ -35,7 +35,15 @@ export class SchedulingController {
     @CurrentUser() u: AuthUser,
     @Body() body: { slots?: SlotRef[]; planId?: string },
   ) {
-    return this.slots.hints(body?.slots ?? [], u.id, await this.svc.diasPorSemanaDe(u.id, body?.planId))
+    // La duración del propio comprador: con 75 min una hora solo sirve si
+    // también está libre la siguiente, y el rayito tiene que decirlo ANTES de
+    // que la elija.
+    return this.slots.hints(
+      body?.slots ?? [],
+      u.id,
+      await this.svc.diasPorSemanaDe(u.id, body?.planId),
+      await this.svc.duracionDe(u.id),
+    )
   }
 
   /** @endpoint GET /api/v1/admin/settings/schedule */

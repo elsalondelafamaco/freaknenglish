@@ -129,8 +129,14 @@ function AdminCalendar() {
           // Se deriva de la CLASE y no de la franja recurrente a propósito: una
           // semana en que esté cancelada o movida no debe mostrar una cola sobre
           // una casilla en la que no hay nadie.
+          //
+          // Solo cuando el final cae en una hora DISTINTA a la de inicio: una
+          // de 50 min (8:00–8:50) tampoco termina en punto, pero su descanso
+          // vive en la misma casilla que ya muestra la clase, y pintarle cola
+          // ahí la duplicaba bajo todas las clases del calendario.
+          const inicio = new Date(c.startsAt);
           const fin = new Date(c.endsAt);
-          if (fin.getMinutes() !== 0) {
+          if (fin.getMinutes() !== 0 && fin.getHours() !== inicio.getHours()) {
             const finDeHora = new Date(fin);
             finDeHora.setMinutes(0, 0, 0);
             finDeHora.setHours(fin.getHours() + 1);

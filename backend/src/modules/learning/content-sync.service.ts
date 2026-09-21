@@ -4,7 +4,9 @@ import * as path from 'node:path'
 import { createHash } from 'node:crypto'
 import { PrismaService } from '../../prisma/prisma.service'
 
-const hashDe = (s: string) => createHash('sha256').update(s, 'utf8').digest('hex')
+/** Huella del HTML de una lección; la misma que se guarda en `contentSourceHash`. */
+export const hashDeContenido = (s: string) => createHash('sha256').update(s, 'utf8').digest('hex')
+const hashDe = hashDeContenido
 
 /**
  * Slides de una lección, en orden. Las 84 los marcan con `class="slide"`; se

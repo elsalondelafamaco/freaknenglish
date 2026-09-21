@@ -22,6 +22,11 @@ interface BELesson {
   notes?: string | null;
   /** Compuerta: bloquea el contenido posterior hasta superarla. */
   isCheckpoint?: boolean;
+  /**
+   * Su HTML ya no coincide con el del repositorio: la editaron aquí y el
+   * arranque la respeta en vez de sobreescribirla.
+   */
+  editadaEnPlataforma?: boolean;
 }
 // Checkpoints v2: pregunta editable de cualquier tipo (ver backend
 // checkpoint-questions.ts). Los campos aplican según `type`.
@@ -97,6 +102,10 @@ function AdminContent() {
     queryFn: () => adminApi.content() as unknown as Promise<BEModule[]>,
   });
   const modules = modulesQ.data ?? [];
+  const editadasEnPlataforma = modules.reduce(
+    (n, m) => n + m.lessons.filter((l) => l.editadaEnPlataforma).length,
+    0,
+  );
   const invalidate = () => qc.invalidateQueries({ queryKey: ["admin", "content"] });
 
   const updateModule = useMutation({
@@ -157,6 +166,12 @@ function AdminContent() {
             Crea módulos por nivel y sus lecciones (video, PDF, slides, HTML,
             descargable). Cambios sincronizados con el backend.
           </p>
+          {editadasEnPlataforma > 0 ? (
+            <p className="mt-1 text-xs text-brand-ink/70">
+              <b>{editadasEnPlataforma}</b> lección(es) editadas en plataforma: el repositorio ya no
+              las sobreescribe en los despliegues.
+            </p>
+          ) : null}
         </div>
         <button
           onClick={() =>
@@ -374,6 +389,14 @@ function LessonList({
           <div className="min-w-0 flex-1 truncate text-brand-ink/85">
             {l.position}. {l.title}
           </div>
+          {l.editadaEnPlataforma ? (
+            <span
+              title="Su HTML se editó aquí; el repositorio ya no la sobreescribe en los despliegues"
+              className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900"
+            >
+              editada en plataforma
+            </span>
+          ) : null}
           <span className="text-xs text-brand-ink/55">{l.durationMin ?? 0} min</span>
           <button
             onClick={() => onMove(l, -1)}

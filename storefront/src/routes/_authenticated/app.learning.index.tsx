@@ -5,6 +5,7 @@ import { CheckCircle2, Lock, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { learningApi } from "@/lib/api/endpoints";
 import type { EnglishLevel, LearningModule } from "@/lib/domain/types";
+import { progresoDelModulo } from "@/lib/learning/progreso";
 
 export const Route = createFileRoute("/_authenticated/app/learning/")({
   head: () => ({ meta: [{ title: "Aprendizaje — FreaknEnglish" }] }),
@@ -38,12 +39,7 @@ function LearningIndex() {
     advanced: ORDER[userLevel] >= 2,
   };
 
-  const moduleProgress = (m: LearningModule) => {
-    const lessons = (m as any).lessons ?? [];
-    const total = lessons.length || 1;
-    const done = lessons.filter((l: any) => doneIds.has(l.id)).length;
-    return { done, total: lessons.length, pct: Math.round((done / total) * 100), complete: lessons.length > 0 && done === lessons.length };
-  };
+  const moduleProgress = (m: LearningModule) => progresoDelModulo((m as any).lessons ?? [], doneIds);
 
   return (
     <div className="flex flex-col gap-8">
@@ -118,7 +114,7 @@ function LearningIndex() {
                       </span>
                     ) : (
                       <span className="rounded-full bg-brand-cream px-2.5 py-1 text-[11px] font-medium text-brand-ink/65">
-                        {prog.done}/{prog.total} lecciones
+                        {prog.done}/{prog.total} actividades
                       </span>
                     )}
                   </div>

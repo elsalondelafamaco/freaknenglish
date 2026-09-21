@@ -4,6 +4,7 @@ import { CalendarDays, CheckCircle2, ExternalLink, LayoutGrid, Sparkles, Trendin
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { classesApi, learningApi, subscriptionsApi } from "@/lib/api/endpoints";
+import { leccionesQueCuentan } from "@/lib/learning/progreso";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   head: () => ({ meta: [{ title: "Mi dashboard — FreaknEnglish" }] }),
@@ -85,7 +86,7 @@ function DashboardPage() {
   const today = all.find((c) => isToday(c.startsAt) && c.status === "scheduled");
   const completed = all.filter((c) => c.status === "validated").length;
   const doneIds = new Set(progQ.data?.completedLessonIds ?? []);
-  const lessons = (modsQ.data ?? []).flatMap((m: any) => m.lessons ?? []);
+  const lessons = (modsQ.data ?? []).flatMap((m: any) => leccionesQueCuentan(m.lessons ?? []));
   const pct = lessons.length ? Math.round((lessons.filter((l: any) => doneIds.has(l.id)).length / lessons.length) * 100) : 0;
   const todayPending = today && !today.studentConfirmedAt;
 

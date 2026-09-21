@@ -5,6 +5,7 @@ import { ArrowLeft, CheckCircle2, Circle, Download, FileText, Lock, PlayCircle, 
 import { toast } from "sonner";
 import { learningApi } from "@/lib/api/endpoints";
 import { urlDeMedios } from "@/lib/learning/lessonHtml";
+import { progresoDelModulo } from "@/lib/learning/progreso";
 import { LessonFrame } from "@/components/learning/LessonFrame";
 
 export const Route = createFileRoute("/_authenticated/app/learning/$moduleId")({
@@ -47,9 +48,7 @@ function ModuleDetail() {
   // Arranca en la primera lección accesible (no en una bloqueada).
   const currentActiveId = activeId || (lessons.find((l) => !l.locked) ?? lessons[0])?.id || "";
   const active = lessons.find((l) => l.id === currentActiveId);
-  const total = lessons.length;
-  const done = lessons.filter((l) => doneIds.has(l.id)).length;
-  const pct = total ? Math.round((done / total) * 100) : 0;
+  const { done, total, pct } = progresoDelModulo(lessons, doneIds);
   const activeDone = active ? doneIds.has(active.id) : false;
 
   return (
@@ -67,7 +66,7 @@ function ModuleDetail() {
         <div className="rounded-2xl border border-brand-line bg-white px-4 py-3 text-sm">
           <div className="text-xs uppercase tracking-wide text-brand-ink/55">Progreso</div>
           <div className="text-xl font-bold text-brand-ink">{pct}%</div>
-          <div className="text-xs text-brand-ink/55">{done}/{total} lecciones</div>
+          <div className="text-xs text-brand-ink/55">{done}/{total} actividades</div>
         </div>
       </header>
 

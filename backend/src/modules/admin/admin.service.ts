@@ -16,6 +16,7 @@ import { SlotsService, SlotRef, MOTIVO_HOLD_VENCIDO, DIAS_SEMANA } from '../sche
 import { esZonaValida } from '../../common/zona-horaria'
 import { AuthService, IMPERSONATION_TTL } from '../auth/auth.service'
 import { validateQuestion } from '../learning/checkpoint-questions'
+import { hashDeContenido } from '../learning/content-sync.service'
 
 @Injectable()
 export class AdminService {
@@ -659,11 +660,26 @@ export class AdminService {
     }
   }
 
-  content() {
-    return this.prisma.module.findMany({
+  /**
+   * Árbol del CMS. Cada lección lleva `editadaEnPlataforma`: su HTML ya no
+   * coincide con el del repositorio con el que se sincronizó, así que el
+   * arranque la respeta y no la sobreescribe (ver ContentSyncService). Se
+   * calcula aquí y no se guarda porque es una comparación entre dos cosas que
+   * ya están en la fila.
+   */
+  async content() {
+    const modulos = await this.prisma.module.findMany({
       orderBy: [{ level: 'asc' }, { position: 'asc' }],
       include: { lessons: { orderBy: { position: 'asc' } }, checkpoints: true },
     })
+    return modulos.map((m) => ({
+      ...m,
+      lessons: m.lessons.map((l) => ({
+        ...l,
+        editadaEnPlataforma:
+          !!l.contentSourceHash && hashDeContenido(l.contentHtml ?? '') !== l.contentSourceHash,
+      })),
+    }))
   }
 
   notifications(status?: 'queued' | 'sent' | 'failed') {
@@ -1064,7 +1080,7 @@ export class AdminService {
   async diagnosticarHorarios() {
     const ahora = new Date()
     const estudiantes = await this.prisma.user.findMany({
-      where: { role: 'student', deletedAt: null, subscription: { status: 'active' } },
+      where: { role: 'student', deletedAt: null, disabledAt: null, subscription: { status: 'active' } },
       select: {
         id: true,
         fullName: true,
@@ -1137,15 +1153,16 @@ export class AdminService {
       .filter((e) => e.problemas.length > 0)
 
     // Franjas que siguen reservando la hora de un profesor sin que haya nadie
-    // detrás: alumnos eliminados o con el plan cancelado/vencido. Van aparte de
+    // detrás: alumnos eliminados, baneados o con el plan cancelado/vencido. Van aparte de
     // `afectados` porque el problema no es del alumno —ya no está— sino del
     // profesor, que no puede recibir a nadie a esa hora.
     const fantasmas = await this.prisma.scheduleSlot.findMany({
       where: {
         studentId: { not: null },
         OR: [
-          // Eliminado: no hay nada que esperar, la franja sobra siempre.
+          // Eliminado o baneado: no hay nada que esperar, la franja sobra siempre.
           { student: { deletedAt: { not: null } } },
+          { student: { disabledAt: { not: null } } },
           // Plan caído: la franja sobra SALVO que esté dentro de su retención.
           // Esos 5 días hábiles son a propósito —le guardan el horario por si
           // renueva— y barrerlos aquí rompería esa promesa. `releaseExpiredHolds`
@@ -1161,7 +1178,7 @@ export class AdminService {
         weekday: true,
         hour: true,
         teacher: { select: { fullName: true } },
-        student: { select: { fullName: true, deletedAt: true } },
+        student: { select: { fullName: true, deletedAt: true, disabledAt: true } },
       },
       orderBy: [{ weekday: 'asc' }, { hour: 'asc' }],
     })
@@ -1214,7 +1231,7 @@ export class AdminService {
         id: f.id,
         profesor: f.teacher?.fullName ?? '—',
         alumno: f.student?.fullName ?? '—',
-        motivo: f.student?.deletedAt ? 'eliminado' : 'plan cancelado',
+        motivo: f.student?.deletedAt ? 'eliminado' : f.student?.disabledAt ? 'baneado' : 'plan cancelado',
         cuando: `${DIAS_SEMANA[f.weekday] ?? f.weekday} ${f.hour}:00`,
       })),
     }
@@ -1584,8 +1601,17 @@ export class AdminService {
     return this.prisma.user.update({ where: { id: resolvedId }, data: patch })
   }
 
+  /**
+   * Banear / reactivar. Al deshabilitar se LIBERA el horario, igual que al
+   * cancelar el plan o eliminar: el botón promete que pierde todo acceso de
+   * inmediato, y un alumno sin acceso no puede seguir reservando la hora del
+   * profesor. Para un parón temporal que conserve el horario está "Congelar
+   * plan". Al reactivar no se recrea nada: el horario se le vuelve a asignar
+   * desde la ficha.
+   */
   async setUserStatus(id: string, disabled: boolean) {
     const resolvedId = await this.resolveExistingUserId(id)
+    if (disabled) await this.liberarHorario(resolvedId)
     return this.prisma.user.update({
       where: { id: resolvedId },
       data: { disabledAt: disabled ? new Date() : null },

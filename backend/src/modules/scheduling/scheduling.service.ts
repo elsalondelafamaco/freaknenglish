@@ -181,6 +181,10 @@ export class SchedulingService {
       include: { subscription: true },
     })
     if (!user || !user.assignedTeacherId) return { created: 0 }
+    // Un alumno baneado o eliminado no recibe clases aunque su plan siga
+    // activo: al banearlo se le soltó el horario, y sin esto el respaldo por
+    // preferencias se lo volvía a generar en el tick diario.
+    if (user.disabledAt || user.deletedAt) return { created: 0 }
     if (!user.subscription || user.subscription.status !== 'active') return { created: 0 }
     // Fuente de verdad: ScheduleSlots activos; fallback legacy a preferencias.
     const slotRows = await this.prisma.scheduleSlot.findMany({
@@ -1037,7 +1041,7 @@ export class SchedulingService {
     })
     const prev = await this.prisma.user.findUnique({
       where: { id: studentId },
-      select: { assignedTeacherId: true },
+      select: { assignedTeacherId: true, schedulePreferences: true, classDurationMin: true },
     })
 
     if (!newTeacherId) {
@@ -1061,21 +1065,35 @@ export class SchedulingService {
     // Horarios cruzados: franjas del estudiante ya ocupadas por el nuevo
     // profe, incluyendo las horas que invade una clase larga, y (para >60 min)
     // que el nuevo profe tenga la disponibilidad continua pintada.
+    const duracion = prev?.classDurationMin ?? 50
     if (slots.length > 0) {
-      const durStudent = await this.prisma.user.findUnique({
-        where: { id: studentId },
-        select: { classDurationMin: true },
-      })
       await this.assertBlocksFitTeacher(
         newTeacherId,
         slots.map((s) => ({ weekday: s.weekday, hour: s.hour })),
-        durStudent?.classDurationMin ?? 50,
+        duracion,
         studentId,
       )
       await this.prisma.scheduleSlot.updateMany({
         where: { studentId },
         data: { teacherId: newTeacherId },
       })
+    } else {
+      // Sin franjas pero con preferencias: pasa cuando al crearlo la asignación
+      // chocó y el alumno quedó guardado sin profe. Antes este camino no
+      // validaba nada y no creaba franjas, así que `ensureUpcomingClasses`
+      // le generaba clases desde las preferencias sin que ocupara ninguna hora
+      // del profe: invisible para la disponibilidad y para cualquier choque.
+      const preferencias = (prev?.schedulePreferences as any as ScheduleBlock[] | null) ?? []
+      if (preferencias.length > 0) {
+        await this.assertBlocksFitTeacher(newTeacherId, preferencias, duracion, studentId)
+        await this.prisma.$transaction(
+          preferencias.map((b) =>
+            this.prisma.scheduleSlot.create({
+              data: { teacherId: newTeacherId, studentId, weekday: b.weekday, hour: b.hour, status: 'active' },
+            }),
+          ),
+        )
+      }
     }
 
     const { movidas } = await this.mudarClasesYAula(studentId, newTeacherId, prev?.assignedTeacherId)

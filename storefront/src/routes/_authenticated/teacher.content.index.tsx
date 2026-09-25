@@ -5,6 +5,7 @@ import { BookOpen } from "lucide-react";
 import { learningApi, teachersApi } from "@/lib/api/endpoints";
 import { BarraAlumnoEnClase, useAlumnoEnClase } from "@/components/learning/AlumnoEnClase";
 import type { EnglishLevel } from "@/lib/domain/types";
+import { leccionesInteractivas } from "@/lib/learning/progreso";
 
 const ES_NIVEL = (v: unknown): v is EnglishLevel =>
   v === "beginner" || v === "intermediate" || v === "advanced";
@@ -59,8 +60,14 @@ function TeacherContent() {
     queryFn: () => learningApi.modules(level),
   });
 
-  // Avance del alumno por módulo: promedio de lo recorrido en sus lecciones.
-  // Sirve para saber de un vistazo en qué módulo iban, sin abrirlos uno a uno.
+  // Avance del alumno por módulo: lo recorrido de su LECCIÓN INTERACTIVA, que
+  // es la que se da en clase. Sirve para saber de un vistazo en qué módulo iban,
+  // sin abrirlos uno a uno.
+  //
+  // Solo esa: la actividad extra la hace el alumno por su cuenta y la guía es
+  // material de apoyo, y ninguna de las dos reporta posición de slide, así que
+  // promediando las tres el módulo se quedaba clavado en 33% aunque estuviera
+  // terminado.
   const planQ = useQuery({
     queryKey: ["teacher", "lesson-plan", studentId],
     queryFn: () => teachersApi.lessonPlan(studentId!),
@@ -69,7 +76,9 @@ function TeacherContent() {
   const avancePorModulo = useMemo(() => {
     const m = new Map<string, number>();
     for (const mod of planQ.data ?? []) {
-      const ls = mod.lessons ?? [];
+      const ls = leccionesInteractivas(
+        (mod.lessons ?? []).map((l: any) => ({ ...l, id: l.lessonId })),
+      );
       if (ls.length === 0) continue;
       const suma = ls.reduce((a: number, l: { progreso?: number }) => a + (l.progreso ?? 0), 0);
       m.set(mod.moduleId, suma / ls.length);

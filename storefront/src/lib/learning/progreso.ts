@@ -23,6 +23,23 @@ export function leccionesQueCuentan<L extends LeccionMinima>(lessons: L[]): L[] 
   return extras.length > 0 ? extras : lessons;
 }
 
+/**
+ * Lección interactiva: la que el profe recorre en clase compartiendo pantalla.
+ * Es la única cuyo HTML reporta la posición del slide, así que es la única que
+ * puede tener un avance real; la extra y la guía se quedan siempre en 0.
+ */
+export const esLeccionInteractiva = (l: LeccionMinima) =>
+  l.id.endsWith("-lesson") || /lecci[oó]n interactiva/i.test(l.title ?? "");
+
+/**
+ * Lecciones que pesan en el avance que ve el PROFE. Si el módulo no tiene
+ * lección interactiva, cuentan todas para no dejar la barra muerta.
+ */
+export function leccionesInteractivas<L extends LeccionMinima>(lessons: L[]): L[] {
+  const interactivas = lessons.filter(esLeccionInteractiva);
+  return interactivas.length > 0 ? interactivas : lessons;
+}
+
 export function progresoDelModulo(lessons: LeccionMinima[], doneIds: Set<string>) {
   const cuentan = leccionesQueCuentan(lessons);
   const done = cuentan.filter((l) => doneIds.has(l.id)).length;

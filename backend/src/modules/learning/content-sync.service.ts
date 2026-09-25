@@ -9,25 +9,34 @@ export const hashDeContenido = (s: string) => createHash('sha256').update(s, 'ut
 const hashDe = hashDeContenido
 
 /**
- * Slides de una lección, en orden. Las 84 los marcan con `class="slide"`; se
- * queda con el `id` cuando lo tiene (hay lecciones que navegan por id, como
- * "slide-game") y con la posición cuando no. Es el denominador de la barra de
- * progreso y el que traduce una posición guardada a un porcentaje.
+ * Slides de una lección, en orden. Se queda con el `id` cuando lo tiene (hay
+ * lecciones que navegan por id, como "slide-game") y con la posición cuando no.
+ * Es el denominador de la barra de progreso y el que traduce una posición
+ * guardada a un porcentaje.
+ *
+ * Hay dos convenciones en el contenido, y lo que importa es contar las MISMAS
+ * etiquetas que cuenta la propia lección con su `querySelectorAll`:
+ *
+ * - Cada slide con `class="slide"` y todo envuelto en un `class="slide-container"`.
+ *   Ahí el contenedor NO es un slide: contarlo inflaba el denominador en uno, y
+ *   el último slide se quedaba en 7/8 = 88% sin poder llegar nunca al 100%.
+ * - `class="slide-container"` como el slide en sí, sin ningún `class="slide"`
+ *   suelto.
+ *
+ * Por eso se prefiere la clase exacta `slide` cuando existe, y solo si no hay
+ * ninguna se cae a las variantes con guion, que es lo que se hacía siempre.
  */
 function leerSlides(html: string): { total: number; refs: string[] } {
-  const refs: string[] = []
-  // Cada apertura de etiqueta que lleve `class="… slide …"`, en orden de
-  // aparición; de ahí se saca el `id` si está en la misma etiqueta.
-  const re = /<[a-zA-Z][^>]*\bclass\s*=\s*"[^"]*\bslide\b[^"]*"[^>]*>/g
-  let match: RegExpExecArray | null
-  let i = 0
-  while ((match = re.exec(html)) !== null) {
-    const id = /\bid\s*=\s*"([^"]+)"/.exec(match[0])?.[1]
-    refs.push(id ?? String(i))
-    i++
-  }
+  const etiquetas = [...html.matchAll(/<[a-zA-Z][^>]*\bclass\s*=\s*"([^"]*)"[^>]*>/g)]
+  const exactas = etiquetas.filter((t) => t[1].split(/\s+/).includes('slide'))
+  const elegidas = exactas.length > 0 ? exactas : etiquetas.filter((t) => /\bslide\b/.test(t[1]))
+  const refs = elegidas.map((t, i) => /\bid\s*=\s*"([^"]+)"/.exec(t[0])?.[1] ?? String(i))
   return { total: refs.length, refs }
 }
+
+/** Slides de una lección tal como se sirve; `null` si no tiene HTML. */
+export const slidesDeHtml = (html: string | null | undefined) =>
+  html ? leerSlides(html) : null
 
 /**
  * Sincroniza el contenido versionado del repo (backend/content) con la DB al
@@ -162,7 +171,14 @@ export class ContentSyncService implements OnModuleInit {
         if (editadaEnPlataforma) {
           // Se respeta el contenido de la base y se deja constancia de que
           // diverge, para que el CMS lo pueda mostrar y no sorprenda a nadie.
-          await this.prisma.lesson.update({ where: { id: l.id }, data: meta })
+          // Los slides se cuentan sobre ESE html —el que se sirve— y no sobre el
+          // del repositorio: si le añadieron o quitaron slides en plataforma, el
+          // denominador de la barra tiene que seguirlos.
+          const suyos = leerSlides(previa.contentHtml ?? '')
+          await this.prisma.lesson.update({
+            where: { id: l.id },
+            data: { ...meta, slideCount: suyos.total, slideRefs: suyos.refs as any },
+          })
           preservadas.push(l.id)
         } else {
           await this.prisma.lesson.update({
@@ -173,13 +189,42 @@ export class ContentSyncService implements OnModuleInit {
         lessons++
       }
     }
+    const recontadas = await this.recontarSlides()
     this.log.log(`content sync OK: ${modules} módulo(s), ${lessons} lección(es)`)
+    if (recontadas > 0) this.log.warn(`${recontadas} lección(es) con el conteo de slides corregido`)
     if (preservadas.length > 0) {
       this.log.warn(
         `${preservadas.length} lección(es) editada(s) desde el CMS: se conservó la versión de la ` +
           `plataforma y NO se pisó con la del repositorio → ${preservadas.join(', ')}`,
       )
     }
-    return { modules, lessons, preservadas }
+    return { modules, lessons, preservadas, recontadas }
+  }
+
+  /**
+   * Pone al día `slideCount`/`slideRefs` de cualquier lección cuyo conteo no
+   * coincida con su propio HTML. Hace falta porque las lecciones creadas desde
+   * el CMS no pasan por el manifiesto —los niveles intermedio y avanzado se
+   * cargaron así— y porque un cambio en cómo se cuentan los slides tiene que
+   * alcanzar también a las que ya estaban guardadas. Solo toca esas dos
+   * columnas: el contenido no se mueve.
+   */
+  private async recontarSlides(): Promise<number> {
+    const lecciones = await this.prisma.lesson.findMany({
+      select: { id: true, contentHtml: true, slideCount: true, slideRefs: true },
+    })
+    let corregidas = 0
+    for (const l of lecciones) {
+      const slides = slidesDeHtml(l.contentHtml)
+      if (!slides) continue
+      const guardadas = Array.isArray(l.slideRefs) ? (l.slideRefs as string[]) : []
+      if (slides.total === l.slideCount && slides.refs.join('|') === guardadas.join('|')) continue
+      await this.prisma.lesson.update({
+        where: { id: l.id },
+        data: { slideCount: slides.total, slideRefs: slides.refs as any },
+      })
+      corregidas++
+    }
+    return corregidas
   }
 }

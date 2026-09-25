@@ -16,7 +16,7 @@ import { SlotsService, SlotRef, MOTIVO_HOLD_VENCIDO, DIAS_SEMANA } from '../sche
 import { esZonaValida } from '../../common/zona-horaria'
 import { AuthService, IMPERSONATION_TTL } from '../auth/auth.service'
 import { validateQuestion } from '../learning/checkpoint-questions'
-import { hashDeContenido } from '../learning/content-sync.service'
+import { hashDeContenido, slidesDeHtml } from '../learning/content-sync.service'
 
 @Injectable()
 export class AdminService {
@@ -1823,6 +1823,11 @@ export class AdminService {
   async saveLesson(input: any) {
     const id = input.id ?? randomUUID()
     const existing = await this.prisma.lesson.findUnique({ where: { id } })
+    const contentHtml = input.contentHtml ?? existing?.contentHtml
+    // Los slides se recuentan en cada guardado: son el denominador de la barra
+    // de avance que ve el profe, y una lección creada o editada ahí nunca pasa
+    // por la sincronización del repositorio.
+    const slides = slidesDeHtml(contentHtml)
     const data = {
       title: input.title ?? existing?.title,
       kind: input.kind ?? existing?.kind ?? 'video',
@@ -1830,7 +1835,8 @@ export class AdminService {
       videoUrl: input.videoUrl ?? existing?.videoUrl,
       pdfUrl: input.pdfUrl ?? existing?.pdfUrl,
       slidesUrl: input.slidesUrl ?? existing?.slidesUrl,
-      contentHtml: input.contentHtml ?? existing?.contentHtml,
+      contentHtml,
+      ...(slides ? { slideCount: slides.total, slideRefs: slides.refs as any } : {}),
       notes: input.notes ?? existing?.notes,
       // Compuerta: bloquea todo lo que va después hasta completarla.
       isCheckpoint: input.isCheckpoint ?? existing?.isCheckpoint ?? false,

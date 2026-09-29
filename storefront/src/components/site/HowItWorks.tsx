@@ -7,7 +7,7 @@ import { MediaThumb } from "./MediaThumb";
 import { VideoModal } from "./VideoModal";
 import { Reveal, useCountUp, useInViewOnce, useParallax } from "./anim";
 
-const STEPS = ["Escoge tu horario", "Empieza tus clases", "Habla con confianza"] as const;
+const STEPS = ["Elige tu plan", "Elige tu horario", "Empieza tus clases"] as const;
 
 const WAVE = [7, 13, 18, 10, 16, 8, 14, 19, 11, 7, 15, 9, 13, 6, 11, 17];
 

@@ -59,7 +59,13 @@ export default defineConfig({
       : {}),
     plugins: [
       // D9 · PWA offline básica para el catálogo Learning.
-      // Registro guardado desde src/lib/pwa/register.ts (nunca en dev/iframe/preview).
+      //
+      // OJO: hoy este service worker NO está publicado. Se genera en `dist/` y
+      // el servidor sirve `.output/public/`, así que /sw.js responde 404; por eso
+      // `src/lib/pwa/register.ts` ya no lo registra y además desregistra los que
+      // hayan quedado —estaban sirviendo HTML viejo y rompiendo la app tras cada
+      // despliegue—. Antes de volver a registrarlo hay que asegurarse de que el
+      // archivo se sirva de verdad y de que no cachee el HTML.
       VitePWA({
         registerType: "autoUpdate",
         injectRegister: null,

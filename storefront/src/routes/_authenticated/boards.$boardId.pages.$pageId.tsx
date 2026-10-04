@@ -8,6 +8,7 @@ import CollaborationCaret from "@tiptap/extension-collaboration-caret";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import { ResizableImage } from "@/components/board/ResizableImage";
+import { CLAVE_TEXTO, crearPluginDeTexto } from "@/components/board/TextBehaviors";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyle, FontFamily, FontSize } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
@@ -94,7 +95,14 @@ function BoardPage() {
     {
       extensions: provider
         ? [
-            StarterKit.configure({ undoRedo: false } as any),
+            // `keepMarks`/`keepAttributes`: al convertir un párrafo en viñeta
+            // (o al escribir "- ") la lista conserva el formato que se venía
+            // usando, en vez de volver al tamaño por defecto.
+            StarterKit.configure({
+              undoRedo: false,
+              bulletList: { keepMarks: true, keepAttributes: true },
+              orderedList: { keepMarks: true, keepAttributes: true },
+            } as any),
             Underline,
             TextStyle,
             FontFamily,
@@ -154,6 +162,16 @@ function BoardPage() {
     },
     [provider],
   );
+
+  // El plugin va PRIMERO en la lista: tiene que ver la tecla Enter antes que los
+  // atajos de la lista, que son los que se llevan el cursor fuera de la viñeta.
+  useEffect(() => {
+    if (!editor) return;
+    editor.registerPlugin(crearPluginDeTexto(), (nuevo, previos) => [nuevo, ...previos]);
+    return () => {
+      if (!editor.isDestroyed) editor.unregisterPlugin(CLAVE_TEXTO);
+    };
+  }, [editor]);
 
   if (!user) return null;
   if (!provider || !editor) return <p className="text-sm text-brand-ink/55">Cargando…</p>;

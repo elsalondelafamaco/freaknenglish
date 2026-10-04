@@ -14,6 +14,11 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "../lib/auth/AuthProvider";
 import { LanguageProvider } from "../lib/i18n";
 import { registerPwa } from "../lib/pwa/register";
+import {
+  pareceTrozoFaltante,
+  recuperarSiEsTrozoFaltante,
+  vigilarTrozosFaltantes,
+} from "../lib/chunk-recovery";
 import { THEME_BOOT_SCRIPT } from "../lib/theme";
 import { Toaster } from "../components/ui/sonner";
 
@@ -47,6 +52,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
+    // Si la app se rompió porque falta un trozo de código de la versión vieja,
+    // esto recarga solo y nadie ve esta pantalla. Va antes del reporte para no
+    // llenar el registro de errores con algo que se arregla recargando.
+    if (recuperarSiEsTrozoFaltante(error)) return;
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
@@ -62,7 +71,18 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
-            onClick={() => { router.invalidate(); reset(); }}
+            onClick={() => {
+              // Si faltaba un trozo de código, lo único que trae la versión
+              // nueva es recargar: invalidar las rutas vuelve a pedir el mismo
+              // archivo que el navegador ya dio por fallido. Aquí no hay guarda
+              // de bucle porque lo pidió una persona.
+              if (pareceTrozoFaltante(error)) {
+                window.location.reload();
+                return;
+              }
+              router.invalidate();
+              reset();
+            }}
             className="inline-flex h-11 items-center justify-center rounded-full bg-brand-ink px-6 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-ink-soft"
           >
             Reintentar
@@ -163,7 +183,10 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
-  useEffect(() => { void registerPwa(); }, []);
+  useEffect(() => {
+    vigilarTrozosFaltantes();
+    void registerPwa();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

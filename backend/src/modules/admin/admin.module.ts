@@ -22,5 +22,7 @@ import { AuthModule } from '../auth/auth.module'
   ],
   controllers: [AdminController, PublicSettingsController],
   providers: [AdminService],
+  // Lo usa el tick diario para aplicar y reanudar los congelamientos con fecha.
+  exports: [AdminService],
 })
 export class AdminModule {}

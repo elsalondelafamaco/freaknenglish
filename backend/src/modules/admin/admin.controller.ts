@@ -172,11 +172,18 @@ export class AdminController {
 
   /**
    * @endpoint PATCH /api/v1/admin/users/:id/subscription/pause
-   * Congela el plan: borra sus clases futuras y libera su franja horaria.
+   *
+   * Congela el plan. `desde`/`hasta` son opcionales: sin ellas congela ya y sin
+   * fecha de vuelta. Con `liberarFranja` el profesor pierde la hora reservada
+   * (para pausas largas); por defecto la conserva y sus clases se ven congeladas
+   * en el calendario.
    */
   @Patch('users/:id/subscription/pause')
-  pauseSubscription(@Param('id') id: string, @Body() body: { reason?: string }) {
-    return this.svc.pauseSubscription(id, body?.reason)
+  pauseSubscription(
+    @Param('id') id: string,
+    @Body() body: { reason?: string; desde?: string; hasta?: string; liberarFranja?: boolean },
+  ) {
+    return this.svc.pauseSubscription(id, body ?? {})
   }
 
   /**

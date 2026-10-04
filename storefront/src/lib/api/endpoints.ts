@@ -523,7 +523,7 @@ export const teachersApi = {
         status: string;
         autoValidated: boolean;
         meetingUrl: string | null;
-        student: { id: string; fullName: string; paymentActive: boolean };
+        student: { id: string; fullName: string; paymentActive: boolean; planCongelado?: boolean };
       }>;
       absences: Array<{ id: string; startsAt: string; endsAt: string; reason?: string | null }>;
     }>("/teacher/calendar", { from, to }),
@@ -856,12 +856,20 @@ export const adminApi = {
       startedAt?: string | null;
     },
   ) => apiPatch<any>(`/admin/users/${id}/subscription`, body),
-  /** Congela el plan: borra clases futuras y libera la franja del profesor. */
-  pauseSubscription: (id: string, reason?: string) =>
-    apiPatch<{ subscription: any; classesRemoved: number; slotsFreed: number }>(
-      `/admin/users/${id}/subscription/pause`,
-      { reason },
-    ),
+  /**
+   * Congela el plan. Sin fechas congela ya y sin vuelta; con `liberarFranja`
+   * borra además sus clases futuras y suelta la hora del profesor.
+   */
+  pauseSubscription: (
+    id: string,
+    body: { reason?: string; desde?: string; hasta?: string; liberarFranja?: boolean },
+  ) =>
+    apiPatch<{
+      subscription: any;
+      programado: boolean;
+      classesRemoved: number;
+      slotsFreed: number;
+    }>(`/admin/users/${id}/subscription/pause`, body),
   /** Reanuda y devuelve los días pausados para ajustar el vencimiento a mano. */
   resumeSubscription: (id: string) =>
     apiPatch<{ subscription: any; daysPaused: number; slotsRestored: number }>(

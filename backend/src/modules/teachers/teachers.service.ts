@@ -468,6 +468,10 @@ export class TeachersService {
           fullName: c.student.fullName,
           meetingUrl: c.student.meetingUrl,
           paymentActive: c.student.subscription?.status === 'active',
+          // Plan congelado: la clase sigue ahí y la hora sigue siendo suya, pero
+          // el estudiante no viene. Se marca aparte de `paymentActive` para que
+          // el calendario no lo lea como una alerta de cobro: no debe nada.
+          planCongelado: c.student.subscription?.status === 'paused',
         },
       })),
       absences,

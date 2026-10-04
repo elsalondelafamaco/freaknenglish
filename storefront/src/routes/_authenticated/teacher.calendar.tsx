@@ -17,7 +17,14 @@ type PendingMove = { classId: string; startsAt: string; revert: () => void; labe
 type Selected = {
   id: string; startsAt: string; endsAt: string; status: string;
   meetingUrl: string | null;
-  student: { id: string; fullName: string; paymentActive: boolean; meetingUrl?: string | null };
+  student: {
+    id: string;
+    fullName: string;
+    paymentActive: boolean;
+    /** Plan congelado: la hora sigue reservada pero el estudiante no viene. */
+    planCongelado?: boolean;
+    meetingUrl?: string | null;
+  };
 };
 
 /** Registrar ausencia por rango de fechas (vacaciones, cita médica, etc.). */
@@ -85,6 +92,9 @@ function toLocalInput(iso: string): string {
   const d = new Date(iso);
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }
+
+/** Azul del plan congelado: la hora sigue ocupada, el estudiante no viene. */
+const CONGELADA = "#38bdf8";
 
 const STATUS_COLOR: Record<string, string> = {
   scheduled: "#111827",
@@ -205,8 +215,14 @@ function TeacherCalendar() {
       title: c.student.fullName,
       start: c.startsAt,
       end: c.endsAt,
-      backgroundColor: STATUS_COLOR[c.status] ?? "#111827",
-      borderColor: c.student.paymentActive ? (STATUS_COLOR[c.status] ?? "#111827") : "#f59e0b",
+      // Plan congelado: azul. La hora sigue ocupada —nadie más la puede tomar—
+      // pero el estudiante no va a venir.
+      backgroundColor: c.student.planCongelado ? CONGELADA : (STATUS_COLOR[c.status] ?? "#111827"),
+      borderColor: c.student.planCongelado
+        ? CONGELADA
+        : c.student.paymentActive
+          ? (STATUS_COLOR[c.status] ?? "#111827")
+          : "#f59e0b",
       // Una clase ya movida se puede volver a mover: dejarla clavada era la
       // mitad de por qué "reprogramada" se sentía como un error del sistema.
       // Y las no tomadas también: es justo la que el profe quiere correr para
@@ -258,6 +274,9 @@ function TeacherCalendar() {
               <span className="inline-block size-2.5 rounded-full" style={{ background: STATUS_COLOR[st] }} /> {label}
             </span>
           ))}
+          <span className="inline-flex items-center gap-1">
+            <span className="inline-block size-2.5 rounded-full" style={{ background: CONGELADA }} /> Plan congelado
+          </span>
           <span className="inline-flex items-center gap-1">
             <span className="inline-block size-2.5 rounded-full bg-[#fca5a5]" /> Ausencia
           </span>
@@ -316,7 +335,8 @@ function TeacherCalendar() {
             return (
               <div className="overflow-hidden px-1 py-0.5 text-[11px] leading-tight">
                 <div className="truncate font-semibold">
-                  {!c.student?.paymentActive ? "⚠ " : ""}{c.student?.fullName}
+                  {c.student?.planCongelado ? "❄ " : !c.student?.paymentActive ? "⚠ " : ""}
+                  {c.student?.fullName}
                 </div>
                 <div className="opacity-80">{arg.timeText}</div>
               </div>
@@ -470,7 +490,13 @@ function TeacherCalendar() {
                 {STATUS_LABEL[selected.status] ?? "Programada"}
               </span>
             </div>
-            {!selected.student.paymentActive ? (
+            {selected.student.planCongelado ? (
+              <div className="mt-3 flex items-start gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                Este estudiante tiene el plan congelado: no va a venir, pero la hora sigue siendo
+                suya y nadie más la puede tomar.
+              </div>
+            ) : !selected.student.paymentActive ? (
               <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
                 <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                 Este estudiante no tiene pago activo. Tenlo presente antes de dictar la clase.

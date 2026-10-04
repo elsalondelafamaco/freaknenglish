@@ -18,6 +18,13 @@ import { AuthService, IMPERSONATION_TTL } from '../auth/auth.service'
 import { validateQuestion } from '../learning/checkpoint-questions'
 import { hashDeContenido, slidesDeHtml } from '../learning/content-sync.service'
 
+/** Fecha del formulario ("2026-10-15") a Date; vacío o inválida devuelven null. */
+function aFecha(valor?: string | null): Date | null {
+  if (!valor) return null
+  const d = new Date(valor)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
 @Injectable()
 export class AdminService {
   private readonly log = new Logger(AdminService.name)
@@ -1044,27 +1051,135 @@ export class AdminService {
    * La fecha de vencimiento NO se corre sola: `resume` devuelve los días
    * pausados y el admin decide cuánto extender.
    */
-  async pauseSubscription(id: string, reason?: string) {
+  async pauseSubscription(
+    id: string,
+    opciones: { reason?: string; desde?: string; hasta?: string; liberarFranja?: boolean } = {},
+  ) {
     const userId = await this.resolveExistingUserId(id)
     const sub = await this.prisma.subscription.findUnique({ where: { userId } })
     if (!sub) throw new NotFoundException('Este usuario no tiene suscripción')
     if (sub.status === 'paused') throw new BadRequestException('El plan ya está pausado')
 
-    const now = new Date()
-    const canceladas = await this.prisma.class.deleteMany({
-      where: { studentId: userId, status: { in: ['scheduled', 'rescheduled'] }, startsAt: { gte: now } },
-    })
-    const franjas = await this.prisma.scheduleSlot.deleteMany({ where: { studentId: userId } })
+    const ahora = new Date()
+    const desde = aFecha(opciones.desde) ?? ahora
+    const hasta = aFecha(opciones.hasta)
+    if (hasta && hasta <= desde) {
+      throw new BadRequestException('La fecha de fin tiene que ser posterior a la de inicio')
+    }
+    const liberarFranja = opciones.liberarFranja === true
+    const reason = opciones.reason?.trim() || null
+    const programado = desde.getTime() > ahora.getTime()
+
+    // Congelamiento con fecha futura: se deja anotado y lo aplica el tick
+    // diario. El plan sigue activo hasta entonces —el estudiante tiene clases
+    // esos días y tiene que poder tomarlas—.
+    if (programado) {
+      const updated = await this.prisma.subscription.update({
+        where: { userId },
+        data: {
+          pausedFrom: desde,
+          pausedUntil: hasta,
+          pauseKeepSlot: !liberarFranja,
+          pauseReason: reason,
+        },
+        include: { plan: true },
+      })
+      this.log.log(`Congelamiento programado: user=${userId} desde=${desde.toISOString()}`)
+      return { subscription: updated, programado: true, classesRemoved: 0, slotsFreed: 0 }
+    }
+
+    const efecto = await this.aplicarCongelamiento(userId, { liberarFranja })
     const updated = await this.prisma.subscription.update({
       where: { userId },
-      data: { status: 'paused', pausedAt: now, pauseReason: reason?.trim() || null },
+      data: {
+        status: 'paused',
+        pausedAt: ahora,
+        pausedFrom: desde,
+        pausedUntil: hasta,
+        pauseKeepSlot: !liberarFranja,
+        pauseReason: reason,
+      },
       include: { plan: true },
     })
 
     this.log.log(
-      `Plan pausado: user=${userId} clasesLiberadas=${canceladas.count} franjasLiberadas=${franjas.count}`,
+      `Plan pausado: user=${userId} clasesLiberadas=${efecto.classesRemoved} franjasLiberadas=${efecto.slotsFreed} hasta=${hasta?.toISOString() ?? '—'}`,
     )
-    return { subscription: updated, classesRemoved: canceladas.count, slotsFreed: franjas.count }
+    return { subscription: updated, programado: false, ...efecto }
+  }
+
+  /**
+   * El efecto del congelamiento sobre el horario, que es lo único que cambia
+   * entre las dos formas de congelar:
+   *
+   * - Conservando la franja (lo habitual, para una pausa corta): no se toca
+   *   nada. Las clases ya generadas se quedan en el calendario del profe, que
+   *   las ve congeladas, y nadie más puede tomar esa hora. Al volver, el
+   *   estudiante sigue teniendo su horario de siempre.
+   * - Liberándola (para una pausa larga): se borran sus clases futuras y su
+   *   franja, para que el profesor no se quede con la hora muerta tres meses.
+   *   Al reanudar hay que ver si alguien la tomó.
+   */
+  private async aplicarCongelamiento(userId: string, opts: { liberarFranja: boolean }) {
+    if (!opts.liberarFranja) return { classesRemoved: 0, slotsFreed: 0 }
+    const canceladas = await this.prisma.class.deleteMany({
+      where: {
+        studentId: userId,
+        status: { in: ['scheduled', 'rescheduled'] },
+        startsAt: { gte: new Date() },
+      },
+    })
+    const franjas = await this.prisma.scheduleSlot.deleteMany({ where: { studentId: userId } })
+    return { classesRemoved: canceladas.count, slotsFreed: franjas.count }
+  }
+
+  /**
+   * Aplica los congelamientos con fecha de inicio ya cumplida y reanuda los que
+   * llegaron a su fecha de fin. Lo llama el tick diario: sin esto, elegir fechas
+   * no serviría de nada.
+   */
+  async procesarCongelamientosProgramados() {
+    const ahora = new Date()
+
+    const porEmpezar = await this.prisma.subscription.findMany({
+      where: { status: 'active', pausedFrom: { not: null, lte: ahora } },
+      select: { userId: true, pauseKeepSlot: true, pausedUntil: true },
+    })
+    let congelados = 0
+    for (const s of porEmpezar) {
+      // Si la fecha de fin ya pasó, el congelamiento quedó viejo: se descarta en
+      // vez de congelar a alguien por un periodo que ya terminó.
+      if (s.pausedUntil && s.pausedUntil <= ahora) {
+        await this.prisma.subscription.update({
+          where: { userId: s.userId },
+          data: { pausedFrom: null, pausedUntil: null, pauseReason: null },
+        })
+        continue
+      }
+      await this.aplicarCongelamiento(s.userId, { liberarFranja: !s.pauseKeepSlot })
+      await this.prisma.subscription.update({
+        where: { userId: s.userId },
+        data: { status: 'paused', pausedAt: ahora },
+      })
+      congelados++
+    }
+
+    const porReanudar = await this.prisma.subscription.findMany({
+      where: { status: 'paused', pausedUntil: { not: null, lte: ahora } },
+      select: { userId: true },
+    })
+    let reanudados = 0
+    for (const s of porReanudar) {
+      await this.resumeSubscription(s.userId).catch((e) =>
+        this.log.error(`No se pudo reanudar el plan de ${s.userId}: ${(e as Error).message}`),
+      )
+      reanudados++
+    }
+
+    if (congelados > 0 || reanudados > 0) {
+      this.log.log(`Congelamientos: ${congelados} aplicado(s), ${reanudados} reanudado(s)`)
+    }
+    return { congelados, reanudados }
   }
 
   /**
@@ -1310,12 +1425,21 @@ export class AdminService {
 
     const updated = await this.prisma.subscription.update({
       where: { userId },
-      data: { status: 'active', pausedAt: null, pauseReason: null },
+      data: {
+        status: 'active',
+        pausedAt: null,
+        pausedFrom: null,
+        pausedUntil: null,
+        pauseKeepSlot: true,
+        pauseReason: null,
+      },
       include: { plan: true },
     })
 
     // Reconstruye la franja desde las preferencias guardadas; si alguna hora ya
     // la tomó otro estudiante, `restoreSlots` la salta y queda por reasignar.
+    // Cuando el congelamiento conservó la franja esto no hace nada —las horas
+    // siguen siendo suyas— y es justamente lo que se busca.
     const slotsRestored = await this.restoreSlotsFromPreferences(userId)
     await this.schedulingSvc.ensureUpcomingClasses(userId).catch(() => null)
 

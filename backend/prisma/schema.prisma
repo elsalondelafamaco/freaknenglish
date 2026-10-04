@@ -196,7 +196,15 @@ model Subscription {
   currentPeriodEnd  DateTime?          @map("current_period_end")
   cancelAt          DateTime?          @map("cancel_at")
   canceledAt        DateTime?          @map("canceled_at")
+  // Congelamiento. `pausedAt` es cuándo empezó a regir de verdad; `pausedFrom`
+  // y `pausedUntil` son las fechas que eligió el admin, y pueden ser futuras:
+  // el tick diario aplica el congelamiento al llegar la primera y lo reanuda al
+  // llegar la segunda. `pauseKeepSlot` decide si el profesor conserva la hora
+  // reservada (congelamiento corto) o si se libera para otro (uno largo).
   pausedAt          DateTime?          @map("paused_at")
+  pausedFrom        DateTime?          @map("paused_from")
+  pausedUntil       DateTime?          @map("paused_until")
+  pauseKeepSlot     Boolean            @default(true) @map("pause_keep_slot")
   pauseReason       String?            @map("pause_reason")
   wompiCustomerId   String?            @map("wompi_customer_id")
   createdAt         DateTime           @default(now()) @map("created_at")

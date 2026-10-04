@@ -546,6 +546,11 @@ export class SlotsService {
       if (!studentId) continue
       const sub = await this.prisma.subscription.findUnique({ where: { userId: studentId } })
       if (sub?.status === 'active') continue
+      // Un plan congelado que conservó la franja la conserva de verdad: sin esto
+      // el tick diario la pasaba a retenida y, al vencer la retencion, la
+      // borraba junto con sus clases. El congelamiento que SI libera la franja
+      // ya la borro al congelar, asi que aqui no queda nada suyo.
+      if (sub?.status === 'paused') continue
       const base = sub?.currentPeriodEnd ?? new Date()
       const holdExpiresAt = addBusinessDays(base, HOLD_BUSINESS_DAYS)
       await this.prisma.scheduleSlot.updateMany({

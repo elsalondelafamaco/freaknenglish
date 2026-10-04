@@ -68,6 +68,11 @@ export interface Subscription {
   wompiReference?: string;
   /** Momento en que el admin congeló el plan; base para calcular los días. */
   pausedAt?: string | null;
+  /** Fechas elegidas del congelamiento; pueden ser futuras. */
+  pausedFrom?: string | null;
+  pausedUntil?: string | null;
+  /** El profesor conserva la hora reservada mientras dura el congelamiento. */
+  pauseKeepSlot?: boolean;
   pauseReason?: string | null;
 }
 

@@ -1562,18 +1562,37 @@ function PauseControls({
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
+  // Conservar la franja es lo normal: una pausa de dos semanas no debería
+  // costarle al estudiante su horario de siempre. Liberarla es la excepción, y
+  // se marca a conciencia cuando la pausa es larga.
+  const [liberarFranja, setLiberarFranja] = useState(false);
   const pausada = sub.status === "paused";
+  const programada = !pausada && !!sub.pausedFrom;
 
   async function pausar() {
     setBusy(true);
     setError(null);
     setInfo(null);
     try {
-      const r = await adminApi.pauseSubscription(userId, reason.trim() || undefined);
+      const r = await adminApi.pauseSubscription(userId, {
+        reason: reason.trim() || undefined,
+        desde: desde || undefined,
+        hasta: hasta || undefined,
+        liberarFranja,
+      });
       setInfo(
-        `Plan congelado. Se quitaron ${r.classesRemoved} clase(s) futura(s) y se liberaron ${r.slotsFreed} franja(s) del profesor.`,
+        r.programado
+          ? `Congelamiento programado para el ${new Date(desde).toLocaleDateString("es-CO")}. Hasta entonces el plan sigue activo.`
+          : liberarFranja
+            ? `Plan congelado. Se quitaron ${r.classesRemoved} clase(s) futura(s) y se liberaron ${r.slotsFreed} franja(s) del profesor.`
+            : "Plan congelado. Conserva su horario: sus clases quedan congeladas en el calendario del profesor y nadie más puede tomar esa hora.",
       );
       setReason("");
+      setDesde("");
+      setHasta("");
+      setLiberarFranja(false);
       onSaved();
     } catch (err) {
       setError((err as Error).message ?? "No se pudo congelar");
@@ -1588,8 +1607,13 @@ function PauseControls({
     setInfo(null);
     try {
       const r = await adminApi.resumeSubscription(userId);
+      // Si el congelamiento conservó la franja, no hay nada que recuperar: ya
+      // era suya. Decir "se recuperaron 0 franjas" sonaba a que algo falló.
+      const horario = sub.pauseKeepSlot
+        ? "Mantiene el horario que ya tenía."
+        : `Se recuperaron ${r.slotsRestored} franja(s).`;
       setInfo(
-        `Plan reanudado tras ${r.daysPaused} día(s) pausado. Se recuperaron ${r.slotsRestored} franja(s). ` +
+        `Plan reanudado tras ${r.daysPaused} día(s) pausado. ${horario} ` +
           `Si corresponde, corre la fecha de "Activa hasta" ${r.daysPaused} día(s) abajo.`,
       );
       onSaved();
@@ -1601,33 +1625,65 @@ function PauseControls({
   }
 
   return (
-    <Card title={pausada ? "Plan congelado" : "Congelar plan"}>
+    <Card title={pausada ? "Plan congelado" : programada ? "Congelamiento programado" : "Congelar plan"}>
       {pausada ? (
         <p className="mb-4 text-xs text-brand-ink/60">
           Congelado el{" "}
           {sub.pausedAt ? new Date(sub.pausedAt).toLocaleDateString("es-CO") : "—"}
-          {sub.pauseReason ? ` · ${sub.pauseReason}` : ""}. No se le generan clases y su franja
-          quedó libre. Al reanudar puede que haya que asignarle horario nuevo si otro estudiante
-          la tomó.
+          {sub.pausedUntil
+            ? ` y vuelve solo el ${new Date(sub.pausedUntil).toLocaleDateString("es-CO")}`
+            : " sin fecha de vuelta"}
+          {sub.pauseReason ? ` · ${sub.pauseReason}` : ""}. No se le generan clases nuevas.{" "}
+          {sub.pauseKeepSlot
+            ? "Conserva su horario: sus clases se ven congeladas en el calendario del profesor y nadie más puede tomar esa hora."
+            : "Su franja quedó libre, así que al reanudar puede que haya que asignarle horario nuevo si otro estudiante la tomó."}
+        </p>
+      ) : programada ? (
+        <p className="mb-4 text-xs text-brand-ink/60">
+          Se congela solo el{" "}
+          {sub.pausedFrom ? new Date(sub.pausedFrom).toLocaleDateString("es-CO") : "—"}
+          {sub.pausedUntil
+            ? ` y vuelve el ${new Date(sub.pausedUntil).toLocaleDateString("es-CO")}`
+            : ""}
+          {sub.pauseReason ? ` · ${sub.pauseReason}` : ""}. Hasta entonces el plan sigue activo y
+          toma sus clases con normalidad.
         </p>
       ) : (
         <p className="mb-4 text-xs text-brand-ink/60">
-          Para estudiantes que pausan sin fecha de regreso. Quita sus clases futuras del calendario
-          y de la agenda del profesor, libera su franja y evita que el sistema se las dé por
-          tomadas. El plan no se pierde.
+          Para el estudiante que avisa que no viene por un tiempo. Deja de generarle clases y de
+          darle las de esos días por tomadas; el plan no se pierde. Si pones fecha de fin, vuelve
+          solo ese día.
         </p>
       )}
 
       <div className="flex flex-wrap items-end gap-3">
         {!pausada ? (
-          <Field label="Motivo (opcional)">
-            <input
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Viaje, incapacidad…"
-              className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
-            />
-          </Field>
+          <>
+            <Field label="Desde (opcional)">
+              <input
+                type="date"
+                value={desde}
+                onChange={(e) => setDesde(e.target.value)}
+                className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+              />
+            </Field>
+            <Field label="Hasta (opcional)">
+              <input
+                type="date"
+                value={hasta}
+                onChange={(e) => setHasta(e.target.value)}
+                className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+              />
+            </Field>
+            <Field label="Motivo (opcional)">
+              <input
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Viaje, incapacidad…"
+                className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+              />
+            </Field>
+          </>
         ) : null}
         <button
           type="button"
@@ -1637,9 +1693,26 @@ function PauseControls({
             pausada ? "bg-brand-ink text-white" : "border border-sky-300 bg-sky-50 text-sky-900"
           }`}
         >
-          {busy ? "Procesando…" : pausada ? "Reanudar plan" : "Congelar plan"}
+          {busy ? "Procesando…" : pausada ? "Reanudar plan" : programada ? "Congelar ya" : "Congelar plan"}
         </button>
       </div>
+
+      {!pausada ? (
+        <label className="mt-4 flex cursor-pointer items-start gap-2 text-xs text-brand-ink/70">
+          <input
+            type="checkbox"
+            checked={liberarFranja}
+            onChange={(e) => setLiberarFranja(e.target.checked)}
+            className="mt-0.5 size-4 accent-brand-ink"
+          />
+          <span>
+            <b>Liberar también la franja del profesor.</b> Borra sus clases futuras y suelta la
+            hora para que otro estudiante la pueda tomar. Tiene sentido en una pausa larga; en una
+            de dos o tres semanas conviene dejarla sin marcar para que el estudiante no pierda su
+            horario.
+          </span>
+        </label>
+      ) : null}
 
       {error ? <p className="mt-3 text-xs text-red-700">{error}</p> : null}
       {info ? <p className="mt-3 text-xs text-green-700">{info}</p> : null}
@@ -1658,6 +1731,9 @@ function adaptAdminSubscription(s: any): Subscription | null {
     currentPeriodEnd: s.currentPeriodEnd ?? undefined,
     wompiReference: s.wompiReference ?? undefined,
     pausedAt: s.pausedAt ?? null,
+    pausedFrom: s.pausedFrom ?? null,
+    pausedUntil: s.pausedUntil ?? null,
+    pauseKeepSlot: s.pauseKeepSlot ?? true,
     pauseReason: s.pauseReason ?? null,
   };
 }

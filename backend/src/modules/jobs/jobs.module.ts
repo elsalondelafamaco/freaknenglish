@@ -5,6 +5,7 @@ import { AutomationsProcessor } from './automations.processor'
 import { AutomationsService } from './automations.service'
 import { NotificationsModule } from '../notifications/notifications.module'
 import { SchedulingModule } from '../scheduling/scheduling.module'
+import { AdminModule } from '../admin/admin.module'
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { SchedulingModule } from '../scheduling/scheduling.module'
     BullModule.registerQueue({ name: 'automations' }),
     NotificationsModule,
     SchedulingModule,
+    AdminModule,
   ],
   providers: [AutomationsProcessor, AutomationsService],
   exports: [AutomationsService],

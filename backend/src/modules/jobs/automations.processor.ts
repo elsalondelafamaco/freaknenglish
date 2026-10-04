@@ -6,6 +6,7 @@ import { NotificationsService } from '../notifications/notifications.service'
 import { env } from '../../config/env'
 import { SchedulingService } from '../scheduling/scheduling.service'
 import { SlotsService } from '../scheduling/slots.service'
+import { AdminService } from '../admin/admin.service'
 
 /**
  * Runs the actual automation logic. Triggered by the repeating jobs in
@@ -20,6 +21,7 @@ export class AutomationsProcessor extends WorkerHost {
     private notifications: NotificationsService,
     private scheduling: SchedulingService,
     private slots: SlotsService,
+    private admin: AdminService,
   ) {
     super()
   }
@@ -64,6 +66,9 @@ export class AutomationsProcessor extends WorkerHost {
       where: {
         status: { in: ['scheduled', 'rescheduled'] },
         startsAt: { gte: new Date(in24.getTime() - 5 * 60 * 1000), lte: in24 },
+        // Un plan congelado conserva sus clases en el calendario del profe, pero
+        // el estudiante no las va a tomar: recordarselas es solo ruido.
+        NOT: { student: { subscription: { status: 'paused' } } },
       },
       include: { student: true },
     })
@@ -83,6 +88,7 @@ export class AutomationsProcessor extends WorkerHost {
       where: {
         status: { in: ['scheduled', 'rescheduled'] },
         startsAt: { gte: new Date(in1.getTime() - 5 * 60 * 1000), lte: in1 },
+        NOT: { student: { subscription: { status: 'paused' } } },
       },
       include: { student: true },
     })
@@ -182,6 +188,10 @@ export class AutomationsProcessor extends WorkerHost {
     // Se reconcilia aquí para que el sistema se cure solo aunque el desajuste
     // entre por un camino que todavía no conocemos.
     await this.slots.reactivarFranjasDePlanesAlDia()
+    // Congelamientos con fecha: aplica los que empiezan hoy y reanuda los que
+    // terminaron. Va antes de generar clases para que el que acaba de reanudar
+    // ya entre en la generacion de este mismo tick.
+    await this.admin.procesarCongelamientosProgramados().catch(() => null)
     // Mantiene el horizonte de clases generado para estudiantes activos.
     const activeStudents = await this.prisma.user.findMany({
       where: {

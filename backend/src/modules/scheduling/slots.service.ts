@@ -661,12 +661,16 @@ export class SlotsService {
       where: {
         role: 'student',
         deletedAt: null,
+        disabledAt: null,
         assignedTeacherId: { not: null },
         studentSlots: { none: {} },
-        // Un plan pausado se quedó a propósito sin franja para que otro
-        // estudiante la pueda tomar; sin esta exclusión el backfill se la
-        // devolvía en el siguiente tick diario.
-        NOT: { subscription: { status: 'paused' } },
+        // SOLO quien sigue siendo alumno. Un plan cancelado, vencido, pausado o
+        // sin estrenar se quedó sin franja a propósito —al cancelar se libera la
+        // hora para que otro la tome—, y este trabajo se la devolvía esa misma
+        // noche como "retenida": al día siguiente la hora volvía a aparecer
+        // ocupada por alguien que ya no está, y no se podía montar al nuevo
+        // estudiante. `past_due` sí entra: ese todavía es alumno, solo debe.
+        subscription: { status: { in: ['active', 'past_due'] } },
       },
       select: { id: true, assignedTeacherId: true, classDurationMin: true, schedulePreferences: true, subscription: { select: { status: true, currentPeriodEnd: true } } },
     })

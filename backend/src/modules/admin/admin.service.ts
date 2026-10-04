@@ -1278,14 +1278,18 @@ export class AdminService {
           // Eliminado o baneado: no hay nada que esperar, la franja sobra siempre.
           { student: { deletedAt: { not: null } } },
           { student: { disabledAt: { not: null } } },
-          // Plan caído: la franja sobra SALVO que esté dentro de su retención.
+          // Plan vencido: la franja sobra SALVO que esté dentro de su retención.
           // Esos 5 días hábiles son a propósito —le guardan el horario por si
           // renueva— y barrerlos aquí rompería esa promesa. `releaseExpiredHolds`
           // ya se encarga de soltarlos cuando toca.
           {
-            student: { deletedAt: null, subscription: { status: { in: ['canceled', 'expired'] } } },
+            student: { deletedAt: null, subscription: { status: 'expired' } },
             NOT: { status: 'held', holdExpiresAt: { gt: ahora } },
           },
+          // Cancelado es distinto de vencido: no se le venció el plan, avisó que
+          // no sigue. No hay nada que guardarle, así que la franja sobra desde
+          // ya y la hora tiene que quedar libre para el que entra.
+          { student: { deletedAt: null, subscription: { status: 'canceled' } } },
         ],
       },
       select: {

@@ -60,7 +60,13 @@ function AdminAnalytics() {
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <Card icon={<Users className="size-4" />} label="Estudiantes" value={m.totalStudents.toString()} />
-            <Card icon={<CreditCard className="size-4" />} label="Suscripciones activas" value={m.activeSubscriptions.toString()} highlight />
+            <Card
+              icon={<CreditCard className="size-4" />}
+              label="Suscripciones activas"
+              value={m.activeSubscriptions.toString()}
+              sub={m.congeladas ? `incluye ${m.congeladas} congelada(s)` : undefined}
+              highlight
+            />
             <Card icon={<TrendingUp className="size-4" />} label="MRR" value={formatCop(m.mrrCop)} sub={`ARR ${formatCop(m.arrCop)}`} />
             <Card icon={<DollarSign className="size-4" />} label={`Ingresos ${range}d`} value={formatCop(m.revenueCop)} sub={`${m.revenueSeries.length} días`} />
             <Card icon={<GraduationCap className="size-4" />} label="Clases validadas" value={m.classesSeries.reduce((s, c) => s + c.count, 0).toString()} />

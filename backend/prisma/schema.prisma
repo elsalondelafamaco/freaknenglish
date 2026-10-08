@@ -285,6 +285,11 @@ model Class {
   // Congelamiento a la espera de nueva fecha (status `pending_reschedule`).
   frozenAt     DateTime?   @map("frozen_at")
   freezeReason String?     @map("freeze_reason")
+  // Hora del horario fijo que esta clase cubre, cuando se movió a otra fecha.
+  // Sin esto, la generación diaria veía la hora original vacía y creaba otra
+  // clase ahí: la movida reaparecía sola cada vez. Se guarda solo la PRIMERA
+  // vez que se mueve, que es la que corresponde a la franja.
+  originalStartsAt DateTime? @map("original_starts_at")
   createdAt    DateTime    @default(now()) @map("created_at")
   updatedAt    DateTime    @updatedAt @map("updated_at")
 

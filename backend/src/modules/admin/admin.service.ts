@@ -60,19 +60,27 @@ export class AdminService {
 
   async analytics() {
     const [activeSubs, plans, surveys, totalClasses, validatedClasses] = await Promise.all([
-      this.prisma.subscription.findMany({ where: { status: 'active' }, include: { plan: true } }),
+      // Un plan congelado sigue siendo un estudiante nuestro: no se fue, vuelve
+      // a su horario cuando termine la pausa. Por eso cuenta para el total. Lo
+      // que no hace es facturar este mes, así que el MRR se calcula aparte.
+      this.prisma.subscription.findMany({
+        where: { status: { in: ['active', 'paused'] } },
+        include: { plan: true },
+      }),
       this.prisma.plan.findMany(),
       this.prisma.satisfactionSurvey.findMany({ orderBy: { createdAt: 'desc' }, take: 1000 }),
       this.prisma.class.count(),
       this.prisma.class.count({ where: { status: 'validated' } }),
     ])
-    const mrr = activeSubs.reduce((s, sub) => s + sub.plan.priceCop, 0)
+    const facturando = activeSubs.filter((s) => s.status === 'active')
+    const mrr = facturando.reduce((s, sub) => s + sub.plan.priceCop, 0)
     const promoters = surveys.filter((s) => s.score >= 9).length
     const detractors = surveys.filter((s) => s.score <= 6).length
     const nps = surveys.length ? Math.round(((promoters - detractors) / surveys.length) * 100) : 0
     return {
       mrrCop: mrr,
       activeSubscriptions: activeSubs.length,
+      congeladas: activeSubs.filter((s) => s.status === 'paused').length,
       nps,
       surveys: surveys.length,
       attendanceRate: totalClasses ? Math.round((validatedClasses / totalClasses) * 100) : 0,
@@ -112,7 +120,11 @@ export class AdminService {
     const periodStartMs = from.getTime()
 
     const [activeSubs, allClasses, payments, surveys, teachers, totalStudents] = await Promise.all([
-      this.prisma.subscription.findMany({ where: { status: 'active' }, include: { plan: true } }),
+      // Activos + congelados: cuentan como estudiantes, no como facturación.
+      this.prisma.subscription.findMany({
+        where: { status: { in: ['active', 'paused'] } },
+        include: { plan: true },
+      }),
       this.prisma.class.findMany({
         where: { startsAt: { gte: from } },
         select: { id: true, teacherId: true, studentId: true, status: true, startsAt: true, endsAt: true },
@@ -133,7 +145,9 @@ export class AdminService {
     ])
 
     // MRR/ARR
-    const mrrCop = activeSubs.reduce((s, sub) => s + sub.plan.priceCop, 0)
+    const mrrCop = activeSubs
+      .filter((s) => s.status === 'active')
+      .reduce((s, sub) => s + sub.plan.priceCop, 0)
     const arrCop = mrrCop * 12
 
     // Churn: subs canceladas en el rango / activas al inicio del rango
@@ -247,6 +261,7 @@ export class AdminService {
       mrrCop,
       arrCop,
       activeSubscriptions: activeSubs.length,
+      congeladas: activeSubs.filter((s) => s.status === 'paused').length,
       totalStudents,
       churnRate,
       attendanceRate,

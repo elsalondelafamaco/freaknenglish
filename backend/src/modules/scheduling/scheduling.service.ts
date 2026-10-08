@@ -236,8 +236,12 @@ export class SchedulingService {
         if (startsAt.getTime() < noNantesDe.getTime()) continue
         if (startsAt.getTime() > noDespuesDe) continue
         const endsAt = new Date(startsAt.getTime() + durationMin * 60 * 1000)
+        // Ya hay clase en esa hora, o la hay en otra fecha PORQUE se movió
+        // desde esta. Sin lo segundo, cada reprogramación hacía reaparecer la
+        // clase en su hora vieja a la mañana siguiente, y si alguien la daba por
+        // tomada entraba a la nómina.
         const exists = await this.prisma.class.findFirst({
-          where: { studentId, startsAt },
+          where: { studentId, OR: [{ startsAt }, { originalStartsAt: startsAt }] },
           select: { id: true },
         })
         if (exists) continue
@@ -697,7 +701,11 @@ export class SchedulingService {
         schedulePreferences: blocks as any,
         ...(duracionNueva != null ? { classDurationMin: duracionNueva } : {}),
         ...(teacherIdNuevo !== undefined ? { assignedTeacherId: teacherIdNuevo } : {}),
-        ...(teacherId ? { scheduleAssignmentStatus: 'auto' } : {}),
+        // 'auto_assigned', no 'auto': el área del estudiante solo reconoce
+        // 'auto_assigned' y 'manual_pending'. Con cualquier otra cosa concluía
+        // que nunca había elegido horario y lo mandaba de vuelta a la pantalla
+        // de elegirlo, con su horario real intacto por detrás.
+        ...(teacherId ? { scheduleAssignmentStatus: 'auto_assigned' } : {}),
       },
     })
     await this.prisma.scheduleSlot.deleteMany({ where: { studentId } })

@@ -83,7 +83,9 @@ function DashboardPage() {
 
   const all = (allQ.data ?? []) as any[];
   const next = nextQ.data as any;
-  const today = all.find((c) => isToday(c.startsAt) && c.status === "scheduled");
+  // Las reprogramadas cuentan igual: son clases de verdad, solo que movidas.
+  const activa = (c: any) => c.status === "scheduled" || c.status === "rescheduled";
+  const today = all.find((c) => isToday(c.startsAt) && activa(c));
   const completed = all.filter((c) => c.status === "validated").length;
   const doneIds = new Set(progQ.data?.completedLessonIds ?? []);
   const lessons = (modsQ.data ?? []).flatMap((m: any) => leccionesQueCuentan(m.lessons ?? []));
@@ -207,7 +209,7 @@ function DashboardPage() {
           <Link to="/app/calendar" className="text-sm font-medium text-brand-ink/70 hover:text-brand-ink">Ver calendario →</Link>
         </div>
         <ul className="mt-4 divide-y divide-brand-line">
-          {all.filter((c) => c.status === "scheduled").slice(0, 4).map((c) => (
+          {all.filter(activa).slice(0, 4).map((c) => (
             <li key={c.id} className="flex items-center justify-between gap-4 py-3 text-sm">
               <div>
                 <div className="font-semibold text-brand-ink">{c.topic ?? "Sesión 1-on-1"}</div>
@@ -216,7 +218,7 @@ function DashboardPage() {
               <span className="rounded-full bg-brand-cream px-2.5 py-1 text-[11px] font-medium text-brand-ink/70">{durMin(c)} min</span>
             </li>
           ))}
-          {all.filter((c) => c.status === "scheduled").length === 0 ? (
+          {all.filter(activa).length === 0 ? (
             <li className="py-6 text-sm text-brand-ink/55">No tienes clases programadas. Agenda desde el calendario.</li>
           ) : null}
         </ul>

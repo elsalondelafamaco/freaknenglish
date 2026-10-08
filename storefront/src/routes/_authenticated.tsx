@@ -105,8 +105,11 @@ function AuthenticatedLayout() {
       if (!target && roleIsStudent && !pathname.startsWith("/onboarding")) {
         const missingProfile = !user.phone || !user.documentNumber;
         const hasActiveSub = !!mySub && (mySub as any).status === "active";
-        const hasSchedule = user.scheduleAssignmentStatus === "auto_assigned"
-          || user.scheduleAssignmentStatus === "manual_pending";
+        // Cualquier etiqueta puesta significa que ya pasó por asignación de
+        // horario; solo sin etiqueta nunca eligió. Antes se listaban los dos
+        // valores conocidos y bastaba con que el backend guardara uno distinto
+        // para mandar de vuelta a elegir horario a alguien que ya tenía el suyo.
+        const hasSchedule = !!user.scheduleAssignmentStatus;
         if (missingProfile) target = "/onboarding/profile";
         // Sin suscripción activa: puede ENTRAR a la app pero solo al dashboard
         // (/app), que muestra su estado y el botón para elegir plan.

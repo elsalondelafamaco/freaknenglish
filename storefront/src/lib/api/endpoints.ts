@@ -47,7 +47,10 @@ export type AdminMetrics = {
   range: { from: string; to: string; days: number };
   mrrCop: number;
   arrCop: number;
+  /** Planes vigentes, congelados incluidos: es el total de estudiantes. */
   activeSubscriptions: number;
+  /** Cuántos de esos están congelados (no facturan este mes). */
+  congeladas: number;
   totalStudents: number;
   churnRate: number;
   attendanceRate: number;
@@ -655,6 +658,7 @@ export const adminApi = {
   analytics: () => apiGet<{
     mrrCop: number;
     activeSubscriptions: number;
+    congeladas: number;
     nps: number;
     surveys: number;
     attendanceRate: number;

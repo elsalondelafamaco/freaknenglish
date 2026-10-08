@@ -78,7 +78,10 @@ export class AutomationsProcessor extends WorkerHost {
         toEmail: c.student.email,
         template: 'reminder_24h',
         subject: 'Tu clase es mañana',
-        dedupeKey: `reminder24:${c.id}`,
+        // La fecha va en la clave: una clase que ya recibió su aviso y después
+        // se movió tiene que volver a avisar en la fecha nueva. Con la clave
+        // solo por id, la reprogramada se quedaba muda.
+        dedupeKey: `reminder24:${c.id}:${c.startsAt.toISOString()}`,
         vars: { startsAt: c.startsAt.toISOString() },
       })
     }
@@ -98,7 +101,7 @@ export class AutomationsProcessor extends WorkerHost {
         toEmail: c.student.email,
         template: 'reminder_1h',
         subject: 'Tu clase empieza en 1 hora',
-        dedupeKey: `reminder1:${c.id}`,
+        dedupeKey: `reminder1:${c.id}:${c.startsAt.toISOString()}`,
         vars: {},
       })
     }
@@ -192,6 +195,14 @@ export class AutomationsProcessor extends WorkerHost {
     // terminaron. Va antes de generar clases para que el que acaba de reanudar
     // ya entre en la generacion de este mismo tick.
     await this.admin.procesarCongelamientosProgramados().catch(() => null)
+    // Higiene: guardar el horario desde el panel dejaba la etiqueta en 'auto',
+    // que el área del estudiante no reconoce y lo mandaba a elegir horario de
+    // nuevo. Ya se guarda bien; esto limpia las que quedaron.
+    const etiquetas = await this.prisma.user.updateMany({
+      where: { scheduleAssignmentStatus: 'auto' },
+      data: { scheduleAssignmentStatus: 'auto_assigned' },
+    })
+    if (etiquetas.count > 0) this.log.warn(`Etiquetas de horario corregidas: ${etiquetas.count}`)
     // Mantiene el horizonte de clases generado para estudiantes activos.
     const activeStudents = await this.prisma.user.findMany({
       where: {

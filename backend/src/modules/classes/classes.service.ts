@@ -49,7 +49,15 @@ export class ClassesService {
 
   upcoming(studentId: string) {
     return this.prisma.class.findFirst({
-      where: { studentId, status: 'scheduled', startsAt: { gte: new Date(Date.now() - 60 * 60 * 1000) } },
+      // También las reprogramadas: si al estudiante le movieron una clase para
+      // mañana, ESA es su próxima clase. Antes la pantalla de inicio saltaba
+      // directo a la siguiente de su horario fijo, y la movida solo aparecía
+      // entrando al calendario —que es justo donde no entran—.
+      where: {
+        studentId,
+        status: { in: ['scheduled', 'rescheduled'] },
+        startsAt: { gte: new Date(Date.now() - 60 * 60 * 1000) },
+      },
       orderBy: { startsAt: 'asc' },
       include: { teacher: { select: { id: true, fullName: true, avatarUrl: true } } },
     })
@@ -267,6 +275,9 @@ export class ClassesService {
         startsAt: newStartsAt,
         endsAt: newEndsAt,
         status: ClassStatus.rescheduled,
+        // La hora de su horario fijo, solo la primera vez que se mueve: es lo
+        // que le dice a la generación diaria que esa hora ya está cubierta.
+        originalStartsAt: c.originalStartsAt ?? c.startsAt,
         // Al ponerle fecha deja de estar congelada.
         frozenAt: null,
         freezeReason: null,

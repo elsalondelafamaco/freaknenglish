@@ -528,6 +528,10 @@ export class TeachersService {
           startsAt: newStartsAt,
           endsAt: newEndsAt,
           status: 'rescheduled',
+          // Queda apuntada la hora de su horario fijo —solo la primera vez que
+          // se mueve—, para que la generación diaria sepa que esa hora ya está
+          // cubierta y no cree otra clase ahí.
+          originalStartsAt: c.originalStartsAt ?? c.startsAt,
           // Deja de estar congelada y deja de contar como tomada: se va a dar
           // en la fecha nueva. Sin esto, mover una clase que el job ya había
           // auto-validado la dejaba cobrada en nómina en su fecha vieja.

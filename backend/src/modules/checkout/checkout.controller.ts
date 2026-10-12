@@ -14,6 +14,8 @@ class CreateIntentDto {
   @IsString() @MinLength(4) customerDocument!: string
   @IsString() @IsOptional() userId?: string
   @IsString() @MinLength(8) @IsOptional() password?: string
+  /** Zona IANA del navegador de quien compra, p. ej. "Europe/Madrid". */
+  @IsString() @IsOptional() timezone?: string
   @IsArray() @IsOptional() slots?: Array<{ weekday: number; hour: number }>
 }
 

@@ -7,6 +7,7 @@ import { scheduleApi, subscriptionsApi, type SlotRef } from "@/lib/api/endpoints
 import { SchedulePickerGrid, slotKey } from "@/components/schedule/SchedulePickerGrid";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { ZONA_BOGOTA, etiquetaDeZona, nombreDeZona, zonaDe } from "@/lib/domain/zona-horaria";
+import { useZonaDelNavegador } from "@/lib/domain/zona-navegador";
 
 export const Route = createFileRoute("/_authenticated/onboarding/schedule")({
   head: () => ({ meta: [{ title: "Elige tu horario — FreaknEnglish" }] }),
@@ -24,7 +25,10 @@ export const Route = createFileRoute("/_authenticated/onboarding/schedule")({
  */
 function OnboardingSchedule() {
   const { refresh, user } = useAuth();
-  const zonaPropia = zonaDe(user?.timezone);
+  // El respaldo del navegador cubre la primera carga de una cuenta que todavía
+  // no tiene zona guardada: se captura sola, pero tarda un viaje al servidor.
+  const zonaNavegador = useZonaDelNavegador();
+  const zonaPropia = zonaDe(user?.timezone ?? zonaNavegador);
   const navigate = useNavigate();
   const [selected, setSelected] = useState<SlotRef[]>([]);
 

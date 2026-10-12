@@ -9,6 +9,7 @@ import { ActivePlanScreen, useActivePlanGate } from "@/components/site/ActivePla
 import { LegalLinks } from "@/components/site/LegalLinks";
 import { PhoneInput, validatePhone } from "@/components/app/PhoneInput";
 import { checkoutApi, plansApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
+import { useZonaDelNavegador } from "@/lib/domain/zona-navegador";
 import { slotTimeRange } from "@/components/schedule/SchedulePickerGrid";
 import { copAcobrar } from "@/lib/domain/plans";
 import { useRenovacion } from "@/lib/domain/renovacion";
@@ -69,6 +70,7 @@ function CheckoutPage() {
   );
 
   const loggedIn = !!user;
+  const zonaNavegador = useZonaDelNavegador();
   const gate = useActivePlanGate();
   const [form, setForm] = useState({ fullName: "", email: "", document: "", phone: "" });
   const [password, setPassword] = useState("");
@@ -139,6 +141,10 @@ function CheckoutPage() {
         // reasignara el profesor.
         slots: esRenovacion ? undefined : selSlots,
         password: loggedIn ? undefined : password,
+        // La cuenta se crea después, cuando el pago se aprueba, así que la zona
+        // con la que eligió sus horas viaja con el intento. Sin esto elegía
+        // viendo Madrid y entraba a la plataforma viendo Bogotá.
+        timezone: loggedIn ? undefined : zonaNavegador,
       });
       window.location.href = created.checkoutUrl;
     } catch (err: any) {

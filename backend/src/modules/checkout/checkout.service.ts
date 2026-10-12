@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service'
 import { env } from '../../config/env'
 import { ExchangeService } from '../exchange/exchange.service'
 import { SlotsService, SlotRef, PENDING_HOLD_MINUTES } from '../scheduling/slots.service'
+import { esZonaValida } from '../../common/zona-horaria'
 
 @Injectable()
 export class CheckoutService {
@@ -24,6 +25,7 @@ export class CheckoutService {
     userId?: string
     slots?: SlotRef[]
     password?: string
+    timezone?: string
   }) {
     const plan = await this.prisma.plan.findUnique({ where: { id: input.planId } })
     // Un plan inactivo no existe para el checkout público: el listado ya lo
@@ -112,6 +114,10 @@ export class CheckoutService {
         scheduleJson: slots.length > 0 ? (slots as any) : undefined,
         esRenovacion,
         ...(esRenovacion ? { assignmentMode: 'auto' } : {}),
+        // La zona con la que vio las horas al elegir. Se valida aquí porque
+        // llega de un formulario público: un valor corrupto no puede quedar
+        // guardado en la cuenta.
+        timezone: input.timezone && esZonaValida(input.timezone) ? input.timezone : undefined,
         // Credenciales elegidas en el checkout: solo se guarda el hash.
         passwordHash: input.password ? await argon2.hash(input.password) : undefined,
       },

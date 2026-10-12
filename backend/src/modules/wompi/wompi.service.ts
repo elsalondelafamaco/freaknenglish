@@ -200,6 +200,10 @@ export class WompiService {
               phone: intent.customerPhone ?? undefined,
               documentNumber: intent.customerDocument ?? undefined,
               role: 'student' as any,
+              // La zona con la que eligió su horario en el checkout: si no se
+              // guarda, entra a la plataforma y ve horas distintas a las que
+              // escogió.
+              ...(intent.timezone ? { timezone: intent.timezone } : {}),
               // Si eligió contraseña en el checkout, la cuenta nace lista;
               // si no, flujo de invitación por token.
               ...(chosenHash

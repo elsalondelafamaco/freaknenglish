@@ -230,6 +230,11 @@ model PaymentIntent {
   customerPhone   String?       @map("customer_phone")
   customerDocument String?      @map("customer_document")
   scheduleJson   Json?   @map("schedule_json") // franjas elegidas [{weekday,hour}]
+  /// Zona horaria del navegador al comprar. Viaja hasta aquí porque la cuenta
+  /// se crea después, en el webhook del pago: sin esto, quien eligió sus
+  /// franjas viendo horas de Madrid entraba a la plataforma con horas de
+  /// Colombia y veía otras distintas a las que escogió.
+  timezone       String? @map("timezone")
   passwordHash   String? @map("password_hash") // credenciales elegidas en checkout (argon2)
   assignmentMode String? @map("assignment_mode") // auto | manual
   /// Una renovación no vuelve a elegir horario ni profesor. Se congela AQUÍ y no

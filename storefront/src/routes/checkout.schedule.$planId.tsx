@@ -9,6 +9,7 @@ import { plansApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
 import { SchedulePickerGrid } from "@/components/schedule/SchedulePickerGrid";
 import { useRenovacion } from "@/lib/domain/renovacion";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useZonaDelNavegador } from "@/lib/domain/zona-navegador";
 
 export const Route = createFileRoute("/checkout/schedule/$planId")({
   head: () => ({ meta: [{ title: "Elige tu horario — FreaknEnglish" }] }),
@@ -28,7 +29,11 @@ function SchedulePicker() {
   const { planId } = Route.useParams();
   const nav = useNavigate();
   const { user } = useAuth();
-  const zonaPropia = zonaDe(user?.timezone);
+  // Aquí todavía no hay cuenta: sin preguntarle al navegador, la rejilla caía
+  // siempre en hora de Colombia y ni siquiera lo avisaba. Alguien en Madrid
+  // elegía "18:00" creyendo que eran las suyas y reservaba sus 11:00.
+  const zonaNavegador = useZonaDelNavegador();
+  const zonaPropia = zonaDe(user?.timezone ?? zonaNavegador);
   const [selected, setSelected] = useState<SlotRef[]>([]);
   const preloaded = useRef(false);
   const [renewalNotice, setRenewalNotice] = useState(false);

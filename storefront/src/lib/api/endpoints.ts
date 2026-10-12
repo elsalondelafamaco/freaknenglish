@@ -253,7 +253,7 @@ export const exchangeApi = {
 };
 
 export const checkoutApi = {
-  createIntent: (body: { planId: string; customerEmail: string; customerName: string; customerPhone: string; customerDocument: string; userId?: string; slots?: SlotRef[]; password?: string }) =>
+  createIntent: (body: { planId: string; customerEmail: string; customerName: string; customerPhone: string; customerDocument: string; userId?: string; slots?: SlotRef[]; password?: string; timezone?: string }) =>
     apiPost<{
       intentId: string;
       reference: string;

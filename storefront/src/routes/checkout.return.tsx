@@ -5,6 +5,7 @@ import { z } from "zod";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { checkoutApi } from "@/lib/api/endpoints";
+import { rastrearCompra } from "@/lib/meta-pixel";
 
 /**
  * Wompi devuelve al usuario con `?id=<transaction_id>` (y a veces `env=...`).
@@ -56,6 +57,9 @@ function ReturnPage() {
         if (cancelled) return;
         if (r.status === "APPROVED") {
           setState({ kind: "ok", reference: r.reference, planId: r.planId });
+          // La compra al píxel. Si no llega a salir (bloqueador, cierra rápido),
+          // la manda igual el servidor desde el webhook con la misma referencia.
+          rastrearCompra(r);
           // Refresca sesión/suscripción y lleva al portal automáticamente.
           qc.invalidateQueries({ queryKey: ["me"] });
           setTimeout(() => nav({ to: "/app" }), 2500);

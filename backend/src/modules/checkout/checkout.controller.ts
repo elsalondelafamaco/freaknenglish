@@ -1,4 +1,5 @@
-import { Body, Controller, Get, NotFoundException, Post, Query } from '@nestjs/common'
+import { Body, Controller, Get, NotFoundException, Post, Query, Req } from '@nestjs/common'
+import type { Request } from 'express'
 import { ApiTags } from '@nestjs/swagger'
 import { Throttle } from '@nestjs/throttler'
 import { IsArray, IsEmail, IsOptional, IsString, MinLength } from 'class-validator'
@@ -17,6 +18,24 @@ class CreateIntentDto {
   /** Zona IANA del navegador de quien compra, p. ej. "Europe/Madrid". */
   @IsString() @IsOptional() timezone?: string
   @IsArray() @IsOptional() slots?: Array<{ weekday: number; hour: number }>
+  /** Cookies del píxel de Meta, para atribuir la compra al anuncio. */
+  @IsString() @IsOptional() fbp?: string
+  @IsString() @IsOptional() fbc?: string
+  /** Página desde la que se inició el pago. */
+  @IsString() @IsOptional() eventSourceUrl?: string
+}
+
+/**
+ * IP real de quien compra. El sitio va detrás de Cloudflare y de Railway, así
+ * que la del socket es la de un proxy: se toma la que Cloudflare dice que vio, y
+ * si no está, la primera de la cadena `x-forwarded-for`.
+ */
+function ipDelCliente(req: Request): string | undefined {
+  const cf = req.headers['cf-connecting-ip']
+  if (typeof cf === 'string' && cf.trim()) return cf.trim()
+  const xff = req.headers['x-forwarded-for']
+  const primera = (Array.isArray(xff) ? xff[0] : xff)?.split(',')[0]?.trim()
+  return primera || req.socket?.remoteAddress || undefined
 }
 
 @ApiTags('checkout')
@@ -30,7 +49,14 @@ export class CheckoutController {
    */
   @Throttle({ burst: { ttl: 60_000, limit: 10 } })
   @Post('intents')
-  create(@Body() dto: CreateIntentDto) { return this.svc.createIntent(dto) }
+  create(@Body() dto: CreateIntentDto, @Req() req: Request) {
+    const ua = req.headers['user-agent']
+    return this.svc.createIntent({
+      ...dto,
+      clientIp: ipDelCliente(req),
+      clientUserAgent: typeof ua === 'string' ? ua : undefined,
+    })
+  }
 
   /** @endpoint GET /api/v1/checkout/status?reference=... (public) */
   @Get('status')
@@ -55,6 +81,9 @@ export class CheckoutController {
         planName: null,
         approvedAt: null,
         customerEmail: null,
+        amountInCents: null,
+        currency: null,
+        esRenovacion: false,
       }
     }
     return {
@@ -64,6 +93,11 @@ export class CheckoutController {
       planName: intent.plan?.name,
       approvedAt: intent.approvedAt,
       customerEmail: intent.customerEmail,
+      // Lo cobrado de verdad (USD × TRM del momento), para que el píxel del
+      // navegador reporte la compra con el mismo valor que el servidor.
+      amountInCents: intent.amountInCents,
+      currency: intent.currency,
+      esRenovacion: intent.esRenovacion,
     }
   }
 }

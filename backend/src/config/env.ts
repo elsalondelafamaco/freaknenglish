@@ -59,6 +59,16 @@ const schema = z.object({
   WHATSAPP_API_TOKEN: z.string().optional().default(''),
   WHATSAPP_PHONE_ID: z.string().optional().default(''),
   WHATSAPP_FROM: z.string().optional().default(''),
+
+  // ─── Meta (API de Conversiones) ─────────────────────────────────────────
+  // Manda las compras a Meta desde el servidor, además del píxel del
+  // navegador. Sin las dos primeras queda apagado y no sale nada.
+  META_PIXEL_ID: z.string().optional().default(''),
+  // Secreto: se genera en Events Manager → el píxel → Settings → Conversions API.
+  META_CAPI_TOKEN: z.string().optional().default(''),
+  // Solo para probar: con esto los eventos aparecen en Events Manager → Test
+  // Events y no cuentan para las campañas. Se quita al terminar la prueba.
+  META_TEST_EVENT_CODE: z.string().optional().default(''),
 })
 
 export const env = schema.parse(process.env)

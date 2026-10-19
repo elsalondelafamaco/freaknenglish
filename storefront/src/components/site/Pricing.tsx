@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { MessageCircle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -5,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { PLANS, copAcobrar, formatCop } from "@/lib/domain/plans";
 import { plansApi } from "@/lib/api/endpoints";
 import { Reveal } from "./anim";
+import { useRastrearAlVer } from "@/lib/meta-pixel";
 
 // Fallback de venta si el backend no responde: nunca frenamos una compra.
 const SALES_WHATSAPP = "573012646770";
@@ -78,10 +80,23 @@ export function Pricing() {
       };
     }) ?? null;
 
+  // Vio los planes: cuando la sección entra en pantalla, no al cargar el inicio.
+  const seccion = useRef<HTMLElement>(null);
+  useRastrearAlVer(
+    seccion,
+    "ViewContent",
+    () => ({
+      content_type: "product",
+      content_ids: (data?.plans ?? []).map((p) => p.id),
+      content_category: "planes",
+    }),
+    !!data?.plans.length,
+  );
+
   if (isError || (data && !data.plans.length)) return <PricingWhatsAppFallback />;
 
   return (
-    <section id="precios" className="scroll-mt-24 bg-white py-16 lg:py-24">
+    <section ref={seccion} id="precios" className="scroll-mt-24 bg-white py-16 lg:py-24">
       <div className="mx-auto max-w-[1440px] px-5 lg:px-16">
         <SectionHeader trm={trm} />
         <div

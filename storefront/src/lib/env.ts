@@ -23,6 +23,11 @@ export const publicEnv = {
   wompiPublicKey: () => readPublic("WOMPI_PUBLIC_KEY", "pub_test_placeholder"),
   /** Moneda (Wompi Colombia siempre COP) */
   currency: () => readPublic("CURRENCY", "COP"),
+  /**
+   * ID del píxel de Meta. Vacío = píxel apagado: así el entorno local y las
+   * previews no mandan visitas falsas a los datos de las campañas.
+   */
+  metaPixelId: () => readPublic("META_PIXEL_ID", ""),
   /** Origin público para construir redirect URLs */
   appOrigin: () =>
     readPublic(

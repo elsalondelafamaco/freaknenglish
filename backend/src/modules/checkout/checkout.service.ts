@@ -26,6 +26,11 @@ export class CheckoutService {
     slots?: SlotRef[]
     password?: string
     timezone?: string
+    fbp?: string
+    fbc?: string
+    eventSourceUrl?: string
+    clientIp?: string
+    clientUserAgent?: string
   }) {
     const plan = await this.prisma.plan.findUnique({ where: { id: input.planId } })
     // Un plan inactivo no existe para el checkout público: el listado ya lo
@@ -118,6 +123,13 @@ export class CheckoutService {
         // llega de un formulario público: un valor corrupto no puede quedar
         // guardado en la cuenta.
         timezone: input.timezone && esZonaValida(input.timezone) ? input.timezone : undefined,
+        // Para atribuir la compra en Meta cuando el webhook la confirme. Se
+        // recortan porque llegan de un formulario público.
+        fbp: input.fbp?.slice(0, 200) || undefined,
+        fbc: input.fbc?.slice(0, 500) || undefined,
+        eventSourceUrl: input.eventSourceUrl?.slice(0, 500) || undefined,
+        clientIp: input.clientIp?.slice(0, 64) || undefined,
+        clientUserAgent: input.clientUserAgent?.slice(0, 500) || undefined,
         // Credenciales elegidas en el checkout: solo se guarda el hash.
         passwordHash: input.password ? await argon2.hash(input.password) : undefined,
       },

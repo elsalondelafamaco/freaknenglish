@@ -10,6 +10,8 @@ import { SchedulePickerGrid } from "@/components/schedule/SchedulePickerGrid";
 import { useRenovacion } from "@/lib/domain/renovacion";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useZonaDelNavegador } from "@/lib/domain/zona-navegador";
+import { copAcobrar } from "@/lib/domain/plans";
+import { useRastrearUnaVez } from "@/lib/meta-pixel";
 
 export const Route = createFileRoute("/checkout/schedule/$planId")({
   head: () => ({ meta: [{ title: "Elige tu horario — FreaknEnglish" }] }),
@@ -86,6 +88,22 @@ function SchedulePicker() {
     preloaded.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, mineQ.data, hintsQ.data]);
+
+  // Eligió un plan: es el "agregar al carrito" de una tienda. Se mide aquí y no
+  // en el clic porque a este paso se llega por dos lados —los precios del inicio
+  // y la página de planes— y así no se escapa ninguno. Las renovaciones no
+  // pasan por aquí: no son clientes nuevos eligiendo plan.
+  useRastrearUnaVez(
+    "AddToCart",
+    () => ({
+      content_type: "product",
+      content_ids: [planId],
+      content_name: plan?.name,
+      value: copAcobrar(plan, plansQ.data?.trm?.valueCop ?? 0),
+      currency: "COP",
+    }),
+    !!plan && !gate.blocked && !cargandoRenovacion && !esRenovacion,
+  );
 
   // Plan activo lejos de renovación: no puede comprar otro plan — se avisa
   // desde el inicio y se sugiere cerrar sesión.

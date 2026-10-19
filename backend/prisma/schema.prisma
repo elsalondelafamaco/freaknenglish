@@ -235,6 +235,15 @@ model PaymentIntent {
   /// franjas viendo horas de Madrid entraba a la plataforma con horas de
   /// Colombia y veía otras distintas a las que escogió.
   timezone       String? @map("timezone")
+  /// Datos del navegador al crear el intento, para atribuir la compra en Meta.
+  /// Se toman AQUÍ y no en el webhook: el webhook lo llama el servidor de Wompi,
+  /// y su IP y su "navegador" serían los de Wompi, no los de quien compró.
+  /// `fbp`/`fbc` son las cookies del píxel que conectan con el clic del anuncio.
+  fbp             String? @map("fbp")
+  fbc             String? @map("fbc")
+  clientIp        String? @map("client_ip")
+  clientUserAgent String? @map("client_user_agent")
+  eventSourceUrl  String? @map("event_source_url")
   passwordHash   String? @map("password_hash") // credenciales elegidas en checkout (argon2)
   assignmentMode String? @map("assignment_mode") // auto | manual
   /// Una renovación no vuelve a elegir horario ni profesor. Se congela AQUÍ y no

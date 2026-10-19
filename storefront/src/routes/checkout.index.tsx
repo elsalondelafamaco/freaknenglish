@@ -6,6 +6,7 @@ import { ArrowRight } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { plansApi, subscriptionsApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useRastrearUnaVez } from "@/lib/meta-pixel";
 
 export const Route = createFileRoute("/checkout/")({
   head: () => ({ meta: [{ title: "Elige tu plan — FreaknEnglish" }] }),
@@ -28,6 +29,18 @@ function CheckoutSelect() {
   const activeFar = sub?.status === "active" && daysLeft != null && daysLeft > 5;
   const { esRenovacion, cargando: cargandoRenovacion } = useRenovacion();
   const renewalWindow = sub?.status === "active" && daysLeft != null && daysLeft <= 5;
+
+  // Vio los planes. Va antes de los `return` tempranos: un hook no puede
+  // depender de por cuál de ellos salga la página.
+  useRastrearUnaVez(
+    "ViewContent",
+    () => ({
+      content_type: "product",
+      content_ids: (q.data?.plans ?? []).map((p: any) => p.id),
+      content_category: "planes",
+    }),
+    !!q.data && !activeFar,
+  );
 
   if (activeFar) {
     return (

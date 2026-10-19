@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -14,6 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "../lib/auth/AuthProvider";
 import { LanguageProvider } from "../lib/i18n";
 import { registerPwa } from "../lib/pwa/register";
+import { rastrearPagina } from "../lib/meta-pixel";
 import {
   pareceTrozoFaltante,
   recuperarSiEsTrozoFaltante,
@@ -187,6 +189,14 @@ function RootComponent() {
     vigilarTrozosFaltantes();
     void registerPwa();
   }, []);
+
+  // Una visita por cada página pública que se ve. En una app de una sola página
+  // el navegador no recarga al cambiar de ruta, así que el píxel solo veía la
+  // primera; las privadas las descarta `rastrearPagina`.
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  useEffect(() => {
+    rastrearPagina(pathname);
+  }, [pathname]);
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -6,6 +6,7 @@ import { SubscriptionsService } from '../subscriptions/subscriptions.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { SchedulingService } from '../scheduling/scheduling.service'
 import { SlotsService } from '../scheduling/slots.service'
+import { MetaCapiService } from '../meta/meta-capi.service'
 import { env } from '../../config/env'
 
 type WompiEvent = {
@@ -33,6 +34,7 @@ export class WompiService {
     private notifications: NotificationsService,
     private scheduling: SchedulingService,
     private slots: SlotsService,
+    private meta: MetaCapiService,
   ) {}
 
   /**
@@ -221,6 +223,11 @@ export class WompiService {
       }
       this.log.log(`[finalize] APROBADO — activando plan=${intent.planId} para user=${userId}`)
       await this.subs.activateForUser(userId, intent.planId)
+      // La compra, a Meta desde el servidor. Va aquí, pasada la guarda del
+      // `paymentEvent` único, para que salga UNA vez por pago aunque el webhook
+      // y la página de retorno lleguen los dos. No se espera: Meta no puede
+      // demorar ni romper la activación.
+      void this.meta.reportarCompra({ ...intent, userId, approvedAt: new Date() })
       // Materializa el horario comprado: reserva→active / renovación / fallback / manual.
       try {
         await this.scheduling.materializePurchase(userId, {

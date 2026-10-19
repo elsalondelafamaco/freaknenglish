@@ -12,6 +12,7 @@ import { checkoutApi, plansApi, scheduleApi, type SlotRef } from "@/lib/api/endp
 import { useZonaDelNavegador } from "@/lib/domain/zona-navegador";
 import { slotTimeRange } from "@/components/schedule/SchedulePickerGrid";
 import { copAcobrar } from "@/lib/domain/plans";
+import { cookiesDeMeta, useRastrearUnaVez } from "@/lib/meta-pixel";
 import { useRenovacion } from "@/lib/domain/renovacion";
 import { ZONA_BOGOTA, franjaEnZona, zonaDe } from "@/lib/domain/zona-horaria";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -90,6 +91,23 @@ function CheckoutPage() {
     }
   }, [user?.id]);
 
+  // Llegó a la pantalla de pago. Solo cuando de verdad se va a mostrar el
+  // formulario: sin horario elegido esta página lo devuelve al selector, y eso
+  // no es haber llegado a pagar.
+  useRastrearUnaVez(
+    "InitiateCheckout",
+    () => ({
+      content_type: "product",
+      content_ids: [planId],
+      content_name: plan?.name,
+      num_items: 1,
+      value: copAcobrar(plan, trm),
+      currency: "COP",
+      content_category: esRenovacion ? "renovacion" : "plan_nuevo",
+    }),
+    !!plan && !gate.blocked && !cargandoRenovacion && (esRenovacion || selSlots.length > 0),
+  );
+
   // Plan activo lejos de renovación: no puede pagar otro plan.
   if (gate.blocked) return <ActivePlanScreen end={gate.end} />;
 
@@ -145,6 +163,10 @@ function CheckoutPage() {
         // con la que eligió sus horas viaja con el intento. Sin esto elegía
         // viendo Madrid y entraba a la plataforma viendo Bogotá.
         timezone: loggedIn ? undefined : zonaNavegador,
+        // Para que el servidor pueda atribuir la compra al anuncio cuando Wompi
+        // la confirme: las cookies del píxel y la página desde la que pagó.
+        ...cookiesDeMeta(),
+        eventSourceUrl: window.location.href,
       });
       window.location.href = created.checkoutUrl;
     } catch (err: any) {

@@ -253,7 +253,7 @@ export const exchangeApi = {
 };
 
 export const checkoutApi = {
-  createIntent: (body: { planId: string; customerEmail: string; customerName: string; customerPhone: string; customerDocument: string; userId?: string; slots?: SlotRef[]; password?: string; timezone?: string }) =>
+  createIntent: (body: { planId: string; customerEmail: string; customerName: string; customerPhone: string; customerDocument: string; userId?: string; slots?: SlotRef[]; password?: string; timezone?: string; fbp?: string; fbc?: string; eventSourceUrl?: string }) =>
     apiPost<{
       intentId: string;
       reference: string;
@@ -273,6 +273,10 @@ export const checkoutApi = {
       planName?: string;
       approvedAt: string | null;
       customerEmail: string;
+      /** Lo cobrado de verdad, para reportar la compra con el valor real. */
+      amountInCents: number | null;
+      currency: string | null;
+      esRenovacion: boolean;
     }>("/checkout/status", params),
 };
 

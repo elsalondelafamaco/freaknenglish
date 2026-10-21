@@ -136,6 +136,16 @@ export const scheduleApi = {
     apiPost<ScheduleHints>("/public/schedule/availability", { slots, planId }),
   availabilityMine: (slots: SlotRef[], planId?: string) =>
     apiPost<ScheduleHints>("/schedule/availability", { slots, planId }),
+  /**
+   * Al confirmar el horario del checkout: si hay profe para lo que eligió
+   * (`assignable`), y si no, hasta 10 horarios parecidos con inicio inmediato.
+   * Con sesión usa otra ruta que no cuenta sus propias franjas como ocupadas.
+   */
+  sugerencias: (slots: SlotRef[], planId: string, conSesion: boolean) =>
+    apiPost<{ assignable: boolean; sugerencias: SlotRef[][] }>(
+      conSesion ? "/checkout/schedule/sugerencias" : "/public/schedule/sugerencias",
+      { slots, planId },
+    ),
   mine: () => apiGet<{
     schedulePreferences: Array<{ weekday: number; hour: number }> | null;
     scheduleAssignmentStatus: "auto_assigned" | "manual_pending" | null;

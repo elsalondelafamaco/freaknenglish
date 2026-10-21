@@ -52,6 +52,76 @@ function cabeElTramo(libres: Set<string>, s: SlotRef, span: number): boolean {
   return true
 }
 
+/**
+ * Reglas de una selección de franjas contra la ventana y el plan. Devuelve el
+ * motivo del primer incumplimiento, o `null` si es válida.
+ *
+ * Es la ÚNICA definición de "selección válida": la usa `validateSelection`
+ * para rechazar una compra y `sugerirHorarios` para no proponer nunca un horario
+ * que después el pago rechazaría. Con `durationMin` de 75, una clase ocupa
+ * también la hora siguiente, así que no cabe al final de la ventana ni pegada
+ * a otra franja del mismo día.
+ */
+export function motivoSeleccionInvalida(
+  slots: SlotRef[],
+  cfg: ScheduleConfig,
+  daysPerWeek: number,
+  durationMin = 50,
+): string | null {
+  if (!Array.isArray(slots) || slots.length !== daysPerWeek) {
+    return `Debes seleccionar exactamente ${daysPerWeek} franjas`
+  }
+  // Horas-celda que abarca cada clase (75 min ⇒ 2 celdas).
+  const span = Math.max(1, Math.ceil(durationMin / 60))
+  const perDay = new Map<number, number>()
+  const seen = new Set<string>()
+  for (const s of slots) {
+    if (!Number.isInteger(s?.weekday) || !Number.isInteger(s?.hour)) return 'Franja inválida'
+    if (!cfg.days.includes(s.weekday)) return 'Día fuera de la ventana permitida'
+    if (s.hour < cfg.startHour || s.hour > cfg.endHour) return 'Hora fuera de la ventana permitida'
+    if (s.hour + span - 1 > cfg.endHour) {
+      return `Una clase de ${durationMin} min que empieza a las ${s.hour}:00 se sale de la ventana de horario (última franja ${cfg.endHour}:00)`
+    }
+    if (seen.has(key(s))) return 'Franja repetida'
+    seen.add(key(s))
+    perDay.set(s.weekday, (perDay.get(s.weekday) ?? 0) + 1)
+    if ((perDay.get(s.weekday) ?? 0) > cfg.maxPerDay) return `Máximo ${cfg.maxPerDay} clase(s) por día`
+  }
+  if (span > 1) {
+    for (const a of slots) {
+      for (const b of slots) {
+        if (a === b || a.weekday !== b.weekday) continue
+        if (Math.abs(a.hour - b.hour) < span) {
+          return `Las franjas del mismo día deben ir separadas: una clase de ${durationMin} min ocupa también la(s) hora(s) siguiente(s)`
+        }
+      }
+    }
+  }
+  return null
+}
+
+/**
+ * Qué tan lejos queda una franja propuesta de la que pidió. Cambiar de día pesa
+ * más que correrse de hora: quien pidió los lunes a las 8 suele preferir los
+ * lunes a las 10 antes que los martes a las 8.
+ */
+function distanciaEntreFranjas(pedida: SlotRef, propuesta: SlotRef): number {
+  const horas = Math.abs(pedida.hour - propuesta.hour)
+  return pedida.weekday === propuesta.weekday ? horas : 3 + horas
+}
+
+/** Cuántas alternativas se le muestran a quien no tiene cupo inmediato. */
+const MAX_SUGERENCIAS = 10
+/** Opciones por franja y estados que se conservan en la búsqueda por profesor. */
+const OPCIONES_POR_FRANJA = 6
+const ANCHO_DEL_HAZ = 30
+/**
+ * Tope de opciones que aporta cada profe. Sin él, un mismo profe llenaba la
+ * lista con variaciones de una hora de la misma idea (13-13-13, 13-13-12,
+ * 13-12-13…); con él, las diez opciones son de verdad distintas.
+ */
+const MAX_POR_PROFE = 3
+
 /** Quién ocupa una celda "día:hora" del horario de un profesor, y por qué. */
 export interface CeldaOcupada {
   studentId: string | null
@@ -192,41 +262,8 @@ export class SlotsService {
    */
   async validateSelection(slots: SlotRef[], daysPerWeek: number, durationMin = 50): Promise<ScheduleConfig> {
     const cfg = await this.getConfig()
-    if (!Array.isArray(slots) || slots.length !== daysPerWeek) {
-      throw new BadRequestException(`Debes seleccionar exactamente ${daysPerWeek} franjas`)
-    }
-    // Horas-celda que abarca cada clase (75 min ⇒ 2 celdas).
-    const span = Math.max(1, Math.ceil(durationMin / 60))
-    const perDay = new Map<number, number>()
-    const seen = new Set<string>()
-    for (const s of slots) {
-      if (!Number.isInteger(s?.weekday) || !Number.isInteger(s?.hour)) throw new BadRequestException('Franja inválida')
-      if (!cfg.days.includes(s.weekday)) throw new BadRequestException('Día fuera de la ventana permitida')
-      if (s.hour < cfg.startHour || s.hour > cfg.endHour) throw new BadRequestException('Hora fuera de la ventana permitida')
-      if (s.hour + span - 1 > cfg.endHour) {
-        throw new BadRequestException(
-          `Una clase de ${durationMin} min que empieza a las ${s.hour}:00 se sale de la ventana de horario (última franja ${cfg.endHour}:00)`,
-        )
-      }
-      if (seen.has(key(s))) throw new BadRequestException('Franja repetida')
-      seen.add(key(s))
-      perDay.set(s.weekday, (perDay.get(s.weekday) ?? 0) + 1)
-      if ((perDay.get(s.weekday) ?? 0) > cfg.maxPerDay) {
-        throw new BadRequestException(`Máximo ${cfg.maxPerDay} clase(s) por día`)
-      }
-    }
-    if (span > 1) {
-      for (const a of slots) {
-        for (const b of slots) {
-          if (a === b || a.weekday !== b.weekday) continue
-          if (Math.abs(a.hour - b.hour) < span) {
-            throw new BadRequestException(
-              `Las franjas del mismo día deben ir separadas: una clase de ${durationMin} min ocupa también la(s) hora(s) siguiente(s)`,
-            )
-          }
-        }
-      }
-    }
+    const motivo = motivoSeleccionInvalida(slots, cfg, daysPerWeek, durationMin)
+    if (motivo) throw new BadRequestException(motivo)
     return cfg
   }
 
@@ -439,6 +476,110 @@ export class SlotsService {
       }
     }
     return { assignable: compatible.length > 0, hints }
+  }
+
+  /**
+   * ¿Hay un profe para el horario que pidió? Y si no, los horarios parecidos que
+   * sí lo tienen.
+   *
+   * El checkout deja elegir el horario ideal sin pistas y pregunta esto UNA vez
+   * al confirmar. `assignable` usa la misma regla que `candidateTeachers` —un
+   * mismo profe con todas las franjas libres—, que es la que decide la
+   * asignación real al pagar: si aquí dice que sí, al pagar también.
+   *
+   * Las sugerencias se buscan por profe: cada franja pedida se conserva si ese
+   * profe la tiene libre o se cambia por sus horas libres más cercanas. Así cada
+   * sugerencia la puede dar UN profe entero, no una mezcla de huecos de varios.
+   * Solo devuelve franjas, nunca quién las daría (AC-6).
+   */
+  async sugerirHorarios(
+    seleccion: SlotRef[],
+    daysPerWeek: number,
+    durationMin = 50,
+    excludeStudentId?: string,
+  ): Promise<{ assignable: boolean; sugerencias: SlotRef[][] }> {
+    const cfg = await this.getConfig()
+    const span = Math.max(1, Math.ceil(durationMin / 60))
+    const pedidas = (seleccion ?? [])
+      .filter((s) => Number.isInteger(s?.weekday) && Number.isInteger(s?.hour))
+      .map((s) => ({ weekday: s.weekday, hour: s.hour }))
+    // Una selección que el pago rechazaría no se evalúa: el paso 1 ya no deja
+    // continuar con ella, y sugerir a partir de algo inválido no tiene sentido.
+    if (motivoSeleccionInvalida(pedidas, cfg, daysPerWeek, durationMin)) {
+      return { assignable: false, sugerencias: [] }
+    }
+
+    const libresPorProfe = await this.freeSlotsByTeacher(excludeStudentId)
+    const profes = Array.from(libresPorProfe.values())
+    if (profes.some((libres) => pedidas.every((s) => cabeElTramo(libres, s, span)))) {
+      return { assignable: true, sugerencias: [] }
+    }
+
+    type Estado = { franjas: SlotRef[]; costo: number; cambios: number }
+    const mejores = new Map<string, Estado>()
+    const huella = (franjas: SlotRef[]) => franjas.map(key).sort().join('|')
+    const orden = (a: Estado, b: Estado) => a.costo - b.costo || a.cambios - b.cambios
+
+    for (const libres of profes) {
+      // Las celdas de este profe donde cabe una clase entera.
+      const celdas: SlotRef[] = []
+      for (const d of cfg.days) {
+        for (let h = cfg.startHour; h <= cfg.endHour; h++) {
+          const c = { weekday: d, hour: h }
+          if (cabeElTramo(libres, c, span)) celdas.push(c)
+        }
+      }
+      if (celdas.length < pedidas.length) continue
+
+      // Búsqueda en haz: franja por franja, quedarse con los mejores parciales.
+      let haz: Estado[] = [{ franjas: [], costo: 0, cambios: 0 }]
+      for (const pedida of pedidas) {
+        // Lo que este profe SÍ puede dar se conserva: solo se buscan reemplazos
+        // para lo que no. Sin esto salían opciones que movían también el
+        // viernes de 18 a 17 cuando el problema era solo el miércoles: correctas,
+        // pero ruido que tapaba las útiles.
+        const opciones = cabeElTramo(libres, pedida, span)
+          ? [pedida]
+          : [...celdas]
+              .sort((a, b) => distanciaEntreFranjas(pedida, a) - distanciaEntreFranjas(pedida, b) || a.hour - b.hour)
+              .slice(0, OPCIONES_POR_FRANJA)
+        const siguiente: Estado[] = []
+        for (const estado of haz) {
+          for (const c of opciones) {
+            const franjas = [...estado.franjas, c]
+            // Las mismas reglas que el pago, sobre el parcial: así nunca se
+            // arma algo que después habría que descartar.
+            if (motivoSeleccionInvalida(franjas, cfg, franjas.length, durationMin)) continue
+            const igual = c.weekday === pedida.weekday && c.hour === pedida.hour
+            siguiente.push({
+              franjas,
+              costo: estado.costo + distanciaEntreFranjas(pedida, c),
+              cambios: estado.cambios + (igual ? 0 : 1),
+            })
+          }
+        }
+        haz = siguiente.sort(orden).slice(0, ANCHO_DEL_HAZ)
+        if (haz.length === 0) break
+      }
+
+      const deEsteProfe = haz
+        .filter((e) => e.franjas.length === pedidas.length && e.cambios > 0)
+        .sort(orden)
+        .slice(0, MAX_POR_PROFE)
+      for (const estado of deEsteProfe) {
+        const k = huella(estado.franjas)
+        const previo = mejores.get(k)
+        // El mismo horario con otro profe es la misma opción para el visitante.
+        if (!previo || orden(estado, previo) < 0) mejores.set(k, estado)
+      }
+    }
+
+    const temprano = (f: SlotRef[]) => f.reduce((s, x) => s + x.weekday * 24 + x.hour, 0)
+    const sugerencias = Array.from(mejores.values())
+      .sort((a, b) => orden(a, b) || temprano(a.franjas) - temprano(b.franjas))
+      .slice(0, MAX_SUGERENCIAS)
+      .map((e) => [...e.franjas].sort((a, b) => a.weekday - b.weekday || a.hour - b.hour))
+    return { assignable: false, sugerencias }
   }
 
   // ── Reserva de pago (pending, 20 min) ───────────────────────────────

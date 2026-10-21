@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common'
 import { SchedulingController } from './scheduling.controller'
 import { PublicScheduleController } from './public-schedule.controller'
+import { CheckoutScheduleController } from './checkout-schedule.controller'
 import { SchedulingService } from './scheduling.service'
 import { SlotsService } from './slots.service'
 import { NotificationsModule } from '../notifications/notifications.module'
@@ -9,7 +10,7 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module'
 
 @Module({
   imports: [NotificationsModule, BoardModule, SubscriptionsModule],
-  controllers: [SchedulingController, PublicScheduleController],
+  controllers: [SchedulingController, PublicScheduleController, CheckoutScheduleController],
   providers: [SchedulingService, SlotsService],
   exports: [SchedulingService, SlotsService],
 })

@@ -19,7 +19,9 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 
 export const Route = createFileRoute("/checkout/$planId")({
   head: () => ({ meta: [{ title: "Checkout — FreaknEnglish" }] }),
-  validateSearch: z.object({ slots: z.string().optional() }),
+  // `.catch`: un `slots` raro se ignora (y la página vuelve al selector) en vez
+  // de devolver la página de error del servidor.
+  validateSearch: z.object({ slots: z.string().optional().catch(undefined) }),
   component: CheckoutPage,
 });
 
@@ -57,7 +59,10 @@ function CheckoutPage() {
 
   const availQ = useQuery({
     queryKey: ["schedule", "hints", "confirm", !!user, slotsRaw],
-    queryFn: () => (user ? scheduleApi.availabilityMine(selSlots) : scheduleApi.availability(selSlots)),
+    // Con `planId`, igual que el paso del horario: sin él el backend no sabe
+    // cuántas clases pide el plan.
+    queryFn: () =>
+      user ? scheduleApi.availabilityMine(selSlots, planId) : scheduleApi.availability(selSlots, planId),
     enabled: selSlots.length > 0,
   });
   const assignable = availQ.data?.assignable ?? true;
@@ -101,7 +106,7 @@ function CheckoutPage() {
       content_ids: [planId],
       content_name: plan?.name,
       num_items: 1,
-      value: copAcobrar(plan, trm),
+      value: plan ? copAcobrar(plan, trm) : undefined,
       currency: "COP",
       content_category: esRenovacion ? "renovacion" : "plan_nuevo",
     }),
@@ -186,8 +191,17 @@ function CheckoutPage() {
           </Link>
           <div className="flex items-center gap-4 text-sm font-medium text-brand-ink/60">
             <Link to="/checkout" className="hover:text-brand-ink">← Plan</Link>
+            {/* Vuelve con su horario marcado: antes volvía a la rejilla vacía
+                y había que elegirlo todo otra vez para cambiar una franja. */}
             {esRenovacion ? null : (
-              <Link to="/checkout/schedule/$planId" params={{ planId }} className="hover:text-brand-ink">← Horario</Link>
+              <Link
+                to="/checkout/schedule/$planId"
+                params={{ planId }}
+                search={{ slots: slotsRaw }}
+                className="hover:text-brand-ink"
+              >
+                ← Horario
+              </Link>
             )}
           </div>
         </div>

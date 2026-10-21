@@ -27,6 +27,20 @@ export class PublicScheduleController {
     return this.slots.hints(body?.slots ?? [], undefined, await this.diasDelPlan(body?.planId))
   }
 
+  /**
+   * @endpoint POST /api/v1/public/schedule/sugerencias
+   * Body: { slots: [{weekday,hour}], planId }
+   * Se llama UNA vez, al confirmar el horario: si hay profe pasa directo al pago,
+   * si no devuelve hasta 10 horarios parecidos con inicio inmediato. Solo
+   * franjas, nunca profesores (AC-6).
+   */
+  @Post('sugerencias')
+  async sugerencias(@Body() body: { slots?: SlotRef[]; planId?: string }) {
+    const slots = body?.slots ?? []
+    const dias = (await this.diasDelPlan(body?.planId)) ?? slots.length
+    return this.slots.sugerirHorarios(slots, dias)
+  }
+
   /** daysPerWeek del plan, o undefined si no vino o no existe. */
   private async diasDelPlan(planId?: string): Promise<number | undefined> {
     if (!planId) return undefined

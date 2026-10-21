@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ZONA_BOGOTA, etiquetaDeZona, nombreDeZona, zonaDe } from "@/lib/domain/zona-horaria";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Sparkles, Zap } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { ActivePlanScreen, useActivePlanGate } from "@/components/site/ActivePlanGate";
 import { plansApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
@@ -12,13 +13,31 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useZonaDelNavegador } from "@/lib/domain/zona-navegador";
 import { copAcobrar } from "@/lib/domain/plans";
 import { useRastrearUnaVez } from "@/lib/meta-pixel";
+import { SugerenciasDeHorario } from "@/components/schedule/SugerenciasDeHorario";
 
 export const Route = createFileRoute("/checkout/schedule/$planId")({
   head: () => ({ meta: [{ title: "Elige tu horario — FreaknEnglish" }] }),
+  // La selección viaja en la URL: volver atrás desde las sugerencias la
+  // restaura, y recargar no la pierde. `paso=coordinacion` es la pantalla de
+  // "tu horario necesita coordinación".
+  //
+  // `.catch` en cada campo: un valor raro (un enlace viejo, una URL mal
+  // copiada) se ignora en vez de romper. Sin él, `?paso=otra` devolvía la página
+  // de error del servidor en lugar de la rejilla.
+  validateSearch: z.object({
+    slots: z.string().optional().catch(undefined),
+    paso: z.enum(["coordinacion"]).optional().catch(undefined),
+  }),
   component: SchedulePicker,
 });
 
-const key = (s: SlotRef) => `${s.weekday}:${s.hour}`;
+/**
+ * Cuánto vale una respuesta de disponibilidad. Corto a propósito: el cupo de un
+ * profe cambia cuando otro compra, pero un minuto alcanza para que la pantalla
+ * de coordinación reutilice la respuesta del botón "Continuar".
+ */
+const VIGENCIA_SUGERENCIAS_MS = 60_000;
+
 export const encodeSlots = (slots: SlotRef[]) => slots.map((s) => `${s.weekday}-${s.hour}`).join(",");
 export const decodeSlots = (raw: string | undefined): SlotRef[] =>
   (raw ?? "")
@@ -36,9 +55,11 @@ function SchedulePicker() {
   // elegía "18:00" creyendo que eran las suyas y reservaba sus 11:00.
   const zonaNavegador = useZonaDelNavegador();
   const zonaPropia = zonaDe(user?.timezone ?? zonaNavegador);
-  const [selected, setSelected] = useState<SlotRef[]>([]);
+  const search = Route.useSearch();
+  const qc = useQueryClient();
+  const [selected, setSelected] = useState<SlotRef[]>(() => decodeSlots(search.slots));
+  const [confirmando, setConfirmando] = useState(false);
   const preloaded = useRef(false);
-  const [renewalNotice, setRenewalNotice] = useState(false);
   const gate = useActivePlanGate();
 
   // Quitar los enlaces al selector no basta mientras la ruta siga accesible:
@@ -62,32 +83,37 @@ function SchedulePicker() {
   const cfg = configQ.data;
   const need = plan?.daysPerWeek ?? 0;
 
-  // Hints en vivo según la selección (autenticado ⇒ ignora slots propios: renovación).
-  const selKey = selected.map(key).sort().join("|");
-  const hintsQ = useQuery({
-    queryKey: ["schedule", "hints", !!user, planId, selKey],
-    queryFn: () =>
-      user ? scheduleApi.availabilityMine(selected, planId) : scheduleApi.availability(selected, planId),
-    enabled: !!cfg,
-    placeholderData: (prev) => prev,
-  });
-  const autoMap = useMemo(() => {
-    const m = new Map<string, boolean>();
-    for (const h of hintsQ.data?.hints ?? []) m.set(`${h.weekday}:${h.hour}`, h.auto);
-    return m;
-  }, [hintsQ.data]);
-
-  // Renovación: preseleccionar el horario anterior si sigue disponible (AC-14/15).
+  // Quien ya tuvo horario (cambia de plan, vuelve tras vencerse) arranca con el
+  // suyo marcado. Antes se filtraba por disponibilidad; ahora la disponibilidad
+  // se decide al confirmar, así que se precarga tal cual.
   useEffect(() => {
-    if (preloaded.current || !user || !mineQ.data || !hintsQ.data || selected.length > 0) return;
-    const old = (mineQ.data.slots ?? []).map((s) => ({ weekday: s.weekday, hour: s.hour }));
-    if (old.length === 0) { preloaded.current = true; return; }
-    const avail = old.filter((s) => autoMap.get(key(s)));
-    setSelected(avail.slice(0, need || avail.length));
-    if (avail.length < old.length) setRenewalNotice(true);
+    if (preloaded.current || !user || !mineQ.data || !plan || selected.length > 0) return;
     preloaded.current = true;
+    const old = (mineQ.data.slots ?? []).map((s) => ({ weekday: s.weekday, hour: s.hour }));
+    if (old.length > 0) setSelected(old.slice(0, need || old.length));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, mineQ.data, hintsQ.data]);
+  }, [user, mineQ.data, plan]);
+
+  // Lo que se consulta al confirmar: si hay profe para lo elegido y, si no, las
+  // alternativas. Una sola consulta, no una por clic como antes.
+  const pedidas = useMemo(() => decodeSlots(search.slots), [search.slots]);
+  const claveSugerencias = ["schedule", "sugerencias", !!user, planId, search.slots ?? ""] as const;
+  const sugerenciasQ = useQuery({
+    queryKey: claveSugerencias,
+    queryFn: () => scheduleApi.sugerencias(pedidas, planId, !!user),
+    enabled: search.paso === "coordinacion" && pedidas.length > 0,
+    // La misma vigencia que al confirmar: la pantalla de coordinación usa la
+    // respuesta que ya trajo el botón en vez de volver a pedirla.
+    staleTime: VIGENCIA_SUGERENCIAS_MS,
+  });
+
+  // Al recargar la pantalla de coordinación puede que ya haya cupo: entonces
+  // no hay nada que coordinar y se va al pago.
+  useEffect(() => {
+    if (search.paso === "coordinacion" && sugerenciasQ.data?.assignable) {
+      nav({ to: "/checkout/$planId", params: { planId }, search: { slots: search.slots } as any, replace: true });
+    }
+  }, [search.paso, search.slots, sugerenciasQ.data, planId, nav]);
 
   // Eligió un plan: es el "agregar al carrito" de una tienda. Se mide aquí y no
   // en el clic porque a este paso se llega por dos lados —los precios del inicio
@@ -99,7 +125,7 @@ function SchedulePicker() {
       content_type: "product",
       content_ids: [planId],
       content_name: plan?.name,
-      value: copAcobrar(plan, plansQ.data?.trm?.valueCop ?? 0),
+      value: plan ? copAcobrar(plan, plansQ.data?.trm?.valueCop ?? 0) : undefined,
       currency: "COP",
     }),
     !!plan && !gate.blocked && !cargandoRenovacion && !esRenovacion,
@@ -124,13 +150,35 @@ function SchedulePicker() {
   }
 
   const complete = selected.length === need;
-  const assignable = hintsQ.data?.assignable ?? true;
-  // Sin franjas automáticas no hay diferencia que explicar: se oculta la leyenda.
-  const hasAutoSlots = (hintsQ.data?.hints ?? []).some((h) => h.auto);
+  const enCoordinacion = search.paso === "coordinacion" && pedidas.length > 0;
 
-  function continueToPay() {
-    if (!complete) return;
-    nav({ to: "/checkout/$planId", params: { planId }, search: { slots: encodeSlots(selected) } as any });
+  function irAPagar(franjas: SlotRef[]) {
+    nav({ to: "/checkout/$planId", params: { planId }, search: { slots: encodeSlots(franjas) } as any });
+  }
+
+  /**
+   * Confirmar el horario ideal. Si hay profe libre pasa directo al pago, sin
+   * pantallas de más; si no, a la de coordinación con las alternativas.
+   */
+  async function confirmar() {
+    if (!complete || confirmando) return;
+    setConfirmando(true);
+    const slots = encodeSlots(selected);
+    try {
+      const r = await qc.fetchQuery({
+        queryKey: ["schedule", "sugerencias", !!user, planId, slots],
+        queryFn: () => scheduleApi.sugerencias(selected, planId, !!user),
+        staleTime: VIGENCIA_SUGERENCIAS_MS,
+      });
+      if (r.assignable) irAPagar(selected);
+      else nav({ to: "/checkout/schedule/$planId", params: { planId }, search: { slots, paso: "coordinacion" } });
+    } catch {
+      // Si la consulta falla no se frena la venta: el pago vuelve a mirar la
+      // disponibilidad y avisa si su horario necesita coordinación.
+      irAPagar(selected);
+    } finally {
+      setConfirmando(false);
+    }
   }
 
   return (
@@ -145,36 +193,21 @@ function SchedulePicker() {
           <div>
             <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-ink/60">Paso 2 de 3 · Tu horario</p>
             <h1 className="mt-3 font-display text-4xl font-extrabold uppercase leading-[1.02] tracking-[-0.02em] text-brand-ink md:text-[46px]">
-              Elige tus {need} clases de la semana
+              {enCoordinacion ? "Tu horario" : `Elige tus ${need} clases de la semana`}
             </h1>
             <p className="mt-1 text-[15px] text-brand-ink/65">
-              Clases de {cfg.durationMin} min. Este será tu horario fijo semanal.
+              {enCoordinacion
+                ? "Revisamos la disponibilidad de los profes para lo que elegiste."
+                : `Clases de ${cfg.durationMin} min. Elige el horario que mejor te quede: este será tu horario fijo semanal.`}
             </p>
           </div>
-          <div className="shadow-hard border-2 border-brand-ink bg-white px-5 py-3 text-center [--hard-x:4px]">
-            <div className="font-display text-3xl font-extrabold text-brand-ink">{selected.length}/{need}</div>
-            <div className="text-[11px] uppercase tracking-wide text-brand-ink/55">franjas elegidas</div>
-          </div>
+          {!enCoordinacion ? (
+            <div className="shadow-hard border-2 border-brand-ink bg-white px-5 py-3 text-center [--hard-x:4px]">
+              <div className="font-display text-3xl font-extrabold text-brand-ink">{selected.length}/{need}</div>
+              <div className="text-[11px] uppercase tracking-wide text-brand-ink/55">franjas elegidas</div>
+            </div>
+          ) : null}
         </header>
-
-        {renewalNotice ? (
-          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Parte de tu horario anterior ya no está disponible. Elige nuevas franjas para completar tu plan.
-          </div>
-        ) : null}
-
-        {hasAutoSlots ? (
-          <div className="mt-3 flex items-center gap-4 text-xs text-brand-ink/60">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="inline-flex size-4 items-center justify-center rounded bg-brand-yellow/70"><Zap className="size-3 text-brand-ink" /></span>
-              Disponibilidad inmediata
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="inline-block size-4 rounded border border-brand-line bg-white" />
-              Disponible con coordinación
-            </span>
-          </div>
-        ) : null}
 
         {/* Aviso de zona: la grilla es hora de COLOMBIA, y quien está fuera
             piensa en la suya. Sin decirlo, una alumna en San Francisco eligió
@@ -191,37 +224,51 @@ function SchedulePicker() {
             </span>
           </div>
         ) : null}
-        <div className="mt-4">
-          <SchedulePickerGrid
-            cfg={cfg}
-            need={need}
-            selected={selected}
-            onChange={setSelected}
-            autoMap={autoMap}
-            zona={zonaPropia}
-          />
-        </div>
-
-        {complete && !assignable ? (
-          <div className="mt-4 flex items-start gap-3 border-2 border-brand-ink bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink">
-            <Sparkles className="mt-0.5 size-4 shrink-0" />
-            <p>
-              Ese horario está muy solicitado 💛 Completa tu compra con total tranquilidad: nuestro equipo te
-              contacta en menos de 24&nbsp;h hábiles para coordinar tu profesor y el inicio de tus clases.
-              <strong> Tu cupo queda garantizado.</strong>
+        {enCoordinacion ? (
+          sugerenciasQ.isLoading || sugerenciasQ.data?.assignable ? (
+            <p className="mt-8 inline-flex items-center gap-2 text-sm text-brand-ink/60">
+              <Loader2 className="size-4 animate-spin" /> Revisando la disponibilidad…
             </p>
-          </div>
-        ) : null}
+          ) : (
+            <SugerenciasDeHorario
+              pedidas={pedidas}
+              // Si la consulta falló, sin alternativas: igual puede seguir con el suyo.
+              sugerencias={sugerenciasQ.data?.sugerencias ?? []}
+              zona={zonaPropia}
+              onSeguirConElMio={() => irAPagar(pedidas)}
+              onElegir={irAPagar}
+              onVolver={() =>
+                nav({ to: "/checkout/schedule/$planId", params: { planId }, search: { slots: search.slots } })
+              }
+            />
+          )
+        ) : (
+          <>
+            {/* Sin pistas de disponibilidad a propósito: primero elige el horario
+                que de verdad le sirve, y la disponibilidad se mira al confirmar. */}
+            <div className="mt-4">
+              <SchedulePickerGrid cfg={cfg} need={need} selected={selected} onChange={setSelected} zona={zonaPropia} />
+            </div>
 
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={continueToPay}
-            disabled={!complete}
-            className="shadow-hard press-hard inline-flex h-12 items-center justify-center gap-2 rounded-full bg-brand-ink px-8 font-display text-[14px] font-bold uppercase tracking-[0.04em] text-brand-cream disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none [--hard-x:5px]"
-          >
-            Continuar al pago <ArrowRight className="size-4" />
-          </button>
-        </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={confirmar}
+                disabled={!complete || confirmando}
+                className="shadow-hard press-hard inline-flex h-12 items-center justify-center gap-2 rounded-full bg-brand-ink px-8 font-display text-[14px] font-bold uppercase tracking-[0.04em] text-brand-cream disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none [--hard-x:5px]"
+              >
+                {confirmando ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" /> Revisando…
+                  </>
+                ) : (
+                  <>
+                    Continuar <ArrowRight className="size-4" />
+                  </>
+                )}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </main>
   );

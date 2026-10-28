@@ -264,8 +264,24 @@ export class BoardService {
     if (role === 'admin') {
       return this.prisma.board.findMany({ orderBy: { updatedAt: 'desc' }, include })
     }
+    // Al profe no se le listan las aulas de alumnos con el plan CANCELADO (lo
+    // cancela el admin cuando el alumno dice que no sigue). Vencido no cuenta:
+    // ese puede pagar al día siguiente y sigue con el mismo profe. El aula no se
+    // borra; si el alumno vuelve y se activa, reaparece sola.
+    const ocultas =
+      role === 'teacher'
+        ? (
+            await this.prisma.subscription.findMany({
+              where: { status: 'canceled' },
+              select: { userId: true },
+            })
+          ).map((s) => s.userId)
+        : []
     return this.prisma.board.findMany({
-      where: { members: { some: { userId } } },
+      where: {
+        members: { some: { userId } },
+        ...(ocultas.length > 0 ? { OR: [{ studentId: null }, { studentId: { notIn: ocultas } }] } : {}),
+      },
       orderBy: { updatedAt: 'desc' },
       include,
     })

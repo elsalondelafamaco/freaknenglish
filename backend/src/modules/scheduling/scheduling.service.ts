@@ -919,8 +919,16 @@ export class SchedulingService {
     })
     if (!teacher || !hasRole(teacher, 'teacher') || teacher.disabledAt || teacher.deletedAt) return []
 
+    // Solo planes activos. `manual_pending` es también donde quedan los
+    // cancelados y pausados a los que el admin les quitó el profe, y sin este
+    // filtro cada vez que un profe pintaba una hora se le colaban de nuevo
+    // (pasó con Sara Quevedo el 20-oct y con Liliana Quimbayo el 28-oct).
     const pending = await this.prisma.user.findMany({
-      where: { scheduleAssignmentStatus: 'manual_pending', deletedAt: null },
+      where: {
+        scheduleAssignmentStatus: 'manual_pending',
+        deletedAt: null,
+        subscription: { status: 'active' },
+      },
       select: { id: true, fullName: true, schedulePreferences: true, classDurationMin: true, assignedTeacherId: true },
     })
 

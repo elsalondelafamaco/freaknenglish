@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Cargando, EstadoError, SeccionTitulo, Vacio, btnChip, btnChipInk } from "@/components/app/AppUi";
+import { btnRow, btnRowInk, inputBase, td, th } from "@/components/teacher/TeacherUi";
+import { ChipEstado } from "@/components/admin/AdminUi";
 import { adminApi } from "@/lib/api/endpoints";
 
 const formatCop = (n: number) =>
@@ -66,27 +69,29 @@ export function PayrollPayments({ period }: { period: string }) {
   });
 
   return (
-    <section className="rounded-3xl border border-brand-line bg-white p-5">
+    <section aria-labelledby="pagos-periodo" className="shadow-hard border-2 border-brand-ink bg-white p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-brand-ink">Pagos del período</h2>
-          <p className="mt-0.5 text-xs text-brand-ink/60">
+          <SeccionTitulo id="pagos-periodo">Pagos del período</SeccionTitulo>
+          <p className="mt-0.5 text-xs text-brand-ink/70">
             Genera las corridas, ajusta si hace falta y paga. Cada pago queda registrado aquí
             aunque la dispersión automática esté apagada.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
+            type="button"
             onClick={() => generar.mutate()}
             disabled={generar.isPending}
-            className="rounded-full border border-brand-line px-4 py-2 text-sm font-semibold text-brand-ink hover:bg-brand-cream/40 disabled:opacity-50"
+            className={btnChip}
           >
             {generar.isPending ? "Generando…" : "Generar corridas"}
           </button>
           <button
+            type="button"
             onClick={() => pagarLote.mutate()}
             disabled={pagarLote.isPending || pendientes.length === 0}
-            className="rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-50"
+            className={btnChipInk}
           >
             {pagarLote.isPending
               ? "Pagando…"
@@ -96,39 +101,40 @@ export function PayrollPayments({ period }: { period: string }) {
       </div>
 
       <div className="mt-4 overflow-x-auto">
-        {runsQ.isLoading ? (
-          <p className="text-sm text-brand-ink/55">Cargando…</p>
+        {runsQ.isError ? (
+          <EstadoError onRetry={() => void runsQ.refetch()}>No pudimos cargar los pagos del período.</EstadoError>
+        ) : runsQ.isLoading ? (
+          <Cargando>Cargando pagos…</Cargando>
         ) : runs.length === 0 ? (
-          <p className="text-sm text-brand-ink/55">
-            Sin corridas para {period}. Usa «Generar corridas» para crearlas a partir de las clases
-            del mes.
-          </p>
+          <Vacio titulo="Sin corridas">
+            Sin corridas para {period}. Usa «Generar corridas» para crearlas a partir de las clases del mes.
+          </Vacio>
         ) : (
-          <table className="w-full min-w-[46rem] text-sm">
-            <thead className="bg-brand-cream/40 text-xs uppercase tracking-wide text-brand-ink/60">
+          <table className="w-full min-w-[46rem] border-collapse">
+            <thead>
               <tr>
-                <th className="px-4 py-3 text-left">Profesor</th>
-                <th className="px-4 py-3 text-left">Clases</th>
-                <th className="px-4 py-3 text-right">Calculado</th>
-                <th className="px-4 py-3 text-right">Ajuste</th>
-                <th className="px-4 py-3 text-right">Total</th>
-                <th className="px-4 py-3 text-left">Estado</th>
-                <th className="px-4 py-3 text-right">Acción</th>
+                <th className={`${th} text-left`}>Profesor</th>
+                <th className={`${th} text-left`}>Clases</th>
+                <th className={`${th} text-right`}>Calculado</th>
+                <th className={`${th} text-right`}>Ajuste</th>
+                <th className={`${th} text-right`}>Total</th>
+                <th className={`${th} text-left`}>Estado</th>
+                <th className={`${th} text-right`}>Acción</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-brand-line/70">
+            <tbody>
               {runs.map((r) => {
                 const total = r.amountCop + (r.adjustmentCop ?? 0);
                 const editando = ajustando === r.id;
                 return (
                   <tr key={r.id}>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-brand-ink">{r.teacher?.fullName ?? r.teacherId}</div>
-                      <div className="text-xs text-brand-ink/50">{r.teacher?.email}</div>
+                    <td className={td}>
+                      <div className="font-bold text-brand-ink">{r.teacher?.fullName ?? r.teacherId}</div>
+                      <div className="text-xs text-brand-ink/70">{r.teacher?.email}</div>
                     </td>
-                    <td className="px-4 py-3">{r.classes}</td>
-                    <td className="px-4 py-3 text-right">{formatCop(r.amountCop)}</td>
-                    <td className="px-4 py-3 text-right">
+                    <td className={td}>{r.classes}</td>
+                    <td className={`${td} text-right`}>{formatCop(r.amountCop)}</td>
+                    <td className={`${td} text-right`}>
                       {editando ? (
                         <div className="flex flex-col items-end gap-1">
                           <input
@@ -136,25 +142,29 @@ export function PayrollPayments({ period }: { period: string }) {
                             value={montoAjuste}
                             onChange={(e) => setMontoAjuste(e.target.value)}
                             placeholder="+50000 / -20000"
-                            className="w-32 rounded-lg border border-brand-line px-2 py-1 text-right text-xs"
+                            aria-label={`Monto del ajuste de ${r.teacher?.fullName ?? r.teacherId}`}
+                            className={`${inputBase} w-36 text-right`}
                           />
                           <input
                             value={notaAjuste}
                             onChange={(e) => setNotaAjuste(e.target.value)}
                             placeholder="Motivo (obligatorio)"
-                            className="w-44 rounded-lg border border-brand-line px-2 py-1 text-xs"
+                            aria-label={`Motivo del ajuste de ${r.teacher?.fullName ?? r.teacherId}`}
+                            className={`${inputBase} w-48`}
                           />
                           <div className="flex gap-1">
                             <button
+                              type="button"
                               onClick={() => ajustar.mutate({ id: r.id, monto: Number(montoAjuste || 0), nota: notaAjuste })}
                               disabled={ajustar.isPending || !notaAjuste.trim()}
-                              className="rounded-full bg-brand-ink px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+                              className={btnRowInk}
                             >
                               Guardar
                             </button>
                             <button
+                              type="button"
                               onClick={() => { setAjustando(null); setMontoAjuste(""); setNotaAjuste(""); }}
-                              className="rounded-full border border-brand-line px-2.5 py-1 text-[11px]"
+                              className={btnRow}
                             >
                               Cancelar
                             </button>
@@ -163,67 +173,61 @@ export function PayrollPayments({ period }: { period: string }) {
                       ) : (
                         <div>
                           <span
-                            className={
-                              r.adjustmentCop
-                                ? r.adjustmentCop > 0
-                                  ? "text-emerald-700"
-                                  : "text-red-600"
-                                : "text-brand-ink/40"
-                            }
+                            className={r.adjustmentCop ? "font-bold text-brand-ink" : "text-brand-ink/70"}
                           >
                             {r.adjustmentCop ? formatCop(r.adjustmentCop) : "—"}
                           </span>
                           {r.adjustmentNote ? (
-                            <div className="text-[10px] text-brand-ink/50">{r.adjustmentNote}</div>
+                            <div className="text-xs text-brand-ink/70">{r.adjustmentNote}</div>
                           ) : null}
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right font-bold text-brand-ink">{formatCop(total)}</td>
-                    <td className="px-4 py-3">
+                    <td className={`${td} text-right font-bold`}>{formatCop(total)}</td>
+                    <td className={td}>
                       {r.status === "paid" ? (
                         <div>
-                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-                            Pagada{r.paidMethod === "wompi" ? " · dispersada" : " · manual"}
-                          </span>
+                          <ChipEstado>Pagada{r.paidMethod === "wompi" ? " · dispersada" : " · manual"}</ChipEstado>
                           {r.payoutError ? (
-                            <div className="mt-0.5 text-[10px] text-amber-700">{r.payoutError}</div>
+                            <div className="mt-0.5 text-xs font-bold text-brand-ink">{r.payoutError}</div>
                           ) : null}
                           {r.payoutRef ? (
-                            <div className="mt-0.5 text-[10px] text-brand-ink/50">ref {r.payoutRef}</div>
+                            <div className="mt-0.5 text-xs text-brand-ink/70">ref {r.payoutRef}</div>
                           ) : null}
                         </div>
                       ) : (
-                        <span className="rounded-full bg-brand-cream px-2 py-0.5 text-[11px] font-semibold text-brand-ink/70">
-                          Pendiente
-                        </span>
+                        <ChipEstado atencion>Pendiente</ChipEstado>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className={`${td} text-right`}>
                       {r.status === "pending" ? (
                         <div className="flex justify-end gap-1.5">
                           {!editando ? (
                             <button
+                              type="button"
                               onClick={() => {
                                 setAjustando(r.id);
                                 setMontoAjuste(String(r.adjustmentCop || ""));
                                 setNotaAjuste(r.adjustmentNote ?? "");
                               }}
-                              className="rounded-full border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink/70 hover:bg-brand-cream/40"
+                              aria-label={`Ajustar el pago de ${r.teacher?.fullName ?? r.teacherId}`}
+                              className={btnRow}
                             >
                               Ajustar
                             </button>
                           ) : null}
                           <button
+                            type="button"
                             onClick={() => pagarUno.mutate(r.id)}
                             disabled={pagarUno.isPending}
-                            className="rounded-full bg-brand-ink px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-50"
+                            aria-label={`Pagar a ${r.teacher?.fullName ?? r.teacherId}`}
+                            className={btnRowInk}
                           >
                             Pagar
                           </button>
                         </div>
                       ) : (
-                        <span className="text-xs text-brand-ink/40">
+                        <span className="text-xs text-brand-ink/60">
                           {r.paidAt ? new Date(r.paidAt).toLocaleDateString("es-CO") : "—"}
                         </span>
                       )}

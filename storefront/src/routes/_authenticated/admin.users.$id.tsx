@@ -20,6 +20,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { Titulo, SeccionTitulo, focusRing } from "@/components/app/AppUi";
+import { inputBase, pillClass, td, th } from "@/components/teacher/TeacherUi";
+import { ChipEstado } from "@/components/admin/AdminUi";
 import type {
   ClassSession,
   SatisfactionSurvey,
@@ -33,7 +36,7 @@ type PaymentIntent = Record<string, any>;
 import { adminApi, classesApi, scheduleApi } from "@/lib/api/endpoints";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SchedulePickerGrid } from "@/components/schedule/SchedulePickerGrid";
-import { etiquetaDeZona, franjaEnZona, nombreDeZona, zonaDe } from "@/lib/domain/zona-horaria";
+import { etiquetaDeZona, franjaEnZona, horaEn12, nombreDeZona, zonaDe } from "@/lib/domain/zona-horaria";
 import type { SlotRef } from "@/lib/api/endpoints";
 import { homePathFor, rolesOfRow } from "@/lib/roles";
 import { ActivityResultsSection, CheckpointAttemptsSection, CheckpointGatesSection, LessonPlanSection, StudentReportsSection, StudentResourcesSection } from "./teacher.students.$studentId";
@@ -261,64 +264,64 @@ function AdminUserDetail() {
     <div className="flex flex-col gap-6">
       <Link
         to="/admin/users"
-        className="inline-flex items-center gap-1.5 text-sm text-brand-ink/70 hover:text-brand-ink"
+        className={`inline-flex min-h-11 items-center gap-1.5 self-start text-[13px] font-bold text-brand-ink underline-offset-2 hover:underline ${focusRing}`}
       >
-        <ArrowLeft className="size-4" /> Volver al CRM
+        <ArrowLeft className="size-4" aria-hidden="true" /> Volver a usuarios
       </Link>
 
-      <header className="flex flex-col gap-3 rounded-2xl border border-brand-line bg-white p-5 md:flex-row md:items-center md:justify-between">
+      <header className="flex flex-col gap-3 bg-white p-5 md:flex-row md:items-center md:justify-between border-2 border-brand-ink">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold text-brand-ink">{user.fullName}</h1>
+            <Titulo className="text-[28px] md:text-[32px]" highlight={user.fullName.split(" ")[0]}>{user.fullName}</Titulo>
             {isDeleted ? (
-              <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+              <span className="inline-flex items-center rounded-full border-[1.5px] border-brand-ink bg-brand-yellow-soft px-2.5 py-0.5 text-[11px] font-bold text-brand-ink">
                 Eliminado
               </span>
             ) : isDisabled ? (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+              <span className="inline-flex items-center rounded-full border-[1.5px] border-brand-ink bg-brand-yellow-soft px-2.5 py-0.5 text-[11px] font-bold text-brand-ink">
                 Desactivado
               </span>
             ) : (
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+              <span className="inline-flex items-center rounded-full border-[1.5px] border-brand-ink bg-white px-2.5 py-0.5 text-[11px] font-bold text-brand-ink">
                 Activo
               </span>
             )}
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-brand-ink/65">
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-brand-ink/70">
             <span className="inline-flex items-center gap-1">
               <Mail className="size-3.5" /> {user.email}
             </span>
             {user.roles.map((r) => (
               <span
                 key={r}
-                className="rounded-full bg-brand-cream px-2 py-0.5 text-[10px] font-semibold capitalize text-brand-ink"
+                className="capitalize inline-flex items-center rounded-full border-[1.5px] border-brand-ink bg-white px-2.5 py-0.5 text-[11px] font-bold text-brand-ink"
               >
                 {r}
               </span>
             ))}
             {user.level ? (
-              <span className="capitalize text-brand-ink/55">Nivel: {user.level}</span>
+              <span className="capitalize text-brand-ink/70">Nivel: {user.level}</span>
             ) : null}
-            {user.phone ? <span className="text-brand-ink/55">Tel: {user.phone}</span> : null}
+            {user.phone ? <span className="text-brand-ink/70">Tel: {user.phone}</span> : null}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setEditing(true)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-brand-line bg-white px-3 py-2 text-xs font-semibold text-brand-ink/80 transition hover:-translate-y-0.5 hover:bg-brand-cream/30"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           >
             <Pencil className="size-3.5" /> Editar
           </button>
           <button
             onClick={onResetPassword}
-            className="inline-flex items-center gap-1.5 rounded-full border border-brand-line bg-white px-3 py-2 text-xs font-semibold text-brand-ink/80 transition hover:-translate-y-0.5 hover:bg-brand-cream/30"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           >
             <KeyRound className="size-3.5" /> Resetear clave
           </button>
           <button
             onClick={() => (isDisabled ? void onToggleActive() : setBanConfirmOpen(true))}
             disabled={isDeleted}
-            className="inline-flex items-center gap-1.5 rounded-full border border-brand-line bg-white px-3 py-2 text-xs font-semibold text-brand-ink/80 transition hover:-translate-y-0.5 hover:bg-brand-cream/30 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           >
             <Power className="size-3.5" /> {isDisabled ? "Quitar ban" : "Banear"}
           </button>
@@ -329,7 +332,7 @@ function AdminUserDetail() {
           {!isDeleted ? (
             <button
               onClick={() => setDeleteConfirmOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 transition hover:-translate-y-0.5 hover:bg-red-50"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-red-700 bg-white text-red-800 hover:bg-red-50 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             >
               <Trash2 className="size-3.5" /> Eliminar
             </button>
@@ -338,7 +341,7 @@ function AdminUserDetail() {
             <button
               onClick={() => setVerComoOpen(true)}
               disabled={isDeleted || isDisabled || entrando}
-              className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-3 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-brand-ink text-brand-cream hover:text-brand-cream dark:text-white disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             >
               <Eye className="size-3.5" /> Ver como este usuario
             </button>
@@ -361,14 +364,14 @@ function AdminUserDetail() {
             <button
               onClick={() => setVerComoOpen(false)}
               disabled={entrando}
-              className="rounded-full border border-brand-line bg-white px-4 py-2 text-sm font-semibold text-brand-ink disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             >
               Cancelar
             </button>
             <button
               onClick={() => void onImpersonate()}
               disabled={entrando}
-              className="rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white hover:bg-brand-ink/90 disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-brand-ink bg-brand-ink text-brand-cream hover:text-brand-cream dark:text-white disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             >
               {entrando ? "Entrando…" : "Sí, entrar"}
             </button>
@@ -389,13 +392,13 @@ function AdminUserDetail() {
           <DialogFooter>
             <button
               onClick={() => setBanConfirmOpen(false)}
-              className="rounded-full border border-brand-line bg-white px-4 py-2 text-sm font-semibold text-brand-ink"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             >
               Cancelar
             </button>
             <button
               onClick={() => void onToggleActive()}
-              className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-red-700 bg-red-700 text-white hover:bg-red-800 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             >
               Sí, banear
             </button>
@@ -419,13 +422,13 @@ function AdminUserDetail() {
           <DialogFooter>
             <button
               onClick={() => setDeleteConfirmOpen(false)}
-              className="rounded-full border border-brand-line bg-white px-4 py-2 text-sm font-semibold text-brand-ink"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             >
               Cancelar
             </button>
             <button
               onClick={() => void onDelete()}
-              className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-red-700 bg-red-700 text-white hover:bg-red-800 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             >
               Sí, eliminar
             </button>
@@ -450,7 +453,7 @@ function AdminUserDetail() {
                 readOnly
                 value={resetInfo.link}
                 onFocus={(e) => e.currentTarget.select()}
-                className="w-full rounded-xl border border-brand-line bg-brand-cream/30 px-3 py-2 text-xs text-brand-ink"
+                className="w-full px-3 py-2 text-xs text-brand-ink border border-brand-ink/25 bg-brand-cream-soft"
               />
               <button
                 onClick={async () => {
@@ -462,7 +465,7 @@ function AdminUserDetail() {
                     toast.error("No se pudo copiar");
                   }
                 }}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-brand-ink px-3 py-2 text-xs font-semibold text-white"
+                className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-brand-ink text-brand-cream hover:text-brand-cream dark:text-white disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
               >
                 {linkCopied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
                 {linkCopied ? "Copiado" : "Copiar"}
@@ -472,16 +475,14 @@ function AdminUserDetail() {
         </DialogContent>
       </Dialog>
 
-      <nav className="flex flex-wrap gap-2 border-b border-brand-line">
+      <nav aria-label="Secciones de la ficha" className="flex flex-wrap gap-2">
         {TABS.filter((t) => t.show).map((t) => (
           <button
             key={t.id}
+            type="button"
+            aria-pressed={tab === t.id}
             onClick={() => setTab(t.id)}
-            className={`border-b-2 px-3 py-2 text-sm font-semibold transition ${
-              tab === t.id
-                ? "border-brand-ink text-brand-ink"
-                : "border-transparent text-brand-ink/60 hover:text-brand-ink"
-            }`}
+            className={pillClass(tab === t.id)}
           >
             {t.label}
           </button>
@@ -504,14 +505,14 @@ function AdminUserDetail() {
           </Card>
           {isStudent ? (
             <Card title="Profesor asignado">
-              <p className="text-xs text-brand-ink/60">
+              <p className="text-xs text-brand-ink/70">
                 Determina quién recibe las clases recurrentes.
               </p>
               <select
                 value={user.assignedTeacherId ?? ""}
                 onChange={onAssign}
                 disabled={isDeleted}
-                className="mt-3 w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm focus:border-brand-ink focus:outline-none disabled:opacity-50"
+                className="mt-3 w-full bg-white px-3 py-2 text-sm disabled:opacity-50 min-h-11 border-2 border-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
               >
                 <option value="">— Sin asignar —</option>
                 {teachers.map((t) => (
@@ -521,7 +522,7 @@ function AdminUserDetail() {
                 ))}
               </select>
               {assignedTeacher ? (
-                <p className="mt-2 text-xs text-brand-ink/55">Actual: {assignedTeacher.fullName}</p>
+                <p className="mt-2 text-xs text-brand-ink/70">Actual: {assignedTeacher.fullName}</p>
               ) : null}
             </Card>
           ) : null}
@@ -560,7 +561,7 @@ function AdminUserDetail() {
                     new Date(sub.currentPeriodEnd).toLocaleDateString("es-CO")
                   ) : sub.status === "active" ? (
                     // El mes no arranca hasta que tenga profesor asignado.
-                    <span className="text-amber-700 dark:text-amber-300">
+                    <span className="font-bold text-brand-ink">
                       En espera de profesor — el mes aún no empieza a correr
                     </span>
                   ) : (
@@ -570,7 +571,7 @@ function AdminUserDetail() {
                 <Row k="Ref. Wompi">{sub.wompiReference ?? "—"}</Row>
               </dl>
             ) : (
-              <p className="text-sm text-brand-ink/55">
+              <p className="text-sm text-brand-ink/70">
                 Sin suscripción. Actívala manualmente abajo (pagos por fuera de
                 Wompi) o espera un pago Wompi aprobado.
               </p>
@@ -588,20 +589,20 @@ function AdminUserDetail() {
       {tab === "payments" && isStudent ? (
         <Card title={`Historial de pagos (${payments.length})`}>
           {payments.length === 0 ? (
-            <p className="text-sm text-brand-ink/55">Aún no hay intentos de pago registrados.</p>
+            <p className="text-sm text-brand-ink/70">Aún no hay intentos de pago registrados.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="text-xs uppercase tracking-wide text-brand-ink/55">
+              <table className="w-full min-w-[560px] border-collapse text-left">
+                <thead>
                   <tr>
-                    <th className="py-2">Fecha</th>
-                    <th>Plan</th>
-                    <th>Monto</th>
-                    <th>Estado</th>
-                    <th>Referencia</th>
+                    <th className={th}>Fecha</th>
+                    <th className={th}>Plan</th>
+                    <th className={th}>Monto</th>
+                    <th className={th}>Estado</th>
+                    <th className={th}>Referencia</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-brand-line">
+                <tbody>
                   {payments
                     .slice()
                     .sort(
@@ -611,19 +612,18 @@ function AdminUserDetail() {
                     )
                     .map((p: PaymentIntent) => (
                       <tr key={p.reference}>
-                        <td className="py-2 text-brand-ink/70">
+                        <td className={td}>
                           {p.createdAt
                             ? new Date(p.createdAt).toLocaleDateString("es-CO")
                             : "—"}
                         </td>
-                        <td className="text-brand-ink/80">{getPlan(p.planId)?.name ?? p.planId}</td>
-                        <td className="text-brand-ink/80">{formatCop(p.amountCop)}</td>
-                        <td>
-                          <span className="rounded-full bg-brand-cream px-2 py-0.5 text-[10px] font-semibold">
-                            {p.status}
-                          </span>
+                        <td className={td}>{getPlan(p.planId)?.name ?? p.planId}</td>
+                        <td className={td}>{formatCop(p.amountCop)}</td>
+                        <td className={td}>
+                          {/* Pago fallido = atención (amarillo); lo demás, neutro. */}
+                          <ChipEstado atencion={/declined|error|voided|failed/i.test(String(p.status))}>{p.status}</ChipEstado>
                         </td>
-                        <td className="font-mono text-xs text-brand-ink/55">{p.reference}</td>
+                        <td className={`${td} font-mono text-xs`}>{p.reference}</td>
                       </tr>
                     ))}
                 </tbody>
@@ -638,25 +638,26 @@ function AdminUserDetail() {
           {/* Totales reales (todas las clases, no solo las listadas) */}
           <div className="mb-4 flex flex-wrap gap-2">
             {[
-              ["validated", "Tomadas", "bg-emerald-50 text-emerald-700 border-emerald-200"],
-              ["no_show", "No tomadas", "bg-orange-50 text-orange-700 border-orange-200"],
-              ["scheduled", "Programadas", "bg-brand-cream/60 text-brand-ink/70 border-brand-line"],
-              ["rescheduled", "Reprogramadas", "bg-yellow-50 text-yellow-700 border-yellow-200"],
-              ["cancelled", "Canceladas", "bg-red-50 text-red-700 border-red-200"],
-            ].map(([key, label, cls]) => (
-              <span key={key} className={`rounded-full border px-3 py-1 text-xs font-semibold ${cls}`}>
+              ["validated", "Tomadas"],
+              ["no_show", "No tomadas"],
+              ["scheduled", "Programadas"],
+              ["rescheduled", "Reprogramadas"],
+              ["cancelled", "Canceladas"],
+            ].map(([key, label]) => (
+              // Amarillo solo para lo que pide atención: las clases no tomadas.
+              <ChipEstado key={key} atencion={key === "no_show" && (classTotals?.[key] ?? 0) > 0}>
                 {label}: {classTotals?.[key] ?? 0}
-              </span>
+              </ChipEstado>
             ))}
           </div>
-          <p className="mb-3 text-xs text-brand-ink/50">
+          <p className="mb-3 text-xs text-brand-ink/70">
             Tomada y No tomada cuentan para la nómina del profesor. Cambiar el estado
             aquí ajusta la nómina del período correspondiente.
           </p>
           {classes.length === 0 ? (
-            <p className="text-sm text-brand-ink/55">Sin clases registradas.</p>
+            <p className="text-sm text-brand-ink/70">Sin clases registradas.</p>
           ) : (
-            <ul className="divide-y divide-brand-line">
+            <ul className="divide-y divide-brand-ink/15">
               {classes
                 .slice()
                 .sort(
@@ -668,7 +669,7 @@ function AdminUserDetail() {
                   <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                     <div>
                       <div className="font-medium text-brand-ink">{c.topic ?? "Clase"}</div>
-                      <div className="text-xs text-brand-ink/55">
+                      <div className="text-xs text-brand-ink/70">
                         {new Date(c.startsAt).toLocaleString("es-CO")} • {c.durationMin} min
                       </div>
                     </div>
@@ -685,7 +686,8 @@ function AdminUserDetail() {
                       <select
                         value={c.status}
                         onChange={(e) => void onSetClassStatus(c.id, e.target.value as any)}
-                        className="rounded-full border border-brand-line bg-white px-2.5 py-1 text-xs font-semibold capitalize text-brand-ink"
+                        aria-label={`Estado de la clase ${c.topic ?? ""}`.trim()}
+                        className={`${inputBase} w-auto capitalize`}
                       >
                         <option value="scheduled">Programada</option>
                         <option value="validated">Tomada</option>
@@ -708,13 +710,13 @@ function AdminUserDetail() {
         <>
           <Card title={`Lecciones completadas (${progress.length})`}>
             {progress.length === 0 ? (
-              <p className="text-sm text-brand-ink/55">El estudiante no ha completado lecciones.</p>
+              <p className="text-sm text-brand-ink/70">El estudiante no ha completado lecciones.</p>
             ) : (
               <ul className="grid gap-1 text-sm md:grid-cols-2">
                 {progress.map((p: { lessonId: string; completedAt: string }) => (
                   <li key={p.lessonId} className="text-brand-ink/70">
-                    <span className="font-mono text-xs text-brand-ink/40">{p.lessonId}</span>{" "}
-                    <span className="text-brand-ink/55">
+                    <span className="font-mono text-xs text-brand-ink/60">{p.lessonId}</span>{" "}
+                    <span className="text-brand-ink/70">
                       — {new Date(p.completedAt).toLocaleDateString("es-CO")}
                     </span>
                   </li>
@@ -750,28 +752,28 @@ function AdminUserDetail() {
       {tab === "nps" && isStudent ? (
         <Card title={`Encuestas de satisfacción (${surveys.length})`}>
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-brand-ink/55">
+            <p className="text-xs text-brand-ink/70">
               Estas respuestas son privadas. El profesor no las puede ver.
             </p>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={onRequestNps}
-                className="rounded-full bg-brand-ink px-3 py-1.5 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5"
+                className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-brand-ink text-brand-cream hover:text-brand-cream dark:text-white disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
               >
                 Solicitar encuesta ahora
               </button>
               <button
                 type="button"
                 onClick={onResetNps}
-                className="rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink/75 transition hover:-translate-y-0.5 hover:bg-brand-cream/40"
+                className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
               >
                 Reiniciar encuesta
               </button>
             </div>
           </div>
           {surveys.length === 0 ? (
-            <p className="text-sm text-brand-ink/55">Aún no ha respondido encuestas.</p>
+            <p className="text-sm text-brand-ink/70">Aún no ha respondido encuestas.</p>
           ) : (
             <ul className="space-y-3">
               {surveys
@@ -781,8 +783,8 @@ function AdminUserDetail() {
                     new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime(),
                 )
                 .map((s: SatisfactionSurvey) => (
-                  <li key={s.id} className="rounded-xl bg-brand-cream/40 p-3 text-sm">
-                    <div className="flex justify-between text-xs text-brand-ink/55">
+                  <li key={s.id} className="bg-brand-cream-soft p-3 text-sm">
+                    <div className="flex justify-between text-xs text-brand-ink/70">
                       <span>{new Date(s.submittedAt).toLocaleDateString("es-CO")}</span>
                       <span>NPS {s.nps}/10</span>
                     </div>
@@ -804,12 +806,12 @@ function AdminUserDetail() {
       {tab === "notes" && isStudent ? (
         <Card title={`Notas del profesor (${notes.length})`}>
           {notes.length === 0 ? (
-            <p className="text-sm text-brand-ink/55">Sin feedback registrado todavía.</p>
+            <p className="text-sm text-brand-ink/70">Sin feedback registrado todavía.</p>
           ) : (
             <ul className="space-y-3">
               {notes.map((n: import("@/lib/domain/types").ClassNote) => (
-                <li key={n.id} className="rounded-xl bg-brand-cream/40 p-3 text-sm">
-                  <div className="flex justify-between text-xs text-brand-ink/55">
+                <li key={n.id} className="bg-brand-cream-soft p-3 text-sm">
+                  <div className="flex justify-between text-xs text-brand-ink/70">
                     <span>{new Date(n.createdAt).toLocaleDateString("es-CO")}</span>
                     <span>{n.rating ? `Rating ${n.rating}/5` : ""}</span>
                   </div>
@@ -824,9 +826,9 @@ function AdminUserDetail() {
       {tab === "students" && isTeacher ? (
         <Card title={`Estudiantes asignados (${students.length})`}>
           {students.length === 0 ? (
-            <p className="text-sm text-brand-ink/55">Aún no tiene estudiantes asignados.</p>
+            <p className="text-sm text-brand-ink/70">Aún no tiene estudiantes asignados.</p>
           ) : (
-            <ul className="divide-y divide-brand-line">
+            <ul className="divide-y divide-brand-ink/15">
               {students.map((s: User) => (
                 <li key={s.id} className="flex items-center justify-between py-2 text-sm">
                   <Link
@@ -836,7 +838,7 @@ function AdminUserDetail() {
                   >
                     {s.fullName}
                   </Link>
-                  <span className="text-xs text-brand-ink/55">{s.email}</span>
+                  <span className="text-xs text-brand-ink/70">{s.email}</span>
                 </li>
               ))}
             </ul>
@@ -864,8 +866,8 @@ function AdminUserDetail() {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-brand-line bg-white p-5">
-      <h2 className="mb-3 text-sm font-semibold text-brand-ink">{title}</h2>
+    <section className="bg-white p-5 border-2 border-brand-ink">
+      <SeccionTitulo className="mb-3">{title}</SeccionTitulo>
       {children}
     </section>
   );
@@ -874,8 +876,8 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 function Row({ k, children }: { k: string; children: React.ReactNode }) {
   return (
     <div className="flex justify-between gap-3">
-      <dt className="text-brand-ink/55">{k}</dt>
-      <dd className="text-right text-brand-ink/85">{children}</dd>
+      <dt className="text-brand-ink/70">{k}</dt>
+      <dd className="text-right text-brand-ink">{children}</dd>
     </div>
   );
 }
@@ -943,16 +945,16 @@ function EditUserDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <form onSubmit={onSubmit} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-semibold text-brand-ink">Editar usuario</h2>
+    <div role="dialog" aria-modal="true" aria-labelledby="editar-usuario-titulo" className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4">
+      <form onSubmit={onSubmit} className="shadow-hard w-full max-w-md border-2 border-brand-ink bg-white p-6 [--hard-x:6px]">
+        <h2 id="editar-usuario-titulo" className="font-display text-[22px] font-extrabold uppercase leading-tight text-brand-ink">Editar usuario</h2>
         <div className="mt-4 grid gap-3">
           <Field label="Nombre completo">
             <input
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               required
-              className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+              className="w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             />
           </Field>
           <Field label="Email">
@@ -961,14 +963,14 @@ function EditUserDialog({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+              className="w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             />
           </Field>
           <Field label="Teléfono">
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+              className="w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             />
           </Field>
           <Field label="Roles">
@@ -978,11 +980,8 @@ function EditUserDialog({
                   key={r}
                   type="button"
                   onClick={() => toggleRole(r)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold capitalize ${
-                    roles.includes(r)
-                      ? "border-brand-ink bg-brand-ink text-white"
-                      : "border-brand-line text-brand-ink/70"
-                  }`}
+                  aria-pressed={roles.includes(r)}
+                  className={`${pillClass(roles.includes(r))} capitalize`}
                 >
                   {r}
                 </button>
@@ -995,7 +994,7 @@ function EditUserDialog({
                 <select
                   value={level}
                   onChange={(e) => setLevel(e.target.value as EnglishLevel)}
-                  className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                  className="w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
                 >
                   <option value="beginner">Beginner</option>
                   <option value="intermediate">Intermediate</option>
@@ -1011,9 +1010,9 @@ function EditUserDialog({
                   value={durationMin}
                   onChange={(e) => setDurationMin(e.target.value)}
                   placeholder="50 (estándar)"
-                  className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                  className="w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
                 />
-                <p className="mt-1 text-[11px] text-brand-ink/50">
+                <p className="mt-1 text-xs text-brand-ink/70">
                   Vacío = 50 min. Aplica a las clases futuras ya programadas y a las nuevas.
                   Una clase larga puede ocupar la hora siguiente del profe: revisa su agenda.
                 </p>
@@ -1023,14 +1022,14 @@ function EditUserDialog({
                   value={zona}
                   onChange={(e) => setZona(e.target.value)}
                   placeholder="America/Bogota"
-                  className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                  className="w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
                 />
-                <p className="mt-1 text-[11px] text-brand-ink/50">
+                <p className="mt-1 text-xs text-brand-ink/70">
                   {zona.trim() && zonaDe(zona) === zona.trim() ? (
                     <>
-                      {nombreDeZona(zona)} ({etiquetaDeZona(zona)}) · sus clases de las 11:00 de
+                      {nombreDeZona(zona)} ({etiquetaDeZona(zona)}) · sus clases de las 11:00 a. m. de
                       Colombia son sus{" "}
-                      {String(franjaEnZona(1, 11, zona).hour).padStart(2, "0")}:00.
+                      {horaEn12(franjaEnZona(1, 11, zona).hour)}.
                     </>
                   ) : zona.trim() ? (
                     <span className="text-red-700">Zona desconocida. Usa el formato America/Bogota.</span>
@@ -1043,19 +1042,19 @@ function EditUserDialog({
           ) : null}
         </div>
         {error ? (
-          <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>
+          <p role="alert" className="mt-3 border-2 border-red-700 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800">{error}</p>
         ) : null}
         <div className="mt-5 flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full px-4 py-2 text-sm font-medium text-brand-ink/70 hover:bg-brand-cream/30"
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border-2 border-brand-ink bg-white px-4 text-[13px] font-bold text-brand-ink transition-colors hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           >
             Cancelar
           </button>
           <button
             type="submit"
-            className="rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-brand-ink bg-brand-ink text-brand-cream hover:text-brand-cream dark:text-white disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           >
             Guardar
           </button>
@@ -1153,21 +1152,21 @@ function ScheduleEditor({
   if (cfgQ.isLoading || schQ.isLoading) {
     return (
       <Card title="Horario semanal">
-        <p className="text-sm text-brand-ink/55">Cargando…</p>
+        <p className="text-sm text-brand-ink/70">Cargando…</p>
       </Card>
     );
   }
   if (!cfgQ.data || !schQ.data) {
     return (
       <Card title="Horario semanal">
-        <p className="text-sm text-brand-ink/55">No se pudo cargar.</p>
+        <p className="text-sm text-brand-ink/70">No se pudo cargar.</p>
       </Card>
     );
   }
   if (need === 0) {
     return (
       <Card title="Horario semanal">
-        <p className="text-sm text-brand-ink/55">
+        <p className="text-sm text-brand-ink/70">
           El estudiante no tiene plan. Asígnale uno en la pestaña Suscripción antes de fijar su
           horario.
         </p>
@@ -1177,7 +1176,7 @@ function ScheduleEditor({
 
   return (
     <Card title="Horario semanal">
-      <p className="mb-3 text-sm text-brand-ink/65">
+      <p className="mb-3 text-sm text-brand-ink/70">
         Plan <b>{schQ.data.planName ?? "—"}</b> · {need} clase(s) por semana de{" "}
         <b>{schQ.data.durationMin} min</b>. Al guardar se rehacen las clases futuras: se quitan las
         que ya no corresponden y se crean las que falten. Las clases pasadas y las validadas no se
@@ -1185,7 +1184,7 @@ function ScheduleEditor({
       </p>
 
       <div className="mb-4 max-w-sm">
-        <label className="block text-xs font-semibold text-brand-ink/70" htmlFor="profe-horario">
+        <label className="block text-xs font-bold text-brand-ink" htmlFor="profe-horario">
           Profesor
         </label>
         <select
@@ -1195,7 +1194,7 @@ function ScheduleEditor({
             setProfesor(e.target.value);
             setError(null);
           }}
-          className="mt-1 w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+          className="mt-1 w-full bg-white px-3 py-2 text-sm min-h-11 border-2 border-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
         >
           <option value="">— Sin asignar —</option>
           {teachers.map((t) => (
@@ -1204,12 +1203,12 @@ function ScheduleEditor({
             </option>
           ))}
         </select>
-        <p className="mt-1 text-[11px] text-brand-ink/50">
+        <p className="mt-1 text-xs text-brand-ink/70">
           Puedes cambiar profesor, duración y horario a la vez: se guardan juntos y lo nuevo se
           comprueba contra el profesor nuevo.
         </p>
 
-        <label className="mt-3 block text-xs font-semibold text-brand-ink/70" htmlFor="dur-horario">
+        <label className="mt-3 block text-xs font-bold text-brand-ink" htmlFor="dur-horario">
           Duración de cada clase
         </label>
         <select
@@ -1219,7 +1218,7 @@ function ScheduleEditor({
             setDuracion(Number(e.target.value));
             setError(null);
           }}
-          className="mt-1 w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+          className="mt-1 w-full bg-white px-3 py-2 text-sm min-h-11 border-2 border-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
         >
           {[50, 60, 75, 90].map((d) => (
             <option key={d} value={d}>
@@ -1228,7 +1227,7 @@ function ScheduleEditor({
           ))}
         </select>
         {durSel > 60 ? (
-          <p className="mt-1 text-[11px] text-brand-ink/50">
+          <p className="mt-1 text-xs text-brand-ink/70">
             Una clase de {durSel} min ocupa también la hora siguiente del profesor.
           </p>
         ) : null}
@@ -1245,7 +1244,7 @@ function ScheduleEditor({
       />
 
       {error ? (
-        <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+        <p role="alert" className="mt-3 border-2 border-red-700 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800">
           {error}
         </p>
       ) : null}
@@ -1254,7 +1253,7 @@ function ScheduleEditor({
         <button
           onClick={() => saveM.mutate()}
           disabled={!dirty || sel.length !== need || saveM.isPending}
-          className="inline-flex h-10 items-center rounded-full bg-brand-ink px-5 text-sm font-semibold text-white transition hover:-translate-y-0.5 disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-brand-ink bg-brand-ink text-brand-cream hover:text-brand-cream dark:text-white disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
         >
           {saveM.isPending ? "Guardando…" : "Guardar horario"}
         </button>
@@ -1266,12 +1265,12 @@ function ScheduleEditor({
               setDuracion(null);
               setError(null);
             }}
-            className="text-sm text-brand-ink/60 hover:text-brand-ink"
+            className={`inline-flex min-h-11 items-center px-2 text-[13px] font-bold text-brand-ink underline-offset-2 hover:underline ${focusRing}`}
           >
             Descartar
           </button>
         ) : null}
-        <span className="text-xs text-brand-ink/55">
+        <span className="text-xs text-brand-ink/70">
           {sel.length}/{need} franjas seleccionadas
         </span>
       </div>
@@ -1364,7 +1363,7 @@ function SubscriptionEditor({
 
   return (
     <Card title={sub ? "Modificar suscripción (manual)" : "Activar plan manualmente"}>
-      <p className="mb-4 text-xs text-brand-ink/55">
+      <p className="mb-4 text-xs text-brand-ink/70">
         Para estudiantes que pagan por fuera de Wompi: define el plan y hasta qué
         fecha queda activo. Un pago Wompi posterior extiende desde esa fecha.
       </p>
@@ -1374,7 +1373,7 @@ function SubscriptionEditor({
             value={planId}
             onChange={(e) => setPlanId(e.target.value)}
             required
-            className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+            className="w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           >
             <option value="" disabled>
               Selecciona…
@@ -1390,7 +1389,7 @@ function SubscriptionEditor({
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+            className="w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           >
             <option value="active">Activa</option>
             <option value="pending">Pendiente</option>
@@ -1409,20 +1408,20 @@ function SubscriptionEditor({
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+            className="w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           />
         </Field>
         <div className="md:col-span-3 flex items-center justify-end gap-3">
           {error ? <p className="text-xs text-red-700">{error}</p> : null}
           {ok ? (
-            <p className="text-xs text-green-700">
-              Suscripción guardada ✓{efecto ? ` — ${efecto}` : ""}
+            <p className="text-xs font-bold text-brand-ink">
+              Suscripción guardada{efecto ? ` — ${efecto}` : ""}
             </p>
           ) : null}
           <button
             type="submit"
             disabled={saving || !planId}
-            className="rounded-full bg-brand-ink px-5 py-2 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-brand-ink bg-brand-ink text-brand-cream hover:text-brand-cream dark:text-white disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           >
             {saving ? "Guardando…" : sub ? "Guardar cambios" : "Activar plan"}
           </button>
@@ -1434,7 +1433,7 @@ function SubscriptionEditor({
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="block text-xs font-semibold text-brand-ink/70">
+    <label className="block text-xs font-bold text-brand-ink">
       <span className="mb-1 block">{label}</span>
       {children}
     </label>
@@ -1501,7 +1500,7 @@ function ClassDateEditor({ session, onMoved }: { session: ClassSession; onMoved:
       <button
         type="button"
         onClick={() => { setValor(toDatetimeLocal(session.startsAt)); setAbierto(true); }}
-        className="rounded-full border border-brand-line bg-white px-2.5 py-1 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40"
+        className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
       >
         Cambiar fecha
       </button>
@@ -1513,20 +1512,20 @@ function ClassDateEditor({ session, onMoved }: { session: ClassSession; onMoved:
         type="datetime-local"
         value={valor}
         onChange={(e) => setValor(e.target.value)}
-        className="rounded-xl border border-brand-line bg-white px-2 py-1 text-xs focus:border-brand-ink focus:outline-none"
+        className="bg-white px-2 py-1 min-h-11 border-2 border-brand-ink text-sm focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
       />
       <button
         type="button"
         onClick={() => void mover()}
         disabled={busy}
-        className="rounded-full bg-brand-ink px-3 py-1 text-xs font-semibold text-white disabled:opacity-60"
+        className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-brand-ink text-brand-cream hover:text-brand-cream dark:text-white disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
       >
         {busy ? "…" : "Mover"}
       </button>
       <button
         type="button"
         onClick={() => setAbierto(false)}
-        className="rounded-full border border-brand-line px-2.5 py-1 text-xs text-brand-ink/70 hover:bg-brand-cream/40"
+        className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
       >
         Cancelar
       </button>
@@ -1627,7 +1626,7 @@ function PauseControls({
   return (
     <Card title={pausada ? "Plan congelado" : programada ? "Congelamiento programado" : "Congelar plan"}>
       {pausada ? (
-        <p className="mb-4 text-xs text-brand-ink/60">
+        <p className="mb-4 text-xs text-brand-ink/70">
           Congelado el{" "}
           {sub.pausedAt ? new Date(sub.pausedAt).toLocaleDateString("es-CO") : "—"}
           {sub.pausedUntil
@@ -1639,7 +1638,7 @@ function PauseControls({
             : "Su franja quedó libre, así que al reanudar puede que haya que asignarle horario nuevo si otro estudiante la tomó."}
         </p>
       ) : programada ? (
-        <p className="mb-4 text-xs text-brand-ink/60">
+        <p className="mb-4 text-xs text-brand-ink/70">
           Se congela solo el{" "}
           {sub.pausedFrom ? new Date(sub.pausedFrom).toLocaleDateString("es-CO") : "—"}
           {sub.pausedUntil
@@ -1649,7 +1648,7 @@ function PauseControls({
           toma sus clases con normalidad.
         </p>
       ) : (
-        <p className="mb-4 text-xs text-brand-ink/60">
+        <p className="mb-4 text-xs text-brand-ink/70">
           Para el estudiante que avisa que no viene por un tiempo. Deja de generarle clases y de
           darle las de esos días por tomadas; el plan no se pierde. Si pones fecha de fin, vuelve
           solo ese día.
@@ -1664,7 +1663,7 @@ function PauseControls({
                 type="date"
                 value={desde}
                 onChange={(e) => setDesde(e.target.value)}
-                className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                className="w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
               />
             </Field>
             <Field label="Hasta (opcional)">
@@ -1672,7 +1671,7 @@ function PauseControls({
                 type="date"
                 value={hasta}
                 onChange={(e) => setHasta(e.target.value)}
-                className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                className="w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
               />
             </Field>
             <Field label="Motivo (opcional)">
@@ -1680,7 +1679,7 @@ function PauseControls({
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Viaje, incapacidad…"
-                className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                className="w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
               />
             </Field>
           </>
@@ -1689,8 +1688,8 @@ function PauseControls({
           type="button"
           onClick={pausada ? reanudar : pausar}
           disabled={busy}
-          className={`rounded-full px-5 py-2 text-sm font-semibold shadow-soft transition hover:-translate-y-0.5 disabled:opacity-60 ${
-            pausada ? "bg-brand-ink text-white" : "border border-sky-300 bg-sky-50 text-sky-900"
+          className={`inline-flex min-h-11 items-center justify-center rounded-full border-2 border-brand-ink px-5 text-[13px] font-bold transition-colors disabled:pointer-events-none disabled:opacity-50 ${focusRing} ${
+            pausada ? "bg-brand-ink text-brand-cream hover:text-brand-cream dark:text-white" : "bg-white text-brand-ink hover:bg-brand-cream-soft"
           }`}
         >
           {busy ? "Procesando…" : pausada ? "Reanudar plan" : programada ? "Congelar ya" : "Congelar plan"}
@@ -1715,7 +1714,7 @@ function PauseControls({
       ) : null}
 
       {error ? <p className="mt-3 text-xs text-red-700">{error}</p> : null}
-      {info ? <p className="mt-3 text-xs text-green-700">{info}</p> : null}
+      {info ? <p className="mt-3 text-xs font-bold text-brand-ink">{info}</p> : null}
     </Card>
   );
 }

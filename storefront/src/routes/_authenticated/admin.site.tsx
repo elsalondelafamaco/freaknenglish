@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, FileText, GripVertical, Plus, RotateCcw, Save, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, ExternalLink, FileText, GripVertical, Plus, RotateCcw, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { adminApi, type SiteFaq } from "@/lib/api/endpoints";
 import { DEFAULT_FAQS, DEFAULT_SITE_CONTENT, MEDIA_SLOTS } from "@/lib/site-content";
+import { Cargando, EstadoError, PageHeader, focusRing } from "@/components/app/AppUi";
+import { inputBase } from "@/components/teacher/TeacherUi";
 
 export const Route = createFileRoute("/_authenticated/admin/site")({
   head: () => ({ meta: [{ title: "Contenido del sitio — Admin Freakn'" }] }),
@@ -16,19 +18,15 @@ const QK = ["admin", "site-content"] as const;
 function AdminSite() {
   const q = useQuery({ queryKey: QK, queryFn: () => adminApi.siteContent() });
 
-  if (q.isLoading) return <p className="text-sm text-brand-ink/60">Cargando…</p>;
-  if (q.isError) return <p className="text-sm text-red-600">No se pudo cargar el contenido del sitio.</p>;
+  if (q.isLoading) return <Cargando>Cargando el contenido del sitio…</Cargando>;
+  if (q.isError) return <EstadoError onRetry={() => void q.refetch()}>No se pudo cargar el contenido del sitio.</EstadoError>;
 
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h2 className="text-lg font-semibold text-brand-ink">Contenido de la home</h2>
-        <p className="text-xs text-brand-ink/55">
-          Imágenes, videos, preguntas frecuentes, documentos legales y redes. La home tiene
-          respaldos quemados: si un recurso no está configurado (o la API se cae), se muestra el
-          contenido por defecto y el sitio nunca se rompe.
-        </p>
-      </div>
+    <div className="flex flex-col gap-8">
+      <PageHeader eyebrowText="Admin · Oferta" title="Contenido de la home" highlight="home">
+        Imágenes, videos, preguntas frecuentes, documentos legales y redes. La home tiene respaldos incluidos: si un
+        recurso no está configurado (o la API se cae), se muestra el contenido por defecto y el sitio nunca se rompe.
+      </PageHeader>
       <MediaCard overrides={q.data!.media} testimonials={q.data!.testimonials ?? {}} />
       <FaqCard current={q.data!.faqs} />
       <LegalCard legal={q.data!.legal} />
@@ -55,9 +53,9 @@ function MediaCard({
   testimonials: Record<string, { name?: string; role?: string }>;
 }) {
   return (
-    <section className="rounded-2xl border border-brand-line bg-white p-5">
-      <h3 className="text-sm font-semibold text-brand-ink">Imágenes y videos</h3>
-      <p className="text-xs text-brand-ink/55">
+    <section className="bg-white p-5 border-2 border-brand-ink">
+      <h3 className="font-display text-[18px] font-extrabold uppercase leading-tight tracking-[-0.01em] text-brand-ink">Imágenes y videos</h3>
+      <p className="text-xs text-brand-ink/70">
         Cada recurso indica dónde aparece en la home. Reemplazar un archivo mantiene la misma URL
         (MinIO) — el cambio se ve de inmediato. Los slots de video sin archivo no muestran botón de
         play en la home.
@@ -124,8 +122,8 @@ function MediaSlotRow({
   }
 
   return (
-    <div className="flex gap-3 rounded-xl border border-brand-line p-3">
-      <div className="size-20 shrink-0 overflow-hidden rounded-lg bg-brand-cream/60">
+    <div className="flex gap-3 p-3 border border-brand-ink/25">
+      <div className="size-20 shrink-0 overflow-hidden border border-brand-ink/25 bg-brand-cream-soft">
         {effective ? (
           slot.kind === "video" ? (
             <video src={effective} muted playsInline className="h-full w-full object-cover" />
@@ -133,25 +131,25 @@ function MediaSlotRow({
             <img src={effective} alt={slot.label} className="h-full w-full object-cover" />
           )
         ) : (
-          <div className="flex h-full items-center justify-center text-[10px] text-brand-ink/40">Sin archivo</div>
+          <div className="flex h-full items-center justify-center text-[11px] text-brand-ink/70">Sin archivo</div>
         )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <span className="truncate text-xs font-semibold text-brand-ink">{slot.label}</span>
+          <span className="truncate text-xs font-bold text-brand-ink">{slot.label}</span>
           {currentUrl ? (
-            <span className="rounded-full bg-brand-yellow/50 px-1.5 py-0.5 text-[9px] font-semibold text-brand-ink">personalizado</span>
+            <span className="inline-flex items-center rounded-full border-[1.5px] border-brand-ink bg-brand-yellow-soft px-2.5 py-0.5 text-[11px] font-bold text-brand-ink">personalizado</span>
           ) : (
-            <span className="rounded-full bg-brand-cream px-1.5 py-0.5 text-[9px] font-semibold text-brand-ink/60">default</span>
+            <span className="inline-flex items-center rounded-full border-[1.5px] border-brand-ink bg-white px-2.5 py-0.5 text-[11px] font-bold text-brand-ink">default</span>
           )}
         </div>
-        <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-brand-ink/55">{slot.where}</p>
+        <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-brand-ink/70">{slot.where}</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
           <button
             type="button"
             disabled={busy}
             onClick={() => fileRef.current?.click()}
-            className="inline-flex items-center gap-1 rounded-full bg-brand-ink px-2.5 py-1 text-[11px] font-semibold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-brand-ink text-brand-cream hover:text-brand-cream dark:text-white disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           >
             <Upload className="size-3" /> {busy ? "Subiendo…" : currentUrl ? "Reemplazar" : "Subir"}
           </button>
@@ -160,7 +158,7 @@ function MediaSlotRow({
               type="button"
               disabled={busy}
               onClick={restoreDefault}
-              className="inline-flex items-center gap-1 rounded-full border border-brand-line px-2.5 py-1 text-[11px] font-semibold text-brand-ink/70 transition hover:bg-brand-cream/50 disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             >
               <RotateCcw className="size-3" /> Restaurar default
             </button>
@@ -211,11 +209,10 @@ function TestimonioTextos({
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });
 
-  const input =
-    "w-full rounded-lg border border-brand-line px-2 py-1 text-[11px] focus:border-brand-ink focus:outline-none";
+  const input = inputBase;
 
   return (
-    <div className="mt-2 grid gap-1.5 border-t border-brand-line/70 pt-2">
+    <div className="mt-2 grid gap-1.5 border-t border-brand-ink/15 pt-2">
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -233,7 +230,7 @@ function TestimonioTextos({
           type="button"
           onClick={() => guardar.mutate()}
           disabled={guardar.isPending}
-          className="justify-self-start rounded-full bg-brand-ink px-2.5 py-1 text-[11px] font-semibold text-white transition hover:-translate-y-0.5 disabled:opacity-60"
+          className="justify-self-start inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-brand-ink text-brand-cream hover:text-brand-cream dark:text-white disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
         >
           {guardar.isPending ? "Guardando…" : "Guardar textos"}
         </button>
@@ -280,34 +277,34 @@ function FaqCard({ current }: { current: SiteFaq[] | null }) {
   const valid = faqs.every((f) => f.q.trim() && f.a.trim());
 
   return (
-    <section className="rounded-2xl border border-brand-line bg-white p-5">
-      <h3 className="text-sm font-semibold text-brand-ink">Preguntas frecuentes</h3>
-      <p className="text-xs text-brand-ink/55">
+    <section className="bg-white p-5 border-2 border-brand-ink">
+      <h3 className="font-display text-[18px] font-extrabold uppercase leading-tight tracking-[-0.01em] text-brand-ink">Preguntas frecuentes</h3>
+      <p className="text-xs text-brand-ink/70">
         Se muestran en la sección FAQ de la home. Si la API no responde, la home usa las preguntas
         por defecto quemadas en el sitio.
       </p>
       <div className="mt-3 flex flex-col gap-3">
         {faqs.map((f, i) => (
-          <div key={i} className="rounded-xl border border-brand-line p-3">
+          <div key={i} className="p-3 border border-brand-ink/25">
             <div className="flex items-start gap-2">
-              <div className="flex flex-col items-center gap-0.5 pt-1 text-brand-ink/40">
-                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="disabled:opacity-30" aria-label="Subir">▲</button>
-                <GripVertical className="size-3.5" />
-                <button type="button" onClick={() => move(i, 1)} disabled={i === faqs.length - 1} className="disabled:opacity-30" aria-label="Bajar">▼</button>
+              <div className="flex flex-col items-center gap-0.5 text-brand-ink/70">
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className={`inline-grid size-9 place-items-center rounded-full hover:bg-brand-cream-soft disabled:opacity-30 ${focusRing}`} aria-label={`Subir la pregunta ${i + 1}`}><ArrowUp className="size-4" aria-hidden="true" /></button>
+                <GripVertical className="size-3.5" aria-hidden="true" />
+                <button type="button" onClick={() => move(i, 1)} disabled={i === faqs.length - 1} className={`inline-grid size-9 place-items-center rounded-full hover:bg-brand-cream-soft disabled:opacity-30 ${focusRing}`} aria-label={`Bajar la pregunta ${i + 1}`}><ArrowDown className="size-4" aria-hidden="true" /></button>
               </div>
               <div className="flex-1">
                 <input
                   value={f.q}
                   onChange={(e) => edit(i, { q: e.target.value })}
                   placeholder="Pregunta"
-                  className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm font-semibold focus:border-brand-ink focus:outline-none"
+                  className="w-full px-3 py-2 text-sm font-semibold min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
                 />
                 <textarea
                   value={f.a}
                   onChange={(e) => edit(i, { a: e.target.value })}
                   placeholder="Respuesta"
                   rows={3}
-                  className="mt-2 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                  className="mt-2 w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
                 />
               </div>
               <button
@@ -316,8 +313,8 @@ function FaqCard({ current }: { current: SiteFaq[] | null }) {
                   setFaqs((prev) => prev.filter((_, j) => j !== i));
                   setDirty(true);
                 }}
-                className="rounded-full p-1.5 text-brand-ink/40 transition hover:bg-red-50 hover:text-red-600"
-                aria-label="Eliminar pregunta"
+                className="inline-grid size-9 place-items-center rounded-full text-red-800 hover:bg-red-50 disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
+                aria-label={`Eliminar la pregunta ${i + 1}`}
               >
                 <Trash2 className="size-4" />
               </button>
@@ -332,7 +329,7 @@ function FaqCard({ current }: { current: SiteFaq[] | null }) {
             setFaqs((prev) => [...prev, { q: "", a: "" }]);
             setDirty(true);
           }}
-          className="inline-flex items-center gap-1.5 rounded-full border border-brand-line px-4 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-cream/50"
+          className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
         >
           <Plus className="size-3.5" /> Agregar pregunta
         </button>
@@ -340,7 +337,7 @@ function FaqCard({ current }: { current: SiteFaq[] | null }) {
           type="button"
           onClick={() => saveM.mutate(faqs)}
           disabled={saveM.isPending || !dirty || !valid}
-          className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-brand-ink bg-brand-ink text-brand-cream hover:text-brand-cream dark:text-white disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
         >
           <Save className="size-3.5" /> {saveM.isPending ? "Guardando…" : "Guardar preguntas"}
         </button>
@@ -348,12 +345,12 @@ function FaqCard({ current }: { current: SiteFaq[] | null }) {
           type="button"
           onClick={() => saveM.mutate(null)}
           disabled={saveM.isPending}
-          className="inline-flex items-center gap-1.5 rounded-full border border-brand-line px-4 py-2 text-xs font-semibold text-brand-ink/70 transition hover:bg-brand-cream/50 disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
         >
           <RotateCcw className="size-3.5" /> Restaurar predeterminadas
         </button>
       </div>
-      {!valid ? <p className="mt-2 text-[11px] text-red-600">Hay preguntas o respuestas vacías.</p> : null}
+      {!valid ? <p className="mt-2 text-xs font-semibold text-red-800">Hay preguntas o respuestas vacías.</p> : null}
     </section>
   );
 }
@@ -401,9 +398,9 @@ function LegalCard({ legal }: { legal: Record<string, string> }) {
   }
 
   return (
-    <section className="rounded-2xl border border-brand-line bg-white p-5">
-      <h3 className="text-sm font-semibold text-brand-ink">Documentos legales (PDF)</h3>
-      <p className="text-xs text-brand-ink/55">
+    <section className="bg-white p-5 border-2 border-brand-ink">
+      <h3 className="font-display text-[18px] font-extrabold uppercase leading-tight tracking-[-0.01em] text-brand-ink">Documentos legales (PDF)</h3>
+      <p className="text-xs text-brand-ink/70">
         Aparecen en el footer de la home y en los checkboxes de aceptación del checkout/registro.
         Se abren en pestaña aparte (no se descargan). Sin documento, el link no se muestra.
       </p>
@@ -412,18 +409,18 @@ function LegalCard({ legal }: { legal: Record<string, string> }) {
           const url = legal[doc.key];
           const busy = busyKey === doc.key;
           return (
-            <div key={doc.key} className="flex flex-wrap items-center gap-2 rounded-xl border border-brand-line p-3">
-              <FileText className="size-4 shrink-0 text-brand-ink/60" />
+            <div key={doc.key} className="flex flex-wrap items-center gap-2 p-3 border border-brand-ink/25">
+              <FileText className="size-4 shrink-0 text-brand-ink/70" />
               <span className="min-w-40 text-sm font-semibold text-brand-ink">{doc.label}</span>
               {url ? (
-                <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-brand-ink/70 underline hover:text-brand-ink">
+                <a href={url} target="_blank" rel="noreferrer" className="inline-flex min-h-9 items-center gap-1 text-xs font-bold text-brand-ink underline">
                   Ver PDF actual <ExternalLink className="size-3" />
                 </a>
               ) : (
-                <span className="text-xs text-brand-ink/45">Sin documento — no se muestra en el sitio</span>
+                <span className="text-xs text-brand-ink/70">Sin documento — no se muestra en el sitio</span>
               )}
               <div className="ml-auto flex items-center gap-2">
-                <label className="inline-flex cursor-pointer items-center gap-1 rounded-full bg-brand-ink px-2.5 py-1 text-[11px] font-semibold text-white transition hover:-translate-y-0.5">
+                <label className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-brand-ink text-brand-cream hover:text-brand-cream dark:text-white disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow">
                   <Upload className="size-3" /> {busy ? "Subiendo…" : url ? "Reemplazar" : "Subir PDF"}
                   <input
                     type="file"
@@ -438,7 +435,7 @@ function LegalCard({ legal }: { legal: Record<string, string> }) {
                     type="button"
                     disabled={busy}
                     onClick={() => clearDoc(doc)}
-                    className="rounded-full p-1.5 text-brand-ink/40 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-60"
+                    className="inline-grid size-9 place-items-center rounded-full text-red-800 hover:bg-red-50 disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
                     aria-label={`Quitar ${doc.label}`}
                   >
                     <Trash2 className="size-4" />
@@ -477,26 +474,26 @@ function SocialCard({ social }: { social: Record<string, string> }) {
   });
 
   return (
-    <section className="rounded-2xl border border-brand-line bg-white p-5">
-      <h3 className="text-sm font-semibold text-brand-ink">Redes sociales</h3>
-      <p className="text-xs text-brand-ink/55">Links de la columna “Síguenos” del footer. Vacío = no se muestra.</p>
+    <section className="bg-white p-5 border-2 border-brand-ink">
+      <h3 className="font-display text-[18px] font-extrabold uppercase leading-tight tracking-[-0.01em] text-brand-ink">Redes sociales</h3>
+      <p className="text-xs text-brand-ink/70">Links de la columna “Síguenos” del footer. Vacío = no se muestra.</p>
       <div className="mt-3 grid gap-3 md:grid-cols-2">
-        <label className="block text-xs font-semibold text-brand-ink/70">
+        <label className="block text-xs font-bold text-brand-ink">
           Instagram
           <input
             value={instagram}
             onChange={(e) => setInstagram(e.target.value)}
             placeholder="https://www.instagram.com/freaknenglish/"
-            className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+            className="mt-1 w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           />
         </label>
-        <label className="block text-xs font-semibold text-brand-ink/70">
+        <label className="block text-xs font-bold text-brand-ink">
           Facebook
           <input
             value={facebook}
             onChange={(e) => setFacebook(e.target.value)}
             placeholder="https://www.facebook.com/freaknenglish"
-            className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+            className="mt-1 w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           />
         </label>
       </div>
@@ -504,7 +501,7 @@ function SocialCard({ social }: { social: Record<string, string> }) {
         type="button"
         onClick={() => saveM.mutate()}
         disabled={saveM.isPending}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-60"
+        className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-brand-ink bg-brand-ink text-brand-cream hover:text-brand-cream dark:text-white disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
       >
         <Save className="size-3.5" /> {saveM.isPending ? "Guardando…" : "Guardar redes"}
       </button>

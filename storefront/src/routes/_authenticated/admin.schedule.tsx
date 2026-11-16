@@ -2,8 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminApi, scheduleApi } from "@/lib/api/endpoints";
 import { rowHasRole } from "@/lib/roles";
+import { horaEn12 } from "@/lib/domain/zona-horaria";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Cargando, EstadoError, PageHeader, Vacio } from "@/components/app/AppUi";
+import { Seccion, btnRowInk, inputBase, td, th } from "@/components/teacher/TeacherUi";
+import { ChipEstado } from "@/components/admin/AdminUi";
 
 export const Route = createFileRoute("/_authenticated/admin/schedule")({
   head: () => ({ meta: [{ title: "Solicitudes de horario — Admin" }] }),
@@ -33,76 +37,84 @@ function AdminSchedulePage() {
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });
 
-  return (
-    <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-3xl font-bold text-brand-ink">Solicitudes de horario</h1>
-        <p className="mt-1 text-sm text-brand-ink/65">
-          Estudiantes sin profesor auto-asignado. Asigna manualmente y coordina el horario.
-        </p>
-      </header>
+  const total = pending.data?.length ?? 0;
 
-      <div className="rounded-2xl border border-brand-line bg-white p-4">
+  return (
+    <div className="flex flex-col gap-8">
+      <PageHeader eyebrowText="Admin · Hoy" title="Solicitudes de horario" highlight="Solicitudes">
+        Estudiantes sin profesor auto-asignado. Asigna uno manualmente y coordina el horario.
+      </PageHeader>
+
+      <Seccion
+        id="pendientes"
+        titulo="Pendientes"
+        aside={total > 0 ? <ChipEstado atencion>{total} por asignar</ChipEstado> : undefined}
+      >
         {pending.isLoading ? (
-          <p>Cargando…</p>
-        ) : (pending.data ?? []).length === 0 ? (
-          <p className="text-sm text-brand-ink/60">No hay solicitudes pendientes.</p>
+          <div className="p-4 pt-0"><Cargando>Cargando solicitudes…</Cargando></div>
+        ) : pending.isError ? (
+          <div className="p-4 pt-0"><EstadoError onRetry={() => void pending.refetch()}>No pudimos cargar las solicitudes.</EstadoError></div>
+        ) : total === 0 ? (
+          <div className="p-4 pt-0"><Vacio titulo="Todo asignado">No hay solicitudes pendientes.</Vacio></div>
         ) : (
           <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="text-left">
-                <th className="p-2">Estudiante</th>
-                <th className="p-2">Plan</th>
-                <th className="p-2">Preferencia</th>
-                <th className="p-2">Asignar profesor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(pending.data ?? []).map((s: any) => (
-                <tr key={s.id} className="border-t border-brand-line">
-                  <td className="p-2">
-                    <div className="font-medium">{s.fullName}</div>
-                    <div className="text-xs text-brand-ink/60">{s.email} · {s.phone ?? "—"}</div>
-                  </td>
-                  <td className="p-2">{s.subscription?.plan?.name ?? "—"}</td>
-                  <td className="p-2">
-                    <div className="flex flex-wrap gap-1">
-                      {(s.schedulePreferences ?? []).map((b: any, i: number) => (
-                        <span key={i} className="rounded bg-brand-cream/60 px-2 py-0.5 text-xs">
-                          {DAYS[b.weekday]} {String(b.hour).padStart(2, "0")}:00
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="p-2">
-                    <div className="flex gap-2">
-                      <select
-                        className="rounded border border-brand-line px-2 py-1 text-xs"
-                        value={assigning[s.id] ?? ""}
-                        onChange={(e) => setAssigning((p) => ({ ...p, [s.id]: e.target.value }))}
-                      >
-                        <option value="">Selecciona profesor…</option>
-                        {(teachers.data ?? []).map((t: any) => (
-                          <option key={t.id} value={t.id}>{t.fullName}</option>
-                        ))}
-                      </select>
-                      <button
-                        disabled={!assigning[s.id] || assign.isPending}
-                        onClick={() => assign.mutate({ studentId: s.id, teacherId: assigning[s.id]! })}
-                        className="rounded-full bg-brand-ink px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
-                      >
-                        Asignar
-                      </button>
-                    </div>
-                  </td>
+            <table className="w-full min-w-[720px] border-collapse">
+              <thead>
+                <tr>
+                  <th className={th}>Estudiante</th>
+                  <th className={th}>Plan</th>
+                  <th className={th}>Preferencia</th>
+                  <th className={th}>Asignar profesor</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(pending.data ?? []).map((s: any) => (
+                  <tr key={s.id} className="align-top">
+                    <td className={td}>
+                      <div className="font-bold">{s.fullName}</div>
+                      <div className="text-xs text-brand-ink/70">{s.email} · {s.phone ?? "—"}</div>
+                    </td>
+                    <td className={td}>{s.subscription?.plan?.name ?? "—"}</td>
+                    <td className={td}>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(s.schedulePreferences ?? []).map((b: any, i: number) => (
+                          <ChipEstado key={i}>
+                            {DAYS[b.weekday]} {horaEn12(b.hour)}
+                          </ChipEstado>
+                        ))}
+                      </div>
+                    </td>
+                    <td className={td}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <select
+                          aria-label={`Profesor para ${s.fullName}`}
+                          className={`${inputBase} w-auto min-w-48`}
+                          value={assigning[s.id] ?? ""}
+                          onChange={(e) => setAssigning((p) => ({ ...p, [s.id]: e.target.value }))}
+                        >
+                          <option value="">Selecciona profesor…</option>
+                          {(teachers.data ?? []).map((t: any) => (
+                            <option key={t.id} value={t.id}>{t.fullName}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          disabled={!assigning[s.id] || assign.isPending}
+                          onClick={() => assign.mutate({ studentId: s.id, teacherId: assigning[s.id]! })}
+                          aria-label={`Asignar profesor a ${s.fullName}`}
+                          className={btnRowInk}
+                        >
+                          Asignar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-      </div>
+      </Seccion>
     </div>
   );
 }

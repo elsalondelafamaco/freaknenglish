@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, RefreshCw, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { adminApi } from "@/lib/api/endpoints";
+import { Cargando, EstadoError, PageHeader, btnChip, btnChipInk, focusRing } from "@/components/app/AppUi";
+import { td, th } from "@/components/teacher/TeacherUi";
 
 /**
  * Salud del horario: estudiantes con el plan al día cuyo horario no lo está.
@@ -58,42 +60,40 @@ function AdminScheduleHealth() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-brand-ink">Salud del horario</h1>
-          <p className="mt-1 max-w-2xl text-brand-ink/70">
-            Estudiantes con el plan al día cuyo horario no está sano: franjas retenidas, franjas
-            perdidas o semanas sin clases generadas.
-          </p>
-        </div>
-        <button
-          onClick={() => q.refetch()}
-          disabled={q.isFetching}
-          className="inline-flex items-center gap-2 self-start rounded-full border border-brand-line bg-white px-4 py-2 text-sm font-semibold text-brand-ink hover:bg-brand-cream/40 disabled:opacity-50"
-        >
-          <RefreshCw className={`size-4 ${q.isFetching ? "animate-spin" : ""}`} /> Revisar
-        </button>
-      </header>
+      <PageHeader
+        eyebrowText="Admin · Operación"
+        title="Salud del horario"
+        highlight="horario"
+        aside={
+          <button type="button" onClick={() => q.refetch()} disabled={q.isFetching} className={btnChip}>
+            <RefreshCw className={`size-4 ${q.isFetching ? "animate-spin" : ""}`} aria-hidden="true" /> Revisar de nuevo
+          </button>
+        }
+      >
+        Estudiantes con el plan al día cuyo horario no está sano: franjas retenidas, franjas perdidas o semanas sin
+        clases generadas.
+      </PageHeader>
 
       {/* Franjas que reservan la hora de un profe sin nadie detrás. Van aparte
           porque el problema no es del alumno —ya no está— sino del profesor,
           que no puede recibir a nadie a esa hora hasta soltarlas. */}
       {fantasmas.length > 0 ? (
-        <div className="rounded-2xl border border-red-300 bg-red-50 p-4">
+        <div className="border-2 border-brand-ink bg-brand-yellow-soft p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-red-900">
+            <p className="text-sm text-brand-ink">
               <b>{fantasmas.length}</b> franja(s) siguen ocupando la hora de un profesor sin nadie
               detrás. Mientras existan, no puedes asignar a nadie más a esa hora.
             </p>
             <button
+              type="button"
               onClick={() => reparar.mutate(undefined)}
               disabled={reparar.isPending}
-              className="shrink-0 rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white hover:bg-brand-ink/90 disabled:opacity-50"
+              className={`${btnChipInk} shrink-0`}
             >
               {reparar.isPending ? "Liberando…" : "Liberar franjas"}
             </button>
           </div>
-          <ul className="mt-3 flex flex-col gap-1 text-sm text-red-900/85">
+          <ul className="mt-3 flex flex-col gap-1 text-sm text-brand-ink">
             {fantasmas.map((f) => (
               <li key={f.id}>
                 · <b>{f.profesor}</b>, {f.cuando} — la reserva {f.alumno} ({f.motivo})
@@ -109,12 +109,12 @@ function AdminScheduleHealth() {
           hora de inicio— y hasta ahora solo aparecían cuando dos personas se
           presentaban a la misma clase. */}
       {cruces.length > 0 ? (
-        <div className="rounded-2xl border border-red-300 bg-red-50 p-4">
-          <p className="text-sm text-red-900">
+        <div className="border-2 border-brand-ink bg-brand-yellow-soft p-4">
+          <p className="text-sm text-brand-ink">
             <b>{cruces.length}</b> hora(s) con dos estudiantes a la vez. Hay que mover a uno de
             los dos desde su ficha; el sistema no puede decidir a cuál.
           </p>
-          <ul className="mt-3 flex flex-col gap-1 text-sm text-red-900/85">
+          <ul className="mt-3 flex flex-col gap-1 text-sm text-brand-ink">
             {cruces.map((c, i) => (
               <li key={i}>
                 · <b>{c.profesor}</b>, {c.cuando} — {c.alumnos.join(" y ")}
@@ -125,10 +125,12 @@ function AdminScheduleHealth() {
       ) : null}
 
       {q.isLoading ? (
-        <div className="text-sm text-brand-ink/60">Revisando…</div>
+        <Cargando>Revisando horarios…</Cargando>
+      ) : q.isError ? (
+        <EstadoError onRetry={() => void q.refetch()}>No pudimos revisar los horarios.</EstadoError>
       ) : afectados.length === 0 ? (
-        <div className="flex items-center gap-3 rounded-2xl border border-green-200 bg-green-50 p-6 text-sm text-green-900">
-          <CheckCircle2 className="size-5 shrink-0" />
+        <div className="shadow-hard flex items-center gap-3 border-2 border-brand-ink bg-white p-6 text-sm font-semibold text-brand-ink">
+          <CheckCircle2 className="size-5 shrink-0" aria-hidden="true" />
           <span>
             Todo en orden. Se revisaron {q.data?.revisados ?? 0} estudiantes con plan activo y
             ninguno tiene el horario roto.
@@ -136,9 +138,9 @@ function AdminScheduleHealth() {
         </div>
       ) : (
         <>
-          <div className="flex flex-col gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3 text-sm text-amber-900">
-              <AlertTriangle className="mt-0.5 size-5 shrink-0" />
+          <div className="flex flex-col gap-3 border-2 border-brand-ink bg-brand-yellow-soft p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3 text-sm text-brand-ink">
+              <AlertTriangle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
               <span>
                 <b>{afectados.length}</b> de {q.data?.revisados} estudiantes con plan activo tienen
                 el horario incompleto.
@@ -148,11 +150,12 @@ function AdminScheduleHealth() {
               </span>
             </div>
             <button
+              type="button"
               onClick={() => reparar.mutate(seleccion.size > 0 ? [...seleccion] : undefined)}
               disabled={reparar.isPending || reparables.length === 0}
-              className="inline-flex shrink-0 items-center gap-2 rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white hover:bg-brand-ink/90 disabled:opacity-50"
+              className={`${btnChipInk} shrink-0`}
             >
-              <Wrench className="size-4" />
+              <Wrench className="size-4" aria-hidden="true" />
               {reparar.isPending
                 ? "Reparando…"
                 : seleccion.size > 0
@@ -161,46 +164,47 @@ function AdminScheduleHealth() {
             </button>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-brand-line bg-white">
-            <table className="w-full min-w-[820px] text-sm">
-              <thead className="border-b border-brand-line text-left text-xs uppercase tracking-wide text-brand-ink/55">
+          <div className="overflow-x-auto bg-white border-2 border-brand-ink">
+            <table className="w-full min-w-[820px] border-collapse">
+              <thead>
                 <tr>
-                  <th className="w-10 px-4 py-3"></th>
-                  <th className="px-4 py-3">Estudiante</th>
-                  <th className="px-4 py-3">Profesor</th>
-                  <th className="px-4 py-3">Qué le pasa</th>
-                  <th className="px-4 py-3 text-right">Clases futuras</th>
+                  <th className={`${th} w-12`}><span className="sr-only">Elegir</span></th>
+                  <th className={th}>Estudiante</th>
+                  <th className={th}>Profesor</th>
+                  <th className={th}>Qué le pasa</th>
+                  <th className={`${th} text-right`}>Clases futuras</th>
                 </tr>
               </thead>
               <tbody>
                 {afectados.map((a) => (
-                  <tr key={a.id} className="border-b border-brand-line/60 last:border-0">
-                    <td className="px-4 py-3">
+                  <tr key={a.id}>
+                    <td className={td}>
                       <input
                         type="checkbox"
+                        aria-label={`Elegir a ${a.fullName}`}
                         checked={seleccion.has(a.id)}
                         onChange={() => alternar(a.id)}
                         disabled={!a.reparable}
-                        className="size-4 accent-brand-ink disabled:opacity-40"
+                        className={`size-5 accent-brand-ink disabled:opacity-40 ${focusRing}`}
                       />
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-brand-ink">{a.fullName}</div>
-                      <div className="text-xs text-brand-ink/55">{a.email}</div>
+                    <td className={td}>
+                      <div className="font-bold text-brand-ink">{a.fullName}</div>
+                      <div className="text-xs text-brand-ink/70">{a.email}</div>
                     </td>
-                    <td className="px-4 py-3 text-brand-ink/75">
-                      {a.profesor ?? <span className="text-red-700">Sin asignar</span>}
+                    <td className={td}>
+                      {a.profesor ?? <span className="font-bold">Sin asignar</span>}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={td}>
                       <ul className="flex flex-col gap-1">
                         {a.problemas.map((p) => (
-                          <li key={p} className="text-brand-ink/80">
+                          <li key={p}>
                             · {p}
                           </li>
                         ))}
                       </ul>
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-brand-ink">
+                    <td className={`${td} text-right font-bold`}>
                       {a.clasesFuturas}
                     </td>
                   </tr>
@@ -209,7 +213,7 @@ function AdminScheduleHealth() {
             </table>
           </div>
 
-          <p className="text-xs text-brand-ink/55">
+          <p className="text-xs text-brand-ink/70">
             La reparación devuelve las franjas retenidas, recupera las clases que canceló el sistema
             y genera las que falten hasta el fin de la vigencia. No recupera clases de hoy ni de días
             ya pasados: esas hay que reponerlas a mano.
@@ -218,14 +222,14 @@ function AdminScheduleHealth() {
       )}
 
       {reparar.data ? (
-        <div className="rounded-2xl border border-brand-line bg-white p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-ink/60">
+        <div className="border-2 border-brand-ink bg-white p-4">
+          <h2 className="font-display text-[18px] font-extrabold uppercase leading-tight text-brand-ink">
             Última reparación
           </h2>
           <ul className="mt-2 flex flex-col gap-1 text-sm">
             {reparar.data.resultados.map((r) => (
-              <li key={r.id} className={r.ok ? "text-brand-ink/80" : "text-red-700"}>
-                {r.ok ? "✓" : "✕"} <b>{r.fullName}</b> — {r.detalle}
+              <li key={r.id} className={r.ok ? "text-brand-ink" : "font-semibold text-red-800"}>
+                <b>{r.ok ? "Reparado:" : "Sin resolver:"} {r.fullName}</b> — {r.detalle}
               </li>
             ))}
           </ul>

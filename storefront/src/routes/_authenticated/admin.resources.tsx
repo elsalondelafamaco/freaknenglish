@@ -6,6 +6,9 @@ import { toast } from "sonner";
 import { adminApi } from "@/lib/api/endpoints";
 import type { EnglishLevel } from "@/lib/domain/types";
 import { LessonFrame } from "@/components/learning/LessonFrame";
+import { Cargando, EstadoError, PageHeader, Vacio, btnChipInk, focusRing } from "@/components/app/AppUi";
+import { btnRow, td, th } from "@/components/teacher/TeacherUi";
+import { ChipEstado } from "@/components/admin/AdminUi";
 
 export const Route = createFileRoute("/_authenticated/admin/resources")({
   head: () => ({ meta: [{ title: "Material extra — Admin" }] }),
@@ -99,63 +102,67 @@ function AdminResources() {
   const filas = listQ.data ?? [];
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">Material extra</h1>
-          <p className="mt-2 max-w-2xl text-[15px] text-brand-ink/65">
-            Recursos de apoyo que ven los profesores en su barra lateral. No aparecen en el
-            catálogo del estudiante.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setEditando({ ...VACIO })}
-          className="inline-flex w-fit items-center gap-2 rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white shadow-soft"
-        >
-          <Plus className="size-4" /> Nuevo material
-        </button>
-      </header>
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        eyebrowText="Admin · Oferta"
+        title="Material extra"
+        highlight="extra"
+        aside={
+          <button type="button" onClick={() => setEditando({ ...VACIO })} className={btnChipInk}>
+            <Plus className="size-4" aria-hidden="true" /> Nuevo material
+          </button>
+        }
+      >
+        Recursos de apoyo que ven los profesores en su barra lateral. No aparecen en el catálogo del estudiante.
+      </PageHeader>
 
-      {listQ.isLoading ? (
-        <div className="text-sm text-brand-ink/60">Cargando…</div>
+      {listQ.isError ? (
+        <EstadoError onRetry={() => void listQ.refetch()}>No pudimos cargar el material.</EstadoError>
+      ) : listQ.isLoading ? (
+        <Cargando>Cargando material…</Cargando>
       ) : filas.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-brand-line bg-white p-8 text-center text-sm text-brand-ink/65">
-          Todavía no hay material. Sube un HTML para que los profes lo vean.
-        </div>
+        <Vacio
+          titulo="Todavía no hay material"
+          accion={
+            <button type="button" onClick={() => setEditando({ ...VACIO })} className={btnChipInk}>
+              <Plus className="size-4" aria-hidden="true" /> Subir el primero
+            </button>
+          }
+        >
+          Sube un HTML para que los profes lo vean.
+        </Vacio>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-brand-line bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-brand-cream/50 text-left text-xs uppercase tracking-wide text-brand-ink/60">
+        <div className="overflow-x-auto border-2 border-brand-ink bg-white">
+          <table className="w-full min-w-[640px] border-collapse text-left">
+            <thead>
               <tr>
-                <th className="px-4 py-3">Título</th>
-                <th className="px-4 py-3">Nivel</th>
-                <th className="px-4 py-3">Categoría</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3" />
+                <th className={th}>Título</th>
+                <th className={th}>Nivel</th>
+                <th className={th}>Categoría</th>
+                <th className={th}>Estado</th>
+                <th className={th}><span className="sr-only">Acciones</span></th>
               </tr>
             </thead>
             <tbody>
               {filas.map((r) => (
-                <tr key={r.id} className="border-t border-brand-line">
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-brand-ink">{r.title}</div>
-                    {r.description ? <div className="text-xs text-brand-ink/60">{r.description}</div> : null}
+                <tr key={r.id}>
+                  <td className={td}>
+                    <div className="font-bold text-brand-ink">{r.title}</div>
+                    {r.description ? <div className="text-xs text-brand-ink/70">{r.description}</div> : null}
                   </td>
-                  <td className="px-4 py-3 text-brand-ink/70">{etiquetaNivel(r.level)}</td>
-                  <td className="px-4 py-3 text-brand-ink/70">{r.category ?? "General"}</td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${r.published ? "bg-green-100 text-green-800" : "bg-zinc-100 text-zinc-700"}`}>
-                      {r.published ? "Publicado" : "Oculto"}
-                    </span>
+                  <td className={td}>{etiquetaNivel(r.level)}</td>
+                  <td className={td}>{r.category ?? "General"}</td>
+                  <td className={td}>
+                    {/* Oculto = el material no llega a los profes: amarillo para notarlo. */}
+                    <ChipEstado atencion={!r.published}>{r.published ? "Publicado" : "Oculto"}</ChipEstado>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className={td}>
                     <div className="flex justify-end gap-1">
                       <button
                         type="button"
                         onClick={() => publicarM.mutate({ id: r.id, published: !r.published })}
-                        className="rounded-lg p-2 text-brand-ink/50 hover:bg-brand-cream/50 hover:text-brand-ink"
-                        aria-label={r.published ? "Ocultar" : "Publicar"}
+                        className="inline-grid size-9 place-items-center rounded-full text-brand-ink hover:bg-brand-cream-soft focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
+                        aria-label={`${r.published ? "Ocultar" : "Publicar"} ${r.title}`}
                         title={r.published ? "Ocultar a los profes" : "Publicar"}
                       >
                         {r.published ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -163,23 +170,23 @@ function AdminResources() {
                       <button
                         type="button"
                         onClick={() => abrirParaEditar(r.id)}
-                        className="rounded-lg p-2 text-brand-ink/50 hover:bg-brand-cream/50 hover:text-brand-ink"
-                        aria-label="Editar"
+                        className="inline-grid size-9 place-items-center rounded-full text-brand-ink hover:bg-brand-cream-soft focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
+                        aria-label={`Editar ${r.title}`}
                       >
                         <Pencil className="size-4" />
                       </button>
                       {confirmarBorrado === r.id ? (
-                        <span className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
-                          ¿Eliminar?
-                          <button type="button" onClick={() => borrarM.mutate(r.id)} disabled={borrarM.isPending} className="font-semibold underline">Sí</button>
-                          <button type="button" onClick={() => setConfirmarBorrado(null)} className="underline">No</button>
+                        <span role="alert" className="flex items-center gap-1 border-2 border-red-700 bg-red-50 px-2 py-1 text-xs font-bold text-red-800">
+                          ¿Eliminar “{r.title}”?
+                          <button type="button" onClick={() => borrarM.mutate(r.id)} disabled={borrarM.isPending} className={`min-h-9 px-2 underline ${focusRing}`}>Sí, eliminar</button>
+                          <button type="button" onClick={() => setConfirmarBorrado(null)} className={`min-h-9 px-2 underline ${focusRing}`}>No</button>
                         </span>
                       ) : (
                         <button
                           type="button"
                           onClick={() => setConfirmarBorrado(r.id)}
-                          className="rounded-lg p-2 text-red-500/70 hover:bg-red-50 hover:text-red-600"
-                          aria-label="Eliminar"
+                          className="inline-grid size-9 place-items-center rounded-full text-red-800 hover:bg-red-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
+                          aria-label={`Eliminar ${r.title}`}
                         >
                           <Trash2 className="size-4" />
                         </button>
@@ -240,67 +247,67 @@ function EditorMaterial({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4">
-      <div className="my-8 w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl">
+    <div role="dialog" aria-modal="true" aria-label="Editor de material" className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4">
+      <div className="shadow-hard my-8 w-full max-w-3xl border-2 border-brand-ink bg-white p-6 [--hard-x:6px]">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-brand-ink">
+          <h2 className="font-display text-[22px] font-extrabold uppercase leading-tight text-brand-ink">
             {valor.id ? "Editar material" : "Nuevo material"}
           </h2>
-          <button type="button" onClick={onClose} className="text-sm text-brand-ink/55 hover:text-brand-ink">Cerrar</button>
+          <button type="button" onClick={onClose} className={`inline-flex min-h-11 items-center px-2 text-[13px] font-bold text-brand-ink underline-offset-2 hover:underline ${focusRing}`}>Cerrar</button>
         </div>
 
         <div className="flex flex-col gap-3">
-          <label className="text-xs font-semibold text-brand-ink/70">
+          <label className="text-xs font-bold text-brand-ink">
             Título
             <input
               value={valor.title}
               onChange={(e) => onChange({ ...valor, title: e.target.value })}
-              className="mt-1 w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm font-normal text-brand-ink focus:border-brand-ink focus:outline-none"
+              className="mt-1 w-full bg-white px-3 py-2 text-sm font-normal text-brand-ink min-h-11 border-2 border-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             />
           </label>
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <label className="text-xs font-semibold text-brand-ink/70">
+            <label className="text-xs font-bold text-brand-ink">
               Nivel
               <select
                 value={valor.level}
                 onChange={(e) => onChange({ ...valor, level: e.target.value as EnglishLevel | "" })}
-                className="mt-1 w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm font-normal text-brand-ink focus:border-brand-ink focus:outline-none"
+                className="mt-1 w-full bg-white px-3 py-2 text-sm font-normal text-brand-ink min-h-11 border-2 border-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
               >
                 {NIVELES.map((n) => (
                   <option key={n.id} value={n.id}>{n.label}</option>
                 ))}
               </select>
             </label>
-            <label className="text-xs font-semibold text-brand-ink/70">
+            <label className="text-xs font-bold text-brand-ink">
               Categoría (opcional)
               <input
                 value={valor.category}
                 onChange={(e) => onChange({ ...valor, category: e.target.value })}
                 placeholder="Gramática, Pronunciación…"
-                className="mt-1 w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm font-normal text-brand-ink focus:border-brand-ink focus:outline-none"
+                className="mt-1 w-full bg-white px-3 py-2 text-sm font-normal text-brand-ink min-h-11 border-2 border-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
               />
             </label>
-            <label className="text-xs font-semibold text-brand-ink/70">
+            <label className="text-xs font-bold text-brand-ink">
               Descripción corta (opcional)
               <input
                 value={valor.description}
                 onChange={(e) => onChange({ ...valor, description: e.target.value })}
-                className="mt-1 w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm font-normal text-brand-ink focus:border-brand-ink focus:outline-none"
+                className="mt-1 w-full bg-white px-3 py-2 text-sm font-normal text-brand-ink min-h-11 border-2 border-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
               />
             </label>
           </div>
 
           {/* A lo ancho y como textarea: es prosa, y es lo que el profe lee al
               lado del visor para decidir si le sirve la clase. */}
-          <label className="text-xs font-semibold text-brand-ink/70">
+          <label className="text-xs font-bold text-brand-ink">
             ¿Para qué sirve esta clase? (objetivo)
             <textarea
               value={valor.objective}
               onChange={(e) => onChange({ ...valor, objective: e.target.value })}
               rows={3}
               placeholder="Ej. Repasar el past simple con verbos irregulares y soltar al alumno contando anécdotas en pasado. Ideal si ya vio el presente perfecto y confunde los dos."
-              className="mt-1 w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm font-normal text-brand-ink focus:border-brand-ink focus:outline-none"
+              className="mt-1 w-full bg-white px-3 py-2 text-sm font-normal text-brand-ink min-h-11 border-2 border-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             />
           </label>
 
@@ -315,7 +322,7 @@ function EditorMaterial({
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="inline-flex items-center gap-2 rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             >
               <FileUp className="size-3.5" /> Subir archivo .html
             </button>
@@ -323,13 +330,14 @@ function EditorMaterial({
               type="button"
               onClick={() => setPrevia((v) => !v)}
               disabled={!valor.contentHtml.trim()}
-              className="rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40 disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             >
               {previa ? "Ver el código" : "Ver previa"}
             </button>
-            <label className="ml-auto inline-flex items-center gap-2 text-xs font-semibold text-brand-ink/70">
+            <label className="ml-auto inline-flex min-h-11 items-center gap-2 text-xs font-bold text-brand-ink">
               <input
                 type="checkbox"
+                className={`size-5 accent-brand-ink ${focusRing}`}
                 checked={valor.published}
                 onChange={(e) => onChange({ ...valor, published: e.target.checked })}
               />
@@ -340,27 +348,27 @@ function EditorMaterial({
           {previa ? (
             <LessonFrame title={valor.title || "Previa"} html={valor.contentHtml} />
           ) : (
-            <label className="text-xs font-semibold text-brand-ink/70">
+            <label className="text-xs font-bold text-brand-ink">
               Contenido HTML
               <textarea
                 value={valor.contentHtml}
                 onChange={(e) => onChange({ ...valor, contentHtml: e.target.value })}
                 rows={12}
                 placeholder="<h2>Present perfect</h2><p>…</p>"
-                className="mt-1 w-full rounded-xl border border-brand-line bg-white px-3 py-2 font-mono text-xs font-normal text-brand-ink focus:border-brand-ink focus:outline-none"
+                className="mt-1 w-full bg-white px-3 py-2 font-mono font-normal text-brand-ink min-h-11 border-2 border-brand-ink text-sm focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
               />
             </label>
           )}
 
           <div className="mt-2 flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="rounded-full border border-brand-line px-4 py-2 text-sm font-semibold text-brand-ink hover:bg-brand-cream/40">
+            <button type="button" onClick={onClose} className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow">
               Cancelar
             </button>
             <button
               type="button"
               onClick={onSave}
               disabled={!puedeGuardar || pending}
-              className="rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white shadow-soft disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-brand-ink bg-brand-ink text-brand-cream hover:text-brand-cream dark:text-white disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             >
               {pending ? "Guardando…" : "Guardar"}
             </button>

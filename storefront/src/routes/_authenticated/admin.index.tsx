@@ -1,23 +1,25 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  CheckCircle2,
-  CreditCard,
-  GraduationCap,
-  Smile,
-  TrendingUp,
-  Users,
-  TrendingDown,
-  DollarSign,
-} from "lucide-react";
 import { formatCop } from "@/lib/domain/plans";
 import { adminApi } from "@/lib/api/endpoints";
+import { Cargando, EstadoError, PageHeader, Vacio, tagNeutral } from "@/components/app/AppUi";
+import { Seccion, td, th } from "@/components/teacher/TeacherUi";
+import { ChipEstado, Kpi, Segmentado } from "@/components/admin/AdminUi";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   head: () => ({ meta: [{ title: "Analítica — Admin Freakn'" }] }),
   component: AdminAnalytics,
 });
+
+const RANGOS = [
+  { valor: 30 as const, texto: "30 días" },
+  { valor: 90 as const, texto: "90 días" },
+  { valor: 365 as const, texto: "1 año" },
+];
+
+const diaMes = (iso: string) =>
+  new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
 
 function AdminAnalytics() {
   const [range, setRange] = useState<30 | 90 | 365>(30);
@@ -27,174 +29,201 @@ function AdminAnalytics() {
   });
   const atRiskQ = useQuery({ queryKey: ["admin", "at-risk"], queryFn: () => adminApi.atRisk() });
   const m = q.data;
+  const fallidos = ((m as any)?.failedPayments ?? 0) as number;
+  const enRiesgo = atRiskQ.data?.length ?? 0;
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-brand-ink">Analítica</h1>
-          <p className="text-sm text-brand-ink/60">KPIs y series en tiempo real desde el backend.</p>
-        </div>
-        <div className="inline-flex rounded-full border border-brand-line bg-white p-1">
-          {[
-            { v: 30, l: "30d" },
-            { v: 90, l: "90d" },
-            { v: 365, l: "1a" },
-          ].map((o) => (
-            <button
-              key={o.v}
-              onClick={() => setRange(o.v as 30 | 90 | 365)}
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                range === o.v ? "bg-brand-ink text-white" : "text-brand-ink/70"
-              }`}
-            >
-              {o.l}
-            </button>
-          ))}
-        </div>
-      </header>
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        eyebrowText="Admin · Analítica"
+        title="Cómo va el negocio"
+        highlight="negocio"
+        aside={<Segmentado etiqueta="Periodo" opciones={RANGOS} valor={range} onChange={setRange} />}
+      >
+        Cifras en tiempo real. Lo que pide atención aparece en amarillo.
+      </PageHeader>
 
-      {q.isLoading || !m ? (
-        <div className="text-sm text-brand-ink/60">Cargando métricas…</div>
+      {q.isLoading ? (
+        <Cargando>Cargando métricas…</Cargando>
+      ) : q.isError || !m ? (
+        <EstadoError onRetry={() => void q.refetch()}>No pudimos cargar las métricas.</EstadoError>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Card icon={<Users className="size-4" />} label="Estudiantes" value={m.totalStudents.toString()} />
-            <Card
-              icon={<CreditCard className="size-4" />}
-              label="Suscripciones activas"
-              value={m.activeSubscriptions.toString()}
-              sub={m.congeladas ? `incluye ${m.congeladas} congelada(s)` : undefined}
-              highlight
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <Kpi etiqueta={`Ingresos · ${range} días`} valor={formatCop(m.revenueCop)} ayuda="Pagos aprobados en el periodo." />
+            <Kpi
+              etiqueta="Lo que entra cada mes"
+              valor={formatCop(m.mrrCop)}
+              ayuda={`Suma de las suscripciones activas que se renuevan. En un año serían ${formatCop(m.arrCop)}.`}
             />
-            <Card icon={<TrendingUp className="size-4" />} label="MRR" value={formatCop(m.mrrCop)} sub={`ARR ${formatCop(m.arrCop)}`} />
-            <Card icon={<DollarSign className="size-4" />} label={`Ingresos ${range}d`} value={formatCop(m.revenueCop)} sub={`${m.revenueSeries.length} días`} />
-            <Card icon={<GraduationCap className="size-4" />} label="Clases validadas" value={m.classesSeries.reduce((s, c) => s + c.count, 0).toString()} />
-            <Card icon={<CheckCircle2 className="size-4" />} label="Asistencia" value={`${m.attendanceRate}%`} />
-            <Card icon={<TrendingDown className="size-4" />} label="Churn" value={`${m.churnRate}%`} sub="Cancelaciones vs. activas al inicio" />
-            <Card icon={<Smile className="size-4" />} label="NPS" value={`${m.nps}`} sub={`${m.surveys} encuestas`} />
-            <Card icon={<CreditCard className="size-4" />} label="Pagos fallidos" value={`${(m as any).failedPayments ?? 0}`} highlight={((m as any).failedPayments ?? 0) > 0} sub={`últimos ${range}d`} />
+            <Kpi
+              etiqueta="Suscripciones activas"
+              valor={m.activeSubscriptions.toString()}
+              ayuda={m.congeladas ? `Incluye ${m.congeladas} congelada(s).` : `De ${m.totalStudents} estudiantes.`}
+            />
+            <Kpi
+              etiqueta="Pagos fallidos"
+              valor={`${fallidos}`}
+              ayuda={fallidos > 0 ? `Últimos ${range} días. Revisa los carritos.` : `Ninguno en los últimos ${range} días.`}
+              atencion={fallidos > 0}
+              to={fallidos > 0 ? "/admin/carts" : undefined}
+            />
+            <Kpi etiqueta="Clases validadas" valor={m.classesSeries.reduce((s, c) => s + c.count, 0).toString()} />
+            <Kpi etiqueta="Asistencia" valor={`${m.attendanceRate}%`} ayuda="De las clases agendadas, las que sí se dieron." />
+            <Kpi etiqueta="Bajas" valor={`${m.churnRate}%`} ayuda="Cancelaciones frente a las activas al inicio del periodo." />
+            <Kpi etiqueta="Satisfacción (NPS)" valor={`${m.nps}`} ayuda={`${m.surveys} encuestas respondidas.`} />
           </div>
 
-          <section className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-brand-line bg-white p-5">
-              <div className="mb-3 text-sm font-semibold text-brand-ink">Ingresos por día</div>
-              <Sparkline values={m.revenueSeries.map((r) => r.cents)} />
-            </div>
-            <div className="rounded-2xl border border-brand-line bg-white p-5">
-              <div className="mb-3 text-sm font-semibold text-brand-ink">Clases validadas por día</div>
-              <Sparkline values={m.classesSeries.map((c) => c.count)} />
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-brand-line bg-white p-5">
-            <div className="mb-3 text-sm font-semibold text-brand-ink">Top profesores</div>
-            {m.topTeachers.length === 0 ? (
-              <div className="text-sm text-brand-ink/60">Sin clases validadas en el rango.</div>
-            ) : (
-              <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-xs uppercase text-brand-ink/50">
-                  <tr><th className="py-2 text-left">Profesor</th><th className="text-right">Clases</th><th className="text-right">Horas</th></tr>
-                </thead>
-                <tbody>
-                  {m.topTeachers.map((t) => (
-                    <tr key={t.id} className="border-t border-brand-line">
-                      <td className="py-2">{t.fullName}</td>
-                      <td className="text-right font-semibold">{t.validatedClasses}</td>
-                      <td className="text-right">{t.hours}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <section className="grid gap-6 md:grid-cols-2" aria-label="Series">
+            <Seccion id="grafica-ingresos" titulo="Ingresos por día">
+              <div className="p-4 pt-0">
+                <Grafica
+                  fechas={m.revenueSeries.map((r) => r.date)}
+                  valores={m.revenueSeries.map((r) => r.cents / 100)}
+                  formato={formatCop}
+                  descripcion="Ingresos por día"
+                />
               </div>
-            )}
-          </section>
-
-          <section className="rounded-2xl border border-brand-line bg-white p-5">
-            <div className="mb-3 text-sm font-semibold text-brand-ink">Módulos donde se estancan los estudiantes</div>
-            {(((m as any).stuckModules ?? []).length === 0) ? (
-              <div className="text-sm text-brand-ink/60">Sin datos de progreso todavía.</div>
-            ) : (
-              <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-xs uppercase text-brand-ink/50">
-                  <tr><th className="py-2 text-left">Módulo</th><th className="text-right">Estudiantes estancados</th></tr>
-                </thead>
-                <tbody>
-                  {((m as any).stuckModules ?? []).map((sm: any) => (
-                    <tr key={sm.moduleId} className="border-t border-brand-line">
-                      <td className="py-2">{sm.title}</td>
-                      <td className="text-right font-semibold">{sm.students}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            </Seccion>
+            <Seccion id="grafica-clases" titulo="Clases validadas por día" principal={false}>
+              <div className="p-4 pt-0">
+                <Grafica
+                  fechas={m.classesSeries.map((c) => c.date)}
+                  valores={m.classesSeries.map((c) => c.count)}
+                  formato={(n) => `${n}`}
+                  descripcion="Clases validadas por día"
+                />
               </div>
-            )}
+            </Seccion>
           </section>
 
-          <section className="rounded-2xl border border-brand-line bg-white p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="text-sm font-semibold text-brand-ink">Estudiantes en riesgo</div>
-              <span className="text-xs text-brand-ink/55">{atRiskQ.data?.length ?? 0} en seguimiento</span>
-            </div>
+          <Seccion
+            id="en-riesgo"
+            titulo="Estudiantes en riesgo"
+            aside={enRiesgo > 0 ? <ChipEstado atencion>{enRiesgo} en seguimiento</ChipEstado> : <span className="text-xs text-brand-ink/70">0 en seguimiento</span>}
+          >
             {atRiskQ.isLoading ? (
-              <div className="text-sm text-brand-ink/60">Cargando…</div>
-            ) : (atRiskQ.data?.length ?? 0) === 0 ? (
-              <div className="text-sm text-brand-ink/60">Ningún estudiante en riesgo. 🎉</div>
+              <div className="p-4 pt-0"><Cargando>Cargando estudiantes en riesgo…</Cargando></div>
+            ) : atRiskQ.isError ? (
+              <div className="p-4 pt-0"><EstadoError onRetry={() => void atRiskQ.refetch()}>No pudimos cargar los estudiantes en riesgo.</EstadoError></div>
+            ) : enRiesgo === 0 ? (
+              <div className="p-4 pt-0"><Vacio titulo="Todo en orden">Ningún estudiante en riesgo por ahora.</Vacio></div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-xs uppercase text-brand-ink/50">
-                    <tr><th className="py-2 text-left">Estudiante</th><th className="text-left">Señales</th><th className="text-right">Última clase</th><th className="text-right">Riesgo</th></tr>
+                <table className="w-full min-w-[560px] border-collapse">
+                  <thead>
+                    <tr>
+                      <th className={th}>Estudiante</th>
+                      <th className={th}>Señales</th>
+                      <th className={`${th} text-right`}>Última clase</th>
+                      <th className={`${th} text-right`}>Riesgo</th>
+                    </tr>
                   </thead>
                   <tbody>
                     {(atRiskQ.data ?? []).slice(0, 25).map((r) => (
-                      <tr key={r.id} className="border-t border-brand-line align-top">
-                        <td className="py-2">
-                          <div className="font-semibold text-brand-ink">{r.fullName}</div>
-                          <div className="text-xs text-brand-ink/50">{r.email}</div>
+                      <tr key={r.id} className="align-top">
+                        <td className={td}>
+                          <div className="font-bold">{r.fullName}</div>
+                          <div className="text-xs text-brand-ink/70">{r.email}</div>
                         </td>
-                        <td className="py-2">
-                          <div className="flex flex-wrap gap-1">
+                        <td className={td}>
+                          <div className="flex flex-wrap gap-1.5">
                             {r.reasons.map((reason, i) => (
-                              <span key={i} className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">{reason}</span>
+                              <ChipEstado key={i} atencion>{reason}</ChipEstado>
                             ))}
                           </div>
                         </td>
-                        <td className="py-2 text-right text-xs text-brand-ink/60">{r.daysSinceClass != null ? `hace ${r.daysSinceClass}d` : "—"}</td>
-                        <td className="py-2 text-right font-semibold text-brand-ink">{r.risk}</td>
+                        <td className={`${td} text-right text-xs text-brand-ink/70`}>{r.daysSinceClass != null ? `hace ${r.daysSinceClass} d` : "—"}</td>
+                        <td className={`${td} text-right font-bold`}>{r.risk}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
-          </section>
+          </Seccion>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <Seccion id="top-profes" titulo="Top profesores" principal={false}>
+              {m.topTeachers.length === 0 ? (
+                <div className="p-4 pt-0"><Vacio>Sin clases validadas en el periodo.</Vacio></div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr>
+                        <th className={th}>Profesor</th>
+                        <th className={`${th} text-right`}>Clases</th>
+                        <th className={`${th} text-right`}>Horas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {m.topTeachers.map((t) => (
+                        <tr key={t.id}>
+                          <td className={td}>{t.fullName}</td>
+                          <td className={`${td} text-right font-bold`}>{t.validatedClasses}</td>
+                          <td className={`${td} text-right`}>{t.hours}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Seccion>
+
+            <Seccion id="estancados" titulo="Módulos donde se estancan" principal={false}>
+              {(((m as any).stuckModules ?? []).length === 0) ? (
+                <div className="p-4 pt-0"><Vacio>Sin datos de progreso todavía.</Vacio></div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr>
+                        <th className={th}>Módulo</th>
+                        <th className={`${th} text-right`}>Estudiantes estancados</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {((m as any).stuckModules ?? []).map((sm: any) => (
+                        <tr key={sm.moduleId}>
+                          <td className={td}>{sm.title}</td>
+                          <td className={`${td} text-right font-bold`}>{sm.students}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Seccion>
+          </div>
 
           {m.cohorts.length > 0 ? (
-            <section className="rounded-2xl border border-brand-line bg-white p-5 overflow-x-auto">
-              <div className="mb-3 text-sm font-semibold text-brand-ink">Retención por cohorte (%)</div>
-              <table className="w-full text-xs">
-                <thead className="text-brand-ink/50">
-                  <tr><th className="py-1 text-left">Cohorte</th><th className="text-right">Tamaño</th>
-                    {Array.from({ length: 6 }).map((_, i) => <th key={i} className="text-right">M{i}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {m.cohorts.map((c) => (
-                    <tr key={c.cohort} className="border-t border-brand-line">
-                      <td className="py-1.5">{c.cohort}</td>
-                      <td className="text-right">{c.size}</td>
-                      {c.retention.map((r, i) => (
-                        <td key={i} className="text-right" style={{ background: `rgba(10,10,10,${r / 400})` }}>{r}%</td>
+            <Seccion id="cohortes" titulo="Cuántos siguen cada mes" principal={false} aside={<span className="text-xs text-brand-ink/70">Retención por cohorte, en %</span>}>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[520px] border-collapse">
+                  <thead>
+                    <tr>
+                      <th className={th}>Cohorte</th>
+                      <th className={`${th} text-right`}>Tamaño</th>
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <th key={i} className={`${th} text-right`}>Mes {i}</th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
+                  </thead>
+                  <tbody>
+                    {m.cohorts.map((c) => (
+                      <tr key={c.cohort}>
+                        <td className={td}>{c.cohort}</td>
+                        <td className={`${td} text-right`}>{c.size}</td>
+                        {c.retention.map((r, i) => (
+                          <td key={i} className={`${td} text-right font-bold`} style={{ background: `rgba(255,214,0,${Math.min(r, 100) / 220})` }}>{r}%</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Seccion>
           ) : null}
         </>
       )}
@@ -202,43 +231,51 @@ function AdminAnalytics() {
   );
 }
 
-function Sparkline({ values }: { values: number[] }) {
-  if (values.length === 0) return <div className="text-xs text-brand-ink/50">Sin datos</div>;
-  const max = Math.max(...values, 1);
-  const w = 600, h = 60;
-  const step = values.length > 1 ? w / (values.length - 1) : w;
-  const points = values.map((v, i) => `${i * step},${h - (v / max) * h}`).join(" ");
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-16">
-      <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2" className="text-brand-ink" />
-    </svg>
-  );
-}
-
-function Card({
-  icon,
-  label,
-  value,
-  sub,
-  highlight,
+/**
+ * Gráfica de línea con lo mínimo para leerla: máximo, total, y primera y última
+ * fecha. Un lector de pantalla recibe un resumen en texto en lugar del dibujo.
+ */
+function Grafica({
+  fechas,
+  valores,
+  formato,
+  descripcion,
 }: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  sub?: string;
-  highlight?: boolean;
+  fechas: string[];
+  valores: number[];
+  formato: (n: number) => string;
+  descripcion: string;
 }) {
+  const id = useId();
+  if (valores.length === 0) return <p className="text-sm text-brand-ink/70">Sin datos en este periodo.</p>;
+  const max = Math.max(...valores, 1);
+  const total = valores.reduce((s, v) => s + v, 0);
+  const iMax = valores.indexOf(Math.max(...valores));
+  const w = 600, h = 120;
+  const step = valores.length > 1 ? w / (valores.length - 1) : w;
+  const puntos = valores.map((v, i) => `${i * step},${h - (v / max) * (h - 6) - 3}`);
+  const linea = puntos.join(" ");
+  const area = `0,${h} ${linea} ${(valores.length - 1) * step},${h}`;
   return (
-    <div
-      className={`rounded-2xl border p-5 ${
-        highlight ? "border-brand-ink bg-brand-cream/30" : "border-brand-line bg-white"
-      }`}
-    >
-      <div className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-ink/60">
-        {icon} {label}
+    <figure>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs text-brand-ink/70">
+        <span>
+          Total <b className="text-brand-ink">{formato(total)}</b>
+        </span>
+        <span className={tagNeutral}>
+          Máx. {formato(valores[iMax])} · {diaMes(fechas[iMax])}
+        </span>
       </div>
-      <div className="mt-2 text-3xl font-bold tracking-tight text-brand-ink">{value}</div>
-      {sub ? <div className="mt-1 text-xs text-brand-ink/55">{sub}</div> : null}
-    </div>
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" role="img" aria-labelledby={id} className="mt-2 h-32 w-full">
+        <title id={id}>{`${descripcion}: total ${formato(total)}, máximo ${formato(valores[iMax])} el ${diaMes(fechas[iMax])}`}</title>
+        <polygon points={area} className="fill-brand-yellow/40" />
+        <polyline points={linea} fill="none" strokeWidth="2.5" vectorEffect="non-scaling-stroke" className="stroke-brand-ink" />
+        <line x1={0} y1={h - 0.5} x2={w} y2={h - 0.5} strokeWidth="1" vectorEffect="non-scaling-stroke" className="stroke-brand-ink/40" />
+      </svg>
+      <figcaption className="mt-1 flex justify-between text-[11px] font-semibold text-brand-ink/70">
+        <span>{diaMes(fechas[0])}</span>
+        <span>{diaMes(fechas[fechas.length - 1])}</span>
+      </figcaption>
+    </figure>
   );
 }

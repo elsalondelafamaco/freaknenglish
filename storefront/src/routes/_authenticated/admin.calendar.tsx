@@ -1,10 +1,13 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { CheckCircle2, Search } from "lucide-react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import { adminApi, scheduleApi } from "@/lib/api/endpoints";
+import { PageHeader, focusRing } from "@/components/app/AppUi";
+import { btnRow, inputBase } from "@/components/teacher/TeacherUi";
+import { horaEn12 } from "@/lib/domain/zona-horaria";
 
 export const Route = createFileRoute("/_authenticated/admin/calendar")({
   head: () => ({ meta: [{ title: "Calendario — Admin Freakn'" }] }),
@@ -40,32 +43,35 @@ function AuditoriaHorarios() {
 
   if (problemas.length === 0) {
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+      <div className="flex items-start gap-2 border-2 border-brand-ink bg-white px-4 py-3 text-sm text-brand-ink">
+        <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+        <span>
         {/* Este aviso solo mira si cada clase cae dentro de horas que su profe
             pintó. NO comprueba si dos alumnos se pisan — eso vive en Salud del
             horario. Decirlo evita que un tick verde se lea como "todo bien". */}
-        ✓ Las {total} franjas asignadas caben en la disponibilidad de su profesor.{" "}
-        <span className="opacity-70">Los cruces entre alumnos se revisan en Salud del horario.</span>
+        Las {total} franjas asignadas caben en la disponibilidad de su profesor.{" "}
+        <span className="text-brand-ink/70">Los cruces entre alumnos se revisan en Salud del horario.</span>
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3">
-      <p className="text-sm font-semibold text-amber-900">
+    <div role="alert" className="border-2 border-brand-ink bg-brand-yellow-soft px-4 py-3">
+      <p className="text-sm font-bold text-brand-ink">
         {problemas.length} de {total} franjas no caben en la disponibilidad de su profesor
       </p>
-      <p className="mt-1 text-xs text-amber-900/70">
+      <p className="mt-1 text-xs text-brand-ink/80">
         La clase se sale de las horas que el profe tiene pintadas. Corrígelo pintando esas horas en
         su disponibilidad, o reasignando al estudiante.
       </p>
       <ul className="mt-3 flex flex-col gap-1.5">
         {problemas.map((p, i) => {
-          const horas = p.horasRequeridas.map((h) => `${h}:00`).join(" y ");
+          const horas = p.horasRequeridas.map((h) => horaEn12(h)).join(" y ");
           return (
-            <li key={i} className="text-xs text-amber-950">
-              <span className="font-semibold">{p.studentName ?? "—"}</span> con{" "}
-              <span className="font-semibold">{p.teacherName}</span> · {p.dayName} {p.hour}:00 (
+            <li key={i} className="text-xs text-brand-ink">
+              <span className="font-bold">{p.studentName ?? "—"}</span> con{" "}
+              <span className="font-bold">{p.teacherName}</span> · {p.dayName} {horaEn12(p.hour)} (
               {p.durationMin} min) — necesita {horas} pintadas
             </li>
           );
@@ -110,7 +116,7 @@ function AdminCalendar() {
           const eventos: any[] = [
             {
               id: c.id,
-              title: `${congelada ? "❄ " : ""}${c.student.fullName} · ${c.teacher!.fullName}`,
+              title: `${congelada ? "Congelada · " : ""}${c.student.fullName} · ${c.teacher!.fullName}`,
               start: c.startsAt,
               end: c.endsAt,
               backgroundColor: colorFor(c.teacher!.id),
@@ -198,20 +204,16 @@ function AdminCalendar() {
   const cfg = cfgQ.data;
 
   return (
-    <div className="flex flex-col gap-4">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight text-brand-ink">Calendario global</h1>
-        <p className="mt-1 text-sm text-brand-ink/60">
-          Todas las clases de la semana sobre la disponibilidad declarada de cada profe. Borde ámbar
-          = estudiante sin pago activo.
-        </p>
-      </header>
+    <div className="flex flex-col gap-6">
+      <PageHeader eyebrowText="Admin · Operación" title="Calendario global" highlight="Calendario">
+        Todas las clases de la semana sobre la disponibilidad declarada de cada profe. Borde amarillo = estudiante sin pago activo.
+      </PageHeader>
 
       <AuditoriaHorarios />
 
       {/* Calendario + panel de profesores. En móvil el panel va debajo. */}
       <div className="grid gap-4 lg:grid-cols-[1fr_260px] lg:items-start">
-        <div className="freakn-calendar overflow-x-auto rounded-3xl border border-brand-line bg-white p-2 shadow-soft md:p-4">
+        <div className="freakn-calendar overflow-x-auto bg-white p-2 md:p-4 border-2 border-brand-ink">
           <div className="min-w-[640px]">
             <FullCalendar
               plugins={[timeGridPlugin]}
@@ -230,6 +232,8 @@ function AdminCalendar() {
               buttonText={{ today: "Hoy" }}
               allDaySlot={false}
               slotDuration="01:00:00"
+              slotLabelFormat={{ hour: "numeric", minute: "2-digit", hour12: true }}
+              eventTimeFormat={{ hour: "numeric", minute: "2-digit", hour12: true }}
               slotMinTime={`${String(cfg?.startHour ?? 6).padStart(2, "0")}:00:00`}
               slotMaxTime={`${String((cfg?.endHour ?? 20) + 1).padStart(2, "0")}:00:00`}
               hiddenDays={cfg ? [0, 1, 2, 3, 4, 5, 6].filter((d) => !cfg.days.includes(d)) : [0, 6]}
@@ -249,15 +253,15 @@ function AdminCalendar() {
                 // de quién es esa hora sin repetir la ficha entera.
                 if (c.cola) {
                   return (
-                    <div className="truncate px-1 text-[10px] italic leading-tight opacity-90">
+                    <div className="truncate px-1 text-[11px] italic leading-tight opacity-90">
                       ↳ {c.student?.fullName}
                     </div>
                   );
                 }
                 return (
-                  <div className="overflow-hidden px-1 py-0.5 text-[10px] leading-tight">
+                  <div className="overflow-hidden px-1 py-0.5 text-[11px] leading-tight">
                     <div className="truncate font-semibold">
-                      {!c.student?.paymentActive ? "⚠ " : ""}
+                      {!c.student?.paymentActive ? "Sin pago · " : ""}
                       {c.student?.fullName}
                     </div>
                     <div className="truncate opacity-80">{c.teacher?.fullName}</div>
@@ -316,33 +320,36 @@ function PanelProfesores({
 }) {
   const activos = total - hidden.size;
   return (
-    <aside className="rounded-3xl border border-brand-line bg-white p-4 shadow-soft">
+    <aside aria-labelledby="panel-profes" className="border-2 border-brand-ink bg-white p-4">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-bold text-brand-ink">Profesores</h2>
-        <span className="text-xs text-brand-ink/55">{activos}/{total}</span>
+        <h2 id="panel-profes" className="font-display text-[18px] font-extrabold uppercase leading-tight text-brand-ink">Profesores</h2>
+        <span className="text-xs text-brand-ink/70">{activos}/{total}</span>
       </div>
 
       <div className="relative mt-3">
-        <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-brand-ink/40" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-brand-ink/70" aria-hidden="true" />
         <input
+          type="search"
+          aria-label="Buscar profesor"
           value={busqueda}
           onChange={(e) => onBuscar(e.target.value)}
           placeholder="Buscar profesor…"
-          className="w-full rounded-full border border-brand-line bg-white py-1.5 pl-8 pr-3 text-xs focus:border-brand-ink focus:outline-none"
+          className={`${inputBase} pl-8`}
         />
       </div>
 
       <button
         type="button"
         onClick={onTodos}
-        className="mt-2 w-full rounded-full border border-brand-ink bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink transition hover:bg-brand-cream/40"
+        className={`${btnRow} mt-2 w-full`}
       >
         {hidden.size > 0 ? "Seleccionar todos" : "Deseleccionar todos"}
       </button>
 
-      <label className="mt-2 flex cursor-pointer items-center gap-2 rounded-xl bg-brand-cream/30 px-3 py-2 text-xs text-brand-ink/75">
+      <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-2 bg-brand-cream-soft px-3 py-2 text-xs font-semibold text-brand-ink">
         <input
           type="checkbox"
+          className={`size-5 accent-brand-ink ${focusRing}`}
           checked={verDisponibilidad}
           onChange={(e) => onVerDisponibilidad(e.target.checked)}
         />
@@ -352,7 +359,7 @@ function PanelProfesores({
       {/* Alto acotado + scroll: la lista puede crecer sin empujar el calendario. */}
       <ul className="mt-3 max-h-[52vh] space-y-1 overflow-y-auto pr-1">
         {teachers.length === 0 ? (
-          <li className="px-1 py-3 text-xs text-brand-ink/50">Sin resultados.</li>
+          <li className="px-1 py-3 text-xs text-brand-ink/70">Sin resultados.</li>
         ) : (
           teachers.map((t) => {
             const off = hidden.has(t.id);
@@ -361,19 +368,21 @@ function PanelProfesores({
                 <button
                   type="button"
                   onClick={() => onToggle(t.id)}
-                  className={`flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-xs font-medium transition ${
-                    off ? "text-brand-ink/40 hover:bg-brand-cream/40" : "text-brand-ink hover:bg-brand-cream/50"
+                  aria-pressed={!off}
+                  className={`flex min-h-11 w-full items-center gap-2 px-2 py-1.5 text-left text-xs font-bold transition-colors ${focusRing} ${
+                    off ? "text-brand-ink/60 hover:bg-brand-cream-soft" : "text-brand-ink hover:bg-brand-cream-soft"
                   }`}
                 >
                   <span
                     className="inline-block size-2.5 shrink-0 rounded-full"
                     style={{ background: colorFor(t.id), opacity: off ? 0.3 : 1 }}
+                    aria-hidden="true"
                   />
                   <span className="flex-1 truncate">{t.fullName}</span>
                   {/* Sin franjas declaradas no hay fondo que pintar: se avisa,
                       porque si no parece que el filtro no funciona. */}
                   {!conDisponibilidad.has(t.id) ? (
-                    <span className="shrink-0 text-[10px] text-brand-ink/40" title="Sin disponibilidad declarada">
+                    <span className="shrink-0 text-[11px] text-brand-ink/70" title="Sin disponibilidad declarada">
                       sin agenda
                     </span>
                   ) : null}

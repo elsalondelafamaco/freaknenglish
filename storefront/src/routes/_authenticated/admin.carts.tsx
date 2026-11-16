@@ -4,7 +4,9 @@ import { Mail, ShoppingCart, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { adminApi } from "@/lib/api/endpoints";
 import { formatCop } from "@/lib/domain/plans";
-import { cn } from "@/lib/utils";
+import { Cargando, EstadoError, PageHeader, Vacio } from "@/components/app/AppUi";
+import { Seccion, btnRowInk } from "@/components/teacher/TeacherUi";
+import { ChipEstado } from "@/components/admin/AdminUi";
 
 export const Route = createFileRoute("/_authenticated/admin/carts")({
   head: () => ({ meta: [{ title: "Carritos abandonados — Admin Freakn'" }] }),
@@ -13,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/admin/carts")({
 
 function AdminCarts() {
   const qc = useQueryClient();
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin", "carts"],
     queryFn: () => adminApi.abandonedCarts(),
     refetchInterval: 60_000,
@@ -29,26 +31,27 @@ function AdminCarts() {
   });
 
   return (
-    <div>
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight text-brand-ink">Carritos abandonados</h1>
-        <p className="mt-1 text-sm text-brand-ink/65">
-          Ventas por recuperar: checkouts sin pagar y registros que nunca compraron. El
-          recordatorio automático sale solo a las 4 horas; desde aquí puedes reenviarlo cuando quieras.
-        </p>
-      </header>
+    <div className="flex flex-col gap-8">
+      <PageHeader eyebrowText="Admin · Hoy" title="Ventas por recuperar" highlight="recuperar">
+        Checkouts sin pagar y registros que nunca compraron. El recordatorio automático sale solo a las 4 horas;
+        desde aquí puedes reenviarlo cuando quieras.
+      </PageHeader>
 
       {isLoading ? (
-        <div className="mt-10 text-center text-sm text-brand-ink/50">Cargando…</div>
+        <Cargando>Cargando carritos…</Cargando>
+      ) : isError ? (
+        <EstadoError onRetry={() => void refetch()}>No pudimos cargar los carritos abandonados.</EstadoError>
       ) : (
         <>
-          <Section
+          <Lista
+            id="sin-pagar"
             icon={ShoppingCart}
             title={`Checkouts sin pagar (${data?.carts.length ?? 0})`}
-            empty="No hay checkouts pendientes de pago. 🎉"
+            vacio="No hay checkouts pendientes de pago."
+            principal
           >
             {data?.carts.map((c) => (
-              <Row
+              <Fila
                 key={c.intentId}
                 name={c.fullName}
                 email={c.email}
@@ -59,15 +62,16 @@ function AdminCarts() {
                 onRemind={() => remind.mutate({ intentId: c.intentId })}
               />
             ))}
-          </Section>
+          </Lista>
 
-          <Section
+          <Lista
+            id="sin-compra"
             icon={UserPlus}
             title={`Registrados sin compra (${data?.registered.length ?? 0})`}
-            empty="Todos los registrados tienen plan. 🎉"
+            vacio="Todos los registrados tienen plan."
           >
             {data?.registered.map((u) => (
-              <Row
+              <Fila
                 key={u.userId}
                 name={u.fullName}
                 email={u.email}
@@ -78,7 +82,7 @@ function AdminCarts() {
                 onRemind={() => remind.mutate({ userId: u.userId })}
               />
             ))}
-          </Section>
+          </Lista>
         </>
       )}
     </div>
@@ -89,35 +93,44 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
 }
 
-function Section({
+function Lista({
+  id,
   icon: Icon,
   title,
-  empty,
+  vacio,
+  principal,
   children,
 }: {
+  id: string;
   icon: typeof ShoppingCart;
   title: string;
-  empty: string;
+  vacio: string;
+  principal?: boolean;
   children: React.ReactNode;
 }) {
   const hasItems = Array.isArray(children) ? children.length > 0 : !!children;
   return (
-    <section className="mt-8">
-      <h2 className="flex items-center gap-2 text-lg font-bold text-brand-ink">
-        <Icon className="size-5" /> {title}
-      </h2>
-      <div className="mt-3 overflow-hidden rounded-2xl border border-brand-line bg-white shadow-soft">
-        {hasItems ? (
-          <div className="divide-y divide-brand-line/60">{children}</div>
-        ) : (
-          <div className="p-8 text-center text-sm text-brand-ink/50">{empty}</div>
-        )}
-      </div>
-    </section>
+    <Seccion
+      id={id}
+      principal={!!principal}
+      titulo={
+        <span className="inline-flex items-center gap-2">
+          <Icon className="size-5" aria-hidden="true" /> {title}
+        </span>
+      }
+    >
+      {hasItems ? (
+        <div className="divide-y divide-brand-ink/15 border-t border-brand-ink/15">{children}</div>
+      ) : (
+        <div className="p-4 pt-0">
+          <Vacio>{vacio}</Vacio>
+        </div>
+      )}
+    </Seccion>
   );
 }
 
-function Row({
+function Fila({
   name,
   email,
   phone,
@@ -137,36 +150,27 @@ function Row({
   return (
     <div className="flex flex-wrap items-center gap-3 px-4 py-3">
       <div className="min-w-0 flex-1">
-        <div className="font-medium text-brand-ink">{name || "—"}</div>
-        <div className="truncate text-xs text-brand-ink/60">
+        <div className="font-bold text-brand-ink">{name || "—"}</div>
+        <div className="truncate text-xs text-brand-ink/70">
           {email}
           {phone ? ` · ${phone}` : ""}
         </div>
-        <div className="mt-0.5 text-xs text-brand-ink/50">{meta}</div>
+        <div className="mt-0.5 text-xs text-brand-ink/70">{meta}</div>
       </div>
       <div className="flex items-center gap-2">
         {reminder ? (
-          <span
-            className={cn(
-              "rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-              reminder.status === "sent"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "border-amber-200 bg-amber-50 text-amber-700",
-            )}
-          >
-            Recordado {fmtDate(reminder.at)}
-          </span>
+          <ChipEstado atencion={reminder.status !== "sent"}>Recordado {fmtDate(reminder.at)}</ChipEstado>
         ) : (
-          <span className="rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">
-            Sin recordatorio
-          </span>
+          <ChipEstado atencion>Sin recordatorio</ChipEstado>
         )}
         <button
+          type="button"
           onClick={onRemind}
           disabled={sending}
-          className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-3 py-1.5 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-50"
+          aria-label={`${reminder ? "Reenviar recordatorio" : "Enviar recordatorio"} a ${name || email}`}
+          className={btnRowInk}
         >
-          <Mail className="size-3.5" /> {reminder ? "Reenviar" : "Enviar recordatorio"}
+          <Mail className="size-3.5" aria-hidden="true" /> {reminder ? "Reenviar" : "Enviar recordatorio"}
         </button>
       </div>
     </div>

@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Copy, FileCode2, Sparkles } from "lucide-react";
+import { Check, Copy, FileCode2 } from "lucide-react";
 import { toast } from "sonner";
+import { PageHeader, SeccionTitulo, btnChipInk } from "@/components/app/AppUi";
+import { btnRow } from "@/components/teacher/TeacherUi";
 
 export const Route = createFileRoute("/_authenticated/admin/content-prompt")({
   head: () => ({ meta: [{ title: "Prompt para Gemini — Admin" }] }),
@@ -193,47 +195,35 @@ function ContentPromptPage() {
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <header>
-        <p className="text-sm text-brand-ink/65">Panel admin · Contenido</p>
-        <h1 className="mt-1 flex items-center gap-2 text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">
-          <Sparkles className="size-7 text-brand-yellow" />
-          Prompt para generar contenido con IA
-        </h1>
-        <p className="mt-2 max-w-3xl text-brand-ink/70">
-          Copia este prompt y pégalo como instrucciones de un{" "}
-          <strong>Gem de Gemini</strong> (o del asistente que uses). Con esto, la IA
-          genera lecciones, actividades y checkpoints en HTML que ya salen
-          responsive y que reportan las respuestas del estudiante a la
-          plataforma, listos para subir desde el CMS.
-        </p>
-      </header>
+    <div className="flex flex-col gap-8">
+      <PageHeader eyebrowText="Admin · Oferta" title="Prompt para generar contenido con IA" highlight="IA">
+        Copia este prompt y pégalo como instrucciones de un <strong>Gem de Gemini</strong> (o del asistente que uses).
+        Con esto, la IA genera lecciones, actividades y checkpoints en HTML que ya salen responsive y que reportan las
+        respuestas del estudiante a la plataforma, listos para subir desde Contenido.
+      </PageHeader>
 
       <div className="flex flex-wrap items-center gap-3">
-        <button
-          onClick={copy}
-          className="inline-flex items-center gap-2 rounded-full bg-brand-ink px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:bg-brand-ink-soft"
-        >
-          {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+        <button type="button" onClick={copy} className={btnChipInk}>
+          {copied ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
           {copied ? "¡Copiado!" : "Copiar prompt completo"}
         </button>
-        <span className="text-xs text-brand-ink/55">
+        <span className="text-xs text-brand-ink/70">
           {GEM_PROMPT.length.toLocaleString("es-CO")} caracteres
         </span>
       </div>
 
-      <section className="rounded-3xl border border-brand-line bg-white p-5">
-        <h2 className="flex items-center gap-2 text-sm font-bold text-brand-ink">
-          <FileCode2 className="size-4" /> Cómo usarlo
-        </h2>
-        <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm text-brand-ink/75">
+      <section aria-labelledby="como-usarlo" className="border-2 border-brand-ink bg-white p-5">
+        <SeccionTitulo id="como-usarlo" className="flex items-center gap-2">
+          <FileCode2 className="size-5" aria-hidden="true" /> Cómo usarlo
+        </SeccionTitulo>
+        <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-brand-ink/90">
           <li>En Gemini, crea un Gem nuevo (o edita el que ya tengas para contenido).</li>
           <li>Pega este prompt en el campo de <strong>instrucciones</strong> del Gem y guárdalo.</li>
           <li>
             Pídele el material: <em>"Hazme la lección del módulo 12 sobre pasado
             simple, nivel A2, con 8 ejercicios"</em>.
           </li>
-          <li>Descarga el HTML que te entregue y súbelo desde el CMS como lección tipo HTML.</li>
+          <li>Descarga el HTML que te entregue y súbelo desde Contenido como lección tipo HTML.</li>
           <li>
             Ábrelo en la plataforma, responde un par de ejercicios y confirma que
             el resultado aparece en el perfil del estudiante.
@@ -241,17 +231,14 @@ function ContentPromptPage() {
         </ol>
       </section>
 
-      <section className="rounded-3xl border border-brand-line bg-white">
-        <div className="flex items-center justify-between border-b border-brand-line px-5 py-3">
-          <h2 className="text-sm font-bold text-brand-ink">Prompt</h2>
-          <button
-            onClick={copy}
-            className="inline-flex items-center gap-1.5 rounded-full border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink/75 transition hover:bg-brand-cream/40"
-          >
-            {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />} Copiar
+      <section aria-labelledby="prompt-texto" className="shadow-hard border-2 border-brand-ink bg-white">
+        <div className="flex items-center justify-between border-b border-brand-ink/15 px-5 py-3">
+          <SeccionTitulo id="prompt-texto">Prompt</SeccionTitulo>
+          <button type="button" onClick={copy} className={btnRow}>
+            {copied ? <Check className="size-3.5" aria-hidden="true" /> : <Copy className="size-3.5" aria-hidden="true" />} Copiar
           </button>
         </div>
-        <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap break-words px-5 py-4 text-[12.5px] leading-relaxed text-brand-ink/85">
+        <pre className="max-h-[60vh] overflow-auto whitespace-pre-wrap break-words px-5 py-4 text-[12.5px] leading-relaxed text-brand-ink">
           {GEM_PROMPT}
         </pre>
       </section>

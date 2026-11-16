@@ -6,9 +6,15 @@ import { toast } from "sonner";
 import { adminApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
 import { SchedulePickerGrid } from "@/components/schedule/SchedulePickerGrid";
 import { rolesOfRow, rowHasRole } from "@/lib/roles";
+import { Cargando, EstadoError, PageHeader, Vacio, btnChip, btnChipInk, focusRing } from "@/components/app/AppUi";
+import { btnRow, inputBase, td, th } from "@/components/teacher/TeacherUi";
+import { ChipEstado, Segmentado } from "@/components/admin/AdminUi";
+
+/** Los roles llegan en inglés desde la API; al dueño se le muestran en español. */
+const NOMBRE_DE_ROL: Record<string, string> = { student: "Estudiante", teacher: "Profe", admin: "Admin" };
 
 export const Route = createFileRoute("/_authenticated/admin/users/")({
-  head: () => ({ meta: [{ title: "CRM — Admin Freakn'" }] }),
+  head: () => ({ meta: [{ title: "Usuarios — Admin Freakn'" }] }),
   component: AdminCRM,
 });
 
@@ -32,78 +38,114 @@ function AdminCRM() {
   const filtered = rows.filter((u) => (role === "all" ? true : rowHasRole(u, role)));
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        eyebrowText={`Admin · Personas${usersQ.data ? ` · ${filtered.length} de ${rows.length}` : ""}`}
+        title="Usuarios"
+        highlight="Usuarios"
+        aside={
+          <button type="button" onClick={() => setShowCreate(true)} className={btnChipInk}>
+            <Plus className="size-3.5" aria-hidden="true" /> Invitar usuario
+          </button>
+        }
+      >
+        Estudiantes, profes y administradores. Abre una persona para ver su plan, sus clases y sus pagos.
+      </PageHeader>
+
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="relative w-full md:max-w-sm">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-brand-ink/40" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nombre o email…" className="w-full rounded-full border border-brand-line bg-white py-2 pl-9 pr-3 text-sm focus:border-brand-ink focus:outline-none" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-brand-ink/70" aria-hidden="true" />
+          <input
+            type="search"
+            aria-label="Buscar por nombre o email"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar por nombre o email…"
+            className={`${inputBase} pl-9`}
+          />
         </div>
-        <div className="flex items-center gap-2">
-          <div className="inline-flex rounded-full border border-brand-line bg-white p-1 text-xs">
-            {(["all", "student", "teacher", "admin"] as const).map((r) => (
-              <button key={r} onClick={() => setRole(r)} className={`rounded-full px-3 py-1.5 font-medium capitalize transition ${role === r ? "bg-brand-ink text-white" : "text-brand-ink/70 hover:text-brand-ink"}`}>
-                {r === "all" ? "Todos" : r}
-              </button>
-
-            ))}
-          </div>
-          <label className="inline-flex items-center gap-1.5 rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-medium text-brand-ink/70">
+        <div className="flex flex-wrap items-center gap-3">
+          <Segmentado
+            etiqueta="Filtrar por rol"
+            valor={role}
+            onChange={setRole}
+            opciones={[
+              { valor: "all" as const, texto: "Todos" },
+              { valor: "student" as const, texto: "Estudiantes" },
+              { valor: "teacher" as const, texto: "Profes" },
+              { valor: "admin" as const, texto: "Admin" },
+            ]}
+          />
+          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-[13px] font-bold text-brand-ink">
             <input
               type="checkbox"
               checked={verEliminados}
               onChange={(e) => setVerEliminados(e.target.checked)}
+              className={`size-5 accent-brand-ink ${focusRing}`}
             />
             Ver eliminados
           </label>
-          <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5">
-            <Plus className="size-3.5" /> Invitar usuario
-          </button>
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-brand-line bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-brand-cream/40 text-xs uppercase tracking-wide text-brand-ink/60">
-            <tr>
-              <th className="px-4 py-3">Usuario</th>
-              <th className="px-4 py-3">Rol</th>
-              <th className="px-4 py-3">Nivel</th>
-              <th className="px-4 py-3">Plan</th>
-              <th className="px-4 py-3">Estado</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-brand-line">
-            {usersQ.isLoading ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-brand-ink/55">Cargando…</td></tr>
-            ) : filtered.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-brand-ink/55">Sin resultados.</td></tr>
-            ) : (
-              filtered.map((u) => (
-                <tr key={u.id} className="cursor-pointer hover:bg-brand-cream/30">
-                  <td className="px-4 py-3">
-                    <Link to="/admin/users/$id" params={{ id: u.id }} className="block">
-                      <div className="font-semibold text-brand-ink hover:underline">{u.fullName}</div>
-                      <div className="text-xs text-brand-ink/55">{u.email}</div>
+      {usersQ.isError ? (
+        <EstadoError onRetry={() => void usersQ.refetch()}>No pudimos cargar los usuarios.</EstadoError>
+      ) : usersQ.isLoading ? (
+        <Cargando>Cargando usuarios…</Cargando>
+      ) : filtered.length === 0 ? (
+        <Vacio titulo="Sin resultados">Prueba con otro nombre o email, o cambia el filtro de rol.</Vacio>
+      ) : (
+        <div className="overflow-x-auto border-2 border-brand-ink bg-white">
+          <table className="w-full min-w-[720px] border-collapse text-left">
+            <thead>
+              <tr>
+                <th className={th}>Usuario</th>
+                <th className={th}>Rol</th>
+                <th className={th}>Nivel</th>
+                <th className={th}>Plan</th>
+                <th className={th}>Estado</th>
+                <th className={`${th} text-right`}><span className="sr-only">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((u) => (
+                <tr key={u.id} className="hover:bg-brand-cream-soft">
+                  <td className={td}>
+                    <Link to="/admin/users/$id" params={{ id: u.id }} className={`block ${focusRing}`}>
+                      <div className="font-bold text-brand-ink hover:underline">{u.fullName}</div>
+                      <div className="text-xs text-brand-ink/70">{u.email}</div>
                     </Link>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className={td}>
                     {/* Todos los roles, no solo el principal: si no, un admin
                         que además da clases se veía como simple "admin". */}
-                    {rolesOfRow(u).map((r) => (
-                      <span key={r} className="mr-1 rounded-full bg-brand-cream px-2 py-0.5 text-[10px] font-semibold capitalize text-brand-ink">{r}</span>
-                    ))}
-                    {u.disabledAt ? <span className="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">inactivo</span> : null}
-                    {u.deletedAt ? <span className="ml-1 rounded-full bg-zinc-200 px-2 py-0.5 text-[10px] font-semibold text-zinc-700">eliminado</span> : null}
+                    <div className="flex flex-wrap gap-1">
+                      {rolesOfRow(u).map((r) => (
+                        <ChipEstado key={r}>{NOMBRE_DE_ROL[String(r).toLowerCase()] ?? r}</ChipEstado>
+                      ))}
+                      {u.disabledAt ? <ChipEstado atencion>inactivo</ChipEstado> : null}
+                      {u.deletedAt ? <ChipEstado>eliminado</ChipEstado> : null}
+                    </div>
                   </td>
-                  <td className="px-4 py-3 capitalize text-brand-ink/70">{u.englishLevel ?? "—"}</td>
-                  <td className="px-4 py-3 text-brand-ink/70">{u.subscription?.plan?.name ?? "—"}</td>
-                  <td className="px-4 py-3">{u.subscription ? <StatusBadge status={u.subscription.status} /> : <span className="text-brand-ink/40">—</span>}</td>
+                  <td className={`${td} capitalize`}>{u.englishLevel ?? "—"}</td>
+                  <td className={td}>{u.subscription?.plan?.name ?? "—"}</td>
+                  <td className={td}>{u.subscription ? <StatusBadge status={u.subscription.status} /> : <span className="text-brand-ink/70">—</span>}</td>
+                  <td className={`${td} text-right`}>
+                    <Link
+                      to="/admin/users/$id"
+                      params={{ id: u.id }}
+                      aria-label={`Ver a ${u.fullName}`}
+                      className={btnRow}
+                    >
+                      Ver
+                    </Link>
+                  </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {showCreate ? <CreateUserDialog onClose={() => setShowCreate(false)} /> : null}
     </div>
@@ -184,38 +226,43 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
     // La grilla de horario mide 640px de ancho mínimo y 15 filas de alto, así
     // que el modal necesita ancho y scroll propio: con `max-w-md` y sin
     // overflow se salía de la pantalla y no se alcanzaba el botón de enviar.
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4">
+    <div role="dialog" aria-modal="true" aria-labelledby="invitar-titulo" className="fixed inset-0 z-50 overflow-y-auto bg-black/40 p-4">
       <form
         onSubmit={(e) => { e.preventDefault(); createM.mutate(); }}
-        className="mx-auto my-4 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl"
+        className="shadow-hard mx-auto my-4 flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden border-2 border-brand-ink bg-white [--hard-x:6px]"
       >
         <div className="flex-1 overflow-y-auto p-6">
-        <h2 className="text-lg font-semibold text-brand-ink">Invitar usuario</h2>
-        <p className="mt-1 text-xs text-brand-ink/60">
+        <h2 id="invitar-titulo" className="font-display text-[22px] font-extrabold uppercase leading-tight text-brand-ink">Invitar usuario</h2>
+        <p className="mt-1 text-xs text-brand-ink/70">
           Le llegará un correo de invitación con el link para crear su contraseña y entrar. Sin plan manual, un estudiante se activa solo tras pagar por Wompi.
         </p>
 
-        <div className="mt-4 flex gap-2">
-          {(["student", "teacher", "admin"] as const).map((r) => (
-            <button key={r} type="button" onClick={() => setUserRole(r)} className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium capitalize ${userRole === r ? "border-brand-ink bg-brand-ink text-white" : "border-brand-line text-brand-ink/70 hover:bg-brand-cream/30"}`}>
-              {r === "student" ? "Estudiante" : r === "teacher" ? "Profesor" : "Administrador"}
-            </button>
-          ))}
+        <div className="mt-4">
+          <Segmentado
+            etiqueta="Tipo de usuario"
+            valor={userRole}
+            onChange={setUserRole}
+            opciones={[
+              { valor: "student" as const, texto: "Estudiante" },
+              { valor: "teacher" as const, texto: "Profesor" },
+              { valor: "admin" as const, texto: "Administrador" },
+            ]}
+          />
         </div>
         {userRole === "admin" ? (
           <>
-            <p className="mt-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <p className="mt-2 border-2 border-brand-ink bg-brand-yellow-soft px-3 py-2 text-xs text-brand-ink">
               Un administrador ve y edita <b>todo</b>: usuarios, pagos, nómina y contenido. Invita
               solo a gente del equipo en la que confíes.
             </p>
-            <label className="mt-2 flex items-start gap-2 rounded-xl border border-brand-line bg-brand-cream/20 p-3">
+            <label className="mt-2 flex items-start gap-2 p-3 border border-brand-ink/25 bg-brand-cream-soft">
               <input
                 type="checkbox"
                 checked={alsoTeacher}
                 onChange={(e) => setAlsoTeacher(e.target.checked)}
-                className="mt-0.5"
+                className={`mt-0.5 size-5 shrink-0 accent-brand-ink ${focusRing}`}
               />
-              <span className="text-xs text-brand-ink/75">
+              <span className="text-xs text-brand-ink/80">
                 <strong className="block text-brand-ink">También dicta clases</strong>
                 Además del panel de admin, tendrá los módulos de profesor y aparecerá en los
                 listados para asignarle estudiantes y liquidarle nómina.
@@ -224,33 +271,33 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
           </>
         ) : null}
 
-        <label className="mt-4 block text-xs font-semibold text-brand-ink/70">
+        <label className="mt-4 block text-xs font-bold text-brand-ink">
           Nombre completo
-          <input value={fullName} onChange={(e) => setFullName(e.target.value)} required className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none" />
+          <input value={fullName} onChange={(e) => setFullName(e.target.value)} required className="mt-1 w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow" />
         </label>
-        <label className="mt-3 block text-xs font-semibold text-brand-ink/70">
+        <label className="mt-3 block text-xs font-bold text-brand-ink">
           Email
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none" />
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="mt-1 w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow" />
         </label>
         {userRole === "student" ? (
           <>
-            <label className="mt-3 block text-xs font-semibold text-brand-ink/70">
+            <label className="mt-3 block text-xs font-bold text-brand-ink">
               Nivel inicial
-              <select value={level} onChange={(e) => setLevel(e.target.value as Level)} className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none">
+              <select value={level} onChange={(e) => setLevel(e.target.value as Level)} className="mt-1 w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow">
                 <option value="beginner">Beginner (A1–A2)</option>
                 <option value="intermediate">Intermediate (B1–B2)</option>
                 <option value="advanced">Advanced (C1)</option>
               </select>
             </label>
 
-            <label className="mt-4 flex items-start gap-2 rounded-xl border border-brand-line bg-brand-cream/20 p-3">
+            <label className="mt-4 flex items-start gap-2 p-3 border border-brand-ink/25 bg-brand-cream-soft">
               <input
                 type="checkbox"
                 checked={withPlan}
                 onChange={(e) => setWithPlan(e.target.checked)}
-                className="mt-0.5"
+                className={`mt-0.5 size-5 shrink-0 accent-brand-ink ${focusRing}`}
               />
-              <span className="text-xs text-brand-ink/75">
+              <span className="text-xs text-brand-ink/80">
                 <strong className="block text-brand-ink">Activar plan manualmente</strong>
                 Para estudiantes que ya pagaron por fuera de Wompi. La suscripción queda activa hasta la fecha que definas.
               </span>
@@ -258,7 +305,7 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
 
             {withPlan ? (
               <>
-                <label className="mt-3 block text-xs font-semibold text-brand-ink/70">
+                <label className="mt-3 block text-xs font-bold text-brand-ink">
                   Plan
                   <select
                     value={planId}
@@ -271,7 +318,7 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
                       setDurationMin(plans.find((p) => p.id === id)?.daysPerWeek === 2 ? 75 : 50);
                     }}
                     required
-                    className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                    className="mt-1 w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
                   >
                     <option value="" disabled>Selecciona…</option>
                     {plans.map((p) => (
@@ -279,12 +326,12 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
                     ))}
                   </select>
                 </label>
-                <label className="mt-3 block text-xs font-semibold text-brand-ink/70">
+                <label className="mt-3 block text-xs font-bold text-brand-ink">
                   Duración de cada clase
                   <select
                     value={durationMin}
                     onChange={(e) => { setDurationMin(Number(e.target.value)); setSchedule([]); }}
-                    className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                    className="mt-1 w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
                   >
                     <option value={50}>50 minutos (estándar)</option>
                     <option value={60}>60 minutos</option>
@@ -292,24 +339,24 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
                     <option value={90}>90 minutos</option>
                   </select>
                   {durationMin > 60 ? (
-                    <span className="mt-1 block font-normal text-[10px] text-brand-ink/55">
+                    <span className="mt-1 block font-normal text-xs text-brand-ink/70">
                       La clase ocupa también la hora siguiente: el profesor debe tener las
                       horas seguidas pintadas en su disponibilidad para poder asignarlo.
                     </span>
                   ) : null}
                 </label>
                 <div className="mt-3 grid grid-cols-2 gap-3">
-                  <label className="block text-xs font-semibold text-brand-ink/70">
+                  <label className="block text-xs font-bold text-brand-ink">
                     Inicia el
                     <input
                       type="date"
                       value={planStartDate}
                       onChange={(e) => setPlanStartDate(e.target.value)}
-                      className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                      className="mt-1 w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
                     />
-                    <span className="mt-1 block font-normal text-[10px] text-brand-ink/55">Vacío = hoy.</span>
+                    <span className="mt-1 block font-normal text-xs text-brand-ink/70">Vacío = hoy.</span>
                   </label>
-                  <label className="block text-xs font-semibold text-brand-ink/70">
+                  <label className="block text-xs font-bold text-brand-ink">
                     Activo hasta
                     <input
                       type="date"
@@ -317,7 +364,7 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
                       onChange={(e) => setPlanEndDate(e.target.value)}
                       required
                       min={new Date().toISOString().slice(0, 10)}
-                      className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+                      className="mt-1 w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
                     />
                   </label>
                 </div>
@@ -327,8 +374,8 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
                 {planId && cfg ? (
                   <div className="mt-4">
                     <div className="flex items-baseline justify-between">
-                      <span className="text-xs font-semibold text-brand-ink/70">
-                        Horario semanal <span className="font-normal text-brand-ink/50">(opcional)</span>
+                      <span className="text-xs font-bold text-brand-ink">
+                        Horario semanal <span className="font-normal text-brand-ink/70">(opcional)</span>
                       </span>
                       <span className="text-xs font-semibold text-brand-ink">
                         {schedule.length}/{need || "—"}
@@ -345,20 +392,20 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
                       />
                     </div>
 
-                    <label className="mt-3 block text-xs font-semibold text-brand-ink/70">
+                    <label className="mt-3 block text-xs font-bold text-brand-ink">
                       Profesor
                       <select
                         value={teacherId}
                         onChange={(e) => setTeacherId(e.target.value)}
                         disabled={!scheduleReady}
-                        className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none disabled:opacity-50"
+                        className="mt-1 w-full px-3 py-2 text-sm disabled:opacity-50 min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
                       >
                         <option value="">Sin asignar (queda en solicitudes)</option>
                         {(teachersQ.data ?? []).map((t: any) => (
                           <option key={t.id} value={t.id}>{t.fullName}</option>
                         ))}
                       </select>
-                      <span className="mt-1 block font-normal text-[10px] text-brand-ink/55">
+                      <span className="mt-1 block font-normal text-xs text-brand-ink/70">
                         {scheduleReady
                           ? "Al asignarlo se crean sus clases y les llega el correo a ambos."
                           : `Completa las ${need || ""} franjas del plan para poder asignar profesor.`}
@@ -375,9 +422,9 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
 
         {/* Fijo abajo: con el horario abierto el formulario es largo y el
             botón de enviar quedaba fuera de la vista. */}
-        <div className="flex justify-end gap-2 border-t border-brand-line bg-white px-6 py-4">
-          <button type="button" onClick={onClose} className="rounded-full px-4 py-2 text-sm font-medium text-brand-ink/70 hover:bg-brand-cream/30">Cancelar</button>
-          <button type="submit" disabled={createM.isPending} className="rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white shadow-soft hover:-translate-y-0.5 transition disabled:opacity-60">
+        <div className="flex justify-end gap-2 border-t border-brand-ink/15 bg-white px-6 py-4">
+          <button type="button" onClick={onClose} className={btnChip}>Cancelar</button>
+          <button type="submit" disabled={createM.isPending} className={btnChipInk}>
             {createM.isPending ? "Enviando…" : "Enviar invitación"}
           </button>
         </div>
@@ -386,13 +433,16 @@ function CreateUserDialog({ onClose }: { onClose: () => void }) {
   );
 }
 
+// Pago fallido y pendiente piden atención (amarillo); lo demás, contorno neutro.
+const ESTADO_SUSCRIPCION: Record<string, { texto: string; atencion: boolean }> = {
+  active: { texto: "Activo", atencion: false },
+  pending: { texto: "Pendiente", atencion: true },
+  past_due: { texto: "Pago fallido", atencion: true },
+  canceled: { texto: "Cancelado", atencion: false },
+  expired: { texto: "Vencido", atencion: false },
+};
+
 function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    active: "bg-green-100 text-green-800",
-    pending: "bg-amber-100 text-amber-800",
-    past_due: "bg-red-100 text-red-800",
-    canceled: "bg-zinc-100 text-zinc-700",
-    expired: "bg-zinc-100 text-zinc-700",
-  };
-  return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${styles[status] ?? "bg-zinc-100 text-zinc-700"}`}>{status.replace("_", " ")}</span>;
+  const e = ESTADO_SUSCRIPCION[status] ?? { texto: status.replace("_", " "), atencion: false };
+  return <ChipEstado atencion={e.atencion}>{e.texto}</ChipEstado>;
 }

@@ -276,7 +276,7 @@
 @layer base {
   /* Form input baseline used by admin/CMS dialogs. */
   .input {
-    @apply w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm text-brand-ink focus:border-brand-ink focus:outline-none;
+    @apply min-h-11 w-full border-2 border-brand-ink bg-white px-3 py-2 text-sm text-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow;
   }
   * {
     border-color: var(--color-border);

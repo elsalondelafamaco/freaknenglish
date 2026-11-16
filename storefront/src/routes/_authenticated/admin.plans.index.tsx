@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Save } from "lucide-react";
+import { horaEn12 } from "@/lib/domain/zona-horaria";
 import { toast } from "sonner";
 import { adminApi, exchangeApi } from "@/lib/api/endpoints";
+import { Cargando, EstadoError, Interruptor, PageHeader, SeccionTitulo, btnChipInk } from "@/components/app/AppUi";
+import { inputBase, pillClass } from "@/components/teacher/TeacherUi";
 
 export const Route = createFileRoute("/_authenticated/admin/plans/")({
   head: () => ({ meta: [{ title: "Planes — Admin Freakn'" }] }),
@@ -19,19 +22,18 @@ function AdminPlans() {
   const trm = trmQ.data?.valueCop ?? 0;
 
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h2 className="text-lg font-semibold text-brand-ink">Planes y precios</h2>
-        <p className="text-xs text-brand-ink/55">
-          El precio se define en <strong>USD</strong>; al cobrar se convierte a COP con la TRM del momento.
-          {trm ? <> TRM actual: <strong>{copFmt.format(trm)}</strong>/USD.</> : null}
-        </p>
-      </div>
+    <div className="flex flex-col gap-8">
+      <PageHeader eyebrowText="Admin · Oferta" title="Planes y precios" highlight="precios">
+        El precio se define en <strong>USD</strong>; al cobrar se convierte a pesos (COP) con la TRM, la tasa de cambio del día.
+        {trm ? <> TRM actual: <strong>{copFmt.format(trm)}</strong> por dólar.</> : null}
+      </PageHeader>
 
       {plansQ.isLoading ? (
-        <p className="text-sm text-brand-ink/60">Cargando…</p>
+        <Cargando>Cargando planes…</Cargando>
+      ) : plansQ.isError ? (
+        <EstadoError onRetry={() => void plansQ.refetch()}>No pudimos cargar los planes.</EstadoError>
       ) : (
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3">
           {(plansQ.data ?? []).map((p: any) => (
             <PlanCard key={p.id} plan={p} trm={trm} onSaved={() => qc.invalidateQueries({ queryKey: ["admin", "plans"] })} />
           ))}
@@ -72,42 +74,44 @@ function ScheduleCard() {
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });
   return (
-    <section className="rounded-2xl border border-brand-line bg-white p-5">
-      <h3 className="text-sm font-semibold text-brand-ink">Agenda global</h3>
-      <p className="text-xs text-brand-ink/55">Días y horas en que se pueden agendar clases (aplica al picker de compra).</p>
+    <section aria-labelledby="agenda-global" className="border-2 border-brand-ink bg-white p-5">
+      <SeccionTitulo id="agenda-global">Agenda global</SeccionTitulo>
+      <p className="mt-1 text-xs text-brand-ink/70">Días y horas en que se pueden agendar clases (aplica al selector de horario de la compra).</p>
       <div className="mt-3 flex flex-wrap items-end gap-4">
         <div>
-          <div className="text-xs font-semibold text-brand-ink/70">Días</div>
-          <div className="mt-1 flex gap-1">
+          <div id="agenda-dias" className="text-xs font-bold text-brand-ink">Días</div>
+          <div role="group" aria-labelledby="agenda-dias" className="mt-1 flex flex-wrap gap-1.5">
             {DAY_LABELS.map((lbl, d) => (
               <button
                 key={d}
+                type="button"
+                aria-pressed={days.includes(d)}
                 onClick={() => setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort()))}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${days.includes(d) ? "bg-brand-ink text-white" : "border border-brand-line text-brand-ink/60"}`}
+                className={pillClass(days.includes(d))}
               >
                 {lbl}
               </button>
             ))}
           </div>
         </div>
-        <label className="block text-xs font-semibold text-brand-ink/70">
-          Desde (hora)
-          <input type="number" min={0} max={23} value={startHour} onChange={(e) => setStartHour(Number(e.target.value))} className="mt-1 w-24 rounded-xl border border-brand-line px-3 py-2 text-sm" />
+        <label className="block text-xs font-bold text-brand-ink">
+          Desde (hora, 0 a 23)
+          <input type="number" min={0} max={23} value={startHour} onChange={(e) => setStartHour(Number(e.target.value))} className={`${inputBase} mt-1 w-24`} />
         </label>
-        <label className="block text-xs font-semibold text-brand-ink/70">
-          Hasta (última clase)
-          <input type="number" min={0} max={23} value={endHour} onChange={(e) => setEndHour(Number(e.target.value))} className="mt-1 w-24 rounded-xl border border-brand-line px-3 py-2 text-sm" />
+        <label className="block text-xs font-bold text-brand-ink">
+          Hasta (última clase, 0 a 23)
+          <input type="number" min={0} max={23} value={endHour} onChange={(e) => setEndHour(Number(e.target.value))} className={`${inputBase} mt-1 w-24`} />
         </label>
-        <label className="block text-xs font-semibold text-brand-ink/70">
-          Máx clases/día
-          <input type="number" min={1} max={4} value={maxPerDay} onChange={(e) => setMaxPerDay(Number(e.target.value))} className="mt-1 w-24 rounded-xl border border-brand-line px-3 py-2 text-sm" />
+        <label className="block text-xs font-bold text-brand-ink">
+          Máximo de clases por día
+          <input type="number" min={1} max={4} value={maxPerDay} onChange={(e) => setMaxPerDay(Number(e.target.value))} className={`${inputBase} mt-1 w-24`} />
         </label>
-        <button onClick={() => saveM.mutate()} disabled={saveM.isPending} className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-60">
-          <Save className="size-3.5" /> {saveM.isPending ? "Guardando…" : "Guardar agenda"}
+        <button type="button" onClick={() => saveM.mutate()} disabled={saveM.isPending} className={btnChipInk}>
+          <Save className="size-3.5" aria-hidden="true" /> {saveM.isPending ? "Guardando…" : "Guardar agenda"}
         </button>
       </div>
-      <p className="mt-2 text-[11px] text-brand-ink/50">
-        Última franja: {endHour}:00–{endHour}:50 · Clases de 50 min
+      <p className="mt-2 text-xs text-brand-ink/70">
+        Última franja: {horaEn12(endHour)} a {horaEn12(endHour, 50)} · Clases de 50 min
       </p>
     </section>
   );
@@ -125,21 +129,21 @@ function ContactCard() {
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });
   return (
-    <section className="rounded-2xl border border-brand-line bg-white p-5">
-      <h3 className="text-sm font-semibold text-brand-ink">Contacto / WhatsApp</h3>
-      <p className="text-xs text-brand-ink/55">Número y mensaje del botón “Escríbenos” en todo el sitio.</p>
+    <section aria-labelledby="contacto-wa" className="border-2 border-brand-ink bg-white p-5">
+      <SeccionTitulo id="contacto-wa">Contacto y WhatsApp</SeccionTitulo>
+      <p className="mt-1 text-xs text-brand-ink/70">Número y mensaje del botón “Escríbenos” en todo el sitio.</p>
       <div className="mt-3 grid gap-3 md:grid-cols-2">
-        <label className="block text-xs font-semibold text-brand-ink/70">
+        <label className="block text-xs font-bold text-brand-ink">
           Número (solo dígitos, con país)
-          <input value={num} onChange={(e) => setNum(e.target.value)} placeholder="573001234567" className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none" />
+          <input value={num} onChange={(e) => setNum(e.target.value)} placeholder="573001234567" inputMode="numeric" className={`${inputBase} mt-1`} />
         </label>
-        <label className="block text-xs font-semibold text-brand-ink/70">
+        <label className="block text-xs font-bold text-brand-ink">
           Mensaje precargado
-          <input value={msg} onChange={(e) => setMsg(e.target.value)} className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none" />
+          <input value={msg} onChange={(e) => setMsg(e.target.value)} className={`${inputBase} mt-1`} />
         </label>
       </div>
-      <button onClick={() => saveM.mutate()} disabled={saveM.isPending} className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-60">
-        <Save className="size-3.5" /> {saveM.isPending ? "Guardando…" : "Guardar contacto"}
+      <button type="button" onClick={() => saveM.mutate()} disabled={saveM.isPending} className={`${btnChipInk} mt-3`}>
+        <Save className="size-3.5" aria-hidden="true" /> {saveM.isPending ? "Guardando…" : "Guardar contacto"}
       </button>
     </section>
   );
@@ -166,38 +170,39 @@ function PlanCard({ plan, trm, onSaved }: { plan: any; trm: number; onSaved: () 
   const cop = trm ? Math.round(priceUsd * trm) : null;
 
   return (
-    <div className="rounded-2xl border border-brand-line bg-white p-5">
-      <div className="flex items-center justify-between">
-        <span className="rounded-full bg-brand-cream px-2.5 py-1 text-[11px] font-semibold text-brand-ink">
+    <div className="shadow-hard border-2 border-brand-ink bg-white p-5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="inline-flex items-center rounded-full border-[1.5px] border-brand-ink bg-white px-2.5 py-0.5 text-[11px] font-bold text-brand-ink">
           {plan.daysPerWeek} días/sem
         </span>
-        <label className="inline-flex items-center gap-1.5 text-xs text-brand-ink/70">
-          <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} /> Activo
-        </label>
+        <span className="inline-flex items-center gap-1">
+          <span id={`plan-activo-${plan.id}`} className="text-xs font-bold text-brand-ink">{isActive ? "Activo" : "Inactivo"}</span>
+          <Interruptor checked={isActive} onChange={setIsActive} labelledBy={`plan-activo-${plan.id}`} />
+        </span>
       </div>
 
-      <label className="mt-3 block text-xs font-semibold text-brand-ink/70">
+      <label className="mt-3 block text-xs font-bold text-brand-ink">
         Nombre
-        <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none" />
+        <input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow" />
       </label>
 
-      <label className="mt-3 block text-xs font-semibold text-brand-ink/70">
-        Precio (USD / mes)
+      <label className="mt-3 block text-xs font-bold text-brand-ink">
+        Precio (USD por mes)
         <div className="mt-1 flex items-center gap-1">
-          <span className="text-brand-ink/50">$</span>
-          <input type="number" min={0} step="0.01" value={priceUsd} onChange={(e) => setPriceUsd(Number(e.target.value))} className="w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none" />
+          <span className="text-brand-ink/70">$</span>
+          <input type="number" min={0} step="0.01" value={priceUsd} onChange={(e) => setPriceUsd(Number(e.target.value))} className="w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow" />
         </div>
       </label>
 
-      <div className="mt-2 text-xs text-brand-ink/55">
-        ≈ {cop != null ? copFmt.format(cop) : "—"} <span className="opacity-60">(TRM en vivo)</span>
+      <div className="mt-2 text-xs text-brand-ink/70">
+        ≈ {cop != null ? copFmt.format(cop) : "—"} <span>(con la TRM de hoy)</span>
       </div>
 
       {/* El COP de respaldo: es lo que se cobra y se muestra cuando el plan no
           tiene precio en dólares o no hay TRM. Hasta ahora no se podía editar
           desde aquí, así que arrastraba el valor de la semilla original y no
           coincidía con lo que pagaba el alumno. */}
-      <label className="mt-3 block text-xs font-semibold text-brand-ink/70">
+      <label className="mt-3 block text-xs font-bold text-brand-ink">
         Precio de respaldo (COP)
         <input
           type="number"
@@ -205,17 +210,18 @@ function PlanCard({ plan, trm, onSaved }: { plan: any; trm: number; onSaved: () 
           step="1000"
           value={priceCop}
           onChange={(e) => setPriceCop(Number(e.target.value))}
-          className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+          className="mt-1 w-full px-3 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
         />
-        <span className="mt-1 block font-normal text-[11px] text-brand-ink/50">
+        <span className="mt-1 block font-normal text-[11px] text-brand-ink/70">
           Solo se usa si el plan no tiene precio en USD o si falla la TRM.
         </span>
       </label>
 
       <button
+        type="button"
         onClick={() => saveM.mutate()}
         disabled={saveM.isPending}
-        className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-60"
+        className={`${btnChipInk} mt-4 w-full`}
       >
         <Save className="size-3.5" /> {saveM.isPending ? "Guardando…" : "Guardar"}
       </button>

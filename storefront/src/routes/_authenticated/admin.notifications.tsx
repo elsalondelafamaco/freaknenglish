@@ -4,16 +4,20 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { CheckCircle2, ChevronLeft, ChevronRight, Clock, Mail, Search, XCircle } from "lucide-react";
 import { notificationsApi } from "@/lib/api/endpoints";
 import { cn } from "@/lib/utils";
+import { Cargando, EstadoError, PageHeader, Vacio } from "@/components/app/AppUi";
+import { btnRow, inputBase, pillClass, td, th } from "@/components/teacher/TeacherUi";
+import { ChipEstado } from "@/components/admin/AdminUi";
 
 export const Route = createFileRoute("/_authenticated/admin/notifications")({
   head: () => ({ meta: [{ title: "Notificaciones — Admin Freakn'" }] }),
   component: AdminNotifications,
 });
 
-const STATUS_META: Record<string, { label: string; cls: string; icon: typeof CheckCircle2 }> = {
-  sent: { label: "Enviada", cls: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
-  failed: { label: "Falló", cls: "bg-red-50 text-red-700 border-red-200", icon: XCircle },
-  pending: { label: "Pendiente", cls: "bg-amber-50 text-amber-700 border-amber-200", icon: Clock },
+// Fallida y pendiente piden atención (amarillo); enviada es lo normal (neutra).
+const STATUS_META: Record<string, { label: string; atencion: boolean; icon: typeof CheckCircle2 }> = {
+  sent: { label: "Enviada", atencion: false, icon: CheckCircle2 },
+  failed: { label: "Falló", atencion: true, icon: XCircle },
+  pending: { label: "Pendiente", atencion: true, icon: Clock },
 };
 
 function AdminNotifications() {
@@ -29,7 +33,7 @@ function AdminNotifications() {
     staleTime: 60_000,
   });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin", "notifications", { q: qDebounced, template, status, page }],
     queryFn: () =>
       notificationsApi.adminAll({
@@ -46,28 +50,23 @@ function AdminNotifications() {
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
   return (
-    <div>
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight text-brand-ink">Notificaciones</h1>
-        <p className="mt-1 text-sm text-brand-ink/65">
-          Rastreo completo de correos y avisos enviados a estudiantes y profesores.
-        </p>
-      </header>
+    <div className="flex flex-col gap-6">
+      <PageHeader eyebrowText="Admin · Operación" title="Notificaciones" highlight="Notificaciones">
+        Rastreo completo de correos y avisos enviados a estudiantes y profesores.
+      </PageHeader>
 
-      {/* Resumen por estado */}
-      <div className="mt-5 flex flex-wrap gap-3">
+      {/* Resumen por estado: cada uno filtra la tabla */}
+      <div role="group" aria-label="Filtrar por estado" className="flex flex-wrap gap-2">
         {["sent", "failed", "pending"].map((s) => {
           const meta = STATUS_META[s];
           const count = data?.byStatus?.[s] ?? 0;
           return (
             <button
               key={s}
+              type="button"
+              aria-pressed={status === s}
               onClick={() => { setStatus(status === s ? "" : s); setPage(1); }}
-              className={cn(
-                "rounded-2xl border px-4 py-2 text-sm font-semibold transition",
-                status === s ? "ring-2 ring-brand-ink ring-offset-1" : "",
-                meta.cls,
-              )}
+              className={pillClass(status === s)}
             >
               {meta.label}: {count}
             </button>
@@ -76,22 +75,25 @@ function AdminNotifications() {
       </div>
 
       {/* Filtros */}
-      <div className="mt-4 flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-brand-ink/40" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-brand-ink/70" aria-hidden="true" />
           <input
+            type="search"
+            aria-label="Buscar notificaciones"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { setQDebounced(q.trim()); setPage(1); } }}
             onBlur={() => { setQDebounced(q.trim()); setPage(1); }}
             placeholder="Buscar por correo, nombre o asunto…"
-            className="w-72 rounded-full border border-brand-line bg-white py-2 pl-9 pr-4 text-sm focus:border-brand-ink focus:outline-none"
+            className={`${inputBase} w-72 max-w-full pl-9`}
           />
         </div>
         <select
+          aria-label="Plantilla"
           value={template}
           onChange={(e) => { setTemplate(e.target.value); setPage(1); }}
-          className="rounded-full border border-brand-line bg-white px-3 py-2 text-sm"
+          className={`${inputBase} w-auto`}
         >
           <option value="">Todas las plantillas</option>
           {(templates ?? []).map((t) => (
@@ -103,85 +105,85 @@ function AdminNotifications() {
       </div>
 
       {/* Tabla */}
-      <div className="mt-5 overflow-x-auto rounded-2xl border border-brand-line bg-white shadow-soft">
-        <table className="w-full min-w-[760px] text-sm">
-          <thead>
-            <tr className="border-b border-brand-line text-left text-xs uppercase tracking-wide text-brand-ink/50">
-              <th className="px-4 py-3">Destinatario</th>
-              <th className="px-4 py-3">Asunto</th>
-              <th className="px-4 py-3">Plantilla</th>
-              <th className="px-4 py-3">Canal</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3">Fecha</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading && !data ? (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-brand-ink/50">Cargando…</td></tr>
-            ) : !data?.items.length ? (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-brand-ink/50">Sin notificaciones con estos filtros.</td></tr>
-            ) : (
-              data.items.map((n) => {
+      {isError ? (
+        <EstadoError onRetry={() => void refetch()}>No pudimos cargar las notificaciones.</EstadoError>
+      ) : isLoading && !data ? (
+        <Cargando>Cargando notificaciones…</Cargando>
+      ) : !data?.items.length ? (
+        <Vacio>Sin notificaciones con estos filtros.</Vacio>
+      ) : (
+        <div className="overflow-x-auto border-2 border-brand-ink bg-white">
+          <table className="w-full min-w-[760px] border-collapse">
+            <thead>
+              <tr>
+                <th className={th}>Destinatario</th>
+                <th className={th}>Asunto</th>
+                <th className={th}>Plantilla</th>
+                <th className={th}>Canal</th>
+                <th className={th}>Estado</th>
+                <th className={th}>Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.map((n) => {
                 const meta = STATUS_META[n.status] ?? STATUS_META.pending;
                 const StatusIcon = meta.icon;
                 return (
-                  <tr key={n.id} className="border-b border-brand-line/60 align-top last:border-0 hover:bg-brand-cream/20">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-brand-ink">{n.user?.fullName ?? "—"}</div>
-                      <div className="text-xs text-brand-ink/60">{n.toEmail}</div>
-                      {n.user?.role ? (
-                        <span className="mt-0.5 inline-block rounded-full bg-brand-cream/70 px-2 py-0.5 text-[10px] font-semibold uppercase text-brand-ink/60">
-                          {n.user.role}
-                        </span>
-                      ) : null}
+                  <tr key={n.id} className="align-top">
+                    <td className={td}>
+                      <div className="font-bold">{n.user?.fullName ?? "—"}</div>
+                      <div className="text-xs text-brand-ink/70">{n.toEmail}</div>
+                      {n.user?.role ? <ChipEstado className="mt-1 uppercase">{n.user.role}</ChipEstado> : null}
                     </td>
-                    <td className="max-w-[260px] px-4 py-3 text-brand-ink/85">{n.subject}</td>
-                    <td className="px-4 py-3"><code className="rounded bg-brand-cream/50 px-1.5 py-0.5 text-xs">{n.template}</code></td>
-                    <td className="px-4 py-3">
+                    <td className={cn(td, "max-w-[260px]")}>{n.subject}</td>
+                    <td className={td}><code className="bg-brand-cream-soft px-1.5 py-0.5 text-xs">{n.template}</code></td>
+                    <td className={td}>
                       <span className="inline-flex items-center gap-1 text-xs text-brand-ink/70">
-                        <Mail className="size-3.5" /> {n.channel}
+                        <Mail className="size-3.5" aria-hidden="true" /> {n.channel}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold", meta.cls)}>
-                        <StatusIcon className="size-3.5" /> {meta.label}
-                      </span>
-                      {n.error ? <div className="mt-1 max-w-[200px] text-[11px] text-red-600">{n.error}</div> : null}
+                    <td className={td}>
+                      <ChipEstado atencion={meta.atencion} className="gap-1">
+                        <StatusIcon className="size-3.5" aria-hidden="true" /> {meta.label}
+                      </ChipEstado>
+                      {n.error ? <div className="mt-1 max-w-[200px] text-[11px] font-semibold text-red-800">{n.error}</div> : null}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-xs text-brand-ink/60">
+                    <td className={cn(td, "whitespace-nowrap text-xs text-brand-ink/70")}>
                       {new Date(n.sentAt ?? n.createdAt).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}
-                      {n.readAt ? <div className="text-[10px] text-emerald-600">Leída in-app</div> : null}
+                      {n.readAt ? <div className="text-[11px] font-semibold text-brand-ink">Leída in-app</div> : null}
                     </td>
                   </tr>
                 );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Paginación */}
       {data && totalPages > 1 ? (
-        <div className="mt-4 flex items-center justify-between text-sm text-brand-ink/70">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-brand-ink/80">
           <span>
             {data.total} notificaciones · página {data.page} de {totalPages}
           </span>
           <div className="flex gap-2">
             <button
+              type="button"
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
-              className="flex size-9 items-center justify-center rounded-full border border-brand-line bg-white transition hover:bg-brand-cream/40 disabled:opacity-40"
-              aria-label="Anterior"
+              className={btnRow}
+              aria-label="Página anterior"
             >
-              <ChevronLeft className="size-4" />
+              <ChevronLeft className="size-4" aria-hidden="true" /> Anterior
             </button>
             <button
+              type="button"
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
-              className="flex size-9 items-center justify-center rounded-full border border-brand-line bg-white transition hover:bg-brand-cream/40 disabled:opacity-40"
-              aria-label="Siguiente"
+              className={btnRow}
+              aria-label="Página siguiente"
             >
-              <ChevronRight className="size-4" />
+              Siguiente <ChevronRight className="size-4" aria-hidden="true" />
             </button>
           </div>
         </div>

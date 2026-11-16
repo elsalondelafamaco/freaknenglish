@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Pause, Pencil, Play, Plus, Trash2 } from "lucide-react";
@@ -8,6 +8,9 @@ import { formatCop } from "@/lib/domain/plans";
 import { textoBadge } from "@/lib/domain/promos";
 import { textoDeBanner } from "@/components/site/PromoBanner";
 import { cn } from "@/lib/utils";
+import { Cargando, EstadoError, Interruptor as InterruptorSwitch, PageHeader, SeccionTitulo, Vacio, btnChip, btnChipInk, focusRing, tag, tagNeutral } from "@/components/app/AppUi";
+import { btnRow, inputBase, pillClass } from "@/components/teacher/TeacherUi";
+import { Segmentado } from "@/components/admin/AdminUi";
 
 export const Route = createFileRoute("/_authenticated/admin/promos")({
   head: () => ({ meta: [{ title: "Promociones — Admin Freakn'" }] }),
@@ -26,13 +29,21 @@ const localBogotaAIso = (local: string) => (local ? new Date(`${local}:00-05:00`
 const fechaBogota = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "medium", timeStyle: "short" }) : null;
 
+// Amarillo = la promoción que está funcionando ahora; el resto, contorno neutro.
 const ESTADOS: Record<PromoAdmin["estado"], { label: string; cls: string }> = {
-  activa: { label: "Activa", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  programada: { label: "Programada", cls: "bg-sky-50 text-sky-700 border-sky-200" },
-  vencida: { label: "Vencida", cls: "bg-neutral-100 text-neutral-600 border-neutral-200" },
-  pausada: { label: "Pausada", cls: "bg-amber-50 text-amber-700 border-amber-200" },
-  agotada: { label: "Agotada", cls: "bg-red-50 text-red-700 border-red-200" },
+  activa: { label: "Activa", cls: tag },
+  programada: { label: "Programada", cls: tagNeutral },
+  vencida: { label: "Vencida", cls: tagNeutral },
+  pausada: { label: "Pausada", cls: tagNeutral },
+  agotada: { label: "Agotada", cls: tagNeutral },
 };
+
+/** Dónde se anuncia, en palabras del dueño (no "silenciosa"). */
+function visibilidad(p: Pick<PromoAdmin, "showBanner" | "showOnPrices" | "audience">) {
+  const partes = [p.showBanner ? "barra" : null, p.showOnPrices ? "precios" : null].filter(Boolean);
+  if (partes.length === 0) return p.audience === "LINK" ? "No se anuncia en la web (solo con enlace)" : "No se anuncia en la web";
+  return `${partes.join(" y ").replace(/^./, (c) => c.toUpperCase())} en la web`;
+}
 
 function resumenDescuento(p: Pick<PromoAdmin, "discountType" | "discountValue">) {
   if (p.discountType === "PERCENT") return `${p.discountValue}% de descuento`;
@@ -170,14 +181,13 @@ function payloadDe(f: Form): { body: PromoInput } | { error: string } {
   };
 }
 
-const inputCls =
-  "mt-1 w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm focus:border-brand-ink focus:outline-none";
+const inputCls = `${inputBase} mt-1`;
 
 function Seccion({ titulo, ayuda, children }: { titulo: string; ayuda?: string; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-brand-line bg-white p-5">
-      <h3 className="text-sm font-semibold text-brand-ink">{titulo}</h3>
-      {ayuda ? <p className="text-xs text-brand-ink/55">{ayuda}</p> : null}
+    <section className="border-2 border-brand-ink bg-white p-5">
+      <SeccionTitulo>{titulo}</SeccionTitulo>
+      {ayuda ? <p className="mt-1 text-xs text-brand-ink/70">{ayuda}</p> : null}
       <div className="mt-3 grid gap-3 md:grid-cols-2">{children}</div>
     </section>
   );
@@ -185,28 +195,32 @@ function Seccion({ titulo, ayuda, children }: { titulo: string; ayuda?: string; 
 
 function Campo({ label, children, ancho }: { label: string; children: ReactNode; ancho?: boolean }) {
   return (
-    <label className={cn("block text-xs font-semibold text-brand-ink/70", ancho && "md:col-span-2")}>
+    <label className={cn("block text-xs font-bold text-brand-ink", ancho && "md:col-span-2")}>
       {label}
       {children}
     </label>
   );
 }
 
+/** Interruptor real (role="switch") con su texto como etiqueta. */
 function Interruptor({ checked, onChange, children }: { checked: boolean; onChange: (v: boolean) => void; children: ReactNode }) {
+  const id = useId();
   return (
-    <label className="flex items-start gap-2 text-sm text-brand-ink/85">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 size-4 accent-brand-ink" />
-      <span>{children}</span>
-    </label>
+    <div className="flex items-start gap-3">
+      <InterruptorSwitch checked={checked} onChange={onChange} labelledBy={id} />
+      <span id={id} className="pt-2.5 text-sm text-brand-ink">
+        {children}
+      </span>
+    </div>
   );
 }
 
 function Copiable({ etiqueta, url }: { etiqueta: string; url: string }) {
   return (
     <div className="md:col-span-2">
-      <div className="text-xs font-semibold text-brand-ink/70">{etiqueta}</div>
+      <div className="text-xs font-bold text-brand-ink">{etiqueta}</div>
       <div className="mt-1 flex items-center gap-2">
-        <code className="min-w-0 flex-1 truncate rounded-xl bg-brand-surface px-3 py-2 text-xs text-brand-ink">{url}</code>
+        <code className="min-w-0 flex-1 truncate border-2 border-brand-ink bg-brand-cream-soft px-3 py-2.5 text-xs text-brand-ink">{url}</code>
         <button
           type="button"
           onClick={() => {
@@ -215,13 +229,24 @@ function Copiable({ etiqueta, url }: { etiqueta: string; url: string }) {
               () => toast.error("No se pudo copiar"),
             );
           }}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink hover:bg-brand-surface"
+          aria-label={`Copiar ${etiqueta.toLowerCase()}`}
+          className={`${btnChip} shrink-0`}
         >
-          <Copy className="size-3.5" /> Copiar
+          <Copy className="size-3.5" aria-hidden="true" /> Copiar
         </button>
       </div>
     </div>
   );
+}
+
+/** Enlace para compartir una promo solo-con-enlace: el código si lo hay; si no, los UTM. */
+function enlaceDe(p: Pick<PromoAdmin, "code" | "utmSource" | "utmMedium" | "utmCampaign">, origen: string) {
+  if (p.code) return `${origen}/?promo=${encodeURIComponent(p.code)}`;
+  const sp = new URLSearchParams();
+  if (p.utmSource) sp.set("utm_source", p.utmSource);
+  if (p.utmMedium) sp.set("utm_medium", p.utmMedium);
+  if (p.utmCampaign) sp.set("utm_campaign", p.utmCampaign);
+  return sp.toString() ? `${origen}/?${sp.toString()}` : null;
 }
 
 function PromoForm({
@@ -268,7 +293,7 @@ function PromoForm({
   }
 
   return (
-    <form onSubmit={enviar} className="flex flex-col gap-4">
+    <form onSubmit={enviar} className="flex flex-col gap-5">
       <Seccion titulo="Descuento">
         <Campo label="Nombre interno (solo lo ves tú)" ancho>
           <input value={f.name} onChange={(e) => set("name", e.target.value)} maxLength={120} placeholder="Black Friday 2026" className={inputCls} />
@@ -283,7 +308,7 @@ function PromoForm({
         <Campo label={f.discountType === "PERCENT" ? "Porcentaje (1 a 90)" : f.discountType === "USD" ? "USD a descontar (enteros)" : "Pesos a descontar"}>
           <input type="number" min={1} step={1} value={f.discountValue} onChange={(e) => set("discountValue", e.target.value)} className={inputCls} />
         </Campo>
-        <p className="text-[11px] text-brand-ink/50 md:col-span-2">
+        <p className="text-xs text-brand-ink/70 md:col-span-2">
           El precio final nunca baja de {formatCop(5000)}. Si hay varias promos para un plan, se aplica la que más descuenta; en empate, la de mayor prioridad.
         </p>
         <Campo label="Prioridad (desempate)">
@@ -293,16 +318,17 @@ function PromoForm({
 
       <Seccion titulo="Planes y quién aplica">
         <div className="md:col-span-2">
-          <div className="text-xs font-semibold text-brand-ink/70">Planes (sin marcar = todos)</div>
-          <div className="mt-1 flex flex-wrap gap-2">
+          <div id="promo-planes" className="text-xs font-bold text-brand-ink">Planes (sin marcar = todos)</div>
+          <div role="group" aria-labelledby="promo-planes" className="mt-1 flex flex-wrap gap-2">
             {planes.map((p) => {
               const on = f.planIds.includes(p.id);
               return (
                 <button
                   key={p.id}
                   type="button"
+                  aria-pressed={on}
                   onClick={() => set("planIds", on ? f.planIds.filter((x) => x !== p.id) : [...f.planIds, p.id])}
-                  className={cn("rounded-full px-3 py-1.5 text-xs font-semibold", on ? "bg-brand-ink text-white" : "border border-brand-line text-brand-ink/70")}
+                  className={pillClass(on)}
                 >
                   {p.name}
                 </button>
@@ -324,19 +350,20 @@ function PromoForm({
       </Seccion>
 
       <Seccion titulo="Quién la recibe">
-        <div className="flex flex-wrap gap-4 md:col-span-2">
-          <label className="flex items-center gap-2 text-sm text-brand-ink/85">
-            <input type="radio" name="audiencia" checked={f.audience === "ALL"} onChange={() => set("audience", "ALL")} className="accent-brand-ink" />
-            Todos los visitantes
-          </label>
-          <label className="flex items-center gap-2 text-sm text-brand-ink/85">
-            <input type="radio" name="audiencia" checked={f.audience === "LINK"} onChange={() => set("audience", "LINK")} className="accent-brand-ink" />
-            Solo con enlace
-          </label>
+        <div className="md:col-span-2">
+          <Segmentado
+            etiqueta="Quién la recibe"
+            valor={f.audience}
+            onChange={(v) => set("audience", v)}
+            opciones={[
+              { valor: "ALL" as const, texto: "Todos los visitantes" },
+              { valor: "LINK" as const, texto: "Solo con enlace" },
+            ]}
+          />
         </div>
         {f.audience === "LINK" ? (
           <>
-            <p className="text-[11px] text-brand-ink/50 md:col-span-2">
+            <p className="text-xs text-brand-ink/70 md:col-span-2">
               Le toca a quien llegue con este código (<code>?promo=</code>), o con TODOS los UTM que definas. Cualquiera de las dos vías basta. No distingue mayúsculas.
             </p>
             <Campo label="Código (?promo=)">
@@ -358,7 +385,7 @@ function PromoForm({
         ) : null}
       </Seccion>
 
-      <Seccion titulo="Visibilidad en la web" ayuda="Si no marcas ninguna, la promo es “silenciosa”: se aplica y se ve en el resumen del pago, pero no se anuncia.">
+      <Seccion titulo="Visibilidad en la web" ayuda="Si no marcas ninguna, la promoción no se anuncia en la web: se aplica y se ve en el resumen del pago.">
         <Interruptor checked={f.showBanner} onChange={(v) => set("showBanner", v)}>Barra de anuncio arriba de la home</Interruptor>
         <Interruptor checked={f.showOnPrices} onChange={(v) => set("showOnPrices", v)}>Precio tachado e insignia en los planes de la home (en el checkout el descuento se ve siempre)</Interruptor>
         <Interruptor checked={f.showCountdown} onChange={(v) => set("showCountdown", v)}>Cuenta regresiva en la barra (necesita fecha de fin)</Interruptor>
@@ -376,18 +403,18 @@ function PromoForm({
         </Campo>
         <Campo label="Color de fondo">
           <div className="mt-1 flex items-center gap-2">
-            <input type="color" value={f.bgColor} onChange={(e) => set("bgColor", e.target.value.toUpperCase())} className="h-9 w-12 cursor-pointer rounded-lg border border-brand-line bg-white p-1" />
+            <input type="color" value={f.bgColor} onChange={(e) => set("bgColor", e.target.value.toUpperCase())} className={`h-11 w-14 cursor-pointer border-2 border-brand-ink bg-white p-1 ${focusRing}`} />
             <code className="text-xs">{f.bgColor}</code>
           </div>
         </Campo>
         <Campo label="Color del texto">
           <div className="mt-1 flex items-center gap-2">
-            <input type="color" value={f.textColor} onChange={(e) => set("textColor", e.target.value.toUpperCase())} className="h-9 w-12 cursor-pointer rounded-lg border border-brand-line bg-white p-1" />
+            <input type="color" value={f.textColor} onChange={(e) => set("textColor", e.target.value.toUpperCase())} className={`h-11 w-14 cursor-pointer border-2 border-brand-ink bg-white p-1 ${focusRing}`} />
             <code className="text-xs">{f.textColor}</code>
           </div>
         </Campo>
         <div className="md:col-span-2">
-          <div className="text-xs font-semibold text-brand-ink/70">Vista previa</div>
+          <div className="text-xs font-bold text-brand-ink">Vista previa</div>
           <div
             className="mt-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-xl px-4 py-2.5 text-center text-[13px] font-semibold"
             style={{ backgroundColor: f.bgColor, color: f.textColor }}
@@ -401,7 +428,7 @@ function PromoForm({
             <span className="underline underline-offset-2">Ver planes →</span>
           </div>
           <div className="mt-2 flex items-center gap-2">
-            <span className="text-[16px] font-bold text-brand-ink/50 line-through">$30 USD</span>
+            <span className="text-[16px] font-bold text-brand-ink/70 line-through">US$30</span>
             <span
               className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.06em]"
               style={{ backgroundColor: f.bgColor, color: f.textColor }}
@@ -422,10 +449,10 @@ function PromoForm({
       </Seccion>
 
       <div className="flex flex-wrap gap-2">
-        <button type="submit" disabled={guardando} className="rounded-full bg-brand-ink px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-60">
+        <button type="submit" disabled={guardando} className={`${btnChipInk} min-w-40`}>
           {guardando ? "Guardando…" : "Guardar promoción"}
         </button>
-        <button type="button" onClick={onCancelar} className="rounded-full border border-brand-line px-5 py-2.5 text-sm font-semibold text-brand-ink hover:bg-brand-surface">
+        <button type="button" onClick={onCancelar} className={btnChip}>
           Cancelar
         </button>
       </div>
@@ -475,12 +502,16 @@ function AdminPromos() {
   const planes = ((plansQ.data ?? []) as any[]).map((p) => ({ id: p.id as string, name: (p.name as string) ?? p.id }));
   const nombrePlan = (id: string) => planes.find((p) => p.id === id)?.name ?? id;
 
+  const origen = typeof window !== "undefined" ? window.location.origin : "https://freaknenglish.com";
+
   if (editando) {
     return (
-      <div className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-brand-ink">{editando === "nueva" ? "Nueva promoción" : `Editar: ${editando.name}`}</h2>
-        </div>
+      <div className="flex flex-col gap-8">
+        <PageHeader
+          eyebrowText={editando === "nueva" ? "Admin · Oferta · Promociones" : `Admin · Oferta · ${editando.name}`}
+          title={editando === "nueva" ? "Nueva promoción" : "Editar promoción"}
+          highlight={editando === "nueva" ? "Nueva" : "Editar"}
+        />
         <PromoForm
           // La clave reinicia el formulario al cambiar de promo.
           key={editando === "nueva" ? "nueva" : editando.id}
@@ -496,75 +527,111 @@ function AdminPromos() {
 
   const promos = promosQ.data ?? [];
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-brand-ink">Promociones</h2>
-          <p className="text-xs text-brand-ink/55">
-            Descuentos con fechas, planes y público. El precio se calcula en el servidor: lo que ve la persona es lo que se cobra.
-          </p>
-        </div>
-        <button onClick={() => setEditando("nueva")} className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5">
-          <Plus className="size-3.5" /> Nueva promoción
-        </button>
-      </div>
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        eyebrowText="Admin · Oferta"
+        title="Promociones"
+        highlight="Promociones"
+        aside={
+          <button type="button" onClick={() => setEditando("nueva")} className={btnChipInk}>
+            <Plus className="size-3.5" aria-hidden="true" /> Nueva promoción
+          </button>
+        }
+      >
+        Descuentos con fechas, planes y público. El precio se calcula en el servidor: lo que ve la persona es lo que se cobra.
+      </PageHeader>
 
       {promosQ.isLoading ? (
-        <p className="text-sm text-brand-ink/60">Cargando…</p>
+        <Cargando>Cargando promociones…</Cargando>
+      ) : promosQ.isError ? (
+        <EstadoError onRetry={() => void promosQ.refetch()}>No pudimos cargar las promociones.</EstadoError>
       ) : promos.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-brand-line bg-white p-8 text-center text-sm text-brand-ink/60">
-          Todavía no hay promociones. Crea la primera con “Nueva promoción”.
-        </p>
+        <Vacio
+          titulo="Todavía no hay promociones"
+          accion={
+            <button type="button" onClick={() => setEditando("nueva")} className={btnChipInk}>
+              <Plus className="size-3.5" aria-hidden="true" /> Crear la primera
+            </button>
+          }
+        >
+          Crea una para ofrecer un descuento por tiempo limitado o con un enlace especial.
+        </Vacio>
       ) : (
         <ul className="flex flex-col gap-3">
           {promos.map((p) => {
             const est = ESTADOS[p.estado];
+            const enlace = p.audience === "LINK" ? enlaceDe(p, origen) : null;
             return (
-              <li key={p.id} className="rounded-2xl border border-brand-line bg-white p-4">
+              <li key={p.id} className="border-2 border-brand-ink bg-white p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-brand-ink">{p.name}</span>
-                      <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-semibold", est.cls)}>{est.label}</span>
-                      <span className="rounded-full px-2 py-0.5 text-[11px] font-bold" style={{ backgroundColor: p.bgColor, color: p.textColor }}>
+                      <span className="font-display text-[17px] font-extrabold uppercase text-brand-ink">{p.name}</span>
+                      <span className={est.cls}>{est.label}</span>
+                      <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold" style={{ backgroundColor: p.bgColor, color: p.textColor }}>
                         {textoBadge(p)}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-brand-ink/70">
+                    <p className="mt-1 text-xs text-brand-ink/80">
                       {resumenDescuento(p)} ·{" "}
                       {p.planIds.length === 0 ? "todos los planes" : p.planIds.map(nombrePlan).join(", ")} ·{" "}
                       {[p.appliesToNew ? "nuevas" : null, p.appliesToRenewals ? "renovaciones" : null].filter(Boolean).join(" y ") || "sin aplicación"}
                     </p>
-                    <p className="mt-0.5 text-xs text-brand-ink/55">
+                    <p className="mt-0.5 text-xs text-brand-ink/80">
                       {p.startsAt || p.endsAt
                         ? `${fechaBogota(p.startsAt) ?? "ya"} → ${fechaBogota(p.endsAt) ?? "sin fin"}`
                         : "Sin fechas"}{" "}
-                      · {p.audience === "LINK" ? `Solo con enlace${p.code ? ` (${p.code})` : ""}` : "Todos"} ·{" "}
-                      {[p.showBanner ? "barra" : null, p.showOnPrices ? "precios" : null].filter(Boolean).join(" + ") || "silenciosa"}
+                      · {p.audience === "LINK" ? `Solo con enlace${p.code ? ` (${p.code})` : ""}` : "Todos"} · {visibilidad(p)}
                     </p>
-                    <p className="mt-0.5 text-xs font-semibold text-brand-ink/70">
+                    <p className="mt-0.5 text-xs font-bold text-brand-ink">
                       Usos: {p.redemptions}
                       {p.maxRedemptions !== null ? ` / ${p.maxRedemptions}` : ""}
                     </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <button onClick={() => pausarM.mutate(p)} disabled={pausarM.isPending} title={p.isActive ? "Pausar" : "Reanudar"} className="inline-flex items-center gap-1 rounded-full border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink hover:bg-brand-surface disabled:opacity-60">
-                      {p.isActive ? <Pause className="size-3.5" /> : <Play className="size-3.5" />} {p.isActive ? "Pausar" : "Reanudar"}
+                  <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => pausarM.mutate(p)}
+                      disabled={pausarM.isPending}
+                      aria-label={`${p.isActive ? "Pausar" : "Reanudar"} ${p.name}`}
+                      className={btnRow}
+                    >
+                      {p.isActive ? <Pause className="size-3.5" aria-hidden="true" /> : <Play className="size-3.5" aria-hidden="true" />} {p.isActive ? "Pausar" : "Reanudar"}
                     </button>
-                    <button onClick={() => setEditando(p)} className="inline-flex items-center gap-1 rounded-full border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink hover:bg-brand-surface">
-                      <Pencil className="size-3.5" /> Editar
+                    <button type="button" onClick={() => setEditando(p)} aria-label={`Editar ${p.name}`} className={btnRow}>
+                      <Pencil className="size-3.5" aria-hidden="true" /> Editar
                     </button>
                     <button
+                      type="button"
                       onClick={() => {
                         if (window.confirm(`¿Eliminar la promoción “${p.name}”? Los pagos que ya la usaron conservan su descuento.`)) borrarM.mutate(p.id);
                       }}
                       disabled={borrarM.isPending}
-                      className="inline-flex items-center gap-1 rounded-full border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
+                      aria-label={`Eliminar ${p.name}`}
+                      className={`${btnRow} !border-red-700 !text-red-800 hover:!bg-red-50`}
                     >
-                      <Trash2 className="size-3.5" /> Eliminar
+                      <Trash2 className="size-3.5" aria-hidden="true" /> Eliminar
                     </button>
                   </div>
                 </div>
+                {enlace ? (
+                  <div className="mt-3 flex items-center gap-2 border-t border-brand-ink/15 pt-3">
+                    <code className="min-w-0 flex-1 truncate border border-brand-ink/25 bg-brand-cream-soft px-3 py-2 text-xs text-brand-ink">{enlace}</code>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void navigator.clipboard?.writeText(enlace).then(
+                          () => toast.success("Enlace copiado"),
+                          () => toast.error("No se pudo copiar"),
+                        );
+                      }}
+                      aria-label={`Copiar enlace de ${p.name}`}
+                      className={`${btnRow} shrink-0`}
+                    >
+                      <Copy className="size-3.5" aria-hidden="true" /> Copiar
+                    </button>
+                  </div>
+                ) : null}
               </li>
             );
           })}

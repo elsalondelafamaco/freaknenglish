@@ -4,6 +4,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { adminApi } from "@/lib/api/endpoints";
+import { Cargando, PageHeader, btnChipInk, focusRing } from "@/components/app/AppUi";
+import { btnRow } from "@/components/teacher/TeacherUi";
+import { ChipEstado } from "@/components/admin/AdminUi";
 
 type Level = "beginner" | "intermediate" | "advanced";
 type LessonKind = "video" | "pdf" | "slides" | "download" | "html";
@@ -158,69 +161,76 @@ function AdminContent() {
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-brand-ink">Catálogo de aprendizaje</h2>
-          <p className="text-xs text-brand-ink/55">
-            Crea módulos por nivel y sus lecciones (video, PDF, slides, HTML,
-            descargable). Cambios sincronizados con el backend.
-          </p>
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        eyebrowText="Admin · Oferta"
+        title="Contenido de aprendizaje"
+        highlight="aprendizaje"
+        aside={
+          <button
+            type="button"
+            onClick={() =>
+              setEditingModule({ level: "beginner", position: modules.length + 1 })
+            }
+            className={btnChipInk}
+          >
+            <Plus className="size-3.5" aria-hidden="true" /> Crear módulo
+          </button>
+        }
+      >
+        Crea módulos por nivel y sus lecciones (video, PDF, slides, HTML, descargable). Los cambios se guardan al instante.
           {editadasEnPlataforma > 0 ? (
             <p className="mt-1 text-xs text-brand-ink/70">
               <b>{editadasEnPlataforma}</b> lección(es) editadas en plataforma: el repositorio ya no
               las sobreescribe en los despliegues.
             </p>
           ) : null}
-        </div>
-        <button
-          onClick={() =>
-            setEditingModule({ level: "beginner", position: modules.length + 1 })
-          }
-          className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5"
-        >
-          <Plus className="size-3.5" /> Crear módulo
-        </button>
-      </div>
+      </PageHeader>
 
-      {modulesQ.isLoading ? <p className="text-sm text-brand-ink/60">Cargando…</p> : null}
+      {modulesQ.isLoading ? <Cargando>Cargando módulos…</Cargando> : null}
 
       {LEVELS.map((lvl) => {
         const mods = modules
           .filter((m) => m.level === lvl.id)
           .sort((a, b) => a.position - b.position);
         return (
-          <section key={lvl.id} className="rounded-2xl border border-brand-line bg-white p-5">
+          <section key={lvl.id} className="bg-white p-5 border-2 border-brand-ink">
             <header className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-brand-ink">{lvl.label}</h3>
-              <span className="text-xs text-brand-ink/55">{mods.length} módulo(s)</span>
+              <h3 className="font-display text-[18px] font-extrabold uppercase leading-tight tracking-[-0.01em] text-brand-ink">{lvl.label}</h3>
+              <span className="text-xs text-brand-ink/70">{mods.length} módulo(s)</span>
             </header>
             {mods.length === 0 ? (
-              <p className="text-xs text-brand-ink/55">Sin módulos en este nivel.</p>
+              <p className="text-xs text-brand-ink/70">Sin módulos en este nivel.</p>
             ) : (
               <ul className="space-y-2">
                 {mods.map((m, i) => {
                   const open = expanded.has(m.id);
                   return (
-                    <li key={m.id} className="rounded-xl border border-brand-line bg-brand-cream/20">
+                    <li key={m.id} className="border border-brand-ink/25 bg-brand-cream-soft">
                       <div className="flex items-center gap-2 px-3 py-2">
-                        <button onClick={() => toggle(m.id)} className="text-brand-ink/60">
-                          {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                        <button
+                          type="button"
+                          onClick={() => toggle(m.id)}
+                          aria-expanded={open}
+                          aria-label={`${open ? "Contraer" : "Expandir"} ${m.title}`}
+                          className={`inline-grid size-9 place-items-center rounded-full text-brand-ink hover:bg-brand-cream-soft ${focusRing}`}
+                        >
+                          {open ? <ChevronDown className="size-4" aria-hidden="true" /> : <ChevronRight className="size-4" aria-hidden="true" />}
                         </button>
                         <div className="flex flex-col">
                           <button
                             onClick={() => moveModule(m, -1)}
                             disabled={i === 0}
-                            className="rounded p-0.5 text-brand-ink/50 hover:bg-white disabled:opacity-30"
-                            aria-label="Subir"
+                            className="inline-grid size-7 place-items-center rounded-full text-brand-ink hover:bg-brand-cream-soft disabled:opacity-30 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
+                            aria-label={`Subir ${m.title}`}
                           >
                             <ArrowUp className="size-3" />
                           </button>
                           <button
                             onClick={() => moveModule(m, 1)}
                             disabled={i === mods.length - 1}
-                            className="rounded p-0.5 text-brand-ink/50 hover:bg-white disabled:opacity-30"
-                            aria-label="Bajar"
+                            className="inline-grid size-7 place-items-center rounded-full text-brand-ink hover:bg-brand-cream-soft disabled:opacity-30 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
+                            aria-label={`Bajar ${m.title}`}
                           >
                             <ArrowDown className="size-3" />
                           </button>
@@ -229,25 +239,20 @@ function AdminContent() {
                           <div className="flex items-center gap-1.5">
                             {/* La unidad es lo que agrupa el catálogo del estudiante;
                                 si falta, el módulo queda suelto y conviene verlo. */}
-                            <span
-                              className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                                m.unit != null
-                                  ? "bg-brand-yellow/50 text-brand-ink"
-                                  : "bg-amber-100 text-amber-800"
-                              }`}
-                              title={m.unit != null ? `Unidad ${m.unit}` : "Sin unidad: queda fuera de los grupos"}
-                            >
-                              {m.unit != null ? `U${m.unit}` : "sin unidad"}
+                            <span title={m.unit != null ? `Unidad ${m.unit}` : "Sin unidad: queda fuera de los grupos"}>
+                              <ChipEstado atencion={m.unit == null} className="shrink-0">
+                                {m.unit != null ? `U${m.unit}` : "sin unidad"}
+                              </ChipEstado>
                             </span>
                             <span className="truncate text-sm font-semibold text-brand-ink">{m.title}</span>
                           </div>
-                          <div className="truncate text-xs text-brand-ink/55">{m.summary}</div>
+                          <div className="truncate text-xs text-brand-ink/70">{m.summary}</div>
                         </div>
-                        <span className="text-xs text-brand-ink/55">{m.lessons.length} lecciones</span>
+                        <span className="text-xs text-brand-ink/70">{m.lessons.length} lecciones</span>
                         <button
                           onClick={() => setEditingModule(m)}
-                          className="rounded-full p-1.5 text-brand-ink/60 hover:bg-white hover:text-brand-ink"
-                          aria-label="Editar"
+                          className="inline-grid size-9 place-items-center rounded-full text-brand-ink hover:bg-brand-cream-soft disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
+                          aria-label={`Editar ${m.title}`}
                         >
                           <Pencil className="size-3.5" />
                         </button>
@@ -256,21 +261,21 @@ function AdminContent() {
                             if (confirm("¿Eliminar módulo y todas sus lecciones?"))
                               deleteModuleM.mutate(m.id);
                           }}
-                          className="rounded-full p-1.5 text-red-600 hover:bg-red-50"
-                          aria-label="Eliminar"
+                          className="inline-grid size-9 place-items-center rounded-full text-red-800 hover:bg-red-50 disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
+                          aria-label={`Eliminar ${m.title}`}
                         >
                           <Trash2 className="size-3.5" />
                         </button>
                       </div>
                       {open ? (
-                        <div className="border-t border-brand-line bg-white/60 px-3 py-3">
+                        <div className="border-t border-brand-ink/15 bg-white/60 px-3 py-3">
                           <div className="mb-2 flex items-center justify-between">
-                            <span className="text-xs font-semibold uppercase tracking-wide text-brand-ink/55">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-brand-ink/70">
                               Lecciones
                             </span>
                             <button
                               onClick={() => setEditingLesson({ moduleId: m.id })}
-                              className="inline-flex items-center gap-1 rounded-full border border-brand-line bg-white px-2.5 py-1 text-[11px] font-semibold text-brand-ink/80 hover:-translate-y-0.5"
+                              className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
                             >
                               <Plus className="size-3" /> Añadir lección
                             </button>
@@ -293,30 +298,30 @@ function AdminContent() {
                                 .then(invalidate);
                             }}
                           />
-                          <div className="mt-4 border-t border-brand-line pt-3">
+                          <div className="mt-4 border-t border-brand-ink/15 pt-3">
                             <div className="mb-2 flex items-center justify-between">
-                              <span className="text-xs font-semibold uppercase tracking-wide text-brand-ink/55">Checkpoint (examen de nivel)</span>
+                              <span className="text-xs font-semibold uppercase tracking-wide text-brand-ink/70">Checkpoint (examen de nivel)</span>
                               <button
                                 onClick={() => setEditingCheckpoint({ moduleId: m.id, level: m.level, checkpoint: m.checkpoints?.[0] })}
-                                className="inline-flex items-center gap-1 rounded-full border border-brand-line bg-white px-2.5 py-1 text-[11px] font-semibold text-brand-ink/80 hover:-translate-y-0.5"
+                                className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
                               >
                                 <Plus className="size-3" /> {m.checkpoints?.[0] ? "Editar checkpoint" : "Crear checkpoint"}
                               </button>
                             </div>
                             {m.checkpoints?.[0] ? (
-                              <div className="flex items-center justify-between rounded-lg border border-brand-line bg-white px-3 py-2 text-xs">
+                              <div className="flex items-center justify-between bg-white px-3 py-2 text-xs border border-brand-ink/25">
                                 <span className="text-brand-ink/80">
                                   {m.checkpoints[0].fromLevel} → {m.checkpoints[0].toLevel} · {Array.isArray(m.checkpoints[0].questions) ? m.checkpoints[0].questions.length : 0} preguntas · pasa {m.checkpoints[0].passingScore}%
                                 </span>
                                 <button
                                   onClick={() => { if (confirm("¿Eliminar checkpoint?")) deleteCheckpointM.mutate(m.checkpoints![0].id); }}
-                                  className="rounded-full p-1 text-red-600 hover:bg-red-50"
+                                  className="inline-grid size-9 place-items-center rounded-full text-red-800 hover:bg-red-50 disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
                                 >
                                   <Trash2 className="size-3.5" />
                                 </button>
                               </div>
                             ) : (
-                              <p className="text-xs text-brand-ink/55">Sin checkpoint. Al aprobarlo, el estudiante sube de nivel.</p>
+                              <p className="text-xs text-brand-ink/70">Sin checkpoint. Al aprobarlo, el estudiante sube de nivel.</p>
                             )}
                           </div>
                         </div>
@@ -378,12 +383,12 @@ function LessonList({
   onDelete: (id: string) => void;
   onMove: (l: BELesson, dir: -1 | 1) => void;
 }) {
-  if (lessons.length === 0) return <p className="text-xs text-brand-ink/55">Sin lecciones.</p>;
+  if (lessons.length === 0) return <p className="text-xs text-brand-ink/70">Sin lecciones.</p>;
   return (
-    <ul className="divide-y divide-brand-line/60 text-sm">
+    <ul className="divide-y divide-brand-ink/15 text-sm">
       {lessons.map((l, i) => (
         <li key={l.id} className="flex items-center gap-2 py-2">
-          <span className="rounded-full bg-brand-cream px-2 py-0.5 text-[10px] font-semibold uppercase text-brand-ink/70">
+          <span className="uppercase inline-flex items-center rounded-full border-[1.5px] border-brand-ink bg-white px-2.5 py-0.5 text-[11px] font-bold text-brand-ink">
             {l.kind}
           </span>
           <div className="min-w-0 flex-1 truncate text-brand-ink/85">
@@ -392,33 +397,39 @@ function LessonList({
           {l.editadaEnPlataforma ? (
             <span
               title="Su HTML se editó aquí; el repositorio ya no la sobreescribe en los despliegues"
-              className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900"
+              className="shrink-0 inline-flex items-center rounded-full border-[1.5px] border-brand-ink bg-brand-yellow-soft px-2.5 py-0.5 text-[11px] font-bold text-brand-ink"
             >
               editada en plataforma
             </span>
           ) : null}
-          <span className="text-xs text-brand-ink/55">{l.durationMin ?? 0} min</span>
+          <span className="text-xs text-brand-ink/70">{l.durationMin ?? 0} min</span>
           <button
+            type="button"
+            aria-label={`Subir ${l.title}`}
             onClick={() => onMove(l, -1)}
             disabled={i === 0}
-            className="rounded p-1 text-brand-ink/50 hover:bg-brand-cream/40 disabled:opacity-30"
+            className="inline-grid size-7 place-items-center rounded-full text-brand-ink hover:bg-brand-cream-soft disabled:opacity-30 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           >
             <ArrowUp className="size-3" />
           </button>
           <button
+            type="button"
+            aria-label={`Bajar ${l.title}`}
             onClick={() => onMove(l, 1)}
             disabled={i === lessons.length - 1}
-            className="rounded p-1 text-brand-ink/50 hover:bg-brand-cream/40 disabled:opacity-30"
+            className="inline-grid size-7 place-items-center rounded-full text-brand-ink hover:bg-brand-cream-soft disabled:opacity-30 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           >
             <ArrowDown className="size-3" />
           </button>
           <button
+            type="button"
+            aria-label={`Editar ${l.title}`}
             onClick={() => onEdit(l)}
-            className="rounded-full p-1.5 text-brand-ink/60 hover:bg-brand-cream/50 hover:text-brand-ink"
+            className="inline-grid size-9 place-items-center rounded-full text-brand-ink hover:bg-brand-cream-soft disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           >
             <Pencil className="size-3.5" />
           </button>
-          <button onClick={() => onDelete(l.id)} className="rounded-full p-1.5 text-red-600 hover:bg-red-50">
+          <button type="button" aria-label={`Eliminar ${l.title}`} onClick={() => onDelete(l.id)} className="inline-grid size-9 place-items-center rounded-full text-red-800 hover:bg-red-50 disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow">
             <Trash2 className="size-3.5" />
           </button>
         </li>
@@ -501,7 +512,7 @@ function ModuleDialog({
             placeholder="1"
             className="input"
           />
-          <p className="mt-1 text-[11px] text-brand-ink/55">
+          <p className="mt-1 text-xs text-brand-ink/70">
             Agrupa los módulos dentro del nivel en el catálogo del estudiante. Déjalo vacío para
             que quede suelto, fuera de cualquier unidad.
           </p>
@@ -600,8 +611,8 @@ function LessonDialog({
         </div>
 
         {/* Compuerta: la posición define desde dónde bloquea. */}
-        <label className={`flex items-start gap-2.5 rounded-xl border p-3 text-sm transition ${
-          isCheckpoint ? "border-brand-yellow bg-brand-yellow/10" : "border-brand-line bg-brand-cream/20"
+        <label className={`flex items-start gap-2.5 border-2 p-3 text-sm transition ${
+          isCheckpoint ? "border-brand-ink bg-brand-yellow-soft" : "border-brand-ink/25 bg-brand-cream-soft"
         }`}>
           <input
             type="checkbox"
@@ -611,7 +622,7 @@ function LessonDialog({
           />
           <span>
             <span className="font-semibold text-brand-ink">🏁 Esta lección es un checkpoint</span>
-            <span className="mt-0.5 block text-xs text-brand-ink/65">
+            <span className="mt-0.5 block text-xs text-brand-ink/70">
               Actúa como compuerta: todo lo que venga después (en este módulo y en los módulos
               siguientes) queda bloqueado hasta que el estudiante lo supere. Además no se abre
               hasta que su profesor se lo habilite. Usa la <b>posición</b> para decidir dónde cae
@@ -657,10 +668,10 @@ function LessonDialog({
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+      <div className="shadow-hard w-full max-w-lg border-2 border-brand-ink bg-white p-6 [--hard-x:6px]">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-brand-ink">{title}</h2>
-          <button type="button" onClick={onClose} className="text-sm text-brand-ink/55 hover:text-brand-ink">
+          <h2 className="font-display text-[22px] font-extrabold uppercase leading-tight text-brand-ink">{title}</h2>
+          <button type="button" onClick={onClose} className={`inline-flex min-h-11 items-center px-2 text-[13px] font-bold text-brand-ink underline-offset-2 hover:underline ${focusRing}`}>
             Cerrar
           </button>
         </div>
@@ -672,7 +683,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="block text-xs font-semibold text-brand-ink/70">
+    <label className="block text-xs font-bold text-brand-ink">
       <span className="mb-1 block">{label}</span>
       {children}
     </label>
@@ -685,14 +696,14 @@ function Actions({ onClose, pending }: { onClose: () => void; pending?: boolean 
       <button
         type="button"
         onClick={onClose}
-        className="rounded-full px-4 py-2 text-sm font-medium text-brand-ink/70 hover:bg-brand-cream/30"
+        className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border-2 border-brand-ink bg-white px-4 text-[13px] font-bold text-brand-ink transition-colors hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
       >
         Cancelar
       </button>
       <button
         type="submit"
         disabled={pending}
-        className="rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-60"
+        className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-brand-ink bg-brand-ink text-brand-cream hover:text-brand-cream dark:text-white disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
       >
         {pending ? "Guardando…" : "Guardar"}
       </button>
@@ -778,8 +789,8 @@ function CheckpointDialog({
         </div>
 
         {/* ── Configuración del checkpoint ── */}
-        <div className="rounded-xl border border-brand-line bg-brand-cream/20 p-3">
-          <div className="mb-2 text-xs font-bold uppercase tracking-wide text-brand-ink/60">Configuración</div>
+        <div className="p-3 border border-brand-ink/25 bg-brand-cream-soft">
+          <div className="mb-2 text-xs font-bold uppercase tracking-wide text-brand-ink/70">Configuración</div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 md:grid-cols-3">
             <label className="flex items-center gap-2 text-xs text-brand-ink/80">
               <input type="checkbox" checked={!!settings.shuffleQuestions} onChange={(e) => setSettings((s) => ({ ...s, shuffleQuestions: e.target.checked }))} />
@@ -794,7 +805,7 @@ function CheckpointDialog({
               Puede repetir tras aprobar
             </label>
             <label className="text-xs text-brand-ink/80">
-              Máx. intentos <span className="text-brand-ink/40">(vacío = ∞)</span>
+              Máx. intentos <span className="text-brand-ink/60">(vacío = ∞)</span>
               <input type="number" min={1} value={settings.maxAttempts ?? ""} onChange={(e) => setSettings((s) => ({ ...s, maxAttempts: e.target.value ? Number(e.target.value) : null }))} className="input mt-1" />
             </label>
             <label className="text-xs text-brand-ink/80">
@@ -822,10 +833,10 @@ function CheckpointDialog({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-brand-ink/50">Añadir pregunta:</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-brand-ink/70">Añadir pregunta:</span>
           {(Object.keys(Q_TYPE_LABEL) as Array<NonNullable<BECheckpointQuestion["type"]>>).map((t) => (
             <button key={t} type="button" onClick={() => setQuestions((qs) => [...qs, newQuestion(t)])}
-              className="inline-flex items-center gap-1 rounded-full border border-brand-line bg-white px-2.5 py-1 text-[11px] font-semibold text-brand-ink/80 transition hover:-translate-y-0.5 hover:bg-brand-cream/40">
+              className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-9 px-3.5 text-[12px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow">
               <Plus className="size-3" /> {Q_TYPE_LABEL[t]}
             </button>
           ))}
@@ -874,7 +885,7 @@ function StrList({ values, onChange, placeholder, min = 1, prefix }: {
           {prefix ? prefix(i) : null}
           <input value={v} onChange={(e) => onChange(values.map((x, j) => (j === i ? e.target.value : x)))} placeholder={`${placeholder} ${i + 1}`} className="input flex-1" />
           <button type="button" onClick={() => onChange(values.filter((_, j) => j !== i))} disabled={values.length <= min}
-            className="rounded p-1 text-brand-ink/50 hover:bg-white disabled:opacity-30" aria-label="Quitar">
+            className="inline-grid size-7 place-items-center rounded-full text-brand-ink hover:bg-brand-cream-soft disabled:opacity-30 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow" aria-label="Quitar">
             <Trash2 className="size-3" />
           </button>
         </div>
@@ -894,12 +905,12 @@ function QuestionEditor({ q, index, onPatch, onDelete }: {
   const type = q.type ?? "single";
   const blanks = (String(q.text ?? "").match(/\{\{\d+\}\}/g) ?? []).length;
   return (
-    <div className="rounded-xl border border-brand-line bg-brand-cream/20 p-3">
+    <div className="p-3 border border-brand-ink/25 bg-brand-cream-soft">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold text-brand-ink/70">
+        <span className="text-xs font-bold text-brand-ink">
           Pregunta {index + 1} · <span className="rounded-full bg-brand-yellow/60 px-2 py-0.5">{Q_TYPE_LABEL[type]}</span>
         </span>
-        <button type="button" onClick={onDelete} className="text-red-600 hover:text-red-700" aria-label="Eliminar pregunta">
+        <button type="button" onClick={onDelete} className="text-red-800 hover:text-red-900" aria-label="Eliminar pregunta">
           <Trash2 className="size-3.5" />
         </button>
       </div>
@@ -952,28 +963,28 @@ function QuestionEditor({ q, index, onPatch, onDelete }: {
 
       {type === "fill" ? (
         <div>
-          <p className="mb-1 text-[11px] text-brand-ink/55">Respuestas aceptadas (cualquiera vale; no distingue mayúsculas/tildes):</p>
+          <p className="mb-1 text-xs text-brand-ink/70">Respuestas aceptadas (cualquiera vale; no distingue mayúsculas/tildes):</p>
           <StrList values={q.accepted ?? []} min={1} placeholder="Respuesta aceptada" onChange={(accepted) => onPatch({ accepted })} />
         </div>
       ) : null}
 
       {type === "order" ? (
         <div>
-          <p className="mb-1 text-[11px] text-brand-ink/55">Escribe los elementos EN EL ORDEN CORRECTO (al estudiante se le muestran barajados):</p>
+          <p className="mb-1 text-xs text-brand-ink/70">Escribe los elementos EN EL ORDEN CORRECTO (al estudiante se le muestran barajados):</p>
           <StrList values={q.items ?? []} min={2} placeholder="Elemento" onChange={(items) => onPatch({ items })} />
         </div>
       ) : null}
 
       {type === "match" ? (
         <div className="space-y-1.5">
-          <p className="text-[11px] text-brand-ink/55">Parejas correctas (la columna derecha se baraja al presentarla):</p>
+          <p className="text-xs text-brand-ink/70">Parejas correctas (la columna derecha se baraja al presentarla):</p>
           {(q.pairs ?? []).map((p, i) => (
             <div key={i} className="flex items-center gap-2">
               <input value={p.left} onChange={(e) => onPatch({ pairs: (q.pairs ?? []).map((x, j) => (j === i ? { ...x, left: e.target.value } : x)) })} placeholder="Izquierda" className="input flex-1" />
-              <span className="text-brand-ink/40">→</span>
+              <span className="text-brand-ink/60">→</span>
               <input value={p.right} onChange={(e) => onPatch({ pairs: (q.pairs ?? []).map((x, j) => (j === i ? { ...x, right: e.target.value } : x)) })} placeholder="Derecha" className="input flex-1" />
               <button type="button" onClick={() => onPatch({ pairs: (q.pairs ?? []).filter((_, j) => j !== i) })} disabled={(q.pairs ?? []).length <= 2}
-                className="rounded p-1 text-brand-ink/50 hover:bg-white disabled:opacity-30" aria-label="Quitar pareja">
+                className="inline-grid size-7 place-items-center rounded-full text-brand-ink hover:bg-brand-cream-soft disabled:opacity-30 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow" aria-label="Quitar pareja">
                 <Trash2 className="size-3" />
               </button>
             </div>
@@ -988,7 +999,7 @@ function QuestionEditor({ q, index, onPatch, onDelete }: {
       {type === "dragwords" ? (
         <div className="space-y-2">
           <div>
-            <p className="mb-1 text-[11px] text-brand-ink/55">
+            <p className="mb-1 text-xs text-brand-ink/70">
               Frase con huecos <code className="rounded bg-white px-1">{"{{1}}"}</code>, <code className="rounded bg-white px-1">{"{{2}}"}</code>… ({blanks} hueco(s) detectados)
             </p>
             <textarea value={q.text ?? ""} onChange={(e) => {
@@ -1001,11 +1012,11 @@ function QuestionEditor({ q, index, onPatch, onDelete }: {
           </div>
           {blanks > 0 ? (
             <div>
-              <p className="mb-1 text-[11px] text-brand-ink/55">Palabra correcta de cada hueco:</p>
+              <p className="mb-1 text-xs text-brand-ink/70">Palabra correcta de cada hueco:</p>
               <div className="grid gap-1.5 md:grid-cols-2">
                 {Array.from({ length: blanks }, (_, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-brand-yellow text-[10px] font-bold">{i + 1}</span>
+                    <span className="shrink-0 inline-flex items-center rounded-full border-[1.5px] border-brand-ink bg-brand-yellow-soft px-2.5 py-0.5 text-[11px] font-bold text-brand-ink">{i + 1}</span>
                     <input value={q.words?.[i] ?? ""} onChange={(e) => onPatch({ words: Array.from({ length: blanks }, (_, j) => (j === i ? e.target.value : q.words?.[j] ?? "")) })} placeholder={`Palabra del hueco ${i + 1}`} className="input flex-1" />
                   </div>
                 ))}
@@ -1013,7 +1024,7 @@ function QuestionEditor({ q, index, onPatch, onDelete }: {
             </div>
           ) : null}
           <div>
-            <p className="mb-1 text-[11px] text-brand-ink/55">Palabras distractoras (opcionales, van al banco):</p>
+            <p className="mb-1 text-xs text-brand-ink/70">Palabras distractoras (opcionales, van al banco):</p>
             <StrList values={q.extraWords ?? []} min={0} placeholder="Distractor" onChange={(extraWords) => onPatch({ extraWords })} />
           </div>
         </div>

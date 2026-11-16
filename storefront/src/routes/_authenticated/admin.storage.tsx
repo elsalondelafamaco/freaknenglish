@@ -6,6 +6,8 @@ import {
   Pencil, Search, Trash2, Upload,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Cargando, EstadoError, PageHeader, Vacio, btnChipInk, focusRing } from "@/components/app/AppUi";
+import { btnRow, btnRowInk, inputBase, pillClass } from "@/components/teacher/TeacherUi";
 import { adminApi } from "@/lib/api/endpoints";
 
 export const Route = createFileRoute("/_authenticated/admin/storage")({
@@ -123,35 +125,31 @@ function AdminStorage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight text-brand-ink">Storage</h1>
-        <p className="mt-1 text-sm text-brand-ink/60">
-          Todos los archivos del bucket. Sube audios, imágenes o documentos y copia su URL pública
-          para pegarla donde la necesites. Borrar es definitivo: si el archivo está en uso, ese
-          lugar queda sin recurso.
-        </p>
-      </header>
+    <div className="flex flex-col gap-6">
+      <PageHeader eyebrowText="Admin · Operación" title="Archivos del sitio" highlight="Archivos">
+        Todos los archivos del bucket. Sube audios, imágenes o documentos y copia su URL pública para pegarla donde la
+        necesites. Borrar es definitivo: si el archivo está en uso, ese lugar queda sin recurso.
+      </PageHeader>
 
       {/* Subida */}
-      <section className="rounded-2xl border border-brand-line bg-white p-4">
+      <section aria-label="Subir archivos" className="border-2 border-brand-ink bg-white p-4">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-xs font-semibold text-brand-ink/70">
+          <label className="text-xs font-bold text-brand-ink">
             Carpeta destino
             <input
               value={destino}
               onChange={(e) => setDestino(e.target.value)}
               placeholder="audio"
-              className="mt-1 w-40 rounded-xl border border-brand-line px-3 py-2 text-sm font-normal focus:border-brand-ink focus:outline-none"
+              className={`${inputBase} mt-1 w-40 font-normal`}
             />
           </label>
           <button
             type="button"
             disabled={subiendo || !destino.trim()}
             onClick={() => fileRef.current?.click()}
-            className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-60"
+            className={btnChipInk}
           >
-            <Upload className="size-3.5" /> {subiendo ? "Subiendo…" : "Subir archivos"}
+            <Upload className="size-3.5" aria-hidden="true" /> {subiendo ? "Subiendo…" : "Subir archivos"}
           </button>
           <input
             ref={fileRef}
@@ -160,7 +158,7 @@ function AdminStorage() {
             className="hidden"
             onChange={(e) => subir(e.target.files)}
           />
-          <p className="text-[11px] text-brand-ink/50">
+          <p className="text-xs text-brand-ink/70">
             El archivo queda en <code>{destino || "…"}/&lt;nombre&gt;</code>. Subir con el mismo
             nombre reemplaza el anterior y la URL no cambia.
           </p>
@@ -170,26 +168,32 @@ function AdminStorage() {
       {/* Filtros */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-brand-ink/40" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-brand-ink/70" aria-hidden="true" />
           <input
+            type="search"
+            aria-label="Buscar archivos por nombre"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar por nombre…"
-            className="w-full rounded-full border border-brand-line bg-white py-2 pl-9 pr-3 text-sm focus:border-brand-ink focus:outline-none"
+            className={`${inputBase} pl-9`}
           />
         </div>
-        <div className="inline-flex flex-wrap gap-1 rounded-full border border-brand-line bg-white p-1 text-xs">
+        <div role="group" aria-label="Carpeta" className="flex flex-wrap gap-1.5">
           <button
+            type="button"
+            aria-pressed={carpeta === ""}
             onClick={() => setCarpeta("")}
-            className={`rounded-full px-3 py-1.5 font-medium transition ${carpeta === "" ? "bg-brand-ink text-white" : "text-brand-ink/70 hover:text-brand-ink"}`}
+            className={pillClass(carpeta === "")}
           >
             Todas
           </button>
           {carpetas.map((c) => (
             <button
               key={c}
+              type="button"
+              aria-pressed={carpeta === c}
               onClick={() => setCarpeta(c)}
-              className={`rounded-full px-3 py-1.5 font-medium transition ${carpeta === c ? "bg-brand-ink text-white" : "text-brand-ink/70 hover:text-brand-ink"}`}
+              className={pillClass(carpeta === c)}
             >
               {c}
             </button>
@@ -197,30 +201,31 @@ function AdminStorage() {
         </div>
         {seleccion.size > 0 ? (
           <button
+            type="button"
             onClick={() => {
               if (!confirm(`¿Eliminar ${seleccion.size} archivo(s)? No se puede deshacer.`)) return;
               borrar.mutate([...seleccion]);
             }}
             disabled={borrar.isPending}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+            className={`${btnRow} ml-auto !border-red-700 !text-red-800 hover:!bg-red-50`}
           >
-            <Trash2 className="size-3.5" /> Eliminar {seleccion.size}
+            <Trash2 className="size-3.5" aria-hidden="true" /> Eliminar {seleccion.size}
           </button>
         ) : null}
       </div>
 
       {/* Listado */}
-      <div className="overflow-hidden rounded-2xl border border-brand-line bg-white">
+      <div className="shadow-hard overflow-hidden border-2 border-brand-ink bg-white">
         {q.isLoading ? (
-          <p className="p-6 text-sm text-brand-ink/55">Cargando archivos…</p>
+          <div className="p-4"><Cargando>Cargando archivos…</Cargando></div>
         ) : q.isError ? (
-          <p className="p-6 text-sm text-red-600">No se pudo leer el bucket.</p>
+          <div className="p-4"><EstadoError onRetry={() => void q.refetch()}>No se pudo leer el bucket.</EstadoError></div>
         ) : filtrados.length === 0 ? (
-          <p className="p-6 text-sm text-brand-ink/55">
-            {busqueda ? "Sin resultados." : "No hay archivos en esta carpeta."}
-          </p>
+          <div className="p-4">
+            <Vacio>{busqueda ? "Sin resultados." : "No hay archivos en esta carpeta."}</Vacio>
+          </div>
         ) : (
-          <ul className="divide-y divide-brand-line">
+          <ul className="divide-y divide-brand-ink/15">
             {filtrados.map((f) => (
               <FilaArchivo
                 key={f.key}
@@ -239,7 +244,7 @@ function AdminStorage() {
       </div>
 
       {q.data?.nextCursor ? (
-        <p className="text-center text-xs text-brand-ink/50">
+        <p className="text-center text-xs text-brand-ink/70">
           Mostrando los primeros {items.length} archivos de esta carpeta. Filtra por carpeta para
           ver el resto.
         </p>
@@ -281,14 +286,20 @@ function FilaArchivo({
 
   return (
     <li className="flex flex-wrap items-center gap-3 px-4 py-3">
-      <input type="checkbox" checked={seleccionado} onChange={onToggle} className="shrink-0" />
+      <input
+        type="checkbox"
+        aria-label={`Elegir ${archivo.key}`}
+        checked={seleccionado}
+        onChange={onToggle}
+        className={`size-5 shrink-0 accent-brand-ink ${focusRing}`}
+      />
 
-      <div className="size-10 shrink-0 overflow-hidden rounded-lg bg-brand-cream/60">
+      <div className="size-10 shrink-0 overflow-hidden border border-brand-ink/25 bg-brand-cream-soft">
         {esImagen ? (
           <img src={archivo.url} alt="" className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full items-center justify-center">
-            <Icono className="size-4 text-brand-ink/45" />
+            <Icono className="size-4 text-brand-ink/70" aria-hidden="true" />
           </div>
         )}
       </div>
@@ -299,33 +310,36 @@ function FilaArchivo({
             <input
               value={nuevaKey}
               onChange={(e) => setNuevaKey(e.target.value)}
-              className="min-w-0 flex-1 rounded-lg border border-brand-line px-2 py-1 text-xs focus:border-brand-ink focus:outline-none"
+              className={`${inputBase} min-w-0 flex-1`}
+              aria-label={`Nuevo nombre de ${archivo.key}`}
             />
             <button
+              type="button"
               onClick={() => {
                 const to = nuevaKey.trim().replace(/^\/+/, "");
                 if (!to || to === archivo.key) return setEditando(false);
                 onRenombrar(to);
                 setEditando(false);
               }}
-              className="rounded-full bg-brand-ink px-2.5 py-1 text-[11px] font-semibold text-white"
+              className={btnRowInk}
             >
               Guardar
             </button>
             <button
+              type="button"
               onClick={() => {
                 setNuevaKey(archivo.key);
                 setEditando(false);
               }}
-              className="rounded-full border border-brand-line px-2.5 py-1 text-[11px] font-semibold text-brand-ink/70"
+              className={btnRow}
             >
               Cancelar
             </button>
           </div>
         ) : (
           <>
-            <div className="truncate text-sm font-medium text-brand-ink">{archivo.key}</div>
-            <div className="text-[11px] text-brand-ink/50">
+            <div className="truncate text-sm font-bold text-brand-ink">{archivo.key}</div>
+            <div className="text-xs text-brand-ink/70">
               {tamano(archivo.size)}
               {archivo.lastModified
                 ? ` · ${new Date(archivo.lastModified).toLocaleString("es-CO")}`
@@ -342,34 +356,41 @@ function FilaArchivo({
 
       <div className="flex shrink-0 items-center gap-1">
         <button
+          type="button"
           onClick={copiarUrl}
           title="Copiar URL pública"
-          className="rounded-full border border-brand-line p-1.5 text-brand-ink/70 transition hover:bg-brand-cream/50"
+          aria-label={`Copiar URL pública de ${archivo.key}`}
+          className="inline-grid size-9 place-items-center rounded-full text-brand-ink hover:bg-brand-cream-soft disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
         >
-          {copiado ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
+          {copiado ? <Check className="size-3.5" aria-hidden="true" /> : <Copy className="size-3.5" aria-hidden="true" />}
         </button>
         <a
           href={archivo.url}
           target="_blank"
           rel="noreferrer"
           title="Abrir en pestaña nueva"
-          className="rounded-full border border-brand-line p-1.5 text-brand-ink/70 transition hover:bg-brand-cream/50"
+          aria-label={`Abrir ${archivo.key} en pestaña nueva`}
+          className="inline-grid size-9 place-items-center rounded-full text-brand-ink hover:bg-brand-cream-soft disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
         >
-          <ExternalLink className="size-3.5" />
+          <ExternalLink className="size-3.5" aria-hidden="true" />
         </a>
         <button
+          type="button"
           onClick={() => setEditando((v) => !v)}
           title="Renombrar / mover"
-          className="rounded-full border border-brand-line p-1.5 text-brand-ink/70 transition hover:bg-brand-cream/50"
+          aria-label={`Renombrar o mover ${archivo.key}`}
+          className="inline-grid size-9 place-items-center rounded-full text-brand-ink hover:bg-brand-cream-soft disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
         >
-          <Pencil className="size-3.5" />
+          <Pencil className="size-3.5" aria-hidden="true" />
         </button>
         <button
+          type="button"
           onClick={onBorrar}
           title="Eliminar"
-          className="rounded-full border border-brand-line p-1.5 text-red-600 transition hover:bg-red-50"
+          aria-label={`Eliminar ${archivo.key}`}
+          className="inline-grid size-9 place-items-center rounded-full text-red-800 hover:bg-red-50 disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
         >
-          <Trash2 className="size-3.5" />
+          <Trash2 className="size-3.5" aria-hidden="true" />
         </button>
       </div>
     </li>

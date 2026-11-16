@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Trash2 } from "lucide-react";
+import { AlertTriangle, Check, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { adminApi } from "@/lib/api/endpoints";
 import { cn } from "@/lib/utils";
+import { PageHeader, focusRing } from "@/components/app/AppUi";
 
 export const Route = createFileRoute("/_authenticated/admin/cleanup")({
   head: () => ({ meta: [{ title: "Cleanup — Admin Freakn'" }] }),
@@ -69,62 +70,62 @@ function AdminCleanup() {
     });
 
   return (
-    <div>
-      <header>
-        <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-brand-ink">
-          <Trash2 className="size-7" /> Cleanup
-        </h1>
-        <p className="mt-1 text-sm text-brand-ink/65">
-          Reset de datos para pruebas en producción. Selecciona qué borrar — tu usuario
-          admin y los demás admins nunca se tocan.
-        </p>
-      </header>
+    <div className="flex flex-col gap-6">
+      <PageHeader eyebrowText="Admin · Operación" title="Limpieza de datos" highlight="Limpieza">
+        Reset de datos para pruebas en producción. Selecciona qué borrar: tu usuario admin y los demás admins nunca se tocan.
+      </PageHeader>
 
-      <div className="mt-4 flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-        <AlertTriangle className="mt-0.5 size-5 shrink-0" />
+      <div role="alert" className="flex items-start gap-2 border-2 border-red-700 bg-red-50 p-4 text-sm font-semibold text-red-800">
+        <AlertTriangle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
         <p>
-          Esto borra datos <strong>de forma permanente</strong> en la base de datos actual.
-          Úsalo solo para limpiar datos de prueba.
+          Esto borra datos <strong>de forma permanente</strong> en la base de datos actual. Úsalo solo para limpiar
+          datos de prueba.
         </p>
       </div>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+      <div role="group" aria-label="Qué borrar" className="grid gap-3 sm:grid-cols-2">
         {TARGETS.map((t) => {
           const count = counts?.[t.countKey] ?? 0;
           const active = selected.has(t.id);
           return (
             <button
               key={t.id}
+              type="button"
+              aria-pressed={active}
               onClick={() => toggle(t.id)}
               className={cn(
-                "rounded-2xl border p-4 text-left transition",
+                "border-2 border-brand-ink p-4 text-left transition-colors",
                 active
-                  ? "border-red-400 bg-red-50 ring-2 ring-red-300"
-                  : "border-brand-line bg-white hover:border-brand-ink/30",
+                  ? "bg-brand-ink text-brand-cream"
+                  : "bg-white text-brand-ink hover:bg-brand-cream-soft",
+                focusRing,
               )}
             >
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-brand-ink">{t.label}</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 font-bold">
+                  {active ? <Check className="size-4" aria-hidden="true" /> : null} {t.label}
+                </span>
                 <span
                   className={cn(
-                    "rounded-full px-2 py-0.5 text-xs font-bold",
-                    active ? "bg-red-600 text-white" : "bg-brand-cream/70 text-brand-ink/60",
+                    "rounded-full border-[1.5px] px-2.5 py-0.5 text-[11px] font-bold",
+                    active ? "border-brand-cream bg-brand-cream text-brand-ink" : "border-brand-ink bg-white text-brand-ink",
                   )}
                 >
                   {count}
                 </span>
               </div>
-              <p className="mt-1 text-xs text-brand-ink/60">{t.hint}</p>
+              <p className={cn("mt-1 text-xs", active ? "text-brand-cream/90" : "text-brand-ink/70")}>{t.hint}</p>
             </button>
           );
         })}
       </div>
 
-      <div className="mt-6">
+      <div>
         <button
+          type="button"
           disabled={selected.size === 0}
           onClick={() => setConfirmOpen(true)}
-          className="inline-flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:bg-red-700 disabled:opacity-40"
+          className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-red-700 bg-red-700 text-white hover:bg-red-800 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
         >
           <Trash2 className="size-4" /> Borrar seleccionado ({selected.size})
         </button>
@@ -143,19 +144,19 @@ function AdminCleanup() {
             value={phrase}
             onChange={(e) => setPhrase(e.target.value)}
             placeholder={CONFIRM_PHRASE}
-            className="w-full rounded-xl border border-brand-line px-4 py-2 text-sm focus:border-red-500 focus:outline-none"
+            className="w-full px-4 py-2 text-sm min-h-11 border-2 border-brand-ink bg-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           />
           <DialogFooter>
             <button
               onClick={() => setConfirmOpen(false)}
-              className="rounded-full border border-brand-line bg-white px-4 py-2 text-sm font-semibold text-brand-ink"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-brand-ink bg-white text-brand-ink hover:bg-brand-cream-soft hover:text-brand-ink disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             >
               Cancelar
             </button>
             <button
               disabled={phrase !== CONFIRM_PHRASE || run.isPending}
               onClick={() => run.mutate()}
-              className="rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full font-bold min-h-11 px-4 text-[13px] border-2 border-red-700 bg-red-700 text-white hover:bg-red-800 disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             >
               {run.isPending ? "Borrando…" : "Borrar definitivamente"}
             </button>

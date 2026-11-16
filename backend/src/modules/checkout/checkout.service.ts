@@ -7,10 +7,17 @@ import { ExchangeService } from '../exchange/exchange.service'
 import { SlotsService, SlotRef, PENDING_HOLD_MINUTES } from '../scheduling/slots.service'
 import { esZonaValida } from '../../common/zona-horaria'
 import { configuracionDirecta } from '../wompi/wompi-api'
+import { PromotionsService } from '../promotions/promotions.service'
+import { Atribucion, precioListaCop } from '../promotions/promo-precio'
 
 @Injectable()
 export class CheckoutService {
-  constructor(private prisma: PrismaService, private exchange: ExchangeService, private slots: SlotsService) {}
+  constructor(
+    private prisma: PrismaService,
+    private exchange: ExchangeService,
+    private slots: SlotsService,
+    private promos: PromotionsService,
+  ) {}
 
   /**
    * Creates a PaymentIntent and returns the payload the Wompi Checkout Widget needs.
@@ -32,6 +39,7 @@ export class CheckoutService {
     eventSourceUrl?: string
     clientIp?: string
     clientUserAgent?: string
+    atribucion?: Atribucion
   }) {
     const plan = await this.prisma.plan.findUnique({ where: { id: input.planId } })
     // Un plan inactivo no existe para el checkout público: el listado ya lo
@@ -41,12 +49,13 @@ export class CheckoutService {
     const reference = `FREAKN-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`
     // El precio del plan está en USD; el cobro a Wompi es en COP convertido con
     // la TRM (COP/USD) en tiempo real en este instante. Fallback a priceCop.
-    let amountCop = plan.priceCop
+    // Aquí solo se calcula el precio de LISTA: la promoción se aplica más abajo,
+    // cuando ya se sabe si es una renovación.
+    let trmCop = 0
     if (plan.priceUsd && plan.priceUsd > 0) {
-      const trm = await this.exchange.getCurrentTrm()
-      amountCop = Math.round(plan.priceUsd * trm.valueCop)
+      trmCop = (await this.exchange.getCurrentTrm()).valueCop
     }
-    const amountInCents = amountCop * 100
+    const listaCop = precioListaCop(plan, trmCop)
     const currency = 'COP'
 
     // ¿Comprador con suscripción activa? Solo se permite renovación anticipada
@@ -82,6 +91,21 @@ export class CheckoutService {
     const propias = buyer?.id ? await this.slots.slotsOfStudent(buyer.id) : []
     const esRenovacion =
       !!buyer?.assignedTeacherId && propias.length > 0 && propias.length === plan.daysPerWeek
+
+    // Promoción: se decide en el servidor con el estado real (renovación o no) y
+    // la atribución que mandó el navegador; del cliente nunca se acepta un monto.
+    // El descuento queda congelado en el intento y todo lo que viene después
+    // (firma de Wompi, cobro directo, verificación del pago, Meta) lee
+    // `amountInCents`, así que cobra exactamente lo que se mostró.
+    const atribucion = limpiarAtribucion(input.atribucion)
+    const elegida = await this.promos.elegirParaCobro(
+      { id: plan.id, priceCop: plan.priceCop, priceUsd: plan.priceUsd },
+      trmCop,
+      esRenovacion,
+      atribucion,
+    )
+    const amountCop = elegida ? elegida.precio.finalCop : listaCop
+    const amountInCents = amountCop * 100
 
     // Selección de horario (SDD-scheduling-v2): validar contra ventana + plan.
     // Un estudiante interno con clase larga (classDurationMin) que renueva por
@@ -119,6 +143,10 @@ export class CheckoutService {
         customerDocument: input.customerDocument,
         scheduleJson: slots.length > 0 ? (slots as any) : undefined,
         esRenovacion,
+        promotionId: elegida?.promo.id,
+        listAmountInCents: elegida ? listaCop * 100 : undefined,
+        discountInCents: elegida ? elegida.precio.descuentoCop * 100 : undefined,
+        atribucion: atribucion ? (atribucion as Record<string, string>) : undefined,
         ...(esRenovacion ? { assignmentMode: 'auto' } : {}),
         // La zona con la que vio las horas al elegir. Se valida aquí porque
         // llega de un formulario público: un valor corrupto no puede quedar
@@ -200,6 +228,26 @@ export class CheckoutService {
       // URL de la pasarela viaja siempre, de salida por si el directo falla.
       modo: configuracionDirecta().ok ? ('direct' as const) : ('hosted' as const),
       accessKey: intent.accessKey,
+      // Para que el checkout muestre el descuento con la etiqueta de la promo.
+      promocion: elegida
+        ? {
+            label: elegida.promo.checkoutLabel ?? 'Descuento',
+            discountInCents: elegida.precio.descuentoCop * 100,
+            listAmountInCents: listaCop * 100,
+          }
+        : null,
     }
   }
+}
+
+/** Solo las claves conocidas y recortadas: llega de un formulario público. */
+function limpiarAtribucion(a?: Atribucion): Atribucion | null {
+  if (!a) return null
+  const claves = ['promo', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content'] as const
+  const out: Atribucion = {}
+  for (const k of claves) {
+    const v = a[k]
+    if (typeof v === 'string' && v.trim()) out[k] = v.trim().slice(0, 100)
+  }
+  return Object.keys(out).length > 0 ? out : null
 }

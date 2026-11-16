@@ -267,16 +267,76 @@ model PaymentIntent {
   /// segunda aprobación del mismo intento (doble cobro a devolver). Mientras
   /// esté puesto, el pago NO activa nada por su cuenta.
   reviewReason     String?   @map("review_reason")
+  /// Promoción aplicada al crear el intento. El precio se congela aquí: lo que
+  /// se cobra (`amountInCents`) ya trae el descuento, y estos tres campos
+  /// guardan de dónde salió para poder auditarlo y contar los usos.
+  promotionId       String? @map("promotion_id")
+  listAmountInCents Int?    @map("list_amount_in_cents")
+  discountInCents   Int?    @map("discount_in_cents")
+  /// Con qué enlace llegó quien compró (promo y utm_*), para medir campañas.
+  atribucion        Json?
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
   user   User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   plan   Plan            @relation(fields: [planId], references: [id])
+  promotion Promotion?   @relation(fields: [promotionId], references: [id], onDelete: SetNull)
   events PaymentEvent[]
 
   @@index([userId])
   @@index([status])
+  @@index([promotionId])
   @@map("payment_intents")
+}
+
+/// Promoción configurable desde el admin. El descuento se aplica al crear el
+/// intento de pago (ver checkout.service) con la misma función que el sitio usa
+/// para mostrar el precio, así lo que se ve es lo que se cobra.
+model Promotion {
+  id       String  @id @default(uuid())
+  /// Nombre interno: solo lo ve el admin.
+  name     String
+  isActive Boolean @default(true) @map("is_active")
+  /// Desempate cuando dos promos descuentan lo mismo: gana la de mayor prioridad.
+  priority Int     @default(0)
+
+  startsAt DateTime? @map("starts_at")
+  endsAt   DateTime? @map("ends_at")
+
+  /// PERCENT | USD | COP
+  discountType  String @map("discount_type")
+  discountValue Int    @map("discount_value")
+
+  /// Vacío = todos los planes.
+  planIds           String[] @map("plan_ids")
+  appliesToNew      Boolean  @default(true) @map("applies_to_new")
+  appliesToRenewals Boolean  @default(false) @map("applies_to_renewals")
+
+  /// ALL | LINK (solo quien llegó con el enlace de la campaña).
+  audience    String  @default("ALL")
+  code        String?
+  utmSource   String? @map("utm_source")
+  utmMedium   String? @map("utm_medium")
+  utmCampaign String? @map("utm_campaign")
+
+  showBanner   Boolean @default(false) @map("show_banner")
+  showOnPrices Boolean @default(false) @map("show_on_prices")
+
+  bannerText    String? @map("banner_text")
+  badgeText     String? @map("badge_text")
+  checkoutLabel String? @map("checkout_label")
+  bgColor       String  @default("#EBD81A") @map("bg_color")
+  textColor     String  @default("#111111") @map("text_color")
+  showCountdown Boolean @default(false) @map("show_countdown")
+
+  maxRedemptions Int? @map("max_redemptions")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  paymentIntents PaymentIntent[]
+
+  @@map("promotions")
 }
 
 model PaymentEvent {

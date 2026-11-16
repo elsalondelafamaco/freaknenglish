@@ -7,6 +7,9 @@ import { Logo } from "@/components/site/Logo";
 import { plansApi, subscriptionsApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useRastrearUnaVez } from "@/lib/meta-pixel";
+import { usePromos } from "@/lib/domain/use-promos";
+import { mejorPromo } from "@/lib/domain/promos";
+import { PromoBadge, preciosParaMostrar } from "@/components/site/PromoBadge";
 
 export const Route = createFileRoute("/checkout/")({
   head: () => ({ meta: [{ title: "Elige tu plan — FreaknEnglish" }] }),
@@ -28,6 +31,7 @@ function CheckoutSelect() {
   const daysLeft = end ? Math.ceil((end.getTime() - Date.now()) / 86400000) : null;
   const activeFar = sub?.status === "active" && daysLeft != null && daysLeft > 5;
   const { esRenovacion, cargando: cargandoRenovacion } = useRenovacion();
+  const { promos } = usePromos();
   const renewalWindow = sub?.status === "active" && daysLeft != null && daysLeft <= 5;
 
   // Vio los planes. Va antes de los `return` tempranos: un hook no puede
@@ -108,7 +112,14 @@ function CheckoutSelect() {
         ) : (
           <div className={`mt-10 grid gap-8 ${plans.length > 3 ? "sm:grid-cols-2 xl:grid-cols-4" : "md:grid-cols-3"}`}>
             {plans.map((plan: any) => {
-              const cop = copAcobrar(plan, trm);
+              // Dentro del checkout se muestra siempre el descuento que se va a
+              // cobrar, también el de una promo "silenciosa" (de enlace):
+              // silenciosa es no anunciarla en la home, no esconderle el precio
+              // a quien está pagando.
+              const conPromo = mejorPromo(promos, plan, trm, esRenovacion);
+              const cop = conPromo ? conPromo.precio.finalCop : copAcobrar(plan, trm);
+              const visible = conPromo;
+              const mostrar = visible ? preciosParaMostrar(visible.precio) : null;
               return (
                 <Link
                   key={plan.id}
@@ -120,9 +131,19 @@ function CheckoutSelect() {
                   className="shadow-hard group flex flex-col border-2 border-brand-ink bg-white p-7 transition-transform duration-300 hover:-translate-y-1.5"
                 >
                   <h2 className="font-display text-[24px] font-extrabold uppercase leading-none text-brand-ink">{plan.name}</h2>
-                  <div className="mt-4 flex items-baseline gap-2">
-                    <span className="font-display text-[42px] font-extrabold leading-none text-brand-ink">${plan.priceUsd ?? "—"}</span>
-                    <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-brand-ink/55">USD / mes</span>
+                  {visible && mostrar ? (
+                    <div className="mt-4 flex items-center gap-2">
+                      <span className="text-[16px] font-bold text-brand-ink/45 line-through">{mostrar.tachado}</span>
+                      <PromoBadge promo={visible.promo} />
+                    </div>
+                  ) : null}
+                  <div className={`${visible ? "mt-1" : "mt-4"} flex items-baseline gap-2`}>
+                    <span className="font-display text-[42px] font-extrabold leading-none text-brand-ink">
+                      {mostrar ? mostrar.final : `$${plan.priceUsd ?? "—"}`}
+                    </span>
+                    <span className="text-[13px] font-semibold uppercase tracking-[0.08em] text-brand-ink/55">
+                      {mostrar && !mostrar.enUsd ? "COP / mes" : "USD / mes"}
+                    </span>
                   </div>
                   <p className="mt-2 text-xs text-brand-ink/55">Se cobra {copFmt.format(cop)} (TRM en vivo).</p>
                   <ul className="mt-4 flex-1 space-y-2 text-sm text-brand-ink/85">

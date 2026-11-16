@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Preloader } from "@/components/site/Preloader";
+import { PromoBanner } from "@/components/site/PromoBanner";
 import { Navbar } from "@/components/site/Navbar";
 import { Hero } from "@/components/site/Hero";
 import { HowItWorks } from "@/components/site/HowItWorks";
@@ -48,6 +49,7 @@ function Index() {
   return (
     <main className="min-h-screen bg-white">
       <Preloader />
+      <PromoBanner />
       <Navbar />
       <Hero />
       <HowItWorks />

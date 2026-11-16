@@ -39,7 +39,10 @@ export function Navbar() {
   return (
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-40 transition-all duration-300",
+        // `--promo-h` lo publica la barra de promoción (0 si no hay): el menú
+        // se coloca debajo de ella al inicio y sube al hacer scroll.
+        "fixed inset-x-0 z-40 transition-all duration-300",
+        scrolled ? "top-0" : "top-[var(--promo-h,0px)]",
         scrolled
           ? "bg-brand-ink/95 shadow-[0_1px_0_0] shadow-brand-yellow/25 backdrop-blur-sm"
           : "bg-transparent shadow-[0_1px_0_0] shadow-white/10",

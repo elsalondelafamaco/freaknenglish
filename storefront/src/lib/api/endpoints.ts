@@ -241,6 +241,58 @@ export const plansApi = {
     }>("/plans"),
 };
 
+/** Promoción tal como la ve el sitio: solo campos públicos (sin nombre ni límites). */
+export type PromoPublica = {
+  id: string;
+  discountType: "PERCENT" | "USD" | "COP";
+  discountValue: number;
+  planIds: string[];
+  appliesToNew: boolean;
+  appliesToRenewals: boolean;
+  showBanner: boolean;
+  showOnPrices: boolean;
+  bannerText: string | null;
+  badgeText: string | null;
+  checkoutLabel: string | null;
+  bgColor: string;
+  textColor: string;
+  showCountdown: boolean;
+  endsAt: string | null;
+  priority: number;
+  createdAt: string;
+};
+
+export const promosApi = {
+  /** Promos vigentes que le corresponden a quien llegó con esa atribución. */
+  publicas: (atribucion?: Partial<Record<"promo" | "utm_source" | "utm_medium" | "utm_campaign", string>> | null) =>
+    apiGet<PromoPublica[]>("/public/promotions", {
+      ...(atribucion?.promo ? { promo: atribucion.promo } : {}),
+      ...(atribucion?.utm_source ? { utm_source: atribucion.utm_source } : {}),
+      ...(atribucion?.utm_medium ? { utm_medium: atribucion.utm_medium } : {}),
+      ...(atribucion?.utm_campaign ? { utm_campaign: atribucion.utm_campaign } : {}),
+    }),
+};
+
+/** Promoción completa del admin (con nombre, usos y estado calculado). */
+export type PromoAdmin = Omit<PromoPublica, "createdAt" | "endsAt"> & {
+  name: string;
+  isActive: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+  audience: "ALL" | "LINK";
+  code: string | null;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  maxRedemptions: number | null;
+  redemptions: number;
+  estado: "activa" | "programada" | "vencida" | "pausada" | "agotada";
+  createdAt: string;
+};
+export type PromoInput = Partial<
+  Omit<PromoAdmin, "id" | "redemptions" | "estado" | "createdAt">
+>;
+
 export const settingsApi = {
   contact: () => apiGet<{ whatsappNumber: string; whatsappMessage: string }>("/public/settings"),
   site: () => apiGet<SiteContentOverrides>("/public/settings/site"),
@@ -311,7 +363,7 @@ export type EstadoDePago = {
 };
 
 export const checkoutApi = {
-  createIntent: (body: { planId: string; customerEmail: string; customerName: string; customerPhone: string; customerDocument: string; userId?: string; slots?: SlotRef[]; password?: string; timezone?: string; fbp?: string; fbc?: string; eventSourceUrl?: string }) =>
+  createIntent: (body: { planId: string; customerEmail: string; customerName: string; customerPhone: string; customerDocument: string; userId?: string; slots?: SlotRef[]; password?: string; timezone?: string; fbp?: string; fbc?: string; eventSourceUrl?: string; atribucion?: Partial<Record<"promo" | "utm_source" | "utm_medium" | "utm_campaign" | "utm_content", string>> }) =>
     apiPost<{
       intentId: string;
       reference: string;
@@ -326,6 +378,8 @@ export const checkoutApi = {
       modo: "direct" | "hosted";
       /** Llave para pagar o retomar este intento. Se guarda en el navegador. */
       accessKey: string;
+      /** Descuento aplicado por el servidor (null si no hubo). Montos en centavos. */
+      promocion: { label: string; discountInCents: number; listAmountInCents: number } | null;
     }>("/checkout/intents", body),
   /** Cómo se cobra y, en directo, lo que el paso de pago necesita. */
   pagoInfo: () => apiGet<InfoDePago>("/checkout/pago/info"),
@@ -744,6 +798,10 @@ export const adminApi = {
   updateCheckpoint: (id: string, body: any) => apiPatch<any>(`/admin/content/checkpoints/${id}`, body),
   deleteCheckpoint: (id: string) => apiPatch<any>(`/admin/content/checkpoints/${id}/delete`, {}),
   plans: () => apiGet<any[]>("/admin/plans"),
+  promos: () => apiGet<PromoAdmin[]>("/admin/promotions"),
+  crearPromo: (body: PromoInput) => apiPost<PromoAdmin>("/admin/promotions", body),
+  actualizarPromo: (id: string, body: PromoInput) => apiPatch<PromoAdmin>(`/admin/promotions/${id}`, body),
+  borrarPromo: (id: string) => apiDelete<{ ok: boolean }>(`/admin/promotions/${id}`),
   calendar: (from: string, to: string) =>
     apiGet<{
       teachers: Array<{ id: string; fullName: string }>;

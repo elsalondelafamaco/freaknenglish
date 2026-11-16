@@ -45,6 +45,7 @@ import { Route as AuthenticatedAdminSiteRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAdminScheduleHealthRouteImport } from './routes/_authenticated/admin.schedule-health'
 import { Route as AuthenticatedAdminScheduleRouteImport } from './routes/_authenticated/admin.schedule'
 import { Route as AuthenticatedAdminResourcesRouteImport } from './routes/_authenticated/admin.resources'
+import { Route as AuthenticatedAdminPromosRouteImport } from './routes/_authenticated/admin.promos'
 import { Route as AuthenticatedAdminPayrollRouteImport } from './routes/_authenticated/admin.payroll'
 import { Route as AuthenticatedAdminNotificationsRouteImport } from './routes/_authenticated/admin.notifications'
 import { Route as AuthenticatedAdminContentPromptRouteImport } from './routes/_authenticated/admin.content-prompt'
@@ -265,6 +266,12 @@ const AuthenticatedAdminResourcesRoute =
     path: '/resources',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminPromosRoute =
+  AuthenticatedAdminPromosRouteImport.update({
+    id: '/promos',
+    path: '/promos',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminPayrollRoute =
   AuthenticatedAdminPayrollRouteImport.update({
     id: '/payroll',
@@ -425,6 +432,7 @@ export interface FileRoutesByFullPath {
   '/admin/content-prompt': typeof AuthenticatedAdminContentPromptRoute
   '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
+  '/admin/promos': typeof AuthenticatedAdminPromosRoute
   '/admin/resources': typeof AuthenticatedAdminResourcesRoute
   '/admin/schedule': typeof AuthenticatedAdminScheduleRoute
   '/admin/schedule-health': typeof AuthenticatedAdminScheduleHealthRoute
@@ -482,6 +490,7 @@ export interface FileRoutesByTo {
   '/admin/content-prompt': typeof AuthenticatedAdminContentPromptRoute
   '/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/admin/payroll': typeof AuthenticatedAdminPayrollRoute
+  '/admin/promos': typeof AuthenticatedAdminPromosRoute
   '/admin/resources': typeof AuthenticatedAdminResourcesRoute
   '/admin/schedule': typeof AuthenticatedAdminScheduleRoute
   '/admin/schedule-health': typeof AuthenticatedAdminScheduleHealthRoute
@@ -543,6 +552,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/content-prompt': typeof AuthenticatedAdminContentPromptRoute
   '/_authenticated/admin/notifications': typeof AuthenticatedAdminNotificationsRoute
   '/_authenticated/admin/payroll': typeof AuthenticatedAdminPayrollRoute
+  '/_authenticated/admin/promos': typeof AuthenticatedAdminPromosRoute
   '/_authenticated/admin/resources': typeof AuthenticatedAdminResourcesRoute
   '/_authenticated/admin/schedule': typeof AuthenticatedAdminScheduleRoute
   '/_authenticated/admin/schedule-health': typeof AuthenticatedAdminScheduleHealthRoute
@@ -605,6 +615,7 @@ export interface FileRouteTypes {
     | '/admin/content-prompt'
     | '/admin/notifications'
     | '/admin/payroll'
+    | '/admin/promos'
     | '/admin/resources'
     | '/admin/schedule'
     | '/admin/schedule-health'
@@ -662,6 +673,7 @@ export interface FileRouteTypes {
     | '/admin/content-prompt'
     | '/admin/notifications'
     | '/admin/payroll'
+    | '/admin/promos'
     | '/admin/resources'
     | '/admin/schedule'
     | '/admin/schedule-health'
@@ -722,6 +734,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/content-prompt'
     | '/_authenticated/admin/notifications'
     | '/_authenticated/admin/payroll'
+    | '/_authenticated/admin/promos'
     | '/_authenticated/admin/resources'
     | '/_authenticated/admin/schedule'
     | '/_authenticated/admin/schedule-health'
@@ -1030,6 +1043,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminResourcesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/promos': {
+      id: '/_authenticated/admin/promos'
+      path: '/promos'
+      fullPath: '/admin/promos'
+      preLoaderRoute: typeof AuthenticatedAdminPromosRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/payroll': {
       id: '/_authenticated/admin/payroll'
       path: '/payroll'
@@ -1218,6 +1238,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminContentPromptRoute: typeof AuthenticatedAdminContentPromptRoute
   AuthenticatedAdminNotificationsRoute: typeof AuthenticatedAdminNotificationsRoute
   AuthenticatedAdminPayrollRoute: typeof AuthenticatedAdminPayrollRoute
+  AuthenticatedAdminPromosRoute: typeof AuthenticatedAdminPromosRoute
   AuthenticatedAdminResourcesRoute: typeof AuthenticatedAdminResourcesRoute
   AuthenticatedAdminScheduleRoute: typeof AuthenticatedAdminScheduleRoute
   AuthenticatedAdminScheduleHealthRoute: typeof AuthenticatedAdminScheduleHealthRoute
@@ -1237,6 +1258,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminContentPromptRoute: AuthenticatedAdminContentPromptRoute,
   AuthenticatedAdminNotificationsRoute: AuthenticatedAdminNotificationsRoute,
   AuthenticatedAdminPayrollRoute: AuthenticatedAdminPayrollRoute,
+  AuthenticatedAdminPromosRoute: AuthenticatedAdminPromosRoute,
   AuthenticatedAdminResourcesRoute: AuthenticatedAdminResourcesRoute,
   AuthenticatedAdminScheduleRoute: AuthenticatedAdminScheduleRoute,
   AuthenticatedAdminScheduleHealthRoute: AuthenticatedAdminScheduleHealthRoute,

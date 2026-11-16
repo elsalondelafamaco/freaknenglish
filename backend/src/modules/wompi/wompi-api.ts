@@ -69,7 +69,6 @@ export function ambienteDeLlave(llave: string): 'test' | 'prod' | null {
  * ambiente que `WOMPI_ENV`. Devuelve el motivo cuando no, para el log.
  */
 export function configuracionDirecta(): { ok: true } | { ok: false; motivo: string } {
-  if (env.WOMPI_CHECKOUT !== 'direct') return { ok: false, motivo: 'WOMPI_CHECKOUT no es "direct"' }
   const llaves = {
     WOMPI_PUBLIC_KEY: env.WOMPI_PUBLIC_KEY,
     WOMPI_PRIVATE_KEY: env.WOMPI_PRIVATE_KEY,
@@ -124,10 +123,11 @@ export class WompiApi implements OnModuleInit {
   onModuleInit() {
     const c = configuracionDirecta()
     if (c.ok) this.log.log(`Cobro directo con Wompi ENCENDIDO (${env.WOMPI_ENV})`)
-    else if (env.WOMPI_CHECKOUT === 'direct') {
-      // Se pidió directo y no se puede: el sitio sigue con la pasarela, que no
-      // necesita la llave privada. Se grita para que se note en el log.
-      this.log.error(`Cobro directo PEDIDO pero apagado: ${c.motivo}. Se usa la pasarela de Wompi.`)
+    else {
+      // El cobro es directo siempre; si faltan llaves o están mezcladas, el
+      // sitio sigue con la pasarela (que no necesita la llave privada) en vez
+      // de romper el pago. Se grita para que se note en el log.
+      this.log.error(`Cobro directo apagado: ${c.motivo}. Se usa la pasarela de Wompi.`)
     }
   }
 

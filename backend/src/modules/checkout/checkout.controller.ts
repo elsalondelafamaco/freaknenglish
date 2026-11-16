@@ -2,13 +2,22 @@ import { Body, Controller, Get, NotFoundException, Param, Post, Query, Req } fro
 import type { Request } from 'express'
 import { ApiTags } from '@nestjs/swagger'
 import { SkipThrottle, Throttle } from '@nestjs/throttler'
-import { IsArray, IsEmail, IsIn, IsInt, IsObject, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator'
+import { IsArray, IsEmail, IsIn, IsInt, IsObject, IsOptional, IsString, Max, MaxLength, Min, MinLength, ValidateNested } from 'class-validator'
 import { Type } from 'class-transformer'
 import { CheckoutService } from './checkout.service'
 import { WompiService } from '../wompi/wompi.service'
 import { PagoDirectoService } from './pago-directo.service'
 import { MEDIOS_SOPORTADOS, MedioDePago } from '../wompi/wompi-api'
 import { PrismaService } from '../../prisma/prisma.service'
+
+/** Con qué enlace llegó quien compra (la guarda el navegador al aterrizar). */
+class AtribucionDto {
+  @IsOptional() @IsString() @MaxLength(100) promo?: string
+  @IsOptional() @IsString() @MaxLength(100) utm_source?: string
+  @IsOptional() @IsString() @MaxLength(100) utm_medium?: string
+  @IsOptional() @IsString() @MaxLength(100) utm_campaign?: string
+  @IsOptional() @IsString() @MaxLength(100) utm_content?: string
+}
 
 class CreateIntentDto {
   @IsString() planId!: string
@@ -26,6 +35,8 @@ class CreateIntentDto {
   @IsString() @IsOptional() fbc?: string
   /** Página desde la que se inició el pago. */
   @IsString() @IsOptional() eventSourceUrl?: string
+  /** Promo/UTM con los que llegó: el servidor decide si hay descuento, nunca el monto del cliente. */
+  @IsOptional() @ValidateNested() @Type(() => AtribucionDto) atribucion?: AtribucionDto
 }
 
 /** La llave de acceso al pago: la devuelve `/checkout/intents` y la guarda el navegador. */

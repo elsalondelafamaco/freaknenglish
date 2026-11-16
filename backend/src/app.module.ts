@@ -25,6 +25,7 @@ import { HealthModule } from './modules/health/health.module'
 import { JobsModule } from './modules/jobs/jobs.module'
 import { SchedulingModule } from './modules/scheduling/scheduling.module'
 import { ExchangeModule } from './modules/exchange/exchange.module'
+import { PromotionsModule } from './modules/promotions/promotions.module'
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { ExchangeModule } from './modules/exchange/exchange.module'
     JobsModule,
     SchedulingModule,
     ExchangeModule,
+    PromotionsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }, BootstrapService],
 })

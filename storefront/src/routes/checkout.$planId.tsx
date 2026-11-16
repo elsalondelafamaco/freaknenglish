@@ -8,10 +8,14 @@ import { Field, inputClass, ErrorBox } from "@/components/site/AuthShell";
 import { ActivePlanScreen, useActivePlanGate } from "@/components/site/ActivePlanGate";
 import { LegalLinks } from "@/components/site/LegalLinks";
 import { PhoneInput, validatePhone } from "@/components/app/PhoneInput";
-import { checkoutApi, plansApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
+import { checkoutApi, plansApi, scheduleApi, type InfoDePago, type SlotRef } from "@/lib/api/endpoints";
 import { useZonaDelNavegador } from "@/lib/domain/zona-navegador";
 import { slotTimeRange } from "@/components/schedule/SchedulePickerGrid";
 import { copAcobrar } from "@/lib/domain/plans";
+import { usePromos } from "@/lib/domain/use-promos";
+import { mejorPromo } from "@/lib/domain/promos";
+import { leerAtribucion } from "@/lib/atribucion";
+import { preciosParaMostrar } from "@/components/site/PromoBadge";
 import { cookiesDeMeta, useRastrearUnaVez } from "@/lib/meta-pixel";
 import { useRenovacion } from "@/lib/domain/renovacion";
 import { ZONA_BOGOTA, franjaEnZona, zonaDe } from "@/lib/domain/zona-horaria";
@@ -31,6 +35,9 @@ export const Route = createFileRoute("/checkout/$planId")({
   }),
   component: CheckoutPage,
 });
+
+type InfoDirecta = Extract<InfoDePago, { modo: "direct" }>;
+const esDirecto = (i: InfoDePago | undefined | null): i is InfoDirecta => i?.modo === "direct";
 
 const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const decodeSlots = (raw: string | undefined): SlotRef[] =>
@@ -92,7 +99,7 @@ function CheckoutPage() {
   }, [planId, pagoRaw, nav]);
 
   const infoQ = useQuery({ queryKey: ["checkout", "pago-info"], queryFn: () => checkoutApi.pagoInfo(), staleTime: 5 * 60_000 });
-  const directo = infoQ.data?.modo === "direct" ? infoQ.data : null;
+  const directo = esDirecto(infoQ.data) ? infoQ.data : null;
   const qc = useQueryClient();
 
   useEffect(() => {
@@ -117,6 +124,12 @@ function CheckoutPage() {
     () => (plansQ.data?.plans ?? []).find((p: any) => p.id === planId),
     [plansQ.data, planId],
   );
+
+  // La promo que le corresponde, con TODAS (también las que no se anuncian en
+  // precios): lo que se muestra en el resumen tiene que ser lo que se cobra. El
+  // servidor decide igual con su propia copia de esta regla.
+  const { promos, cargado: promosCargadas } = usePromos();
+  const promoAplicada = plan ? mejorPromo(promos, plan, trm, esRenovacion) : null;
 
   const loggedIn = !!user;
   const zonaNavegador = useZonaDelNavegador();
@@ -149,11 +162,11 @@ function CheckoutPage() {
       content_ids: [planId],
       content_name: plan?.name,
       num_items: 1,
-      value: plan ? copAcobrar(plan, trm) : undefined,
+      value: plan ? (promoAplicada ? promoAplicada.precio.finalCop : copAcobrar(plan, trm)) : undefined,
       currency: "COP",
       content_category: esRenovacion ? "renovacion" : "plan_nuevo",
     }),
-    !!plan && !gate.blocked && !cargandoRenovacion && (esRenovacion || selSlots.length > 0),
+    !!plan && !gate.blocked && !cargandoRenovacion && promosCargadas && (esRenovacion || selSlots.length > 0),
   );
 
   // Plan activo lejos de renovación: no puede pagar otro plan.
@@ -174,7 +187,8 @@ function CheckoutPage() {
     );
   }
 
-  const cop = copAcobrar(plan, trm);
+  const cop = promoAplicada ? promoAplicada.precio.finalCop : copAcobrar(plan, trm);
+  const mostrar = promoAplicada ? preciosParaMostrar(promoAplicada.precio) : null;
 
   async function submitForm(e: React.FormEvent) {
     e.preventDefault();
@@ -215,6 +229,8 @@ function CheckoutPage() {
         // la confirme: las cookies del píxel y la página desde la que pagó.
         ...cookiesDeMeta(),
         eventSourceUrl: window.location.href,
+        // Con qué enlace llegó: el servidor decide si le toca una promoción.
+        atribucion: leerAtribucion() ?? undefined,
       });
       // Cobro en el sitio: se queda aquí y muestra el paso de pago. Si el
       // modo directo no está (o no cargó su configuración), la pasarela.
@@ -375,10 +391,38 @@ function CheckoutPage() {
             <p className="text-xs font-medium uppercase tracking-wider text-brand-ink/60">Tu plan</p>
             <h2 className="mt-1 text-xl font-bold text-brand-ink">{plan.name}</h2>
             <div className="mt-3 flex items-baseline gap-1">
-              <span className="text-3xl font-bold text-brand-ink">${plan.priceUsd ?? "—"}</span>
-              <span className="text-sm text-brand-ink/60">USD / mes</span>
+              {promoAplicada && mostrar?.enUsd ? (
+                <>
+                  <span className="text-3xl font-bold text-brand-ink">{mostrar.final}</span>
+                  <span className="text-sm text-brand-ink/60">USD / mes</span>
+                  <span className="ml-1 text-sm text-brand-ink/50 line-through">{mostrar.tachado}</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-3xl font-bold text-brand-ink">${plan.priceUsd ?? "—"}</span>
+                  <span className="text-sm text-brand-ink/60">USD / mes</span>
+                </>
+              )}
             </div>
-            <p className="mt-1 text-xs text-brand-ink/60">Se cobra {copFmt.format(cop)} (TRM en vivo).</p>
+            {promoAplicada ? (
+              <dl className="mt-3 space-y-1 rounded-2xl bg-white/70 p-3 text-sm text-brand-ink/85">
+                <div className="flex justify-between gap-3">
+                  <dt>Precio</dt>
+                  <dd className="line-through text-brand-ink/55">{copFmt.format(promoAplicada.precio.listaCop)}</dd>
+                </div>
+                <div className="flex justify-between gap-3 font-semibold text-brand-success">
+                  <dt>{promoAplicada.promo.checkoutLabel?.trim() || "Descuento"}</dt>
+                  <dd>−{copFmt.format(promoAplicada.precio.descuentoCop)}</dd>
+                </div>
+                <div className="flex justify-between gap-3 border-t border-brand-ink/10 pt-1 font-bold text-brand-ink">
+                  <dt>Se cobra</dt>
+                  <dd>{copFmt.format(cop)}</dd>
+                </div>
+                <p className="pt-0.5 text-xs font-normal text-brand-ink/55">TRM en vivo.</p>
+              </dl>
+            ) : (
+              <p className="mt-1 text-xs text-brand-ink/60">Se cobra {copFmt.format(cop)} (TRM en vivo).</p>
+            )}
             {(esRenovacion ? slotsPropios : selSlots).length > 0 ? (
               <div className="mt-4 rounded-2xl bg-white/70 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wider text-brand-ink/60">

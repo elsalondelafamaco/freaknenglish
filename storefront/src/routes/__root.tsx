@@ -16,6 +16,7 @@ import { AuthProvider } from "../lib/auth/AuthProvider";
 import { LanguageProvider } from "../lib/i18n";
 import { registerPwa } from "../lib/pwa/register";
 import { rastrearPagina } from "../lib/meta-pixel";
+import { capturarAtribucion } from "../lib/atribucion";
 import {
   pareceTrozoFaltante,
   recuperarSiEsTrozoFaltante,
@@ -188,6 +189,9 @@ function RootComponent() {
   useEffect(() => {
     vigilarTrozosFaltantes();
     void registerPwa();
+    // Antes de cualquier otra cosa: si llegó con ?promo= o utm_*, se guarda para
+    // que el sitio y el checkout apliquen la promoción de esa campaña.
+    capturarAtribucion();
   }, []);
 
   // Una visita por cada página pública que se ve. En una app de una sola página

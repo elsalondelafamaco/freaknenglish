@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBlocker } from "@tanstack/react-router";
-import { CreditCard, Landmark, Loader2, Smartphone, ShieldCheck, Copy, ExternalLink, AlertTriangle } from "lucide-react";
+import { Loader2, ShieldCheck, Copy, ExternalLink, AlertTriangle } from "lucide-react";
 import { Field, inputClass, ErrorBox } from "@/components/site/AuthShell";
 import { ApiError } from "@/lib/api/client";
-import { checkoutApi, type DatosDePago, type EstadoDePago, type InfoDePago } from "@/lib/api/endpoints";
+import {
+  checkoutApi,
+  type DatosDePago,
+  type EstadoDePago,
+  type InfoDePago,
+} from "@/lib/api/endpoints";
 import {
   NOMBRE_DEL_MEDIO,
   type MedioDePago,
@@ -45,20 +50,62 @@ type Fase =
 
 const FASES_DE_ESPERA = new Set<Fase["tipo"]>(["esperando", "banco", "tresDs", "otp"]);
 
-const ICONO: Record<MedioDePago, typeof CreditCard> = {
-  CARD: CreditCard,
-  NEQUI: Smartphone,
-  PSE: Landmark,
-  BANCOLOMBIA_TRANSFER: Landmark,
-  DAVIPLATA: Smartphone,
+/** Logos de los medios (los mismos de jump). La tarjeta lleva un ícono neutro: las marcas varían. */
+const LOGO: Partial<Record<MedioDePago, string>> = {
+  NEQUI: "/img/pay/nequi.webp",
+  PSE: "/img/pay/pse.webp",
+  BANCOLOMBIA_TRANSFER: "/img/pay/bancolombia.webp",
+  DAVIPLATA: "/img/pay/daviplata.webp",
 };
 
-const copFmt = new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 });
+const DETALLE: Record<MedioDePago, string> = {
+  CARD: "Visa, Mastercard, Amex, Diners",
+  NEQUI: "Aprueba desde tu app",
+  PSE: "Débito desde cualquier banco",
+  BANCOLOMBIA_TRANSFER: "Desde tu cuenta Bancolombia",
+  DAVIPLATA: "Confirma con un código por SMS",
+};
+
+function LogoDelMedio({ medio }: { medio: MedioDePago }) {
+  const src = LOGO[medio];
+  if (!src) {
+    return (
+      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-brand-line bg-brand-cream/60 text-brand-ink">
+        <svg
+          aria-hidden="true"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="2" y="5" width="20" height="14" rx="2.5" />
+          <path d="M2 10h20M6 15h4" />
+        </svg>
+      </span>
+    );
+  }
+  return (
+    <span className="flex size-11 shrink-0 overflow-hidden rounded-xl border border-brand-line bg-white">
+      <img src={src} width={44} height={44} alt="" className="size-full object-cover" />
+    </span>
+  );
+}
+
+const copFmt = new Intl.NumberFormat("es-CO", {
+  style: "currency",
+  currency: "COP",
+  maximumFractionDigits: 0,
+});
 
 /** El HTML del 3DS llega a veces con las entidades escapadas. */
 function htmlDelReto(html: string): string {
   try {
-    const texto = new DOMParser().parseFromString(html, "text/html").documentElement.textContent ?? "";
+    const texto =
+      new DOMParser().parseFromString(html, "text/html").documentElement.textContent ?? "";
     return /<\w+/.test(texto) ? texto : html;
   } catch {
     return html;
@@ -85,14 +132,29 @@ export function PasoDePago({
   const [aviso, setAviso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
-  const [medio, setMedio] = useState<MedioDePago>(info.medios[0] ?? "CARD");
+  // Sin elegir: se muestra la lista de medios, como en jump. Al elegir, su formulario.
+  const [medio, setMedio] = useState<MedioDePago | null>(null);
   const [acepta, setAcepta] = useState(false);
 
   // Formularios por medio.
-  const [tarjeta, setTarjeta] = useState({ numero: "", titular: datos.nombre, vence: "", cvc: "", cuotas: "1" });
+  const [tarjeta, setTarjeta] = useState({
+    numero: "",
+    titular: datos.nombre,
+    vence: "",
+    cvc: "",
+    cuotas: "1",
+  });
   const [telefono, setTelefono] = useState(celularColombiano(datos.telefono) ?? "");
-  const [pse, setPse] = useState({ banco: "", tipoPersona: "0", tipoDocumento: "CC", documento: soloDigitos(datos.documento) });
-  const [davi, setDavi] = useState({ tipoDocumento: "CC", documento: soloDigitos(datos.documento) });
+  const [pse, setPse] = useState({
+    banco: "",
+    tipoPersona: "0",
+    tipoDocumento: "CC",
+    documento: soloDigitos(datos.documento),
+  });
+  const [davi, setDavi] = useState({
+    tipoDocumento: "CC",
+    documento: soloDigitos(datos.documento),
+  });
   const [codigo, setCodigo] = useState("");
   const [otpTexto, setOtpTexto] = useState("Enviando el código al celular de tu Daviplata…");
 
@@ -140,7 +202,8 @@ export function PasoDePago({
         retoVisto.current = true;
         return setFase({ tipo: "tresDs", html: htmlDelReto(e.tresDs) });
       }
-      if (e.otp && !otpHecho.current) return setFase((f) => (f.tipo === "otp" ? f : { tipo: "otp", otp: e.otp! }));
+      if (e.otp && !otpHecho.current)
+        return setFase((f) => (f.tipo === "otp" ? f : { tipo: "otp", otp: e.otp! }));
       if (e.irAlBanco) {
         // Recién pagó aquí: se va al banco solo. Si es una vuelta (ya fue y
         // regresó), se le ofrece el botón en vez de mandarlo otra vez.
@@ -215,7 +278,9 @@ export function PasoDePago({
     // Aprobado: la navegación a la confirmación la hace esta misma página.
     shouldBlockFn: () =>
       !aprobado.current &&
-      !window.confirm("Tu pago está en curso. Si sales ahora puede que no veas la confirmación. ¿Salir igual?"),
+      !window.confirm(
+        "Tu pago está en curso. Si sales ahora puede que no veas la confirmación. ¿Salir igual?",
+      ),
     enableBeforeUnload: () => !yendoAlBanco.current && !aprobado.current,
     disabled: !esperando,
   });
@@ -270,10 +335,12 @@ export function PasoDePago({
 
   /** Arma lo que pide cada medio. Devuelve un texto de error si falta algo. */
   async function armar(): Promise<DatosDePago | string> {
+    if (!medio) return "Elige un medio de pago.";
     switch (medio) {
       case "CARD": {
         if (!luhnValido(tarjeta.numero)) return "Revisa el número de la tarjeta.";
-        if (tarjeta.titular.trim().length < 3) return "Escribe el nombre como aparece en la tarjeta.";
+        if (tarjeta.titular.trim().length < 3)
+          return "Escribe el nombre como aparece en la tarjeta.";
         const vence = vencimientoValido(tarjeta.vence);
         if (!vence) return "Revisa la fecha de vencimiento (MM/AA).";
         if (!/^\d{3,4}$/.test(tarjeta.cvc)) return "Revisa el código de seguridad (CVC).";
@@ -328,7 +395,8 @@ export function PasoDePago({
     e.preventDefault();
     if (enviando) return;
     setError(null);
-    if (!acepta) return setError("Para pagar, acepta el reglamento de Wompi y el tratamiento de tus datos.");
+    if (!acepta)
+      return setError("Para pagar, acepta el reglamento de Wompi y el tratamiento de tus datos.");
     setEnviando(true);
     try {
       const cuerpo = await armar();
@@ -355,7 +423,10 @@ export function PasoDePago({
         // Se pregunta antes de dejarlo reintentar, para no cobrar dos veces.
         try {
           const r = await checkoutApi.estadoDePago(pago.reference, pago.llave);
-          if (r.estado === "SIN_PAGO" || (r.estado !== "PENDING" && r.estado !== "APPROVED" && r.estado !== "REVISION")) {
+          if (
+            r.estado === "SIN_PAGO" ||
+            (r.estado !== "PENDING" && r.estado !== "APPROVED" && r.estado !== "REVISION")
+          ) {
             pagueAqui.current = false;
             setError("No pudimos conectar con el pago. Revisa tu conexión e intenta de nuevo.");
             setEstado(r);
@@ -372,20 +443,26 @@ export function PasoDePago({
       }
     } catch (err) {
       pagueAqui.current = false;
-      setError(err instanceof ErrorDeTarjeta ? err.message : "No pudimos procesar el pago. Intenta de nuevo.");
+      setError(
+        err instanceof ErrorDeTarjeta
+          ? err.message
+          : "No pudimos procesar el pago. Intenta de nuevo.",
+      );
     } finally {
       setEnviando(false);
     }
   }
 
   const monto = estado ? copFmt.format(estado.amountInCents / 100) : null;
-  const nombreMedio = estado?.metodo ? (NOMBRE_DEL_MEDIO[estado.metodo as MedioDePago] ?? null) : null;
+  const nombreMedio = estado?.metodo
+    ? (NOMBRE_DEL_MEDIO[estado.metodo as MedioDePago] ?? null)
+    : null;
 
   const bannerEmbebido = embebido ? (
     <div className="rounded-2xl border border-brand-line bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink">
       <p>
-        Estás en el navegador de {embebido}. Si el pago no avanza, ábrelo en el navegador de tu celular: sigues con
-        el mismo pago, sin pagar dos veces.
+        Estás en el navegador de {embebido}. Si el pago no avanza, ábrelo en el navegador de tu
+        celular: sigues con el mismo pago, sin pagar dos veces.
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
         <button
@@ -465,7 +542,8 @@ export function PasoDePago({
         <div className="rounded-2xl border border-brand-line bg-brand-yellow-soft px-4 py-4 text-sm text-brand-ink">
           <p className="font-semibold">Tu pago sigue en verificación.</p>
           <p className="mt-1 text-brand-ink/75">
-            Si se aprueba, te llega un correo y tu plan se activa solo. No vuelvas a pagar mientras tanto.
+            Si se aprueba, te llega un correo y tu plan se activa solo. No vuelvas a pagar mientras
+            tanto.
           </p>
         </div>
         <button
@@ -495,10 +573,16 @@ export function PasoDePago({
     return (
       <div className="flex flex-col gap-4">
         {bannerEmbebido}
-        {aviso ? <p className="rounded-xl bg-brand-cream/60 px-3 py-2 text-sm text-brand-ink/80">{aviso}</p> : null}
+        {aviso ? (
+          <p className="rounded-xl bg-brand-cream/60 px-3 py-2 text-sm text-brand-ink/80">
+            {aviso}
+          </p>
+        ) : null}
         {fase.tipo === "tresDs" ? (
           <>
-            <p className="text-sm text-brand-ink/75">Tu banco pide confirmar que eres tú. Completa la verificación:</p>
+            <p className="text-sm text-brand-ink/75">
+              Tu banco pide confirmar que eres tú. Completa la verificación:
+            </p>
             <iframe
               title="Verificación 3-D Secure de tu banco"
               srcDoc={fase.html}
@@ -527,14 +611,19 @@ export function PasoDePago({
             >
               {enviando ? "Confirmando…" : "Confirmar pago"}
             </button>
-            <button type="button" onClick={() => void enviarOtp()} className="text-sm font-semibold text-brand-ink/70 underline">
+            <button
+              type="button"
+              onClick={() => void enviarOtp()}
+              className="text-sm font-semibold text-brand-ink/70 underline"
+            >
               Reenviar código
             </button>
           </div>
         ) : fase.tipo === "banco" ? (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-brand-ink/75">
-              Termina el pago en la página de tu banco. Al terminar vuelves aquí solo; si no, regresa a esta pestaña.
+              Termina el pago en la página de tu banco. Al terminar vuelves aquí solo; si no,
+              regresa a esta pestaña.
             </p>
             <a
               href={fase.url}
@@ -553,14 +642,16 @@ export function PasoDePago({
               <>
                 <p className="font-semibold text-brand-ink">Abre Nequi y acepta el pago</p>
                 <p className="text-sm text-brand-ink/70">
-                  Te llegó una notificación por {monto}. Apruébala en la app y vuelve aquí: lo confirmamos solos.
+                  Te llegó una notificación por {monto}. Apruébala en la app y vuelve aquí: lo
+                  confirmamos solos.
                 </p>
               </>
             ) : estado?.metodo === "PSE" || estado?.metodo === "BANCOLOMBIA_TRANSFER" ? (
               <p className="text-sm text-brand-ink/70">Conectando con tu banco…</p>
             ) : (
               <p className="text-sm text-brand-ink/70">
-                Confirmando tu pago{nombreMedio ? ` con ${nombreMedio}` : ""}… No cierres esta página.
+                Confirmando tu pago{nombreMedio ? ` con ${nombreMedio}` : ""}… No cierres esta
+                página.
               </p>
             )}
           </div>
@@ -590,29 +681,67 @@ export function PasoDePago({
         </div>
       ) : null}
 
-      <div role="radiogroup" aria-label="Medio de pago" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {info.medios.map((m) => {
-          const Icono = ICONO[m];
-          const activo = m === medio;
-          return (
-            <button
-              key={m}
-              type="button"
-              role="radio"
-              aria-checked={activo}
-              onClick={() => {
-                setMedio(m);
-                setError(null);
-              }}
-              className={`flex h-14 items-center justify-center gap-2 rounded-2xl border text-sm font-semibold transition ${
-                activo ? "border-brand-ink bg-brand-ink text-white" : "border-brand-line bg-white text-brand-ink hover:bg-brand-cream/40"
-              }`}
-            >
-              <Icono className="size-4" /> {NOMBRE_DEL_MEDIO[m]}
-            </button>
-          );
-        })}
-      </div>
+      {medio === null ? (
+        <div role="radiogroup" aria-label="Medio de pago" className="flex flex-col gap-2.5">
+          {[...info.medios]
+            // El más usado va primero.
+            .sort((a, b) => Number(b === "NEQUI") - Number(a === "NEQUI"))
+            .map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={false}
+                onClick={() => {
+                  setMedio(m);
+                  setError(null);
+                }}
+                className={`flex w-full items-center justify-between gap-3 rounded-2xl border-2 bg-white px-4 text-left transition hover:border-brand-ink/40 ${
+                  m === "NEQUI" ? "min-h-20 border-brand-ink/25" : "min-h-[68px] border-brand-line"
+                }`}
+              >
+                <span className="flex items-center gap-3.5">
+                  <LogoDelMedio medio={m} />
+                  <span className="flex flex-col">
+                    <span className="font-semibold text-brand-ink">
+                      {NOMBRE_DEL_MEDIO[m]}
+                      {m === "NEQUI" ? (
+                        <span className="ml-2 rounded-full bg-brand-ink px-2 py-0.5 align-[2px] text-[10px] font-extrabold uppercase tracking-wider text-white">
+                          Más usado
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="text-[13px] text-brand-ink/60">{DETALLE[m]}</span>
+                  </span>
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="size-6 shrink-0 rounded-full border-2 border-brand-line"
+                />
+              </button>
+            ))}
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border-2 border-brand-ink bg-white px-4 py-3">
+          <span className="flex items-center gap-3.5">
+            <LogoDelMedio medio={medio} />
+            <span className="flex flex-col">
+              <span className="font-semibold text-brand-ink">{NOMBRE_DEL_MEDIO[medio]}</span>
+              <span className="text-[13px] text-brand-ink/60">{DETALLE[medio]}</span>
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setMedio(null);
+              setError(null);
+            }}
+            className="rounded-full border border-brand-ink/20 px-3 py-1.5 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40"
+          >
+            Cambiar
+          </button>
+        </div>
+      )}
 
       {medio === "CARD" ? (
         <>
@@ -645,7 +774,9 @@ export function PasoDePago({
                 autoComplete="cc-exp"
                 placeholder="MM/AA"
                 value={tarjeta.vence}
-                onChange={(e) => setTarjeta({ ...tarjeta, vence: formatoVencimiento(e.target.value) })}
+                onChange={(e) =>
+                  setTarjeta({ ...tarjeta, vence: formatoVencimiento(e.target.value) })
+                }
               />
             </Field>
             <Field label="CVC" htmlFor="card-cvc">
@@ -656,7 +787,9 @@ export function PasoDePago({
                 autoComplete="cc-csc"
                 placeholder="123"
                 value={tarjeta.cvc}
-                onChange={(e) => setTarjeta({ ...tarjeta, cvc: soloDigitos(e.target.value).slice(0, 4) })}
+                onChange={(e) =>
+                  setTarjeta({ ...tarjeta, cvc: soloDigitos(e.target.value).slice(0, 4) })
+                }
               />
             </Field>
             <Field label="Cuotas" htmlFor="card-inst">
@@ -681,7 +814,11 @@ export function PasoDePago({
         <Field
           label={medio === "NEQUI" ? "Celular de tu Nequi" : "Celular"}
           htmlFor="pay-phone"
-          hint={medio === "NEQUI" ? "Te llega una notificación a la app para aprobar el pago." : undefined}
+          hint={
+            medio === "NEQUI"
+              ? "Te llega una notificación a la app para aprobar el pago."
+              : undefined
+          }
         >
           <input
             id="pay-phone"
@@ -744,7 +881,12 @@ export function PasoDePago({
                 className={inputClass}
                 inputMode="numeric"
                 value={pse.documento}
-                onChange={(e) => setPse({ ...pse, documento: e.target.value.replace(/[^0-9A-Za-z-]/g, "").slice(0, 20) })}
+                onChange={(e) =>
+                  setPse({
+                    ...pse,
+                    documento: e.target.value.replace(/[^0-9A-Za-z-]/g, "").slice(0, 20),
+                  })
+                }
               />
             </Field>
           </div>
@@ -753,7 +895,8 @@ export function PasoDePago({
 
       {medio === "BANCOLOMBIA_TRANSFER" ? (
         <p className="rounded-xl bg-brand-cream/50 px-3 py-2 text-sm text-brand-ink/75">
-          Te llevamos a Bancolombia para que apruebes el pago con tu usuario de la app o la sucursal virtual.
+          Te llevamos a Bancolombia para que apruebes el pago con tu usuario de la app o la sucursal
+          virtual.
         </p>
       ) : null}
 
@@ -774,60 +917,82 @@ export function PasoDePago({
             </select>
           </Field>
           <div className="col-span-2">
-            <Field label="Número" htmlFor="dp-doc" hint="El de tu Daviplata. Te enviamos un código por SMS.">
+            <Field
+              label="Número"
+              htmlFor="dp-doc"
+              hint="El de tu Daviplata. Te enviamos un código por SMS."
+            >
               <input
                 id="dp-doc"
                 className={inputClass}
                 inputMode="numeric"
                 value={davi.documento}
-                onChange={(e) => setDavi({ ...davi, documento: e.target.value.replace(/[^0-9A-Za-z-]/g, "").slice(0, 20) })}
+                onChange={(e) =>
+                  setDavi({
+                    ...davi,
+                    documento: e.target.value.replace(/[^0-9A-Za-z-]/g, "").slice(0, 20),
+                  })
+                }
               />
             </Field>
           </div>
         </div>
       ) : null}
 
-      <label className="flex items-start gap-2 text-sm text-brand-ink/80">
-        <input
-          type="checkbox"
-          className="mt-1 size-4 accent-[currentColor]"
-          checked={acepta}
-          onChange={(e) => setAcepta(e.target.checked)}
-        />
-        <span>
-          Acepto el{" "}
-          <a href={info.terminosUrl} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
-            reglamento de Wompi
-          </a>{" "}
-          y autorizo el{" "}
-          <a href={info.datosUrl} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
-            tratamiento de mis datos personales
-          </a>
-          .
-        </span>
-      </label>
+      {medio ? (
+        <>
+          <label className="flex items-start gap-2 text-sm text-brand-ink/80">
+            <input
+              type="checkbox"
+              className="mt-1 size-4 accent-[currentColor]"
+              checked={acepta}
+              onChange={(e) => setAcepta(e.target.checked)}
+            />
+            <span>
+              Acepto el{" "}
+              <a
+                href={info.terminosUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold underline"
+              >
+                reglamento de Wompi
+              </a>{" "}
+              y autorizo el{" "}
+              <a
+                href={info.datosUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold underline"
+              >
+                tratamiento de mis datos personales
+              </a>
+              .
+            </span>
+          </label>
 
-      <ErrorBox>{error}</ErrorBox>
-      <button
-        type="submit"
-        disabled={enviando}
-        className="inline-flex h-12 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white transition hover:bg-brand-ink-soft disabled:opacity-60"
-      >
-        {enviando
-          ? "Procesando…"
-          : medio === "PSE" || medio === "BANCOLOMBIA_TRANSFER"
-            ? "Ir a mi banco y pagar"
-            : medio === "NEQUI"
-              ? "Enviar solicitud a Nequi"
-              : medio === "DAVIPLATA"
-                ? "Enviarme el código"
-                : `Pagar${monto ? ` ${monto}` : ""}`}
-      </button>
+          <ErrorBox>{error}</ErrorBox>
+          <button
+            type="submit"
+            disabled={enviando}
+            className="inline-flex h-12 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white transition hover:bg-brand-ink-soft disabled:opacity-60"
+          >
+            {enviando
+              ? "Procesando…"
+              : medio === "PSE" || medio === "BANCOLOMBIA_TRANSFER"
+                ? "Ir a mi banco y pagar"
+                : medio === "NEQUI"
+                  ? "Enviar solicitud a Nequi"
+                  : medio === "DAVIPLATA"
+                    ? "Enviarme el código"
+                    : `Pagar${monto ? ` ${monto}` : ""}`}
+          </button>
+        </>
+      ) : null}
       <p className="flex items-center justify-center gap-1.5 text-xs text-brand-ink/55">
-        <ShieldCheck className="size-3.5" /> Pago procesado por Wompi (Bancolombia). Los datos de tu tarjeta no pasan
-        por nuestros servidores.
+        <ShieldCheck className="size-3.5" /> Pago procesado por Wompi (Bancolombia). Los datos de tu
+        tarjeta no pasan por nuestros servidores.
       </p>
     </form>
   );
 }
-

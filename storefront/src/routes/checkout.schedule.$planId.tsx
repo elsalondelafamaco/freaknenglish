@@ -12,6 +12,8 @@ import { useRenovacion } from "@/lib/domain/renovacion";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useZonaDelNavegador } from "@/lib/domain/zona-navegador";
 import { copAcobrar } from "@/lib/domain/plans";
+import { usePromos } from "@/lib/domain/use-promos";
+import { mejorPromo } from "@/lib/domain/promos";
 import { useRastrearUnaVez } from "@/lib/meta-pixel";
 import { SugerenciasDeHorario } from "@/components/schedule/SugerenciasDeHorario";
 
@@ -80,6 +82,10 @@ function SchedulePicker() {
     () => (plansQ.data?.plans ?? []).find((p: any) => p.id === planId),
     [plansQ.data, planId],
   );
+  // Aquí siempre es una compra nueva (quien renueva se va derecho a pagar).
+  const { promos, cargado: promosCargadas } = usePromos();
+  const trmPlan = plansQ.data?.trm?.valueCop ?? 0;
+  const promoAplicada = plan ? mejorPromo(promos, plan, trmPlan, false) : null;
   const cfg = configQ.data;
   const need = plan?.daysPerWeek ?? 0;
 
@@ -125,10 +131,10 @@ function SchedulePicker() {
       content_type: "product",
       content_ids: [planId],
       content_name: plan?.name,
-      value: plan ? copAcobrar(plan, plansQ.data?.trm?.valueCop ?? 0) : undefined,
+      value: plan ? (promoAplicada ? promoAplicada.precio.finalCop : copAcobrar(plan, trmPlan)) : undefined,
       currency: "COP",
     }),
-    !!plan && !gate.blocked && !cargandoRenovacion && !esRenovacion,
+    !!plan && !gate.blocked && !cargandoRenovacion && !esRenovacion && promosCargadas,
   );
 
   // Plan activo lejos de renovación: no puede comprar otro plan — se avisa

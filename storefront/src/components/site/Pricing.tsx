@@ -5,6 +5,9 @@ import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { PLANS, copAcobrar, formatCop } from "@/lib/domain/plans";
 import { plansApi } from "@/lib/api/endpoints";
+import { usePromos } from "@/lib/domain/use-promos";
+import { mejorPromo, type PromoPublica } from "@/lib/domain/promos";
+import { PromoBadge, preciosParaMostrar } from "./PromoBadge";
 import { Reveal } from "./anim";
 import { useRastrearAlVer } from "@/lib/meta-pixel";
 
@@ -68,6 +71,7 @@ export function Pricing() {
     staleTime: 60_000,
     retry: 1,
   });
+  const { promos } = usePromos();
   const trm = data?.trm.valueCop ?? null;
   const plans: ApiPlan[] | null =
     data?.plans.map((p) => {
@@ -107,7 +111,7 @@ export function Pricing() {
         >
           {isPending || !plans
             ? [0, 1, 2].map((i) => <PriceCardSkeleton key={i} />)
-            : plans.map((p, i) => <PriceCard key={p.id} plan={p} trm={trm} index={i} />)}
+            : plans.map((p, i) => <PriceCard key={p.id} plan={p} trm={trm} index={i} promos={promos} />)}
         </div>
       </div>
     </section>
@@ -177,8 +181,23 @@ function PricingWhatsAppFallback() {
   );
 }
 
-function PriceCard({ plan, trm, index }: { plan: ApiPlan; trm: number | null; index: number }) {
+function PriceCard({
+  plan,
+  trm,
+  index,
+  promos,
+}: {
+  plan: ApiPlan;
+  trm: number | null;
+  index: number;
+  promos?: PromoPublica[];
+}) {
   const featured = !!plan.highlight;
+  // Solo se anuncia aquí la promo con `showOnPrices`; las "silenciosas" se ven
+  // recién en el resumen del checkout. Una compra nueva: esto es la landing.
+  const conPromo = mejorPromo(promos, plan, trm, false, { soloVisibles: true });
+  const mostrar = conPromo ? preciosParaMostrar(conPromo.precio) : null;
+  const cobraCop = conPromo ? conPromo.precio.finalCop : copAcobrar(plan, trm);
   return (
     <Reveal delay={index * 120}>
       <div
@@ -210,8 +229,25 @@ function PriceCard({ plan, trm, index }: { plan: ApiPlan; trm: number | null; in
         <div className={cn("my-6 h-px w-full", featured ? "bg-brand-cream/25" : "bg-brand-ink/25")} />
 
         {/* USD manda; el COP real (USD × TRM, igual que el checkout) va debajo */}
+        {conPromo && mostrar ? (
+          <div className="mb-2 flex items-center gap-2">
+            <span className={cn("text-[18px] font-bold line-through", featured ? "text-brand-cream/55" : "text-brand-ink/50")}>
+              {mostrar.tachado}
+            </span>
+            <PromoBadge promo={conPromo.promo} />
+          </div>
+        ) : null}
         <div className="font-display text-[52px] font-extrabold leading-none">
-          {plan.priceUsd ? (
+          {conPromo && mostrar ? (
+            mostrar.enUsd ? (
+              <>
+                {mostrar.final}{" "}
+                <span className={cn("text-[20px]", featured ? "text-white" : "text-brand-ink")}>USD</span>
+              </>
+            ) : (
+              mostrar.final
+            )
+          ) : plan.priceUsd ? (
             <>
               ${plan.priceUsd}{" "}
               <span className={cn("text-[20px]", featured ? "text-white" : "text-brand-ink")}>USD</span>
@@ -253,7 +289,7 @@ function PriceCard({ plan, trm, index }: { plan: ApiPlan; trm: number | null; in
 
         <p className={cn("mt-4 text-center text-[12px]", featured ? "text-brand-cream/50" : "text-brand-ink/50")}>
           {/* Mismo cálculo que el checkout y que el cobro real: USD × TRM. */}
-          Se cobra {formatCop(copAcobrar(plan, trm))} COP
+          Se cobra {formatCop(cobraCop)} COP
         </p>
       </div>
     </Reveal>

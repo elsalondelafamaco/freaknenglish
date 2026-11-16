@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { z } from "zod";
-import { AuthShell, ErrorBox, Field, inputClass } from "@/components/site/AuthShell";
+import { AuthShell, ErrorBox, Field, btnPrimary, inputClass, linkTouch } from "@/components/site/AuthShell";
 import { resetPassword } from "@/lib/auth/session";
 
 const searchSchema = z.object({ token: z.string().optional() });
@@ -46,9 +46,10 @@ function ResetPasswordPage() {
   return (
     <AuthShell
       title="Define una nueva contraseña"
+      highlight="nueva"
       subtitle="Asegúrate de que sea fácil de recordar y difícil de adivinar."
       footer={
-        <Link to="/login" className="font-semibold text-brand-ink hover:underline">
+        <Link to="/login" className={linkTouch}>
           Volver al inicio de sesión
         </Link>
       }
@@ -69,7 +70,7 @@ function ResetPasswordPage() {
         <button
           type="submit"
           disabled={busy}
-          className="inline-flex h-11 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white transition hover:bg-brand-ink-soft disabled:opacity-60"
+          className={btnPrimary}
         >
           {busy ? "Guardando…" : "Guardar contraseña"}
         </button>

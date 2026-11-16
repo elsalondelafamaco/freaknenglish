@@ -122,3 +122,13 @@ export function franjaEnZona(
     return { weekday, hour, minuto: 0, cruzaDia: 0 }
   }
 }
+
+/**
+ * Una hora en el formato que se lee en Colombia: "7:00 a. m.", "12:30 p. m.".
+ * Con espacios duros, para que la hora nunca se parta en dos renglones.
+ */
+export function horaEn12(hour: number, minuto = 0): string {
+  const h12 = hour % 12 === 0 ? 12 : hour % 12
+  const sufijo = hour % 24 < 12 ? 'a. m.' : 'p. m.'
+  return `${h12}:${String(minuto).padStart(2, '0')} ${sufijo}`
+}

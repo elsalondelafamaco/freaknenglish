@@ -1,13 +1,14 @@
 import { ArrowLeft, ArrowRight, Clock, Zap } from "lucide-react";
 import type { SlotRef } from "@/lib/api/endpoints";
-import { franjaEnZona } from "@/lib/domain/zona-horaria";
+import { franjaEnZona, horaEn12 } from "@/lib/domain/zona-horaria";
+import { btnPrimary, focusRing, linkPlain } from "@/components/site/AuthShell";
 
 const DIAS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-/** Una franja escrita en la hora de quien la lee: "Lunes 8:00", "Martes 3:30 (+1 día)". */
+/** Una franja escrita en la hora de quien la lee: "Lunes 8:00 a. m.", "Martes 3:30 a. m. (+1 día)". */
 function textoDeFranja(s: SlotRef, zona: string): string {
   const f = franjaEnZona(s.weekday, s.hour, zona);
-  const hora = `${f.hour}:${String(f.minuto).padStart(2, "0")}`;
+  const hora = horaEn12(f.hour, f.minuto);
   const cruce = f.cruzaDia === 1 ? " (+1 día)" : f.cruzaDia === -1 ? " (−1 día)" : "";
   return `${DIAS[s.weekday]} ${hora}${cruce}`;
 }
@@ -55,7 +56,7 @@ export function SugerenciasDeHorario({
 }) {
   return (
     <div className="mt-6 flex flex-col gap-6">
-      <div className="border-2 border-brand-ink bg-brand-yellow-soft p-5 text-sm text-brand-ink">
+      <div className="shadow-hard border-2 border-brand-ink bg-brand-yellow-soft p-5 text-sm text-brand-ink">
         <div className="flex items-center gap-2 font-display text-base font-extrabold uppercase">
           <Clock className="size-4" /> Tu horario necesita coordinación
         </div>
@@ -67,16 +68,12 @@ export function SugerenciasDeHorario({
         <ul className="mt-3 flex flex-wrap gap-2">
           {/* Por día de la semana: llegan en el orden en que las tocó. */}
           {[...pedidas].sort((a, b) => a.weekday - b.weekday || a.hour - b.hour).map((s) => (
-            <li key={`${s.weekday}:${s.hour}`} className="rounded-full border border-brand-ink/30 bg-white px-3 py-1 text-xs font-semibold">
+            <li key={`${s.weekday}:${s.hour}`} className="rounded-full border-2 border-brand-ink bg-white px-3 py-1 text-xs font-bold">
               {textoDeFranja(s, zona)}
             </li>
           ))}
         </ul>
-        <button
-          type="button"
-          onClick={onSeguirConElMio}
-          className="mt-4 inline-flex h-11 items-center gap-2 rounded-full bg-brand-ink px-6 text-sm font-semibold text-white transition hover:-translate-y-0.5"
-        >
+        <button type="button" onClick={onSeguirConElMio} className={`${btnPrimary} mt-5 sm:w-auto`}>
           Continuar con mi horario <ArrowRight className="size-4" />
         </button>
       </div>
@@ -86,7 +83,7 @@ export function SugerenciasDeHorario({
           <h2 className="flex items-center gap-2 font-display text-lg font-extrabold uppercase text-brand-ink">
             <Zap className="size-4" /> O empieza de inmediato con uno de estos
           </h2>
-          <p className="mt-1 text-sm text-brand-ink/65">
+          <p className="mt-1 text-sm text-brand-ink/70">
             Horarios con profe libre ya, del más al menos parecido al que elegiste.
           </p>
           <ul className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -97,9 +94,9 @@ export function SugerenciasDeHorario({
                   <button
                     type="button"
                     onClick={() => onElegir(propuesta)}
-                    className="flex h-full w-full flex-col gap-2 rounded-2xl border-2 border-brand-line bg-white p-4 text-left text-sm text-brand-ink transition hover:-translate-y-0.5 hover:border-brand-ink"
+                    className={`shadow-hard press-hard flex h-full w-full flex-col gap-2 border-2 border-brand-ink bg-white p-4 text-left text-sm text-brand-ink [--hard-x:4px] ${focusRing}`}
                   >
-                    <span className="text-[11px] font-semibold uppercase tracking-wide text-brand-ink/50">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-ink/70">
                       Opción {i + 1}
                     </span>
                     <ul className="flex flex-col gap-1">
@@ -107,7 +104,7 @@ export function SugerenciasDeHorario({
                         <li key={`c-${despues.weekday}:${despues.hour}`} className="font-semibold">
                           {antes ? (
                             <>
-                              <span className="text-brand-ink/45 line-through">{textoDeFranja(antes, zona)}</span>{" "}
+                              <span className="text-brand-ink/60 line-through">{textoDeFranja(antes, zona)}</span>{" "}
                               → {textoDeFranja(despues, zona)}
                             </>
                           ) : (
@@ -135,7 +132,7 @@ export function SugerenciasDeHorario({
       <button
         type="button"
         onClick={onVolver}
-        className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-brand-ink/70 hover:text-brand-ink"
+        className={`${linkPlain} gap-1.5 self-start text-sm`}
       >
         <ArrowLeft className="size-4" /> Cambiar mi horario
       </button>

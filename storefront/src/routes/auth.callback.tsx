@@ -11,8 +11,11 @@
  *      registro); el gate de `_authenticated` manda a /onboarding/profile
  *      a quien le falte teléfono/documento.
  */
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { Logo } from "@/components/site/Logo";
+import { btnPrimary } from "@/components/site/AuthShell";
 import { finishOAuthLogin } from "@/lib/auth/session";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -51,15 +54,32 @@ function OAuthCallback() {
   }, [nav]);
 
   return (
-    <main className="min-h-screen grid place-items-center bg-cream">
-      <div className="rounded-2xl border border-ink/10 bg-white p-6 text-center">
+    <main className="min-h-screen bg-brand-cream px-5 py-6 md:py-12">
+      <div className="mx-auto max-w-md">
+        <Link to="/" aria-label="Inicio" className="inline-flex min-h-11 items-center">
+          <Logo className="h-8 w-auto" />
+        </Link>
         {error ? (
-          <>
-            <p className="font-semibold text-ink">No pudimos iniciar sesión.</p>
-            <p className="mt-1 text-sm text-ink/60">{error}</p>
-          </>
+          <div role="alert" className="mt-8">
+            <h1 className="font-display text-[34px] font-extrabold uppercase leading-[1.02] tracking-[-0.02em] text-brand-ink">
+              No pudimos <span className="marker-highlight">iniciar</span> sesión
+            </h1>
+            <p className="mt-3 text-[15px] text-brand-ink/80">
+              Algo falló al conectar con Google. Inténtalo de nuevo o entra con tu correo y contraseña.
+            </p>
+            {/* El código técnico queda a la vista solo para soporte. */}
+            <p className="mt-2 font-mono text-xs text-brand-ink/70">Detalle: {error}</p>
+            <Link to="/login" className={`${btnPrimary} mt-6`}>
+              Volver a iniciar sesión
+            </Link>
+          </div>
         ) : (
-          <p className="text-ink/70">Conectando con tu cuenta…</p>
+          <div role="status" className="mt-16 flex flex-col items-center text-center">
+            <Loader2 className="size-10 animate-spin text-brand-ink" aria-hidden />
+            <h1 className="mt-5 font-display text-2xl font-extrabold uppercase tracking-[-0.02em] text-brand-ink">
+              Conectando con tu cuenta…
+            </h1>
+          </div>
         )}
       </div>
     </main>

@@ -6,7 +6,9 @@ import {
   ErrorBox,
   Field,
   GoogleButton,
+  btnPrimary,
   inputClass,
+  linkTouch,
 } from "@/components/site/AuthShell";
 import { LegalLinks } from "@/components/site/LegalLinks";
 import { PhoneInput, validatePhone } from "@/components/app/PhoneInput";
@@ -75,18 +77,17 @@ function SignupPage() {
   return (
     <AuthShell
       title="Crea tu cuenta"
+      highlight="cuenta"
       subtitle="Empieza a hablar inglés desde el día 1."
       footer={
         <>
           ¿Ya tienes cuenta?{" "}
-          <Link to="/login" className="font-semibold text-brand-ink hover:underline">
+          <Link to="/login" className={linkTouch}>
             Inicia sesión
           </Link>
         </>
       }
     >
-      <GoogleButton onClick={onGoogle} disabled={busy} label="Registrarte con Google" />
-      <Divider>o</Divider>
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <Field label="Nombre completo" htmlFor="name">
           <input
@@ -163,12 +164,14 @@ function SignupPage() {
         <button
           type="submit"
           disabled={busy}
-          className="mt-1 inline-flex h-11 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white transition hover:bg-brand-ink-soft disabled:opacity-60"
+          className={btnPrimary}
         >
           {busy ? "Creando cuenta…" : "Crear cuenta"}
         </button>
         <LegalLinks />
       </form>
+      <Divider>o</Divider>
+      <GoogleButton onClick={onGoogle} disabled={busy} label="Registrarte con Google" />
     </AuthShell>
   );
 }

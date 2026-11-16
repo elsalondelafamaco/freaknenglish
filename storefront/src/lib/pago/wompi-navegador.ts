@@ -191,5 +191,5 @@ export function describirRechazo(estado: string, mensaje?: string | null): strin
   if (/cancel/.test(m)) return "El pago fue cancelado.";
   if (estado === "VOIDED") return "El pago fue anulado. No se hizo ningún cobro.";
   if (estado === "ERROR") return "Hubo un error procesando el pago y no se hizo ningún cobro. Intenta de nuevo o usa otro medio.";
-  return "El pago no pasó y no se hizo ningún cobro. Revisa los datos o prueba con otro medio de pago.";
+  return "El banco rechazó el pago. No se hizo ningún cobro.";
 }

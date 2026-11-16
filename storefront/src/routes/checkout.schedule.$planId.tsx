@@ -7,7 +7,8 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { ActivePlanScreen, useActivePlanGate } from "@/components/site/ActivePlanGate";
 import { plansApi, scheduleApi, type SlotRef } from "@/lib/api/endpoints";
-import { SchedulePickerGrid } from "@/components/schedule/SchedulePickerGrid";
+import { SchedulePickerSteps } from "@/components/schedule/SchedulePickerSteps";
+import { btnPrimary, focusRing, linkPlain } from "@/components/site/AuthShell";
 import { useRenovacion } from "@/lib/domain/renovacion";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useZonaDelNavegador } from "@/lib/domain/zona-navegador";
@@ -142,14 +143,20 @@ function SchedulePicker() {
   if (gate.blocked) return <ActivePlanScreen end={gate.end} />;
 
   if (configQ.isLoading || plansQ.isLoading) {
-    return <main className="min-h-screen bg-brand-cream grid place-items-center text-sm text-brand-ink/60">Cargando…</main>;
+    return (
+      <main role="status" className="grid min-h-screen place-items-center bg-brand-cream text-sm font-semibold text-brand-ink/80">
+        <span className="inline-flex items-center gap-2">
+          <Loader2 className="size-4 animate-spin" aria-hidden /> Cargando…
+        </span>
+      </main>
+    );
   }
   if (!plan || !cfg) {
     return (
       <main className="min-h-screen bg-brand-cream grid place-items-center px-5">
-        <div className="rounded-3xl border border-brand-line bg-white p-8 text-center shadow-soft">
-          <p className="text-sm text-brand-ink/70">Plan no encontrado.</p>
-          <Link to="/checkout" className="mt-4 inline-flex h-11 items-center rounded-full bg-brand-ink px-6 text-sm font-semibold text-white">Ver planes</Link>
+        <div className="shadow-hard border-2 border-brand-ink bg-white p-8 text-center">
+          <p className="text-sm text-brand-ink/80">Plan no encontrado.</p>
+          <Link to="/checkout" className={`${btnPrimary} mt-4`}>Ver planes</Link>
         </div>
       </main>
     );
@@ -188,31 +195,31 @@ function SchedulePicker() {
   }
 
   return (
-    <main className="min-h-screen bg-brand-cream px-5 py-10 md:py-14">
-      <div className="mx-auto max-w-5xl">
-        <div className="flex items-center justify-between">
-          <Link to="/" aria-label="Inicio"><Logo className="h-8 w-auto" /></Link>
-          <Link to="/checkout" className="text-sm font-medium text-brand-ink/60 hover:text-brand-ink">← Cambiar de plan</Link>
+    <main className="min-h-screen bg-brand-cream px-5 py-6 md:py-12">
+      <div className="mx-auto max-w-2xl">
+        <div className="flex min-h-11 items-center justify-between">
+          <Link to="/" aria-label="Inicio" className={`inline-flex min-h-11 items-center ${focusRing}`}>
+            <Logo className="h-8 w-auto" />
+          </Link>
+          <Link to="/checkout" className={`${linkPlain} text-sm`}>← Volver</Link>
         </div>
 
-        <header className="mt-8 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-brand-ink/60">Paso 2 de 3 · Tu horario</p>
-            <h1 className="mt-3 font-display text-4xl font-extrabold uppercase leading-[1.02] tracking-[-0.02em] text-brand-ink md:text-[46px]">
-              {enCoordinacion ? "Tu horario" : `Elige tus ${need} clases de la semana`}
-            </h1>
-            <p className="mt-1 text-[15px] text-brand-ink/65">
-              {enCoordinacion
-                ? "Revisamos la disponibilidad de los profes para lo que elegiste."
-                : `Clases de ${cfg.durationMin} min. Elige el horario que mejor te quede: este será tu horario fijo semanal.`}
-            </p>
-          </div>
-          {!enCoordinacion ? (
-            <div className="shadow-hard border-2 border-brand-ink bg-white px-5 py-3 text-center [--hard-x:4px]">
-              <div className="font-display text-3xl font-extrabold text-brand-ink">{selected.length}/{need}</div>
-              <div className="text-[11px] uppercase tracking-wide text-brand-ink/55">franjas elegidas</div>
-            </div>
-          ) : null}
+        <header className="mt-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-ink/70">
+            Paso 2 de 3 · {plan.name}
+          </p>
+          <h1 className="mt-2 font-display text-[32px] font-extrabold uppercase leading-[1.02] tracking-[-0.02em] text-brand-ink md:text-[44px]">
+            {enCoordinacion ? (
+              <>Tu <span className="marker-highlight">horario</span></>
+            ) : (
+              <>Tu horario <span className="marker-highlight">fijo</span> de cada semana</>
+            )}
+          </h1>
+          <p className="mt-3 text-[15px] text-brand-ink/80">
+            {enCoordinacion
+              ? "Revisamos la disponibilidad de los profes para lo que elegiste."
+              : `Clases de ${cfg.durationMin} min. Elige el horario que mejor te quede: será el mismo cada semana.`}
+          </p>
         </header>
 
         {/* Aviso de zona: la grilla es hora de COLOMBIA, y quien está fuera
@@ -221,10 +228,10 @@ function SchedulePicker() {
             es lo que evita el reclamo de noviembre, cuando su país cambie la
             hora y Colombia no. */}
         {zonaPropia !== ZONA_BOGOTA ? (
-          <div className="mt-4 border-2 border-brand-ink bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink">
+          <div role="note" className="mt-4 border-2 border-brand-ink bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink">
             Las horas se muestran en <b>tu zona horaria</b> ({nombreDeZona(zonaPropia)},{" "}
             {etiquetaDeZona(zonaPropia)}). Los días son días de Colombia.
-            <span className="mt-1 block text-xs text-brand-ink/70">
+            <span className="mt-1 block text-xs text-brand-ink/80">
               Tu hora local puede cambiar cuando tu país cambie de horario; la hora en Colombia
               es siempre la misma.
             </span>
@@ -232,7 +239,7 @@ function SchedulePicker() {
         ) : null}
         {enCoordinacion ? (
           sugerenciasQ.isLoading || sugerenciasQ.data?.assignable ? (
-            <p className="mt-8 inline-flex items-center gap-2 text-sm text-brand-ink/60">
+            <p role="status" className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-brand-ink/80">
               <Loader2 className="size-4 animate-spin" /> Revisando la disponibilidad…
             </p>
           ) : (
@@ -252,15 +259,17 @@ function SchedulePicker() {
           <>
             {/* Sin pistas de disponibilidad a propósito: primero elige el horario
                 que de verdad le sirve, y la disponibilidad se mira al confirmar. */}
-            <div className="mt-4">
-              <SchedulePickerGrid cfg={cfg} need={need} selected={selected} onChange={setSelected} zona={zonaPropia} />
+            <div className="mt-5">
+              <SchedulePickerSteps cfg={cfg} need={need} selected={selected} onChange={setSelected} zona={zonaPropia} />
             </div>
 
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6">
               <button
+                type="button"
                 onClick={confirmar}
                 disabled={!complete || confirmando}
-                className="shadow-hard press-hard inline-flex h-12 items-center justify-center gap-2 rounded-full bg-brand-ink px-8 font-display text-[14px] font-bold uppercase tracking-[0.04em] text-brand-cream disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none [--hard-x:5px]"
+                aria-describedby="falta-horario"
+                className={btnPrimary}
               >
                 {confirmando ? (
                   <>
@@ -268,10 +277,18 @@ function SchedulePicker() {
                   </>
                 ) : (
                   <>
-                    Continuar <ArrowRight className="size-4" />
+                    Continuar al pago <ArrowRight className="size-4" />
                   </>
                 )}
               </button>
+              {/* Con el botón apagado siempre se dice por qué. */}
+              <p id="falta-horario" className="mt-3 text-center text-[13px] font-bold text-brand-ink">
+                {complete
+                  ? "Listo: revisamos la disponibilidad del profe al continuar."
+                  : `Te falta${need - selected.length === 1 ? "" : "n"} ${need - selected.length} clase${
+                      need - selected.length === 1 ? "" : "s"
+                    } por completar (día y hora).`}
+              </p>
             </div>
           </>
         )}

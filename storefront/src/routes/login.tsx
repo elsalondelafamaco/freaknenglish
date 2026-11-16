@@ -7,7 +7,10 @@ import {
   ErrorBox,
   Field,
   GoogleButton,
+  btnPrimary,
   inputClass,
+  linkPlain,
+  linkTouch,
 } from "@/components/site/AuthShell";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { getSessionSnapshot } from "@/lib/auth/session";
@@ -65,21 +68,22 @@ function LoginPage() {
 
   return (
     <AuthShell
-      title="Bienvenido de vuelta"
+      title="Qué bueno verte de nuevo"
+      highlight="verte"
       subtitle="Inicia sesión para continuar con tu aprendizaje."
       footer={
         <>
           ¿No tienes cuenta?{" "}
-          <Link to="/signup" className="font-semibold text-brand-ink hover:underline">
-            Crea una aquí
+          <Link to="/checkout" className={linkTouch}>
+            Elige tu plan
           </Link>
         </>
       }
     >
-      <GoogleButton onClick={onGoogle} disabled={busy} label="Continuar con Google" />
-      <Divider>o</Divider>
+      {/* El correo va primero: Google no funciona dentro del navegador de
+          Instagram, de donde llega buena parte de quienes compran. */}
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <Field label="Email" htmlFor="email">
+        <Field label="Correo" htmlFor="email">
           <input
             id="email"
             type="email"
@@ -103,21 +107,19 @@ function LoginPage() {
             placeholder="••••••••"
           />
         </Field>
-        <ErrorBox>{error}</ErrorBox>
-        <button
-          type="submit"
-          disabled={busy}
-          className="mt-1 inline-flex h-11 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white transition hover:bg-brand-ink-soft disabled:opacity-60"
-        >
-          {busy ? "Ingresando…" : "Iniciar sesión"}
-        </button>
         <Link
           to="/forgot-password"
-          className="text-center text-sm text-brand-ink/70 hover:text-brand-ink"
+          className={`${linkPlain} -mt-2 self-start text-[13px]`}
         >
           ¿Olvidaste tu contraseña?
         </Link>
+        <ErrorBox>{error}</ErrorBox>
+        <button type="submit" disabled={busy} className={btnPrimary}>
+          {busy ? "Ingresando…" : "Ingresar"}
+        </button>
       </form>
+      <Divider>o</Divider>
+      <GoogleButton onClick={onGoogle} disabled={busy} label="Continuar con Google" />
     </AuthShell>
   );
 }

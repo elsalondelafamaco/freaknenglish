@@ -2,15 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ShieldCheck, LogOut, UserCog } from "lucide-react";
+import { Check, ShieldCheck, LogOut, UserCog, Loader2 } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
-import { Field, inputClass, ErrorBox } from "@/components/site/AuthShell";
+import { Field, inputClass, ErrorBox, btnPrimary, focusRing, linkPlain } from "@/components/site/AuthShell";
 import { ActivePlanScreen, useActivePlanGate } from "@/components/site/ActivePlanGate";
 import { LegalLinks } from "@/components/site/LegalLinks";
 import { PhoneInput, validatePhone } from "@/components/app/PhoneInput";
 import { checkoutApi, plansApi, scheduleApi, type InfoDePago, type SlotRef } from "@/lib/api/endpoints";
 import { useZonaDelNavegador } from "@/lib/domain/zona-navegador";
-import { slotTimeRange } from "@/components/schedule/SchedulePickerGrid";
 import { copAcobrar } from "@/lib/domain/plans";
 import { usePromos } from "@/lib/domain/use-promos";
 import { mejorPromo } from "@/lib/domain/promos";
@@ -18,7 +17,7 @@ import { leerAtribucion } from "@/lib/atribucion";
 import { preciosParaMostrar } from "@/components/site/PromoBadge";
 import { cookiesDeMeta, useRastrearUnaVez } from "@/lib/meta-pixel";
 import { useRenovacion } from "@/lib/domain/renovacion";
-import { ZONA_BOGOTA, franjaEnZona, zonaDe } from "@/lib/domain/zona-horaria";
+import { ZONA_BOGOTA, franjaEnZona, horaEn12, zonaDe } from "@/lib/domain/zona-horaria";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { PasoDePago } from "@/components/pago/PasoDePago";
 import { borrarPago, guardarPago, leerPago, tomarLlaveDeLaUrl } from "@/lib/pago/pago-en-curso";
@@ -173,15 +172,21 @@ function CheckoutPage() {
   if (gate.blocked) return <ActivePlanScreen end={gate.end} />;
 
   if (plansQ.isLoading) {
-    return <main className="min-h-screen bg-brand-cream flex items-center justify-center text-sm text-brand-ink/60">Cargando…</main>;
+    return (
+      <main role="status" className="flex min-h-screen items-center justify-center bg-brand-cream text-sm font-semibold text-brand-ink/80">
+        <span className="inline-flex items-center gap-2">
+          <Loader2 className="size-4 animate-spin" aria-hidden /> Cargando…
+        </span>
+      </main>
+    );
   }
   if (!plan) {
     return (
       <main className="min-h-screen bg-brand-cream flex items-center justify-center px-5 py-16">
-        <div className="w-full max-w-md rounded-3xl border border-brand-line bg-white p-8 shadow-soft text-center">
-          <h1 className="text-xl font-bold text-brand-ink">Plan no encontrado</h1>
-          <p className="mt-2 text-sm text-brand-ink/65">El plan <strong>{planId}</strong> no existe.</p>
-          <Link to="/checkout" className="mt-6 inline-flex h-11 items-center justify-center rounded-full bg-brand-ink px-6 text-sm font-semibold text-white">Ver planes</Link>
+        <div className="shadow-hard w-full max-w-md border-2 border-brand-ink bg-white p-8 text-center">
+          <h1 className="font-display text-xl font-extrabold uppercase text-brand-ink">Plan no encontrado</h1>
+          <p className="mt-2 text-sm text-brand-ink/80">El plan <strong>{planId}</strong> no existe.</p>
+          <Link to="/checkout" className={`${btnPrimary} mt-6`}>Ver planes</Link>
         </div>
       </main>
     );
@@ -261,36 +266,75 @@ function CheckoutPage() {
     nav({ to: "/checkout/return", search: { reference: pago.reference }, replace: true });
   }
 
+  const horarioDeResumen = [...(esRenovacion ? slotsPropios : selSlots)].sort(
+    (a, b) => ((a.weekday + 6) % 7) - ((b.weekday + 6) % 7) || a.hour - b.hour,
+  );
+
   return (
-    <main className="min-h-screen bg-brand-cream px-5 py-10 md:py-14">
+    <main className="min-h-screen bg-brand-cream px-5 py-6 md:py-12">
       <div className="mx-auto max-w-5xl">
-        <div className="flex items-center justify-between">
-          <Link to="/" aria-label="Inicio" className="inline-block">
+        <div className="flex min-h-11 items-center justify-between">
+          <Link to="/" aria-label="Inicio" className={`inline-flex min-h-11 items-center ${focusRing}`}>
             <Logo className="h-8 w-auto" />
           </Link>
-          <div className="flex items-center gap-4 text-sm font-medium text-brand-ink/60">
-            <Link to="/checkout" className="hover:text-brand-ink">← Plan</Link>
+          <div className="flex items-center gap-4 text-sm">
             {/* Vuelve con su horario marcado: antes volvía a la rejilla vacía
                 y había que elegirlo todo otra vez para cambiar una franja. */}
-            {esRenovacion ? null : (
+            {esRenovacion ? (
+              <Link to="/checkout" className={`${linkPlain}`}>← Volver</Link>
+            ) : (
               <Link
                 to="/checkout/schedule/$planId"
                 params={{ planId }}
                 search={{ slots: slotsRaw }}
-                className="hover:text-brand-ink"
+                className={`${linkPlain}`}
               >
-                ← Horario
+                ← Volver
               </Link>
             )}
           </div>
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
-          <div className="rounded-3xl border border-brand-line bg-white p-6 shadow-soft md:p-8">
+        <header className="mt-3 max-w-2xl">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-ink/70">Paso 3 de 3</p>
+          <h1 className="mt-2 font-display text-[32px] font-extrabold uppercase leading-[1.02] tracking-[-0.02em] text-brand-ink md:text-[44px]">
+            {pagando ? (
+              <>Paga tu <span className="marker-highlight">plan</span></>
+            ) : (
+              <>{loggedIn ? "Confirma tus" : "Completa tus"} <span className="marker-highlight">datos</span></>
+            )}
+          </h1>
+          <p className="mt-3 text-[15px] text-brand-ink/80">
+            {pagando
+              ? "Elige cómo quieres pagar."
+              : loggedIn
+                ? `Compras con tu cuenta. ${directo ? "Al continuar eliges cómo pagar." : "Al continuar irás a la pasarela de pago segura."}`
+                : `Los necesitamos para crear tu cuenta. ${directo ? "Al continuar eliges cómo pagar." : "Al continuar irás a la pasarela de pago segura."}`}
+          </p>
+        </header>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
+          <div className="shadow-hard border-2 border-brand-ink bg-white p-5 md:p-7">
             {pagando ? (
               <>
-                <h1 className="text-2xl font-bold text-brand-ink md:text-3xl">Paga tu plan</h1>
-                <p className="mt-1 mb-5 text-sm text-brand-ink/65">Elige cómo quieres pagar. No sales de esta página.</p>
+                {/* Resumen corto para el teléfono: el aside completo solo aparece en pantallas anchas. */}
+                <section
+                  aria-label="Resumen"
+                  className="mb-4 flex items-baseline justify-between gap-3 border-2 border-brand-ink bg-brand-cream-soft px-3 py-2 text-[13px] text-brand-ink lg:hidden"
+                >
+                  <span>
+                    <b>{plan.name}</b>
+                    {promoAplicada ? <> · {promoAplicada.promo.checkoutLabel?.trim() || "Promo"}</> : null}
+                  </span>
+                  <span className="shrink-0">
+                    {promoAplicada ? (
+                      <span className="mr-1.5 text-xs text-brand-ink/70 line-through">
+                        {copFmt.format(promoAplicada.precio.listaCop)}
+                      </span>
+                    ) : null}
+                    <b className="font-display text-[17px] font-extrabold">{copFmt.format(cop)}</b>
+                  </span>
+                </section>
                 <PasoDePago
                   info={directo!}
                   pago={pago!}
@@ -299,35 +343,28 @@ function CheckoutPage() {
                 />
               </>
             ) : buscandoPago || (pago && infoQ.isLoading) ? (
-              <p className="py-10 text-sm text-brand-ink/60">Cargando…</p>
+              <p role="status" className="inline-flex items-center gap-2 py-10 text-sm font-semibold text-brand-ink/80">
+                <Loader2 className="size-4 animate-spin" aria-hidden /> Cargando…
+              </p>
             ) : (
             <>
-            <h1 className="text-2xl font-bold text-brand-ink md:text-3xl">
-              {loggedIn ? "Confirma tus datos" : "Completa tus datos"}
-            </h1>
-            <p className="mt-1 text-sm text-brand-ink/65">
-              {loggedIn
-                ? `Compras con tu cuenta. ${directo ? "Al continuar eliges cómo pagar." : "Al continuar irás a la pasarela de pago segura."}`
-                : `Los necesitamos para crear tu cuenta. ${directo ? "Al continuar eliges cómo pagar." : "Al continuar irás a la pasarela de pago segura."}`}
-            </p>
-
             {loggedIn ? (
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-brand-cream/50 px-4 py-3 text-sm">
-                <span className="inline-flex items-center gap-1.5 text-brand-ink/75">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-2 border-brand-ink bg-brand-cream-soft px-4 py-3 text-sm">
+                <span className="inline-flex items-center gap-1.5 text-brand-ink">
                   <UserCog className="size-4" /> Comprando como <strong>{user!.email}</strong>
                 </span>
                 <button
                   type="button"
                   onClick={async () => { await signOut(); }}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-brand-ink/20 bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40"
+                  className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-brand-ink bg-white px-4 text-xs font-bold text-brand-ink hover:bg-brand-cream-soft ${focusRing}`}
                 >
                   <LogOut className="size-3.5" /> No soy yo · usar otra cuenta
                 </button>
               </div>
             ) : (
-              <div className="mt-4 rounded-2xl bg-brand-cream/50 px-4 py-3 text-sm text-brand-ink/75">
+              <div className="border-2 border-brand-ink bg-brand-cream-soft px-4 py-3 text-sm text-brand-ink">
                 ¿Ya tienes cuenta?{" "}
-                <Link to="/login" search={{ redirect: `/checkout/${planId}${slotsRaw ? `?slots=${slotsRaw}` : ""}` }} className="font-semibold text-brand-ink underline">
+                <Link to="/login" search={{ redirect: `/checkout/${planId}${slotsRaw ? `?slots=${slotsRaw}` : ""}` }} className="font-bold underline">
                   Inicia sesión
                 </Link>{" "}
                 y volvemos aquí para autocompletar tus datos.
@@ -335,19 +372,19 @@ function CheckoutPage() {
             )}
 
             {selSlots.length > 0 && !availQ.isLoading && !assignable ? (
-              <div className="mt-4 rounded-2xl border border-brand-line bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink">
+              <div role="note" className="mt-4 border-2 border-brand-ink bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink">
                 Ese horario está muy solicitado 💛 Completa tu compra con tranquilidad: te contactamos en
                 menos de 24&nbsp;h hábiles para coordinar tu profesor. <strong>Tu cupo queda garantizado.</strong>
               </div>
             ) : null}
 
-            <form onSubmit={submitForm} className="mt-6 flex flex-col gap-4">
+            <form onSubmit={submitForm} className="mt-5 flex flex-col gap-4">
               <Field label="Nombre completo" htmlFor="fullName">
                 <input id="fullName" className={inputClass} value={form.fullName}
                   onChange={(e) => setForm({ ...form, fullName: e.target.value })}
                   autoComplete="name" required readOnly={lockField} disabled={lockField} />
               </Field>
-              <Field label="Email" htmlFor="email" hint={loggedIn ? "El de tu cuenta." : "Aquí te enviaremos la confirmación."}>
+              <Field label="Correo" htmlFor="email" hint={loggedIn ? "El de tu cuenta." : "Aquí te enviaremos la confirmación."}>
                 <input id="email" type="email" className={inputClass} value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   autoComplete="email" required readOnly={lockField} disabled={lockField} />
@@ -377,8 +414,7 @@ function CheckoutPage() {
                 </div>
               ) : null}
               <ErrorBox>{error}</ErrorBox>
-              <button type="submit" disabled={loading}
-                className="mt-2 inline-flex h-12 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white transition hover:bg-brand-ink-soft disabled:opacity-60">
+              <button type="submit" disabled={loading} className={`${btnPrimary} mt-1`}>
                 {loading ? (directo ? "Preparando el pago…" : "Redirigiendo al pago…") : "Continuar al pago"}
               </button>
               <LegalLinks />
@@ -387,93 +423,92 @@ function CheckoutPage() {
             )}
           </div>
 
-          <aside className="rounded-3xl bg-brand-yellow-soft p-6 md:p-7 lg:sticky lg:top-6 lg:h-fit">
-            <p className="text-xs font-medium uppercase tracking-wider text-brand-ink/60">Tu plan</p>
-            <h2 className="mt-1 text-xl font-bold text-brand-ink">{plan.name}</h2>
-            <div className="mt-3 flex items-baseline gap-1">
+          <aside
+            className={`border-2 border-brand-ink bg-brand-yellow-soft p-5 md:p-6 lg:sticky lg:top-6 lg:h-fit ${
+              pagando ? "hidden lg:block" : ""
+            }`}
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-ink/70">Tu plan</p>
+            <h2 className="mt-1 font-display text-xl font-extrabold uppercase text-brand-ink">{plan.name}</h2>
+            <div className="mt-3 flex flex-wrap items-baseline gap-x-1.5">
               {promoAplicada && mostrar?.enUsd ? (
                 <>
-                  <span className="text-3xl font-bold text-brand-ink">{mostrar.final}</span>
-                  <span className="text-sm text-brand-ink/60">USD / mes</span>
-                  <span className="ml-1 text-sm text-brand-ink/50 line-through">{mostrar.tachado}</span>
+                  <span className="font-display text-3xl font-extrabold text-brand-ink">{mostrar.final}</span>
+                  <span className="text-sm text-brand-ink/70">USD / mes</span>
+                  <span className="ml-1 text-sm text-brand-ink/70 line-through">{mostrar.tachado}</span>
                 </>
               ) : (
                 <>
-                  <span className="text-3xl font-bold text-brand-ink">${plan.priceUsd ?? "—"}</span>
-                  <span className="text-sm text-brand-ink/60">USD / mes</span>
+                  <span className="font-display text-3xl font-extrabold text-brand-ink">${plan.priceUsd ?? "—"}</span>
+                  <span className="text-sm text-brand-ink/70">USD / mes</span>
                 </>
               )}
             </div>
             {promoAplicada ? (
-              <dl className="mt-3 space-y-1 rounded-2xl bg-white/70 p-3 text-sm text-brand-ink/85">
+              <dl className="mt-3 space-y-1 border-2 border-brand-ink bg-white p-3 text-sm text-brand-ink">
                 <div className="flex justify-between gap-3">
                   <dt>Precio</dt>
-                  <dd className="line-through text-brand-ink/55">{copFmt.format(promoAplicada.precio.listaCop)}</dd>
+                  <dd className="text-brand-ink/70 line-through">{copFmt.format(promoAplicada.precio.listaCop)}</dd>
                 </div>
-                <div className="flex justify-between gap-3 font-semibold text-brand-success">
+                <div className="flex justify-between gap-3 font-bold">
                   <dt>{promoAplicada.promo.checkoutLabel?.trim() || "Descuento"}</dt>
                   <dd>−{copFmt.format(promoAplicada.precio.descuentoCop)}</dd>
                 </div>
-                <div className="flex justify-between gap-3 border-t border-brand-ink/10 pt-1 font-bold text-brand-ink">
+                <div className="flex justify-between gap-3 border-t-2 border-brand-ink pt-1 font-extrabold">
                   <dt>Se cobra</dt>
                   <dd>{copFmt.format(cop)}</dd>
                 </div>
-                <p className="pt-0.5 text-xs font-normal text-brand-ink/55">TRM en vivo.</p>
+                <p className="pt-0.5 text-xs font-normal text-brand-ink/70">TRM en vivo.</p>
               </dl>
             ) : (
-              <p className="mt-1 text-xs text-brand-ink/60">Se cobra {copFmt.format(cop)} (TRM en vivo).</p>
+              <p className="mt-1 text-xs text-brand-ink/70">Se cobra {copFmt.format(cop)} (TRM en vivo).</p>
             )}
-            {(esRenovacion ? slotsPropios : selSlots).length > 0 ? (
-              <div className="mt-4 rounded-2xl bg-white/70 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-brand-ink/60">
+            {horarioDeResumen.length > 0 ? (
+              <div className="mt-4 border-2 border-brand-ink bg-white p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-ink/70">
                   {esRenovacion ? "Sigues con lo mismo" : "Tu horario semanal"}
                 </p>
                 {esRenovacion && profesor ? (
-                  <p className="mt-1 text-sm font-semibold text-brand-ink">{profesor.fullName}</p>
+                  <p className="mt-1 text-sm font-bold text-brand-ink">{profesor.fullName}</p>
                 ) : null}
-                <ul className="mt-1.5 space-y-1 text-sm text-brand-ink/85">
-                  {[...(esRenovacion ? slotsPropios : selSlots)]
-                    .sort((a, b) => ((a.weekday + 6) % 7) - ((b.weekday + 6) % 7) || a.hour - b.hour)
-                    .map((sl) => {
-                      // Se muestran las DOS horas: la suya, que es como piensa,
-                      // y la de Colombia, que es la que rige. Enseñar solo una
-                      // de las dos es lo que produjo el enredo original.
-                      const suya = franjaEnZona(sl.weekday, sl.hour, zonaPropia);
-                      const propia = zonaPropia !== ZONA_BOGOTA;
-                      return (
-                        <li key={`${sl.weekday}-${sl.hour}`}>
-                          {DAY_NAMES[propia ? suya.weekday : sl.weekday]} ·{" "}
-                          {propia
-                            ? `${suya.hour}:${String(suya.minuto).padStart(2, "0")}`
-                            : slotTimeRange(sl.hour, cfgQ.data?.durationMin ?? 50)}
-                          {propia ? (
-                            <span className="text-brand-ink/55">
-                              {" "}
-                              ({DAY_NAMES[sl.weekday].toLowerCase()} {sl.hour}:00 en Colombia)
-                            </span>
-                          ) : null}
-                        </li>
-                      );
-                    })}
+                <ul className="mt-1.5 space-y-1 text-sm text-brand-ink">
+                  {horarioDeResumen.map((sl) => {
+                    // Se muestran las DOS horas: la suya, que es como piensa,
+                    // y la de Colombia, que es la que rige. Enseñar solo una
+                    // de las dos es lo que produjo el enredo original.
+                    const suya = franjaEnZona(sl.weekday, sl.hour, zonaPropia);
+                    const propia = zonaPropia !== ZONA_BOGOTA;
+                    return (
+                      <li key={`${sl.weekday}-${sl.hour}`}>
+                        <b>{DAY_NAMES[propia ? suya.weekday : sl.weekday]}</b> ·{" "}
+                        {propia ? horaEn12(suya.hour, suya.minuto) : horaEn12(sl.hour)}
+                        {propia ? (
+                          <span className="text-brand-ink/70">
+                            {" "}
+                            ({DAY_NAMES[sl.weekday].toLowerCase()} {horaEn12(sl.hour)} en Colombia)
+                          </span>
+                        ) : null}
+                      </li>
+                    );
+                  })}
                 </ul>
-                {esRenovacion ? (
-                  <p className="mt-2 text-xs text-brand-ink/55">
-                    ¿Necesitas cambiar tu horario? Coordínalo directamente con tu profe.
-                  </p>
-                ) : null}
+                <p className="mt-2 text-xs text-brand-ink/70">
+                  Clases de {cfgQ.data?.durationMin ?? 50} min.
+                  {esRenovacion ? " ¿Necesitas cambiar tu horario? Coordínalo directamente con tu profe." : ""}
+                </p>
               </div>
             ) : null}
-            <ul className="mt-5 space-y-2 text-sm text-brand-ink/85">
+            <ul className="mt-5 space-y-2 text-sm text-brand-ink">
               {(plan.features ?? []).map((f: string) => (
                 <li key={f} className="flex items-start gap-2">
-                  <Check className="mt-0.5 size-4 shrink-0 text-brand-success" strokeWidth={3} />
+                  <Check className="mt-0.5 size-4 shrink-0 text-brand-ink" strokeWidth={3} />
                   {f}
                 </li>
               ))}
             </ul>
-            <div className="mt-6 flex items-center gap-2 rounded-2xl bg-white/70 p-3 text-xs text-brand-ink/70">
-              <ShieldCheck className="size-4 text-brand-ink" />
-              Pago procesado por una pasarela segura. Tus datos viajan cifrados.
+            <div className="mt-6 flex items-center gap-2 border-2 border-brand-ink bg-white p-3 text-xs text-brand-ink">
+              <ShieldCheck className="size-4 shrink-0 text-brand-ink" />
+              Pago seguro. Tus datos viajan cifrados.
             </div>
           </aside>
         </div>

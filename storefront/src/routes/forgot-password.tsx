@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AuthShell, ErrorBox, Field, inputClass } from "@/components/site/AuthShell";
+import { AuthShell, ErrorBox, Field, btnPrimary, inputClass, linkTouch } from "@/components/site/AuthShell";
 import { requestPasswordReset } from "@/lib/auth/session";
 
 export const Route = createFileRoute("/forgot-password")({
@@ -33,18 +33,19 @@ function ForgotPasswordPage() {
   return (
     <AuthShell
       title="Recupera tu contraseña"
+      highlight="contraseña"
       subtitle="Te enviaremos un enlace para restablecerla."
       footer={
-        <Link to="/login" className="font-semibold text-brand-ink hover:underline">
+        <Link to="/login" className={linkTouch}>
           Volver al inicio de sesión
         </Link>
       }
     >
       {sent ? (
-        <div className="rounded-xl border border-brand-line bg-brand-cream/40 p-4 text-sm text-brand-ink">
+        <div role="status" className="border-2 border-brand-ink bg-brand-yellow-soft p-4 text-sm text-brand-ink">
           Si existe una cuenta con <strong>{email}</strong>, te llegará un email con instrucciones.
-          <p className="mt-2 text-xs text-brand-ink/60">
-            (Mock: revisa la consola del navegador para encontrar el enlace de prueba.)
+          <p className="mt-2 text-xs text-brand-ink/70">
+            Si no lo ves en unos minutos, revisa la carpeta de spam o promociones.
           </p>
         </div>
       ) : (
@@ -64,7 +65,7 @@ function ForgotPasswordPage() {
           <button
             type="submit"
             disabled={busy}
-            className="inline-flex h-11 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white transition hover:bg-brand-ink-soft disabled:opacity-60"
+            className={btnPrimary}
           >
             {busy ? "Enviando…" : "Enviar enlace"}
           </button>

@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBlocker } from "@tanstack/react-router";
-import { Loader2, ShieldCheck, Copy, ExternalLink, AlertTriangle } from "lucide-react";
-import { Field, inputClass, ErrorBox } from "@/components/site/AuthShell";
+import { Loader2, Lock, Check, Copy, ExternalLink, AlertTriangle } from "lucide-react";
+import {
+  Field,
+  inputClass,
+  ErrorBox,
+  btnPrimary,
+  btnSecondary,
+  focusRing,
+  linkPlain,
+  linkTouch,
+} from "@/components/site/AuthShell";
 import { ApiError } from "@/lib/api/client";
 import {
   checkoutApi,
@@ -73,11 +82,11 @@ function LogoDelMedio({ medio }: { medio: MedioDePago }) {
   const src = LOGO[medio];
   if (!src) {
     return (
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-brand-line bg-brand-cream/60 text-brand-ink">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-[9px] border border-brand-ink/20 bg-brand-cream text-brand-ink">
         <svg
           aria-hidden="true"
-          width="24"
-          height="24"
+          width="20"
+          height="20"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -92,8 +101,8 @@ function LogoDelMedio({ medio }: { medio: MedioDePago }) {
     );
   }
   return (
-    <span className="flex size-11 shrink-0 overflow-hidden rounded-xl border border-brand-line bg-white">
-      <img src={src} width={44} height={44} alt="" className="size-full object-cover" />
+    <span className="flex size-9 shrink-0 overflow-hidden rounded-[9px] border border-brand-ink/20 bg-white">
+      <img src={src} width={36} height={36} alt="" className="size-full object-cover" />
     </span>
   );
 }
@@ -138,6 +147,7 @@ export function PasoDePago({
   // Sin elegir: se muestra la lista de medios, como en jump. Al elegir, su formulario.
   const [medio, setMedio] = useState<MedioDePago | null>(null);
   const [acepta, setAcepta] = useState(false);
+  const listaDeMedios = useRef<HTMLDivElement>(null);
 
   // Formularios por medio.
   const [tarjeta, setTarjeta] = useState({
@@ -462,7 +472,7 @@ export function PasoDePago({
     : null;
 
   const bannerEmbebido = embebido ? (
-    <div className="rounded-2xl border border-brand-line bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink">
+    <div role="note" className="border-2 border-brand-ink bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink">
       <p>
         Estás en el navegador de {embebido}. Si el pago no avanza, ábrelo en el navegador de tu
         celular: sigues con el mismo pago, sin pagar dos veces.
@@ -479,14 +489,14 @@ export function PasoDePago({
               window.prompt("Copia este enlace y ábrelo en tu navegador:", url);
             }
           }}
-          className="inline-flex items-center gap-1.5 rounded-full border border-brand-ink/20 bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink"
+          className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-brand-ink bg-white px-4 text-xs font-bold text-brand-ink ${focusRing}`}
         >
           <Copy className="size-3.5" /> {copiado ? "Enlace copiado" : "Copiar enlace"}
         </button>
         {android ? (
           <a
             href={enlaceAChrome(enlaceParaOtroNavegador(pago))}
-            className="inline-flex items-center gap-1.5 rounded-full border border-brand-ink/20 bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink"
+            className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-brand-ink bg-white px-4 text-xs font-bold text-brand-ink ${focusRing}`}
           >
             <ExternalLink className="size-3.5" /> Abrir en Chrome
           </a>
@@ -497,20 +507,23 @@ export function PasoDePago({
 
   if (fase.tipo === "cargando") {
     return (
-      <div className="flex items-center gap-2 py-10 text-sm text-brand-ink/60">
-        <Loader2 className="size-4 animate-spin" /> Preparando tu pago…
+      <div role="status" className="flex items-center gap-2 py-10 text-sm font-semibold text-brand-ink/80">
+        <Loader2 className="size-4 animate-spin" aria-hidden /> Preparando tu pago…
       </div>
     );
   }
 
   if (fase.tipo === "aprobado") {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-2xl bg-brand-cream/50 px-4 py-6 text-center">
-        <p className="font-semibold text-brand-ink">¡Pago aprobado!</p>
-        <a
-          href={`/checkout/return?reference=${encodeURIComponent(pago.reference)}`}
-          className="text-sm font-semibold text-brand-ink underline"
+      <div role="status" className="flex flex-col items-start gap-3">
+        <span
+          aria-hidden="true"
+          className="grid size-14 place-items-center rounded-full border-2 border-brand-ink bg-brand-yellow text-brand-ink shadow-hard [--hard-color:var(--brand-ink)] [--hard-x:4px]"
         >
+          <Check className="size-7" strokeWidth={3} />
+        </span>
+        <p className="font-display text-2xl font-extrabold uppercase text-brand-ink">¡Pago aprobado!</p>
+        <a href={`/checkout/return?reference=${encodeURIComponent(pago.reference)}`} className={btnPrimary}>
           Continuar
         </a>
       </div>
@@ -519,32 +532,36 @@ export function PasoDePago({
 
   if (fase.tipo === "perdido") {
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-4">
         <ErrorBox>{fase.mensaje}</ErrorBox>
-        <a href="/checkout" className="text-sm font-semibold text-brand-ink underline">
+        <a href="/checkout" className={btnPrimary}>
           Ver planes
         </a>
+        <EnlaceWhatsApp />
       </div>
     );
   }
 
   if (fase.tipo === "revision") {
     return (
-      <div className="rounded-2xl border border-brand-line bg-brand-yellow-soft px-4 py-4 text-sm text-brand-ink">
-        <p className="font-semibold">Recibimos tu pago y lo estamos revisando.</p>
-        <p className="mt-1 text-brand-ink/75">
-          No vuelvas a pagar. Te escribimos por correo o WhatsApp en cuanto quede listo.
-        </p>
+      <div className="flex flex-col gap-3">
+        <div role="status" className="border-2 border-brand-ink bg-brand-yellow-soft px-4 py-4 text-sm text-brand-ink">
+          <p className="font-bold">Recibimos tu pago y lo estamos revisando.</p>
+          <p className="mt-1 text-brand-ink/80">
+            No vuelvas a pagar. Te escribimos por correo o WhatsApp en cuanto quede listo.
+          </p>
+        </div>
+        <EnlaceWhatsApp />
       </div>
     );
   }
 
   if (fase.tipo === "lento") {
     return (
-      <div className="flex flex-col gap-3">
-        <div className="rounded-2xl border border-brand-line bg-brand-yellow-soft px-4 py-4 text-sm text-brand-ink">
-          <p className="font-semibold">Tu pago sigue en verificación.</p>
-          <p className="mt-1 text-brand-ink/75">
+      <div className="flex flex-col gap-4">
+        <div role="status" className="border-2 border-brand-ink bg-brand-yellow-soft px-4 py-4 text-sm text-brand-ink">
+          <p className="font-bold">Tu pago sigue en verificación.</p>
+          <p className="mt-1 text-brand-ink/80">
             Si se aprueba, te llega un correo y tu plan se activa solo. No vuelvas a pagar mientras
             tanto.
           </p>
@@ -555,7 +572,7 @@ export function PasoDePago({
             inicioEspera.current = Date.now();
             void consultar();
           }}
-          className="inline-flex h-11 items-center justify-center rounded-full border border-brand-ink/20 text-sm font-semibold text-brand-ink"
+          className={btnSecondary}
         >
           Ver estado del pago
         </button>
@@ -563,39 +580,44 @@ export function PasoDePago({
           <button
             type="button"
             onClick={() => setFase({ tipo: "elegir" })}
-            className="text-sm font-semibold text-brand-ink/70 underline"
+            className={`${linkTouch} self-start text-sm`}
           >
             No lo aprobé: probar con otro medio
           </button>
         ) : null}
+        <EnlaceWhatsApp />
       </div>
     );
   }
 
   if (esperando) {
+    const medioEnCurso = (estado?.metodo as MedioDePago | undefined) ?? undefined;
     return (
       <div className="flex flex-col gap-4">
         {bannerEmbebido}
         {aviso ? (
-          <p className="rounded-xl bg-brand-cream/60 px-3 py-2 text-sm text-brand-ink/80">
+          <p role="status" className="border-2 border-brand-ink bg-brand-yellow-soft px-3 py-2 text-sm text-brand-ink">
             {aviso}
           </p>
         ) : null}
         {fase.tipo === "tresDs" ? (
           <>
-            <p className="text-sm text-brand-ink/75">
+            <p className="text-sm text-brand-ink/80">
               Tu banco pide confirmar que eres tú. Completa la verificación:
             </p>
             <iframe
               title="Verificación 3-D Secure de tu banco"
               srcDoc={fase.html}
               sandbox="allow-scripts allow-forms allow-top-navigation-by-user-activation allow-popups"
-              className="min-h-[480px] w-full rounded-2xl border border-brand-line bg-white"
+              className="min-h-[480px] w-full border-2 border-brand-ink bg-white"
             />
           </>
         ) : fase.tipo === "otp" ? (
           <div className="flex flex-col gap-3">
-            <p className="text-sm text-brand-ink/75">{otpTexto}</p>
+            <h2 className="font-display text-[26px] font-extrabold uppercase leading-[1.05] tracking-[-0.02em] text-brand-ink">
+              Escribe tu código
+            </h2>
+            <p role="status" className="text-sm text-brand-ink/80">{otpTexto}</p>
             <input
               className={`${inputClass} h-14 text-center text-2xl font-bold tracking-[0.5em]`}
               inputMode="numeric"
@@ -606,25 +628,23 @@ export function PasoDePago({
               aria-label="Código de 6 dígitos"
             />
             <ErrorBox>{error}</ErrorBox>
-            <button
-              type="button"
-              disabled={enviando}
-              onClick={validarOtp}
-              className="inline-flex h-12 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white disabled:opacity-60"
-            >
+            <button type="button" disabled={enviando} onClick={validarOtp} className={btnPrimary}>
               {enviando ? "Confirmando…" : "Confirmar pago"}
             </button>
             <button
               type="button"
               onClick={() => void enviarOtp()}
-              className="text-sm font-semibold text-brand-ink/70 underline"
+              className={`${linkTouch} self-start text-sm`}
             >
               Reenviar código
             </button>
           </div>
         ) : fase.tipo === "banco" ? (
           <div className="flex flex-col gap-3">
-            <p className="text-sm text-brand-ink/75">
+            <h2 className="font-display text-[26px] font-extrabold uppercase leading-[1.05] tracking-[-0.02em] text-brand-ink">
+              Te llevamos a tu banco
+            </h2>
+            <p className="text-sm text-brand-ink/80">
               Termina el pago en la página de tu banco. Al terminar vuelves aquí solo; si no,
               regresa a esta pestaña.
             </p>
@@ -633,119 +653,65 @@ export function PasoDePago({
               onClick={() => {
                 yendoAlBanco.current = true;
               }}
-              className="inline-flex h-12 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white"
+              className={btnPrimary}
             >
               Ir a mi banco
             </a>
           </div>
-        ) : (
-          <div className="flex flex-col items-center gap-3 rounded-2xl bg-brand-cream/50 px-4 py-6 text-center">
-            <Loader2 className="size-8 animate-spin text-brand-ink/50" />
-            {estado?.metodo === "NEQUI" ? (
+        ) : estado?.metodo === "NEQUI" ? (
+          <Espera
+            etiqueta="Pago pendiente · Nequi"
+            titulo="Revisa tu app de Nequi"
+            monto={monto}
+            medio={medioEnCurso}
+            chip="Esperando tu aprobación"
+            cuerpo={
               <>
-                <p className="font-semibold text-brand-ink">Abre Nequi y acepta el pago</p>
-                <p className="text-sm text-brand-ink/70">
-                  Te llegó una notificación por {monto}. Apruébala en la app y vuelve aquí: lo
-                  confirmamos solos.
-                </p>
+                Te llegó una notificación{monto ? ` por ${monto}` : ""}. Apruébala en Nequi y vuelve: esta
+                pantalla se actualiza sola.
               </>
-            ) : estado?.metodo === "PSE" || estado?.metodo === "BANCOLOMBIA_TRANSFER" ? (
-              <p className="text-sm text-brand-ink/70">Conectando con tu banco…</p>
-            ) : (
-              <p className="text-sm text-brand-ink/70">
-                Confirmando tu pago{nombreMedio ? ` con ${nombreMedio}` : ""}… No cierres esta
-                página.
-              </p>
-            )}
-          </div>
+            }
+          />
+        ) : estado?.metodo === "PSE" || estado?.metodo === "BANCOLOMBIA_TRANSFER" ? (
+          <Espera
+            titulo="Te llevamos a tu banco…"
+            monto={monto}
+            medio={medioEnCurso}
+            cuerpo="Un momento: te conectamos con tu banco para terminar el pago."
+          />
+        ) : (
+          <Espera
+            titulo={`Confirmando tu pago${nombreMedio ? ` con ${nombreMedio}` : ""}…`}
+            monto={monto}
+            medio={medioEnCurso}
+            cuerpo="Toma unos segundos. Esta pantalla se actualiza sola."
+          />
         )}
         {fase.tipo !== "otp" ? <ErrorBox>{error}</ErrorBox> : null}
         {estado && !estado.enCurso && estado.estado === "PENDING" ? (
           <button
             type="button"
             onClick={() => setFase({ tipo: "elegir" })}
-            className="text-sm font-semibold text-brand-ink/70 underline"
+            className={`${linkTouch} self-start text-sm`}
           >
             No lo aprobé: probar con otro medio
           </button>
         ) : null}
+        <EnlaceWhatsApp />
       </div>
     );
   }
 
   // Elegir medio y pagar.
-  return (
-    <form onSubmit={pagar} className="flex flex-col gap-4">
-      {bannerEmbebido}
-      {aviso ? (
-        <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-          <span>{aviso}</span>
-        </div>
-      ) : null}
+  const razonDeshabilitado = !medio
+    ? "Elige cómo quieres pagar."
+    : !acepta
+      ? "Acepta el reglamento de Wompi para poder pagar."
+      : null;
 
-      {medio === null ? (
-        <div role="radiogroup" aria-label="Medio de pago" className="flex flex-col gap-2.5">
-          {[...info.medios]
-            // El más usado (tarjeta) va primero.
-            .sort((a, b) => Number(b === MAS_USADO) - Number(a === MAS_USADO))
-            .map((m) => (
-              <button
-                key={m}
-                type="button"
-                role="radio"
-                aria-checked={false}
-                onClick={() => {
-                  setMedio(m);
-                  setError(null);
-                }}
-                className={`flex w-full items-center justify-between gap-3 rounded-2xl border-2 bg-white px-4 text-left transition hover:border-brand-ink/40 ${
-                  m === MAS_USADO ? "min-h-20 border-brand-ink/25" : "min-h-[68px] border-brand-line"
-                }`}
-              >
-                <span className="flex items-center gap-3.5">
-                  <LogoDelMedio medio={m} />
-                  <span className="flex flex-col">
-                    <span className="font-semibold text-brand-ink">
-                      {NOMBRE_DEL_MEDIO[m]}
-                      {m === MAS_USADO ? (
-                        <span className="ml-2 rounded-full bg-brand-ink px-2 py-0.5 align-[2px] text-[10px] font-extrabold uppercase tracking-wider text-white">
-                          Más usado
-                        </span>
-                      ) : null}
-                    </span>
-                    <span className="text-[13px] text-brand-ink/60">{DETALLE[m]}</span>
-                  </span>
-                </span>
-                <span
-                  aria-hidden="true"
-                  className="size-6 shrink-0 rounded-full border-2 border-brand-line"
-                />
-              </button>
-            ))}
-        </div>
-      ) : (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border-2 border-brand-ink bg-white px-4 py-3">
-          <span className="flex items-center gap-3.5">
-            <LogoDelMedio medio={medio} />
-            <span className="flex flex-col">
-              <span className="font-semibold text-brand-ink">{NOMBRE_DEL_MEDIO[medio]}</span>
-              <span className="text-[13px] text-brand-ink/60">{DETALLE[medio]}</span>
-            </span>
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              setMedio(null);
-              setError(null);
-            }}
-            className="rounded-full border border-brand-ink/20 px-3 py-1.5 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40"
-          >
-            Cambiar
-          </button>
-        </div>
-      )}
-
+  /** Los campos que pide el medio elegido; van justo debajo de su fila. */
+  const campos = (
+    <div className="flex flex-col gap-3 px-0.5 pb-2 pt-3">
       {medio === "CARD" ? (
         <>
           <Field label="Número de la tarjeta" htmlFor="card-number">
@@ -897,7 +863,7 @@ export function PasoDePago({
       ) : null}
 
       {medio === "BANCOLOMBIA_TRANSFER" ? (
-        <p className="rounded-xl bg-brand-cream/50 px-3 py-2 text-sm text-brand-ink/75">
+        <p className="text-sm text-brand-ink/80">
           Te llevamos a Bancolombia para que apruebes el pago con tu usuario de la app o la sucursal
           virtual.
         </p>
@@ -941,61 +907,227 @@ export function PasoDePago({
           </div>
         </div>
       ) : null}
+    </div>
+  );
 
-      {medio ? (
-        <>
-          <label className="flex items-start gap-2 text-sm text-brand-ink/80">
-            <input
-              type="checkbox"
-              className="mt-1 size-4 accent-[currentColor]"
-              checked={acepta}
-              onChange={(e) => setAcepta(e.target.checked)}
-            />
-            <span>
-              Acepto el{" "}
-              <a
-                href={info.terminosUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-semibold underline"
-              >
-                reglamento de Wompi
-              </a>{" "}
-              y autorizo el{" "}
-              <a
-                href={info.datosUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-semibold underline"
-              >
-                tratamiento de mis datos personales
-              </a>
-              .
-            </span>
-          </label>
-
-          <ErrorBox>{error}</ErrorBox>
+  return (
+    <form onSubmit={pagar} className="flex flex-col gap-4">
+      {bannerEmbebido}
+      {aviso ? (
+        <div role="alert" className="border-2 border-red-700 bg-red-50 px-3 py-3 text-sm text-red-800">
+          <p className="flex items-start gap-2 font-semibold">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span>{aviso}</span>
+          </p>
           <button
-            type="submit"
-            disabled={enviando}
-            className="inline-flex h-12 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white transition hover:bg-brand-ink-soft disabled:opacity-60"
+            type="button"
+            onClick={() => {
+              setMedio(null);
+              setError(null);
+              listaDeMedios.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+            }}
+            className={`${linkTouch} mt-1 text-sm text-red-800`}
           >
-            {enviando
-              ? "Procesando…"
-              : medio === "PSE" || medio === "BANCOLOMBIA_TRANSFER"
-                ? "Ir a mi banco y pagar"
-                : medio === "NEQUI"
-                  ? "Enviar solicitud a Nequi"
-                  : medio === "DAVIPLATA"
-                    ? "Enviarme el código"
-                    : `Pagar${monto ? ` ${monto}` : ""}`}
+            Probar con otro medio
           </button>
-        </>
+        </div>
       ) : null}
-      <p className="flex items-center justify-center gap-1.5 text-xs text-brand-ink/55">
-        <ShieldCheck className="size-3.5" /> Pago procesado por Wompi (Bancolombia). Los datos de tu
-        tarjeta no pasan por nuestros servidores.
+
+      <div
+        ref={listaDeMedios}
+        role="radiogroup"
+        aria-label="Medio de pago"
+        className="flex flex-col gap-2"
+      >
+        {[...info.medios]
+          // El más usado (tarjeta) va primero.
+          .sort((a, b) => Number(b === MAS_USADO) - Number(a === MAS_USADO))
+          .map((m) => {
+            const activo = m === medio;
+            return (
+              <div key={m}>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={activo}
+                  onClick={() => {
+                    setMedio(m);
+                    setError(null);
+                  }}
+                  className={`flex min-h-[56px] w-full items-center justify-between gap-3 border-2 border-brand-ink px-3 py-2 text-left transition-colors ${focusRing} ${
+                    activo
+                      ? "bg-brand-ink text-brand-cream"
+                      : "bg-white text-brand-ink hover:bg-brand-cream-soft"
+                  }`}
+                >
+                  <span className="flex items-center gap-3">
+                    <LogoDelMedio medio={m} />
+                    <span className="flex flex-col">
+                      <span className="text-[15px] font-bold">
+                        {NOMBRE_DEL_MEDIO[m]}
+                        {m === MAS_USADO ? (
+                          <span className="ml-2 rounded-full border-[1.5px] border-brand-ink bg-brand-yellow px-2 py-px align-[1px] font-display text-[11px] font-extrabold uppercase tracking-[0.06em] text-brand-ink">
+                            Más usado
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className={`text-xs ${activo ? "text-brand-cream/80" : "text-brand-ink/70"}`}>
+                        {DETALLE[m]}
+                      </span>
+                    </span>
+                  </span>
+                  {/* El círculo siempre ocupa su sitio: elegir no mueve nada. */}
+                  <span
+                    aria-hidden="true"
+                    className={`grid size-6 shrink-0 place-items-center rounded-full border-2 ${
+                      activo ? "border-brand-cream bg-brand-cream text-brand-ink" : "border-brand-ink"
+                    }`}
+                  >
+                    {activo ? <Check className="size-3.5" strokeWidth={3.4} /> : null}
+                  </span>
+                </button>
+                {activo ? campos : null}
+              </div>
+            );
+          })}
+      </div>
+
+      <p className="text-xs text-brand-ink/70">
+        Se cobra en pesos colombianos (TRM del día). Los datos de tu tarjeta no pasan por nuestros
+        servidores.
       </p>
+
+      <label className="flex items-start gap-3 text-[13px] text-brand-ink">
+        <input
+          type="checkbox"
+          className={`size-6 shrink-0 accent-brand-ink ${focusRing}`}
+          checked={acepta}
+          onChange={(e) => setAcepta(e.target.checked)}
+        />
+        <span className="pt-0.5">
+          Acepto el{" "}
+          <a
+            href={info.terminosUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-bold underline"
+          >
+            reglamento de Wompi
+          </a>{" "}
+          y autorizo el{" "}
+          <a
+            href={info.datosUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-bold underline"
+          >
+            tratamiento de mis datos personales
+          </a>
+          .
+        </span>
+      </label>
+
+      {/* Zona de pago siempre a la mano: en el teléfono queda pegada abajo. */}
+      <div className="sticky bottom-0 z-10 -mx-5 -mb-5 mt-1 border-t-2 border-brand-ink bg-white px-5 pb-3 pt-3 md:-mx-7 md:-mb-7 md:px-7">
+        <ErrorBox>{error}</ErrorBox>
+        <p className="mb-2 mt-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-brand-ink">
+          <Lock className="size-3.5" aria-hidden /> Pago seguro con Wompi · Sin permanencia
+        </p>
+        <button
+          type="submit"
+          disabled={enviando || !!razonDeshabilitado}
+          aria-describedby={razonDeshabilitado ? "razon-pago" : undefined}
+          className={btnPrimary}
+        >
+          {enviando
+            ? "Procesando…"
+            : medio === "PSE" || medio === "BANCOLOMBIA_TRANSFER"
+              ? "Ir a mi banco y pagar"
+              : medio === "NEQUI"
+                ? "Enviar solicitud a Nequi"
+                : medio === "DAVIPLATA"
+                  ? "Enviarme el código"
+                  : `Pagar${monto ? ` ${monto}` : ""}`}
+        </button>
+        {razonDeshabilitado ? (
+          <p id="razon-pago" className="mt-2 text-center text-[13px] font-bold text-brand-ink">
+            {razonDeshabilitado}
+          </p>
+        ) : null}
+        <p className="text-center">
+          <EnlaceWhatsApp />
+        </p>
+      </div>
     </form>
+  );
+}
+
+/** Enlace de ayuda por WhatsApp, el mismo en todas las pantallas del pago. */
+function EnlaceWhatsApp() {
+  return (
+    <a
+      href="https://wa.me/573012646770"
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`${linkPlain} min-h-9 text-xs`}
+    >
+      ¿Dudas? Escríbenos por WhatsApp
+    </a>
+  );
+}
+
+/** Tarjeta de espera: el monto, qué hay que hacer y que la pantalla se actualiza sola. */
+function Espera({
+  etiqueta,
+  titulo,
+  cuerpo,
+  monto,
+  medio,
+  chip,
+}: {
+  etiqueta?: string;
+  titulo: string;
+  cuerpo: React.ReactNode;
+  monto: string | null;
+  medio?: MedioDePago;
+  chip?: string;
+}) {
+  return (
+    <section role="status" aria-live="polite" className="shadow-hard border-2 border-brand-ink bg-white p-4 md:p-5">
+      {etiqueta ? (
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-ink/70">{etiqueta}</p>
+      ) : null}
+      <h2 className="mt-1 font-display text-[26px] font-extrabold uppercase leading-[1.05] tracking-[-0.02em] text-brand-ink">
+        {titulo}
+      </h2>
+      <div className="mt-4 flex items-center gap-4">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 56 56"
+          fill="none"
+          className="size-14 shrink-0 animate-spin motion-reduce:animate-none"
+        >
+          <circle cx="28" cy="28" r="23" stroke="currentColor" strokeOpacity="0.2" strokeWidth="6" className="text-brand-ink" />
+          <path d="M28 5a23 23 0 0 1 23 23" stroke="currentColor" strokeWidth="6" strokeLinecap="round" className="text-brand-ink" />
+        </svg>
+        {monto ? (
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-ink/70">Se cobra hoy</p>
+            <p className="mt-1 font-display text-[28px] font-extrabold leading-none text-brand-ink">{monto}</p>
+          </div>
+        ) : null}
+      </div>
+      <p className="mt-4 flex items-center gap-3 text-sm text-brand-ink/80">
+        {medio ? <LogoDelMedio medio={medio} /> : null}
+        <span>{cuerpo}</span>
+      </p>
+      {chip ? (
+        <p className="mt-3">
+          <span className="inline-flex rounded-full border-[1.5px] border-brand-ink bg-brand-yellow px-3 py-1 text-xs font-bold text-brand-ink">
+            {chip}
+          </span>
+        </p>
+      ) : null}
+    </section>
   );
 }

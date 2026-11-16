@@ -4,6 +4,8 @@ import { Logo } from "./Logo";
 import { subscriptionsApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { homePathFor } from "@/lib/roles";
+import { btnPrimary, focusRing } from "./AuthShell";
+import { Check } from "lucide-react";
 
 /**
  * Un usuario logueado con plan activo (fuera de la ventana de renovación de
@@ -27,31 +29,32 @@ export function useActivePlanGate() {
 export function ActivePlanScreen({ end }: { end: Date | null }) {
   const { signOut, user } = useAuth();
   return (
-    <main className="min-h-screen bg-brand-cream px-5 py-16">
-      <div className="mx-auto max-w-lg">
-        <Link to="/" aria-label="Inicio">
+    <main className="min-h-screen bg-brand-cream px-5 py-6 md:py-12">
+      <div className="mx-auto max-w-md">
+        <Link to="/" aria-label="Inicio" className={`inline-flex min-h-11 items-center ${focusRing}`}>
           <Logo className="h-8 w-auto" />
         </Link>
-        <div className="mt-8 rounded-3xl border border-brand-line bg-white p-8 text-center shadow-soft">
-          <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-brand-success/10 text-2xl">✅</div>
-          <h1 className="mt-4 text-2xl font-bold text-brand-ink">Ya tienes un plan activo</h1>
-          <p className="mt-2 text-sm text-brand-ink/65">
+        <div className="shadow-hard mt-8 border-2 border-brand-ink bg-white p-6 text-center md:p-8">
+          <div className="mx-auto flex size-14 items-center justify-center rounded-full border-2 border-brand-ink bg-brand-ink text-brand-cream dark:text-white">
+            <Check className="size-7" aria-hidden="true" />
+          </div>
+          <h1 className="mt-4 font-display text-[28px] font-extrabold uppercase leading-[1.02] tracking-[-0.02em] text-brand-ink">
+            Ya tienes un <span className="marker-highlight">plan</span> activo
+          </h1>
+          <p className="mt-3 text-sm text-brand-ink/80">
             {end
               ? `Tu suscripción está vigente hasta el ${end.toLocaleDateString("es-CO", { day: "2-digit", month: "long" })}. Podrás renovar cuando falten 5 días o menos.`
               : "Tu suscripción está vigente. Podrás renovar cuando esté por vencer."}
           </p>
-          <Link
-            to={homePathFor(user?.roles)}
-            className="mt-6 inline-flex h-12 items-center justify-center rounded-full bg-brand-ink px-6 text-sm font-semibold text-white transition hover:bg-brand-ink-soft"
-          >
+          <Link to={homePathFor(user?.roles)} className={`${btnPrimary} mt-6`}>
             Ir a mi portal
           </Link>
-          <p className="mt-4 text-xs text-brand-ink/55">
+          <p className="mt-4 text-xs text-brand-ink/70">
             ¿Quieres comprar un plan para otra persona?{" "}
             <button
               type="button"
               onClick={() => void signOut()}
-              className="font-semibold text-brand-ink underline hover:text-brand-ink-soft"
+              className={`inline-flex min-h-11 items-center font-bold text-brand-ink underline underline-offset-2 hover:text-brand-ink-soft ${focusRing}`}
             >
               Cierra sesión
             </button>{" "}

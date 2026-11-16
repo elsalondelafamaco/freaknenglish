@@ -4,6 +4,9 @@ import { useMutation } from "@tanstack/react-query";
 import { usersApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { PhoneInput, validatePhone } from "@/components/app/PhoneInput";
+import { btnPrimary, inputClass } from "@/components/site/AuthShell";
+import { PageHeader, cardPrimary } from "@/components/app/AppUi";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/onboarding/profile")({
@@ -28,13 +31,12 @@ function OnboardingProfile() {
   });
 
   return (
-    <div className="mx-auto max-w-lg py-8">
-      <h1 className="text-3xl font-bold text-brand-ink">Completa tu perfil</h1>
-      <p className="mt-2 text-brand-ink/65">
+    <div className="mx-auto flex max-w-lg flex-col gap-6 py-4 md:py-8">
+      <PageHeader title="Completa tu perfil" highlight="perfil">
         Necesitamos tu documento y teléfono para procesar tu suscripción y contactarte por tus clases.
-      </p>
+      </PageHeader>
       <form
-        className="mt-6 space-y-4"
+        className={cn(cardPrimary, "space-y-4 p-5 md:p-7")}
         onSubmit={(e) => {
           e.preventDefault();
           if (!documentNumber.trim()) return toast.error("Todos los campos son obligatorios");
@@ -44,23 +46,25 @@ function OnboardingProfile() {
         }}
       >
         <div>
-          <label className="text-sm font-medium">Número de documento</label>
+          <label htmlFor="documento" className="mb-1.5 block text-[13px] font-bold text-brand-ink">
+            Número de documento
+          </label>
           <input
-            className="mt-1 w-full rounded-xl border border-brand-line px-4 py-2"
+            id="documento"
+            className={inputClass}
             value={documentNumber}
             onChange={(e) => setDocumentNumber(e.target.value)}
+            autoComplete="off"
             required
           />
         </div>
         <div>
-          <label className="text-sm font-medium">Teléfono</label>
-          <PhoneInput className="mt-1" value={phone} onChange={setPhone} required />
+          <label htmlFor="telefono" className="mb-1.5 block text-[13px] font-bold text-brand-ink">
+            Teléfono
+          </label>
+          <PhoneInput id="telefono" value={phone} onChange={setPhone} required />
         </div>
-        <button
-          type="submit"
-          disabled={save.isPending}
-          className="w-full rounded-full bg-brand-ink px-6 py-3 font-semibold text-white disabled:opacity-60"
-        >
+        <button type="submit" disabled={save.isPending} className={btnPrimary}>
           {save.isPending ? "Guardando…" : "Continuar"}
         </button>
       </form>

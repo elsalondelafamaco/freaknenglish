@@ -3,6 +3,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, Circle, Download, FileText, Lock, PlayCircle, Presentation, Trophy } from "lucide-react";
 import { toast } from "sonner";
+import { Cargando, EstadoError, PageHeader, Vacio, btnChip, btnPrimaryAuto, cardPlain, cardPrimary, eyebrow, focusRing, tagNeutral, tag } from "@/components/app/AppUi";
+import { cn } from "@/lib/utils";
 import { learningApi } from "@/lib/api/endpoints";
 import { urlDeMedios } from "@/lib/learning/lessonHtml";
 import { progresoDelModulo } from "@/lib/learning/progreso";
@@ -40,8 +42,23 @@ function ModuleDetail() {
     },
   });
 
-  if (modQ.isLoading) return <p className="text-sm text-brand-ink/60">Cargando módulo…</p>;
-  if (!mod) return <p className="text-sm text-brand-ink/60">Módulo no encontrado.</p>;
+  if (modQ.isLoading) return <Cargando>Cargando módulo…</Cargando>;
+  if (modQ.isError) {
+    return (
+      <div className="flex flex-col gap-4">
+        <VolverAprender />
+        <EstadoError onRetry={() => void modQ.refetch()}>No pudimos cargar este módulo. Revisa tu conexión e inténtalo de nuevo.</EstadoError>
+      </div>
+    );
+  }
+  if (!mod) {
+    return (
+      <div className="flex flex-col gap-4">
+        <VolverAprender />
+        <Vacio titulo="Módulo no encontrado">Puede que ya no esté disponible. Vuelve a Aprender y elige otro.</Vacio>
+      </div>
+    );
+  }
 
   const lessons: any[] = [...(mod.lessons ?? [])].sort((a, b) => a.position - b.position);
   const doneIds = new Set(progQ.data?.completedLessonIds ?? []);
@@ -53,35 +70,44 @@ function ModuleDetail() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link to="/app/learning" className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-ink/65 hover:text-brand-ink">
-        <ArrowLeft className="size-4" /> Volver a aprendizaje
-      </Link>
+      <div className="px-2 sm:px-0">
+        <VolverAprender />
+      </div>
 
-      <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <div className="text-4xl">{mod.coverEmoji ?? "📘"}</div>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">{mod.title}</h1>
-          <p className="mt-1 max-w-xl text-[15px] text-brand-ink/65">{mod.summary}</p>
-        </div>
-        <div className="rounded-2xl border border-brand-line bg-white px-4 py-3 text-sm">
-          <div className="text-xs uppercase tracking-wide text-brand-ink/55">Progreso</div>
-          <div className="text-xl font-bold text-brand-ink">{pct}%</div>
-          <div className="text-xs text-brand-ink/55">{done}/{total} actividades</div>
-        </div>
-      </header>
+      <div className="px-2 sm:px-0">
+        <PageHeader
+          eyebrowText={`${done} de ${total} actividades · ${pct}%`}
+          title={mod.title}
+          highlight={mod.title.split(" ").sort((a: string, b: string) => b.length - a.length)[0]}
+          aside={
+            <div className="min-w-44 max-w-xs" role="group" aria-label="Progreso del módulo">
+              <div
+                role="progressbar"
+                aria-label="Progreso del módulo"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={pct}
+                className="h-2.5 border-[1.5px] border-brand-ink bg-white"
+              >
+                <div className="h-full bg-brand-ink" style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+          }
+        >
+          {mod.summary}
+        </PageHeader>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <article className="flex flex-col gap-4 rounded-3xl border border-brand-line bg-white p-5">
+        <article className={cn(cardPrimary, "flex min-w-0 flex-col gap-4 p-4 [--hard-x:4px] max-sm:border-x-0 max-sm:[box-shadow:none] sm:p-5")}>
           {active ? (
             <>
               <div className="flex items-start justify-between gap-3">
-                <h2 className="text-lg font-bold text-brand-ink">{active.title}</h2>
+                <h2 className="font-display text-[20px] font-extrabold uppercase leading-tight tracking-[-0.01em] text-brand-ink">{active.title}</h2>
                 {/* Solo la duración: el `kind` (html, pdf, slides…) es cómo
                     guardamos la lección, no algo que le sirva a quien la ve. */}
                 {active.durationMin ? (
-                  <span className="rounded-full bg-brand-cream px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-brand-ink/65">
-                    {active.durationMin} min
-                  </span>
+                  <span className={cn(tagNeutral, "shrink-0")}>{active.durationMin} min</span>
                 ) : null}
               </div>
               {active.locked ? (
@@ -91,28 +117,30 @@ function ModuleDetail() {
               )}
               <div className={`flex flex-wrap items-center justify-between gap-3 ${active.locked ? "hidden" : ""}`}>
                 <button
+                  type="button"
                   onClick={() => toggleM.mutate({ lessonId: active.id, completed: !activeDone })}
                   disabled={toggleM.isPending}
-                  className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold disabled:opacity-60 ${activeDone ? "bg-brand-success/15 text-brand-success" : "bg-brand-ink text-white hover:bg-brand-ink-soft"}`}
+                  aria-pressed={activeDone}
+                  className={activeDone ? cn(btnChip, "min-h-12 px-5") : btnPrimaryAuto}
                 >
-                  <CheckCircle2 className="size-4" />
+                  <CheckCircle2 className="size-4" aria-hidden="true" />
                   {activeDone ? "Lección completada" : "Marcar como completada"}
                 </button>
                 {(active.kind === "download" || active.kind === "pdf") && mediaUrl(active) ? (
-                  <a href={mediaUrl(active)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-ink/70 hover:text-brand-ink">
-                    <Download className="size-4" /> Descargar recurso
+                  <a href={mediaUrl(active)} target="_blank" rel="noreferrer" className={cn("inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-brand-ink underline underline-offset-2 hover:text-brand-ink-soft", focusRing)}>
+                    <Download className="size-4" aria-hidden="true" /> Descargar recurso
                   </a>
                 ) : null}
               </div>
             </>
           ) : (
-            <p className="text-sm text-brand-ink/55">Este módulo no tiene lecciones aún.</p>
+            <p className="text-sm text-brand-ink/80">Este módulo no tiene lecciones aún.</p>
           )}
         </article>
 
-        <aside className="rounded-3xl border border-brand-line bg-white p-3">
-          <div className="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-brand-ink/55">Lecciones</div>
-          <ul className="flex flex-col">
+        <aside aria-labelledby="lecciones" className={cn(cardPlain, "mx-2 self-start p-2 sm:mx-0")}>
+          <h2 id="lecciones" className={cn(eyebrow, "px-3 py-2.5")}>Lecciones</h2>
+          <ul className="flex flex-col gap-0.5">
             {lessons.map((l: any) => {
               const Icon = KIND_ICON[l.kind] ?? FileText;
               const isDone = doneIds.has(l.id);
@@ -121,27 +149,33 @@ function ModuleDetail() {
               return (
                 <li key={l.id}>
                   <button
+                    type="button"
                     onClick={() => !locked && setActiveId(l.id)}
                     disabled={locked}
+                    aria-current={isActive ? "true" : undefined}
                     title={locked ? "Tu profe habilita el contenido a medida que avanzas" : undefined}
-                    className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm transition ${
+                    className={cn(
+                      "flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition-colors",
                       locked
-                        ? "cursor-not-allowed text-brand-ink/35"
+                        ? "cursor-not-allowed text-brand-ink/70"
                         : isActive
-                          ? "bg-brand-cream text-brand-ink"
-                          : "text-brand-ink/75 hover:bg-brand-cream/50"
-                    }`}
+                          ? "bg-brand-ink font-bold text-brand-cream dark:text-white"
+                          : "font-medium text-brand-ink hover:bg-brand-cream",
+                      focusRing,
+                    )}
                   >
                     {locked ? (
-                      <Lock className="size-4 text-brand-ink/30" />
+                      <Lock className="size-4 shrink-0" aria-hidden="true" />
                     ) : isDone ? (
-                      <CheckCircle2 className="size-4 text-brand-success" />
+                      <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
                     ) : (
-                      <Circle className="size-4 text-brand-ink/35" />
+                      <Circle className="size-4 shrink-0 opacity-60" aria-hidden="true" />
                     )}
-                    <Icon className={`size-4 ${locked ? "text-brand-ink/25" : "text-brand-ink/60"}`} />
-                    <span className="flex-1 font-medium">{l.title}</span>
-                    {l.isCheckpoint ? <span className="text-[10px]">🏁</span> : null}
+                    <Icon className="size-4 shrink-0 opacity-70" aria-hidden="true" />
+                    <span className="flex-1">{l.title}</span>
+                    {isDone ? <span className="sr-only">(completada)</span> : null}
+                    {locked ? <span className="sr-only">(bloqueada)</span> : null}
+                    {l.isCheckpoint ? <span className={cn(tag, "px-2 py-0 text-[10px]")}>Checkpoint</span> : null}
                   </button>
                 </li>
               );
@@ -163,19 +197,16 @@ function ModuleDetail() {
  */
 function LockedLesson() {
   return (
-    <div className="rounded-2xl border border-brand-line bg-brand-cream/40 p-8 text-center">
-      <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-white shadow-soft">
-        <Lock className="size-6 text-brand-ink/60" />
+    <div className="border-2 border-dashed border-brand-ink/50 bg-brand-cream p-8 text-center">
+      <div className="mx-auto flex size-14 items-center justify-center rounded-full border-2 border-dashed border-brand-ink/60 bg-white">
+        <Lock className="size-6 text-brand-ink/70" aria-hidden="true" />
       </div>
-      <h3 className="mt-4 text-lg font-bold text-brand-ink">Contenido bloqueado</h3>
-      <p className="mx-auto mt-2 max-w-md text-sm text-brand-ink/70">
+      <h3 className="mt-4 font-display text-lg font-extrabold uppercase text-brand-ink">Contenido bloqueado</h3>
+      <p className="mx-auto mt-2 max-w-md text-sm text-brand-ink/80">
         Tu profe habilita el contenido a medida que avanzas, para que vayas con las bases firmes.
         Coméntale en tu próxima clase que quieres seguir.
       </p>
-      <Link
-        to="/app/learning"
-        className="mt-5 inline-block rounded-full bg-brand-ink px-5 py-2 text-sm font-semibold text-white hover:bg-brand-ink-soft"
-      >
+      <Link to="/app/learning" className={cn(btnPrimaryAuto, "mt-5")}>
         Volver al catálogo
       </Link>
     </div>
@@ -211,7 +242,7 @@ function LessonViewer({ lesson }: { lesson: any }) {
           const p = data.payload;
           toast.success(
             typeof p.score === "number" && typeof p.maxScore === "number"
-              ? `Resultado guardado: ${p.score}/${p.maxScore} 🎉`
+              ? `Resultado guardado: ${p.score}/${p.maxScore}`
               : "¡Actividad completada y guardada!",
           );
         } catch {
@@ -237,10 +268,10 @@ function LessonViewer({ lesson }: { lesson: any }) {
         {(resultsQ.data ?? []).length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {resultsQ.data!.map((r) => (
-              <span key={r.id} className="inline-flex items-center gap-1.5 rounded-full bg-brand-yellow/50 px-3 py-1.5 text-xs font-semibold text-brand-ink">
-                <Trophy className="size-3.5" />
+              <span key={r.id} className={cn(tag, "gap-1.5 px-3 py-1.5 text-xs")}>
+                <Trophy className="size-3.5" aria-hidden="true" />
                 {r.title ?? r.activityId}
-                {r.score != null && r.maxScore != null ? `: ${r.score}/${r.maxScore}` : " ✓"}
+                {r.score != null && r.maxScore != null ? `: ${r.score}/${r.maxScore}` : ""}
                 {r.attempts > 1 ? ` · ${r.attempts} intentos` : ""}
               </span>
             ))}
@@ -251,24 +282,32 @@ function LessonViewer({ lesson }: { lesson: any }) {
   }
   if (lesson.kind === "video" || lesson.kind === "slides") {
     return (
-      <div className="aspect-video w-full overflow-hidden rounded-2xl border border-brand-line bg-brand-ink/5">
+      <div className="aspect-video w-full overflow-hidden border-2 border-brand-ink bg-brand-ink/5">
         <iframe src={url} title={lesson.title} className="h-full w-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
       </div>
     );
   }
   if (lesson.kind === "pdf") {
     return (
-      <div className="rounded-2xl border border-brand-line bg-brand-cream/40 p-8 text-center">
-        <FileText className="mx-auto size-10 text-brand-ink/60" />
-        <p className="mt-3 text-sm text-brand-ink/70">Documento PDF listo para leer o descargar.</p>
-        {url ? <a href={url} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-5 py-2 text-sm font-semibold text-white hover:bg-brand-ink-soft">Abrir PDF</a> : null}
+      <div className="border-2 border-brand-ink bg-brand-cream p-8 text-center">
+        <FileText className="mx-auto size-10 text-brand-ink" aria-hidden="true" />
+        <p className="mt-3 text-sm text-brand-ink/80">Documento PDF listo para leer o descargar.</p>
+        {url ? <a href={url} target="_blank" rel="noreferrer" className={cn(btnPrimaryAuto, "mt-4")}>Abrir PDF</a> : null}
       </div>
     );
   }
   return (
-    <div className="rounded-2xl border border-brand-line bg-brand-cream/40 p-8 text-center">
-      <Download className="mx-auto size-10 text-brand-ink/60" />
-      <p className="mt-3 text-sm text-brand-ink/70">Recurso descargable. Úsalo offline para practicar entre clases.</p>
+    <div className="border-2 border-brand-ink bg-brand-cream p-8 text-center">
+      <Download className="mx-auto size-10 text-brand-ink" aria-hidden="true" />
+      <p className="mt-3 text-sm text-brand-ink/80">Recurso descargable. Úsalo offline para practicar entre clases.</p>
     </div>
+  );
+}
+
+function VolverAprender() {
+  return (
+    <Link to="/app/learning" className={cn("inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-brand-ink underline-offset-2 hover:underline", focusRing)}>
+      <ArrowLeft className="size-4" aria-hidden="true" /> Volver a aprender
+    </Link>
   );
 }

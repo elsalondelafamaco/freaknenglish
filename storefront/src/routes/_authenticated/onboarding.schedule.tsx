@@ -8,6 +8,8 @@ import { SchedulePickerGrid, slotKey } from "@/components/schedule/SchedulePicke
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { ZONA_BOGOTA, etiquetaDeZona, nombreDeZona, zonaDe } from "@/lib/domain/zona-horaria";
 import { useZonaDelNavegador } from "@/lib/domain/zona-navegador";
+import { Cargando, PageHeader, btnPrimaryAuto, cardPlain, eyebrow } from "@/components/app/AppUi";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/onboarding/schedule")({
   head: () => ({ meta: [{ title: "Elige tu horario — FreaknEnglish" }] }),
@@ -73,33 +75,32 @@ function OnboardingSchedule() {
 
   return (
     <div className="mx-auto max-w-5xl py-8">
-      <header className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-brand-ink">
-            {need > 0 ? `Elige tus ${need} clases de la semana` : "Elige tu horario"}
-          </h1>
-          <p className="mt-1 text-[15px] text-brand-ink/65">
-            {cfg ? `Clases de ${cfg.durationMin} min. ` : ""}Este será tu horario fijo semanal.
-          </p>
-        </div>
-        <div className="rounded-2xl border border-brand-line bg-white px-4 py-3 text-center">
-          <div className="text-2xl font-bold text-brand-ink">
-            {selected.length}/{need || "—"}
+      <PageHeader
+        eyebrowText={cfg ? `Clases de ${cfg.durationMin} min` : undefined}
+        title={need > 0 ? `Elige tus ${need} clases de la semana` : "Elige tu horario"}
+        highlight={need > 0 ? "clases" : "horario"}
+        aside={
+          <div className={cn(cardPlain, "px-4 py-3 text-center")} role="status" aria-live="polite">
+            <div className="font-display text-2xl font-extrabold text-brand-ink">
+              {selected.length}/{need || "—"}
+            </div>
+            <div className={eyebrow}>franjas elegidas</div>
           </div>
-          <div className="text-[11px] uppercase tracking-wide text-brand-ink/55">franjas elegidas</div>
-        </div>
-      </header>
+        }
+      >
+        Este será tu horario fijo semanal.
+      </PageHeader>
 
       {hasAutoSlots ? (
-        <div className="mt-3 flex items-center gap-4 text-xs text-brand-ink/60">
+        <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-brand-ink/80">
           <span className="inline-flex items-center gap-1.5">
-            <span className="inline-flex size-4 items-center justify-center rounded bg-brand-yellow/70">
-              <Zap className="size-3 text-brand-ink" />
+            <span className="inline-flex size-4 items-center justify-center border-[1.5px] border-brand-ink bg-brand-yellow">
+              <Zap className="size-3 text-brand-ink" aria-hidden="true" />
             </span>
             Disponibilidad inmediata
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block size-4 rounded border border-brand-line bg-white" />
+            <span className="inline-block size-4 border-[1.5px] border-brand-ink bg-white" />
             Disponible con coordinación
           </span>
         </div>
@@ -110,10 +111,10 @@ function OnboardingSchedule() {
           eran sus 9:00. La segunda frase no es adorno: evita el reclamo de
           noviembre, cuando su país cambie la hora y Colombia no. */}
       {zonaPropia !== ZONA_BOGOTA ? (
-        <div className="mt-4 rounded-2xl border border-brand-line bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink">
+        <div className={cn(cardPlain, "mt-4 bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink")}>
           Las horas se muestran en <b>tu zona horaria</b> ({nombreDeZona(zonaPropia)},{" "}
           {etiquetaDeZona(zonaPropia)}). Los días son días de Colombia.
-          <span className="mt-1 block text-xs text-brand-ink/70">
+          <span className="mt-1 block text-xs text-brand-ink/80">
             Tu hora local puede cambiar cuando tu país cambie de horario; la hora en Colombia es
             siempre la misma.
           </span>
@@ -121,7 +122,7 @@ function OnboardingSchedule() {
       ) : null}
 
       {configQ.isLoading || !cfg ? (
-        <p className="mt-6 text-sm text-brand-ink/60">Cargando disponibilidad…</p>
+        <div className="mt-6"><Cargando>Cargando disponibilidad…</Cargando></div>
       ) : (
         <div className="mt-4">
           <SchedulePickerGrid
@@ -136,10 +137,10 @@ function OnboardingSchedule() {
       )}
 
       {complete && !assignable ? (
-        <div className="mt-4 flex items-start gap-3 rounded-2xl border border-brand-line bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink">
-          <Sparkles className="mt-0.5 size-4 shrink-0" />
+        <div className={cn(cardPlain, "mt-4 flex items-start gap-3 bg-brand-yellow-soft px-4 py-3 text-sm text-brand-ink")}>
+          <Sparkles className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <p>
-            Ese horario está muy solicitado 💛 Guarda tu selección con tranquilidad: nuestro equipo te
+            Ese horario está muy solicitado. Guarda tu selección con tranquilidad: nuestro equipo te
             contacta en menos de 24&nbsp;h hábiles para coordinar tu profesor y el inicio de tus clases.
           </p>
         </div>
@@ -150,7 +151,7 @@ function OnboardingSchedule() {
           type="button"
           onClick={() => submit.mutate()}
           disabled={!complete || submit.isPending}
-          className="inline-flex h-12 items-center rounded-full bg-brand-ink px-8 text-sm font-semibold text-white transition hover:bg-brand-ink-soft disabled:cursor-not-allowed disabled:opacity-50"
+          className={cn(btnPrimaryAuto, "sm:min-w-56")}
         >
           {submit.isPending ? "Enviando…" : "Confirmar horario"}
         </button>

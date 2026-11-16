@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Cargando } from "@/components/app/AppUi";
 
 export const Route = createFileRoute("/_authenticated/app/subscribe")({
   head: () => ({ meta: [{ title: "Elige tu plan — FreaknEnglish" }] }),
@@ -13,5 +14,5 @@ function SubscribeRedirect() {
   useEffect(() => {
     nav({ to: "/checkout", replace: true });
   }, [nav]);
-  return null;
+  return <Cargando>Te llevamos a elegir tu plan…</Cargando>;
 }

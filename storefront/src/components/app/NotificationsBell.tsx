@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { Bell } from "lucide-react";
+import { Bell, BookOpen, CalendarDays, CreditCard, UserCheck, type LucideIcon } from "lucide-react";
+import { focusRing } from "@/components/site/AuthShell";
 import { notificationsApi, type InAppNotification } from "@/lib/api/endpoints";
 import { cn } from "@/lib/utils";
 
-const ICON_BY_TYPE: Record<InAppNotification["type"], string> = {
-  system: "🔔",
-  payment: "💳",
-  class: "📅",
-  teacher: "👩‍🏫",
-  learning: "📚",
+const ICON_BY_TYPE: Record<InAppNotification["type"], LucideIcon> = {
+  system: Bell,
+  payment: CreditCard,
+  class: CalendarDays,
+  teacher: UserCheck,
+  learning: BookOpen,
 };
 
 const TYPE_LABEL: Record<string, string> = {
@@ -68,12 +69,14 @@ export function NotificationsBell({ haciaArriba = false }: { haciaArriba?: boole
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative rounded-full p-2 text-brand-ink hover:bg-brand-cream/50"
-        aria-label="Notificaciones"
+        type="button"
+        className={cn("relative inline-flex size-11 items-center justify-center rounded-full text-brand-ink hover:bg-brand-cream", focusRing)}
+        aria-label={unread > 0 ? `Notificaciones, ${unread} sin leer` : "Notificaciones"}
+        aria-expanded={open}
       >
         <Bell className="size-5" />
         {unread > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+          <span aria-hidden="true" className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full border-[1.5px] border-brand-ink bg-brand-yellow px-1 text-[10px] font-bold text-brand-ink">
             {unread > 9 ? "9+" : unread}
           </span>
         ) : null}
@@ -83,15 +86,16 @@ export function NotificationsBell({ haciaArriba = false }: { haciaArriba?: boole
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
-            className={`absolute right-0 lg:left-0 lg:right-auto z-50 w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl border border-brand-line bg-white p-2 shadow-lg ${
+            className={`shadow-hard absolute right-0 lg:left-0 lg:right-auto z-50 w-80 max-w-[calc(100vw-1.5rem)] border-2 border-brand-ink bg-white p-2 [--hard-x:4px] ${
               haciaArriba ? "bottom-full mb-2" : "mt-2"
             }`}
           >
             <div className="flex items-center justify-between px-3 py-2">
-              <div className="text-sm font-semibold text-brand-ink">Notificaciones</div>
+              <div className="font-display text-sm font-extrabold uppercase text-brand-ink">Notificaciones</div>
               {unread > 0 ? (
                 <button
-                  className="text-xs text-brand-ink/60 hover:text-brand-ink"
+                  type="button"
+                  className={cn("inline-flex min-h-11 items-center px-1 text-xs font-bold text-brand-ink underline underline-offset-2 hover:text-brand-ink-soft", focusRing)}
                   onClick={() => markAll.mutate()}
                 >
                   Marcar todas
@@ -103,12 +107,15 @@ export function NotificationsBell({ haciaArriba = false }: { haciaArriba?: boole
               {["", "teacher", "class", "payment", "system"].map((tp) => (
                 <button
                   key={tp || "all"}
+                  type="button"
                   onClick={() => setTypeFilter(tp)}
+                  aria-pressed={typeFilter === tp}
                   className={cn(
-                    "rounded-full px-2 py-0.5 text-[11px] font-semibold transition",
+                    "inline-flex min-h-9 items-center rounded-full border-[1.5px] border-brand-ink px-3 text-[11px] font-bold transition",
                     typeFilter === tp
-                      ? "bg-brand-ink text-white"
-                      : "bg-brand-cream/50 text-brand-ink/60 hover:bg-brand-cream",
+                      ? "bg-brand-ink text-brand-cream dark:text-white"
+                      : "bg-white text-brand-ink hover:bg-brand-cream",
+                    focusRing,
                   )}
                 >
                   {tp ? TYPE_LABEL[tp] : "Todas"}
@@ -117,19 +124,20 @@ export function NotificationsBell({ haciaArriba = false }: { haciaArriba?: boole
             </div>
             <div className="max-h-80 overflow-y-auto">
               {listQ.isLoading ? (
-                <div className="p-4 text-center text-xs text-brand-ink/60">Cargando…</div>
+                <div role="status" className="p-4 text-center text-xs text-brand-ink/70">Cargando…</div>
               ) : filtered.length === 0 ? (
-                <div className="p-6 text-center text-xs text-brand-ink/60">Sin notificaciones</div>
+                <div className="p-6 text-center text-xs text-brand-ink/70">Sin notificaciones</div>
               ) : (
                 filtered.map((n) => {
+                  const Icono = ICON_BY_TYPE[n.type] ?? Bell;
                   const inner = (
                     <div
                       className={cn(
-                        "flex gap-2 rounded-xl px-3 py-2 text-sm",
-                        n.readAt ? "text-brand-ink/70" : "bg-brand-cream/40 text-brand-ink",
+                        "flex gap-2.5 rounded-xl px-3 py-2.5 text-sm",
+                        n.readAt ? "text-brand-ink/70" : "bg-brand-yellow-soft text-brand-ink",
                       )}
                     >
-                      <div className="text-lg leading-none">{ICON_BY_TYPE[n.type] ?? "🔔"}</div>
+                      <Icono className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-medium">{n.title ?? n.subject}</div>
                         {n.body ? <div className="truncate text-xs opacity-80">{n.body}</div> : null}
@@ -148,7 +156,7 @@ export function NotificationsBell({ haciaArriba = false }: { haciaArriba?: boole
                       key={n.id}
                       to={n.linkUrl as never}
                       onClick={onClick}
-                      className="block hover:bg-brand-cream/30 rounded-xl"
+                      className={cn("block rounded-xl hover:bg-brand-cream", focusRing)}
                     >
                       {inner}
                     </Link>
@@ -156,7 +164,8 @@ export function NotificationsBell({ haciaArriba = false }: { haciaArriba?: boole
                     <button
                       key={n.id}
                       onClick={onClick}
-                      className="block w-full text-left hover:bg-brand-cream/30 rounded-xl"
+                      type="button"
+                      className={cn("block w-full rounded-xl text-left hover:bg-brand-cream", focusRing)}
                     >
                       {inner}
                     </button>
@@ -164,11 +173,11 @@ export function NotificationsBell({ haciaArriba = false }: { haciaArriba?: boole
                 })
               )}
             </div>
-            <div className="border-t border-brand-line pt-2">
+            <div className="border-t border-brand-ink/15 pt-2">
               <Link
                 to="/notifications"
                 onClick={() => setOpen(false)}
-                className="block rounded-xl px-3 py-2 text-center text-xs font-medium text-brand-ink hover:bg-brand-cream/40"
+                className={cn("flex min-h-11 items-center justify-center rounded-xl px-3 text-xs font-bold text-brand-ink underline underline-offset-2 hover:bg-brand-cream", focusRing)}
               >
                 Ver todas
               </Link>

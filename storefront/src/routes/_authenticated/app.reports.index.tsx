@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { FileBarChart } from "lucide-react";
 import { learningApi } from "@/lib/api/endpoints";
+import { Cargando, EstadoError, PageHeader, Vacio, cardPlain, eyebrow, focusRing } from "@/components/app/AppUi";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/app/reports/")({
   head: () => ({ meta: [{ title: "Mis reportes — FreaknEnglish" }] }),
@@ -21,43 +23,49 @@ function MisReportes() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">Mis reportes</h1>
-        <p className="mt-2 max-w-2xl text-[15px] text-brand-ink/65">
-          Cómo vas, en palabras de tu profe: qué llevas fuerte, qué conviene reforzar y hacia dónde
-          seguir.
-        </p>
-      </header>
+      <PageHeader title="Tus reportes" highlight="reportes">
+        Cómo vas, en palabras de tu profe: qué llevas fuerte, qué conviene reforzar y hacia dónde
+        seguir.
+      </PageHeader>
 
       {q.isLoading ? (
-        <div className="text-sm text-brand-ink/60">Cargando…</div>
+        <Cargando>Cargando tus reportes…</Cargando>
+      ) : q.isError ? (
+        <EstadoError onRetry={() => void q.refetch()}>
+          No pudimos cargar tus reportes. Revisa tu conexión e inténtalo de nuevo.
+        </EstadoError>
       ) : items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-brand-line bg-white p-8 text-center text-sm text-brand-ink/65">
+        <Vacio titulo="Aún no hay reportes">
           Todavía no tienes reportes. Tu profe te avisará cuando escriba el primero.
-        </div>
+        </Vacio>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <ul className="grid gap-4 md:grid-cols-2">
           {items.map((r) => (
-            <Link
-              key={r.id}
-              to="/app/reports/$reportId"
-              params={{ reportId: r.id }}
-              className="group flex flex-col gap-1.5 rounded-2xl border border-brand-line bg-white p-5 transition hover:border-brand-ink/30 hover:shadow-soft"
-            >
-              <span className="inline-flex size-9 items-center justify-center rounded-xl bg-brand-cream text-brand-ink">
-                <FileBarChart className="size-4" />
-              </span>
-              <span className="mt-1 font-semibold text-brand-ink group-hover:underline">{r.periodLabel}</span>
-              <span className="text-[10px] uppercase tracking-wide text-brand-ink/45">
-                {r.teacher?.fullName ?? "Tu profe"}
-                {r.level ? ` · ${NIVEL[r.level] ?? r.level}` : ""}
-                {r.publishedAt
-                  ? ` · ${new Date(r.publishedAt).toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" })}`
-                  : ""}
-              </span>
-            </Link>
+            <li key={r.id} className="flex">
+              <Link
+                to="/app/reports/$reportId"
+                params={{ reportId: r.id }}
+                className={cn(
+                  cardPlain,
+                  "group flex w-full flex-col gap-1.5 p-4 no-underline transition-colors hover:bg-brand-cream-soft",
+                  focusRing,
+                )}
+              >
+                <span className="inline-flex size-9 items-center justify-center rounded-full border-2 border-brand-ink bg-white text-brand-ink">
+                  <FileBarChart className="size-4" aria-hidden="true" />
+                </span>
+                <span className="mt-1 font-bold text-brand-ink group-hover:underline">{r.periodLabel}</span>
+                <span className={cn(eyebrow, "!tracking-[0.1em]")}>
+                  {r.teacher?.fullName ?? "Tu profe"}
+                  {r.level ? ` · ${NIVEL[r.level] ?? r.level}` : ""}
+                  {r.publishedAt
+                    ? ` · ${new Date(r.publishedAt).toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" })}`
+                    : ""}
+                </span>
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );

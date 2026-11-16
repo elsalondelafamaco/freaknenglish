@@ -2,6 +2,18 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { learningApi } from "@/lib/api/endpoints";
+import {
+  Cargando,
+  EstadoError,
+  SeccionTitulo,
+  Titulo,
+  cardPlain,
+  cardPrimary,
+  eyebrow,
+  focusRing,
+  tagNeutral,
+} from "@/components/app/AppUi";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/app/reports/$reportId")({
   head: () => ({ meta: [{ title: "Reporte — FreaknEnglish" }] }),
@@ -32,36 +44,33 @@ function DetalleReporte() {
     : [];
 
   return (
-    <div className="flex flex-col gap-5">
-      <Link to="/app/reports" className="inline-flex w-fit items-center gap-1.5 text-sm text-brand-ink/60 hover:text-brand-ink">
-        <ArrowLeft className="size-4" /> Mis reportes
+    <div className="flex max-w-3xl flex-col gap-5">
+      <Link
+        to="/app/reports"
+        className={cn("inline-flex min-h-11 w-fit items-center gap-1.5 text-sm font-bold text-brand-ink underline-offset-2 hover:underline", focusRing)}
+      >
+        <ArrowLeft className="size-4" aria-hidden="true" /> Tus reportes
       </Link>
 
       {q.isLoading ? (
-        <div className="text-sm text-brand-ink/60">Cargando…</div>
+        <Cargando>Cargando el reporte…</Cargando>
       ) : q.isError || !r ? (
-        <div className="rounded-2xl border border-dashed border-brand-line bg-white p-8 text-center text-sm text-brand-ink/65">
-          No pudimos abrir este reporte.
-        </div>
+        <EstadoError onRetry={() => void q.refetch()}>No pudimos abrir este reporte.</EstadoError>
       ) : (
         <>
-          <header className="rounded-3xl border border-brand-line bg-gradient-to-br from-brand-yellow/60 to-brand-yellow-soft p-6 md:p-8">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-brand-ink">
-              Reporte de progreso
-            </div>
-            <h1 className="mt-3 text-2xl font-bold tracking-tight text-brand-ink md:text-3xl">{r.periodLabel}</h1>
-            <p className="mt-1 text-sm text-brand-ink/70">
+          <header className={cn(cardPrimary, "p-5 md:p-6")}>
+            <p className={eyebrow}>Reporte de progreso</p>
+            <Titulo className="mt-1.5 text-[28px] md:text-[34px]">{r.periodLabel}</Titulo>
+            <p className="mt-2 text-sm text-brand-ink/80">
               {r.teacher?.fullName ? `Escrito por ${r.teacher.fullName}` : ""}
               {r.publishedAt
                 ? ` · ${new Date(r.publishedAt).toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" })}`
                 : ""}
             </p>
-            <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-brand-ink">
-              {r.level ? (
-                <span className="rounded-full bg-white/80 px-3 py-1">Nivel: {NIVEL[r.level] ?? r.level}</span>
-              ) : null}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {r.level ? <span className={tagNeutral}>Nivel: {NIVEL[r.level] ?? r.level}</span> : null}
               {r.classesTaken != null ? (
-                <span className="rounded-full bg-white/80 px-3 py-1">
+                <span className={tagNeutral}>
                   Clases: {r.classesTaken}
                   {r.classesTotal != null ? ` de ${r.classesTotal}` : ""}
                 </span>
@@ -70,10 +79,8 @@ function DetalleReporte() {
           </header>
 
           {r.comment ? (
-            <section className="rounded-2xl border border-brand-line bg-white p-5">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-ink/60">
-                Mensaje de tu profe
-              </h2>
+            <section className={cn(cardPlain, "p-5")} aria-labelledby="mensaje-profe">
+              <SeccionTitulo id="mensaje-profe" className="text-[15px]">Mensaje de tu profe</SeccionTitulo>
               <p className="mt-2 whitespace-pre-wrap text-[15px] leading-relaxed text-brand-ink">{r.comment}</p>
             </section>
           ) : null}
@@ -81,8 +88,8 @@ function DetalleReporte() {
           {bloques.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-3">
               {bloques.map(([titulo, texto]) => (
-                <section key={titulo} className="rounded-2xl border border-brand-line bg-white p-5">
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-ink/60">{titulo}</h2>
+                <section key={titulo} className={cn(cardPlain, "p-5")} aria-label={titulo}>
+                  <SeccionTitulo className="text-[15px]">{titulo}</SeccionTitulo>
                   <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-brand-ink">{texto}</p>
                 </section>
               ))}

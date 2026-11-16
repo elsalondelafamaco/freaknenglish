@@ -6,6 +6,20 @@ import { toast } from "sonner";
 import { learningApi, type CheckpointSubmitResult, type CheckpointV2 } from "@/lib/api/endpoints";
 import { QuestionBody, TYPE_LABEL, isAnswered, type PublicQuestion } from "@/components/app/checkpoint/QuestionRenderers";
 import { cn } from "@/lib/utils";
+import {
+  Cargando,
+  PageHeader,
+  SeccionTitulo,
+  Titulo,
+  btnChip,
+  btnPrimaryAuto,
+  btnSecondaryAuto,
+  cardPlain,
+  cardPrimary,
+  eyebrow,
+  focusRing,
+  rowLine,
+} from "@/components/app/AppUi";
 
 export const Route = createFileRoute("/_authenticated/app/checkpoint/$checkpointId")({
   head: () => ({ meta: [{ title: "Checkpoint — FreaknEnglish" }] }),
@@ -84,12 +98,12 @@ function CheckpointPage() {
   );
   const missing = questions.filter((q) => !isAnswered(q, answers[q.id]));
 
-  if (chkQ.isLoading) return <div className="text-sm text-brand-ink/60">Cargando checkpoint…</div>;
+  if (chkQ.isLoading) return <Cargando>Cargando checkpoint…</Cargando>;
   if (chkQ.isError) {
     return (
       <ErrorShell>
         No pudimos cargar el checkpoint. Revisa tu conexión e{" "}
-        <button onClick={() => chkQ.refetch()} className="font-semibold underline">intenta de nuevo</button>.
+        <button type="button" onClick={() => chkQ.refetch()} className={cn("inline-flex min-h-11 items-center font-bold underline underline-offset-2", focusRing)}>intenta de nuevo</button>.
       </ErrorShell>
     );
   }
@@ -102,29 +116,29 @@ function CheckpointPage() {
     return (
       <div className="mx-auto flex max-w-lg flex-col gap-5">
         <BackLink />
-        <div className="rounded-3xl border border-brand-line bg-white p-8 text-center shadow-soft">
+        <div className={cn(cardPrimary, "p-8 text-center")}>
           {state.blockReason === "already_passed" ? (
             <>
-              <Trophy className="mx-auto size-10 text-brand-yellow" />
-              <h1 className="mt-3 text-2xl font-bold text-brand-ink">¡Ya aprobaste este checkpoint!</h1>
-              <p className="mt-2 text-sm text-brand-ink/65">
+              <Trophy className="mx-auto size-10 text-brand-ink" aria-hidden="true" />
+              <Titulo className="mt-3 text-[26px] md:text-[30px]">¡Ya aprobaste este checkpoint!</Titulo>
+              <p className="mt-2 text-sm text-brand-ink/80">
                 Lo lograste con {state.bestScore}%. Tu nivel {LABEL[chk.toLevel]} ya está desbloqueado.
               </p>
             </>
           ) : state.blockReason === "max_attempts" ? (
             <>
-              <Lock className="mx-auto size-10 text-brand-ink/50" />
-              <h1 className="mt-3 text-2xl font-bold text-brand-ink">Sin intentos disponibles</h1>
-              <p className="mt-2 text-sm text-brand-ink/65">
+              <Lock className="mx-auto size-10 text-brand-ink" aria-hidden="true" />
+              <Titulo className="mt-3 text-[26px] md:text-[30px]">Sin intentos disponibles</Titulo>
+              <p className="mt-2 text-sm text-brand-ink/80">
                 Usaste tus {state.attemptCount} intento(s). Habla con tu profesor para revisar el tema y pedirle
                 al equipo que te habilite un intento más.
               </p>
             </>
           ) : (
             <>
-              <Clock className="mx-auto size-10 text-brand-ink/50" />
-              <h1 className="mt-3 text-2xl font-bold text-brand-ink">Aún no puedes reintentarlo</h1>
-              <p className="mt-2 text-sm text-brand-ink/65">
+              <Clock className="mx-auto size-10 text-brand-ink" aria-hidden="true" />
+              <Titulo className="mt-3 text-[26px] md:text-[30px]">Aún no puedes reintentarlo</Titulo>
+              <p className="mt-2 text-sm text-brand-ink/80">
                 Podrás volver a presentarlo el{" "}
                 <strong>{state.retryAt ? new Date(state.retryAt).toLocaleString("es-CO", { dateStyle: "long", timeStyle: "short" }) : "—"}</strong>.
                 Aprovecha para repasar los módulos.
@@ -132,10 +146,10 @@ function CheckpointPage() {
             </>
           )}
           {state.lastScore != null ? (
-            <p className="mt-3 text-xs text-brand-ink/50">Último intento: {state.lastScore}% · Mejor: {state.bestScore}%</p>
+            <p className="mt-3 text-xs text-brand-ink/70">Último intento: {state.lastScore}% · Mejor: {state.bestScore}%</p>
           ) : null}
-          <Link to="/app/learning" className="mt-5 inline-block rounded-full bg-brand-ink px-5 py-2 text-sm font-semibold text-white hover:bg-brand-ink-soft">
-            Volver a aprendizaje
+          <Link to="/app/learning" className={cn(btnPrimaryAuto, "mt-5")}>
+            Volver a aprender
           </Link>
         </div>
       </div>
@@ -147,36 +161,34 @@ function CheckpointPage() {
     return (
       <div className="mx-auto flex max-w-2xl flex-col gap-5">
         <BackLink />
-        <div className={cn(
-          "rounded-3xl border p-6 text-center md:p-8",
-          result.passed ? "border-brand-success/30 bg-brand-success/10" : "border-amber-200 bg-amber-50",
-        )}>
-          {result.passed ? <CheckCircle2 className="mx-auto size-12 text-brand-success" /> : <XCircle className="mx-auto size-12 text-amber-600" />}
-          <h1 className="mt-3 text-3xl font-bold text-brand-ink">{result.passed ? "¡Aprobaste! 🎉" : "Casi lo logras"}</h1>
-          <div className="mt-3 text-5xl font-black text-brand-ink">{result.score}%</div>
-          <p className="mt-1 text-sm text-brand-ink/65">
+        <div className={cn(cardPrimary, "p-6 text-center md:p-8", result.passed ? "" : "bg-brand-yellow-soft")}>
+          {result.passed ? <CheckCircle2 className="mx-auto size-12 text-brand-ink" aria-hidden="true" /> : <XCircle className="mx-auto size-12 text-brand-ink" aria-hidden="true" />}
+          <Titulo className="mt-3" highlight={result.passed ? "Aprobaste" : "lograste"}>{result.passed ? "¡Aprobaste!" : "Casi lo lograste"}</Titulo>
+          <div className="mt-3 font-display text-6xl font-extrabold text-brand-ink">{result.score}%</div>
+          <p className="mt-1 text-sm text-brand-ink/80">
             {result.correct} de {result.total} correctas · necesitabas {result.passingScore}%
           </p>
-          <p className="mt-3 text-sm text-brand-ink/75">
+          <p className="mt-3 text-sm text-brand-ink/90">
             {result.passed
               ? `Desbloqueaste el nivel ${LABEL[chk.toLevel]}. Tus nuevos módulos ya están disponibles.`
               : "Repasa los módulos del nivel y vuelve con toda. Tu profe puede ayudarte con los temas que fallaste."}
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
-            <Link to="/app/learning" className="rounded-full bg-brand-ink px-5 py-2 text-sm font-semibold text-white hover:bg-brand-ink-soft">
-              Ir a aprendizaje
+            <Link to="/app/learning" className={btnPrimaryAuto}>
+              Ir a aprender
             </Link>
             {!result.passed && result.canRetry ? (
               <button
+                type="button"
                 onClick={() => { setResult(null); setAnswers({}); startedAt.current = null; chkQ.refetch(); }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-brand-ink/20 bg-white px-5 py-2 text-sm font-semibold text-brand-ink hover:bg-brand-cream/40"
+                className={btnSecondaryAuto}
               >
-                <RefreshCw className="size-3.5" /> Reintentar
+                <RefreshCw className="size-3.5" aria-hidden="true" /> Reintentar
                 {result.remainingAttempts != null ? ` (quedan ${result.remainingAttempts})` : ""}
               </button>
             ) : null}
             {!result.passed && !result.canRetry ? (
-              <span className="rounded-full bg-white px-4 py-2 text-xs text-brand-ink/60">
+              <span className="inline-flex min-h-11 items-center rounded-full border-2 border-dashed border-brand-ink/60 bg-white px-4 text-xs font-bold text-brand-ink/80">
                 {result.blockReason === "cooldown" && result.retryAt
                   ? `Próximo intento: ${new Date(result.retryAt).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}`
                   : "Sin intentos restantes"}
@@ -186,25 +198,25 @@ function CheckpointPage() {
         </div>
 
         {/* Corrección por pregunta (según settings.showAnswers) */}
-        <div className="rounded-3xl border border-brand-line bg-white">
-          <div className="border-b border-brand-line px-5 py-3 text-sm font-bold text-brand-ink">Revisión</div>
-          <ul className="divide-y divide-brand-line/60">
+        <div className={cardPlain}>
+          <SeccionTitulo className="px-5 py-3 text-[15px]">Revisión</SeccionTitulo>
+          <ul>
             {questions.map((q, i) => {
               const fb = result.feedback.find((f) => f.id === q.id);
               if (!fb) return null;
               return (
-                <li key={q.id} className="px-5 py-3.5">
+                <li key={q.id} className={cn("px-5 py-3.5", rowLine)}>
                   <div className="flex items-start gap-2.5">
                     {fb.correct
-                      ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand-success" />
-                      : <XCircle className="mt-0.5 size-4 shrink-0 text-red-500" />}
+                      ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-brand-ink" aria-label="Correcta" />
+                      : <XCircle className="mt-0.5 size-4 shrink-0 text-red-700" aria-label="Incorrecta" />}
                     <div className="min-w-0">
-                      <div className="text-sm font-medium text-brand-ink">{i + 1}. {q.prompt}</div>
-                      <div className="mt-0.5 text-xs text-brand-ink/65">
-                        Tu respuesta: <span className={fb.correct ? "font-semibold text-brand-success" : "font-semibold text-red-600"}>{fb.given}</span>
+                      <div className="text-sm font-bold text-brand-ink">{i + 1}. {q.prompt}</div>
+                      <div className="mt-0.5 text-xs text-brand-ink/80">
+                        Tu respuesta: <span className={fb.correct ? "font-bold text-brand-ink" : "font-bold text-red-700"}>{fb.given}</span>
                       </div>
                       {!fb.correct && result.showAnswers && fb.expected ? (
-                        <div className="text-xs text-brand-ink/65">Correcta: <span className="font-semibold">{fb.expected}</span></div>
+                        <div className="text-xs text-brand-ink/80">Correcta: <span className="font-bold">{fb.expected}</span></div>
                       ) : null}
                     </div>
                   </div>
@@ -213,7 +225,7 @@ function CheckpointPage() {
             })}
           </ul>
           {!result.showAnswers ? (
-            <p className="px-5 pb-4 pt-1 text-xs text-brand-ink/50">
+            <p className="px-5 pb-4 pt-1 text-xs text-brand-ink/70">
               Este checkpoint no muestra las respuestas correctas — repasa con tu profe los temas donde fallaste.
             </p>
           ) : null}
@@ -229,40 +241,39 @@ function CheckpointPage() {
     <div className="mx-auto flex max-w-3xl flex-col gap-6 pb-28">
       <BackLink />
 
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">
-          Checkpoint: {LABEL[chk.fromLevel]} → {LABEL[chk.toLevel]}
-        </h1>
-        <p className="mt-2 max-w-xl text-[15px] text-brand-ink/65">
-          {questions.length} preguntas · aprueba con {chk.passingScore}%
-          {chk.settings.maxAttempts != null ? ` · ${state.remainingAttempts} intento(s) disponibles` : ""}
-          {chk.settings.timeLimitMin ? ` · ${chk.settings.timeLimitMin} min` : ""}
-        </p>
+      <PageHeader
+        eyebrowText={`${LABEL[chk.fromLevel]} → ${LABEL[chk.toLevel]}`}
+        title="Tu checkpoint"
+        highlight="checkpoint"
+      >
+        {questions.length} preguntas · aprueba con {chk.passingScore}%
+        {chk.settings.maxAttempts != null ? ` · ${state.remainingAttempts} intento(s) disponibles` : ""}
+        {chk.settings.timeLimitMin ? ` · ${chk.settings.timeLimitMin} min` : ""}
         {state.attemptCount > 0 ? (
-          <p className="mt-1 text-xs text-brand-ink/50">
+          <span className="mt-1 block text-xs text-brand-ink/70">
             Intentos previos: {state.attemptCount} · mejor puntaje: {state.bestScore}%
-          </p>
+          </span>
         ) : null}
-      </header>
+      </PageHeader>
 
       <ol className="flex flex-col gap-4">
         {questions.map((q, idx) => {
           const missingThis = showMissing && !isAnswered(q, answers[q.id]);
           return (
             <li key={q.id} className={cn(
-              "rounded-3xl border bg-white p-5 transition",
-              missingThis ? "border-red-300 ring-2 ring-red-100" : "border-brand-line",
+              "border-2 bg-white p-5 transition",
+              missingThis ? "border-red-700" : "border-brand-ink",
             )}>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-brand-ink/50">
+                <span className={eyebrow}>
                   Pregunta {idx + 1} · {TYPE_LABEL[q.type] ?? q.type}
                 </span>
-                {isAnswered(q, answers[q.id]) ? <CheckCircle2 className="size-4 text-brand-success" /> : null}
+                {isAnswered(q, answers[q.id]) ? <CheckCircle2 className="size-4 text-brand-ink" aria-label="Respondida" /> : null}
               </div>
-              <p className="mt-1.5 text-base font-semibold text-brand-ink">{q.prompt}</p>
+              <p className="mt-1.5 text-base font-bold text-brand-ink">{q.prompt}</p>
               {missingThis ? (
-                <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-red-600">
-                  <AlertTriangle className="size-3" /> Falta responder esta pregunta
+                <p role="alert" className="mt-1 flex items-center gap-1 text-xs font-bold text-red-700">
+                  <AlertTriangle className="size-3" aria-hidden="true" /> Falta responder esta pregunta
                 </p>
               ) : null}
               <div className="mt-3">
@@ -274,23 +285,31 @@ function CheckpointPage() {
       </ol>
 
       {/* Barra fija: progreso + tiempo + enviar (desktop y mobile) */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-brand-line bg-white/95 px-4 py-3 backdrop-blur lg:left-64">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-brand-ink bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:left-64">
         <div className="mx-auto flex max-w-3xl items-center gap-3">
           <div className="min-w-0 flex-1">
-            <div className="flex justify-between text-[11px] font-semibold text-brand-ink/60">
+            <div className="flex justify-between text-[11px] font-bold text-brand-ink/80">
               <span>{answeredCount}/{questions.length} respondidas</span>
               {secondsLeft != null ? (
-                <span className={cn("inline-flex items-center gap-1", secondsLeft <= 60 ? "text-red-600" : "")}>
+                <span className={cn("inline-flex items-center gap-1", secondsLeft <= 60 ? "text-red-700" : "")}>
                   <Clock className="size-3" />
                   {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, "0")}
                 </span>
               ) : null}
             </div>
-            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-brand-cream">
-              <div className="h-full rounded-full bg-brand-ink transition-all" style={{ width: `${progressPct}%` }} />
+            <div
+              role="progressbar"
+              aria-label="Preguntas respondidas"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progressPct}
+              className="mt-1 h-2.5 border-[1.5px] border-brand-ink bg-white"
+            >
+              <div className="h-full bg-brand-ink transition-all" style={{ width: `${progressPct}%` }} />
             </div>
           </div>
           <button
+            type="button"
             onClick={() => {
               if (missing.length > 0) {
                 setShowMissing(true);
@@ -300,7 +319,7 @@ function CheckpointPage() {
               submitM.mutate();
             }}
             disabled={submitM.isPending}
-            className="shrink-0 rounded-full bg-brand-ink px-6 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 hover:bg-brand-ink-soft disabled:opacity-60"
+            className={cn(btnPrimaryAuto, "h-12 w-auto shrink-0 px-5 [--hard-x:4px]")}
           >
             {submitM.isPending ? "Enviando…" : "Enviar respuestas"}
           </button>
@@ -312,8 +331,8 @@ function CheckpointPage() {
 
 function BackLink() {
   return (
-    <Link to="/app/learning" className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-ink/65 hover:text-brand-ink">
-      <ArrowLeft className="size-4" /> Volver
+    <Link to="/app/learning" className={cn("inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-brand-ink underline-offset-2 hover:underline", focusRing)}>
+      <ArrowLeft className="size-4" aria-hidden="true" /> Volver a aprender
     </Link>
   );
 }
@@ -322,7 +341,7 @@ function ErrorShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-4">
       <BackLink />
-      <div className="rounded-3xl border border-brand-line bg-white p-6 text-sm text-brand-ink/70">{children}</div>
+      <div role="alert" className="border-2 border-red-700 bg-red-50 p-5 text-sm font-semibold text-red-800">{children}</div>
     </div>
   );
 }

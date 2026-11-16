@@ -9,14 +9,14 @@ export function LegalLinks({ prefix = "Al continuar aceptas nuestros" }: { prefi
   const { legal } = useSiteContent();
   const doc = (href: string | undefined, label: string) =>
     href ? (
-      <a href={href} target="_blank" rel="noreferrer" className="underline hover:text-brand-ink">
+      <a href={href} target="_blank" rel="noreferrer" className="inline-flex min-h-6 items-center font-semibold underline underline-offset-2 hover:text-brand-ink-soft focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow">
         {label}
       </a>
     ) : (
       <span>{label}</span>
     );
   return (
-    <p className="text-center text-xs text-brand-ink/55">
+    <p className="text-center text-xs text-brand-ink/70">
       {prefix} {doc(legal.terms, "Términos y condiciones")} y la {doc(legal.privacy, "Política de privacidad")}.
     </p>
   );

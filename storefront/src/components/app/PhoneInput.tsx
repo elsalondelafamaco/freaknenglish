@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { focusRing } from "@/components/site/AuthShell";
 
 /**
  * Input de teléfono con selector de país (bandera + prefijo, buscable).
@@ -156,19 +157,20 @@ export function PhoneInput({
   return (
     <div ref={rootRef} className={cn("relative", className)}>
       <div className={cn(
-        "flex overflow-hidden rounded-xl border border-brand-line bg-white focus-within:border-brand-ink",
+        "flex h-12 overflow-hidden rounded-xl border-[1.5px] border-brand-ink bg-white focus-within:outline-3 focus-within:outline-offset-2 focus-within:outline-brand-ink focus-within:ring-[6px] focus-within:ring-brand-yellow",
         disabled ? "opacity-60" : "",
       )}>
         <button
           type="button"
           disabled={disabled}
           onClick={() => { setOpen((v) => !v); setQuery(""); }}
-          className="flex shrink-0 items-center gap-1.5 border-r border-brand-line bg-brand-cream/40 px-3 py-2.5 text-sm transition hover:bg-brand-cream"
-          aria-label="Seleccionar país"
+          className="flex min-w-11 shrink-0 items-center gap-1.5 border-r-[1.5px] border-brand-ink bg-brand-cream px-3 text-sm transition hover:bg-brand-cream-soft"
+          aria-label={`Seleccionar país (actual: ${country.name} +${country.dial})`}
+          aria-expanded={open}
         >
           <Flag country={country} />
-          <span className="text-xs font-semibold text-brand-ink/70">+{country.dial}</span>
-          <ChevronDown className="size-3.5 text-brand-ink/50" />
+          <span className="text-xs font-bold text-brand-ink">+{country.dial}</span>
+          <ChevronDown className="size-3.5 text-brand-ink/70" aria-hidden="true" />
         </button>
         <input
           id={id}
@@ -180,20 +182,21 @@ export function PhoneInput({
           value={parsed.local}
           onChange={(e) => emit(country, e.target.value.replace(/\D/g, "").slice(0, country.max))}
           placeholder={"3001234567".slice(0, country.max)}
-          className="w-full px-3 py-2.5 text-sm text-brand-ink outline-none"
+          className="w-full bg-transparent px-3.5 text-[15px] font-medium text-brand-ink outline-none placeholder:text-brand-ink/50"
         />
       </div>
 
       {open ? (
-        <div className="absolute z-50 mt-1 w-72 rounded-2xl border border-brand-line bg-white p-2 shadow-lg">
+        <div className="shadow-hard absolute z-50 mt-2 w-72 max-w-[calc(100vw-2.5rem)] border-2 border-brand-ink bg-white p-2 [--hard-x:4px]">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-brand-ink/40" />
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-brand-ink/70" aria-hidden="true" />
             <input
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar país o prefijo…"
-              className="w-full rounded-xl border border-brand-line py-2 pl-8 pr-3 text-xs focus:border-brand-ink focus:outline-none"
+              aria-label="Buscar país o prefijo"
+              className={cn("h-11 w-full rounded-xl border-[1.5px] border-brand-ink bg-white pl-9 pr-3 text-sm text-brand-ink placeholder:text-brand-ink/50", focusRing)}
             />
           </div>
           <ul className="mt-1 max-h-56 overflow-y-auto">
@@ -203,18 +206,19 @@ export function PhoneInput({
                   type="button"
                   onClick={() => { setCountry(c); emit(c, parsed.local); setOpen(false); }}
                   className={cn(
-                    "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition hover:bg-brand-cream/50",
-                    c.code === country.code ? "bg-brand-cream/70 font-semibold" : "",
+                    "flex min-h-11 w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors",
+                    c.code === country.code ? "bg-brand-ink font-bold text-brand-cream dark:text-white" : "text-brand-ink hover:bg-brand-cream",
+                    focusRing,
                   )}
                 >
                   <Flag country={c} />
-                  <span className="flex-1 truncate text-brand-ink">{c.name}</span>
-                  <span className="text-xs text-brand-ink/55">+{c.dial}</span>
+                  <span className="flex-1 truncate">{c.name}</span>
+                  <span className="text-xs opacity-80">+{c.dial}</span>
                 </button>
               </li>
             ))}
             {filtered.length === 0 ? (
-              <li className="px-2.5 py-3 text-center text-xs text-brand-ink/50">Sin resultados</li>
+              <li className="px-2.5 py-3 text-center text-xs text-brand-ink/70">Sin resultados</li>
             ) : null}
           </ul>
         </div>

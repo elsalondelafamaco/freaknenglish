@@ -50,6 +50,9 @@ type Fase =
 
 const FASES_DE_ESPERA = new Set<Fase["tipo"]>(["esperando", "banco", "tresDs", "otp"]);
 
+/** El medio que más usan los estudiantes: va primero y con la etiqueta "Más usado". */
+const MAS_USADO: MedioDePago = "CARD";
+
 /** Logos de los medios (los mismos de jump). La tarjeta lleva un ícono neutro: las marcas varían. */
 const LOGO: Partial<Record<MedioDePago, string>> = {
   NEQUI: "/img/pay/nequi.webp",
@@ -684,8 +687,8 @@ export function PasoDePago({
       {medio === null ? (
         <div role="radiogroup" aria-label="Medio de pago" className="flex flex-col gap-2.5">
           {[...info.medios]
-            // El más usado va primero.
-            .sort((a, b) => Number(b === "NEQUI") - Number(a === "NEQUI"))
+            // El más usado (tarjeta) va primero.
+            .sort((a, b) => Number(b === MAS_USADO) - Number(a === MAS_USADO))
             .map((m) => (
               <button
                 key={m}
@@ -697,7 +700,7 @@ export function PasoDePago({
                   setError(null);
                 }}
                 className={`flex w-full items-center justify-between gap-3 rounded-2xl border-2 bg-white px-4 text-left transition hover:border-brand-ink/40 ${
-                  m === "NEQUI" ? "min-h-20 border-brand-ink/25" : "min-h-[68px] border-brand-line"
+                  m === MAS_USADO ? "min-h-20 border-brand-ink/25" : "min-h-[68px] border-brand-line"
                 }`}
               >
                 <span className="flex items-center gap-3.5">
@@ -705,7 +708,7 @@ export function PasoDePago({
                   <span className="flex flex-col">
                     <span className="font-semibold text-brand-ink">
                       {NOMBRE_DEL_MEDIO[m]}
-                      {m === "NEQUI" ? (
+                      {m === MAS_USADO ? (
                         <span className="ml-2 rounded-full bg-brand-ink px-2 py-0.5 align-[2px] text-[10px] font-extrabold uppercase tracking-wider text-white">
                           Más usado
                         </span>

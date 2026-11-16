@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { teachersApi } from "@/lib/api/endpoints";
+import { cn } from "@/lib/utils";
+import { Cargando, EstadoError, PageHeader, Vacio, focusRing, tagNeutral } from "@/components/app/AppUi";
+import { td, th } from "@/components/teacher/TeacherUi";
 
 export const Route = createFileRoute("/_authenticated/teacher/students/")({
   head: () => ({ meta: [{ title: "Estudiantes — Freakn for Teachers" }] }),
@@ -8,7 +11,7 @@ export const Route = createFileRoute("/_authenticated/teacher/students/")({
 });
 
 function TeacherStudents() {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["teacher", "students"],
     queryFn: () => teachersApi.students(),
   });
@@ -16,63 +19,55 @@ function TeacherStudents() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight text-brand-ink">Tus estudiantes</h1>
-        <p className="mt-1 text-brand-ink/70">
-          Seguimiento de progreso, nivel actual y próxima clase.
-        </p>
-      </header>
+      <PageHeader title="Tus estudiantes" highlight="estudiantes">
+        Seguimiento de progreso, nivel actual y próxima clase.
+      </PageHeader>
 
       {isLoading ? (
-        <div className="rounded-2xl border border-dashed border-brand-line bg-white p-8 text-center text-sm text-brand-ink/65">
-          Cargando estudiantes…
-        </div>
+        <Cargando>Cargando estudiantes…</Cargando>
       ) : error ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+        <EstadoError onRetry={() => void refetch()}>
           No se pudieron cargar los estudiantes: {(error as Error).message}
-        </div>
+        </EstadoError>
       ) : rows.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-brand-line bg-white p-8 text-center text-sm text-brand-ink/65">
-          Aún no tienes estudiantes asignados.
-        </div>
+        <Vacio titulo="Aún no hay estudiantes">Aún no tienes estudiantes asignados. Cuando te asignen uno, aparecerá aquí.</Vacio>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-brand-line bg-white">
+        <div className="shadow-hard overflow-hidden border-2 border-brand-ink bg-white">
           <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-brand-cream/40 text-xs uppercase tracking-wide text-brand-ink/60">
-              <tr>
-                <th className="px-4 py-3">Estudiante</th>
-                <th className="px-4 py-3">Nivel</th>
-                <th className="px-4 py-3">Clases</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-brand-line">
-              {rows.map((s) => (
-                <tr key={s.id}>
-                  <td className="px-4 py-3">
-                    <div className="font-semibold text-brand-ink">{s.fullName}</div>
-                    <div className="text-xs text-brand-ink/60">{s.email}</div>
-                  </td>
-                  <td className="px-4 py-3 capitalize">{s.englishLevel ?? s.level ?? "—"}</td>
-                  <td className="px-4 py-3 text-brand-ink">
-                    {s._count?.classesAsStudent ?? 0}
-                  </td>
-                  <td className="px-4 py-3 text-brand-ink/70">{s.email}</td>
-                  <td className="px-4 py-3 text-right">
-                    <Link
-                      to="/teacher/students/$studentId"
-                      params={{ studentId: s.id }}
-                      className="text-sm font-semibold text-brand-ink hover:underline"
-                    >
-                      Ver →
-                    </Link>
-                  </td>
+            <table className="w-full min-w-[560px] border-collapse text-left">
+              <thead>
+                <tr>
+                  <th className={th}>Estudiante</th>
+                  <th className={th}>Nivel</th>
+                  <th className={th}>Clases</th>
+                  <th className={th}><span className="sr-only">Ver perfil</span></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((s) => (
+                  <tr key={s.id}>
+                    <td className={td}>
+                      <div className="font-bold">{s.fullName}</div>
+                      <div className="text-xs text-brand-ink/70">{s.email}</div>
+                    </td>
+                    <td className={td}>
+                      <span className={cn(tagNeutral, "capitalize")}>{s.englishLevel ?? s.level ?? "—"}</span>
+                    </td>
+                    <td className={td}>{s._count?.classesAsStudent ?? 0}</td>
+                    <td className={cn(td, "text-right")}>
+                      <Link
+                        to="/teacher/students/$studentId"
+                        params={{ studentId: s.id }}
+                        aria-label={`Ver a ${s.fullName}`}
+                        className={cn("inline-flex min-h-9 items-center rounded-full px-2 text-sm font-bold underline underline-offset-2", focusRing)}
+                      >
+                        Ver →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

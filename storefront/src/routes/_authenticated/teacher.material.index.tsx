@@ -1,9 +1,12 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, Search } from "lucide-react";
+import { BookOpen, Check, Search } from "lucide-react";
 import { teachersApi } from "@/lib/api/endpoints";
 import type { EnglishLevel } from "@/lib/domain/types";
+import { cn } from "@/lib/utils";
+import { Cargando, EstadoError, PageHeader, SeccionTitulo, Vacio, focusRing } from "@/components/app/AppUi";
+import { inputBase, pillClass } from "@/components/teacher/TeacherUi";
 
 const ES_NIVEL = (v: unknown): v is EnglishLevel =>
   v === "beginner" || v === "intermediate" || v === "advanced";
@@ -65,52 +68,57 @@ function TeacherMaterial() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">Material extra</h1>
-          <p className="mt-2 max-w-2xl text-[15px] text-brand-ink/65">
-            Recursos de apoyo para tus clases. Ábrelos y compártelos en pantalla cuando un tema
-            necesite refuerzo.
-          </p>
-        </div>
-        <label className="relative w-full md:w-72">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-brand-ink/40" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar material…"
-            className="w-full rounded-xl border border-brand-line bg-white py-2 pl-9 pr-3 text-sm text-brand-ink focus:border-brand-ink focus:outline-none"
-          />
-        </label>
-      </header>
+      <PageHeader
+        title="Material extra"
+        highlight="extra"
+        aside={
+          <label className="relative block w-full md:w-72">
+            <span className="sr-only">Buscar material</span>
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-brand-ink/60" aria-hidden="true" />
+            <input
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar material…"
+              className={cn(inputBase, "pl-9")}
+            />
+          </label>
+        }
+      >
+        Recursos de apoyo para tus clases. Ábrelos y compártelos en pantalla cuando un tema
+        necesite refuerzo.
+      </PageHeader>
 
-      <div className="flex flex-wrap gap-2">
-        {NIVELES.map((n) => (
-          <button
-            key={n.id || "todos"}
-            type="button"
-            onClick={() => navigate({ search: { level: n.id || undefined }, replace: true })}
-            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-              (level ?? "") === n.id
-                ? "bg-brand-ink text-white"
-                : "border border-brand-line bg-white text-brand-ink/70 hover:bg-brand-cream/50"
-            }`}
-          >
-            {n.label}
-          </button>
-        ))}
+      <div role="group" aria-label="Nivel" className="flex flex-wrap gap-2">
+        {NIVELES.map((n) => {
+          const activo = (level ?? "") === n.id;
+          return (
+            <button
+              key={n.id || "todos"}
+              type="button"
+              aria-pressed={activo}
+              onClick={() => navigate({ search: { level: n.id || undefined }, replace: true })}
+              className={pillClass(activo)}
+            >
+              {activo ? <Check className="size-3.5" aria-hidden="true" /> : null}
+              {n.label}
+            </button>
+          );
+        })}
       </div>
 
       {listQ.isLoading ? (
-        <div className="text-sm text-brand-ink/60">Cargando…</div>
+        <Cargando>Cargando material…</Cargando>
+      ) : listQ.isError ? (
+        <EstadoError onRetry={() => void listQ.refetch()}>No pudimos cargar el material. Revisa tu conexión e inténtalo de nuevo.</EstadoError>
       ) : grupos.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-brand-line bg-white p-8 text-center text-sm text-brand-ink/65">
+        <Vacio titulo={q ? "Sin resultados" : "Aún no hay material"}>
           {q ? "Ningún material coincide con la búsqueda." : "Todavía no hay material extra publicado."}
-        </div>
+        </Vacio>
       ) : (
         grupos.map(([categoria, items]) => (
           <section key={categoria} className="flex flex-col gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-ink/60">{categoria}</h2>
+            <SeccionTitulo className="text-[15px]">{categoria}</SeccionTitulo>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {items.map((r) => (
                 <Link
@@ -118,14 +126,14 @@ function TeacherMaterial() {
                   to="/teacher/material/$resourceId"
                   params={{ resourceId: r.id }}
                   search={{ level }}
-                  className="group flex flex-col gap-1.5 rounded-2xl border border-brand-line bg-white p-4 transition hover:border-brand-ink/30 hover:shadow-soft"
+                  className={cn("group flex flex-col gap-1.5 border-2 border-brand-ink bg-white p-4 no-underline transition-colors hover:bg-brand-cream-soft", focusRing)}
                 >
-                  <span className="inline-flex size-9 items-center justify-center rounded-xl bg-brand-cream text-brand-ink">
+                  <span aria-hidden="true" className="inline-flex size-9 items-center justify-center border-2 border-brand-ink bg-brand-yellow-soft text-brand-ink">
                     <BookOpen className="size-4" />
                   </span>
                   <span className="mt-1 font-semibold text-brand-ink group-hover:underline">{r.title}</span>
                   {r.description ? (
-                    <span className="line-clamp-2 text-sm text-brand-ink/65">{r.description}</span>
+                    <span className="line-clamp-2 text-sm text-brand-ink/80">{r.description}</span>
                   ) : null}
                 </Link>
               ))}

@@ -1,11 +1,14 @@
 import { useMemo } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Check } from "lucide-react";
 import { learningApi, teachersApi } from "@/lib/api/endpoints";
 import { BarraAlumnoEnClase, useAlumnoEnClase } from "@/components/learning/AlumnoEnClase";
 import type { EnglishLevel } from "@/lib/domain/types";
 import { leccionesInteractivas } from "@/lib/learning/progreso";
+import { cn } from "@/lib/utils";
+import { Cargando, EstadoError, PageHeader, SeccionTitulo, Vacio, focusRing, tagNeutral } from "@/components/app/AppUi";
+import { pillClass } from "@/components/teacher/TeacherUi";
 
 const ES_NIVEL = (v: unknown): v is EnglishLevel =>
   v === "beginner" || v === "intermediate" || v === "advanced";
@@ -91,46 +94,39 @@ function TeacherContent() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">Contenido</h1>
-        <p className="mt-2 max-w-2xl text-[15px] text-brand-ink/65">
-          Revisa los slides y actividades de cualquier módulo. Elige un estudiante para ver qué
-          tiene habilitado y abrirle o cerrarle lecciones desde el mismo visor.
-        </p>
-      </header>
+      <PageHeader title="Contenido" highlight="Contenido">
+        Revisa los slides y actividades de cualquier módulo. Elige un estudiante para ver qué
+        tiene habilitado y abrirle o cerrarle lecciones desde el mismo visor.
+      </PageHeader>
 
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex flex-wrap gap-2">
-          {LEVELS.map((l) => (
-            <button
-              key={l.id}
-              type="button"
-              onClick={() => setLevel(l.id)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                level === l.id
-                  ? "bg-brand-ink text-white"
-                  : "border border-brand-line bg-white text-brand-ink/70 hover:bg-brand-cream/50"
-              }`}
-            >
-              {l.label}
-            </button>
-          ))}
-        </div>
+      <div role="group" aria-label="Nivel" className="flex flex-wrap gap-2">
+        {LEVELS.map((l) => (
+          <button
+            key={l.id}
+            type="button"
+            aria-pressed={level === l.id}
+            onClick={() => setLevel(l.id)}
+            className={pillClass(level === l.id)}
+          >
+            {level === l.id ? <Check className="size-3.5" aria-hidden="true" /> : null}
+            {l.label}
+          </button>
+        ))}
       </div>
 
       <BarraAlumnoEnClase alumnoId={studentId} onElegir={elegir} />
 
       {modsQ.isLoading ? (
-        <p className="text-sm text-brand-ink/55">Cargando contenido…</p>
+        <Cargando>Cargando contenido…</Cargando>
+      ) : modsQ.isError ? (
+        <EstadoError onRetry={() => void modsQ.refetch()}>No pudimos cargar el contenido. Revisa tu conexión e inténtalo de nuevo.</EstadoError>
       ) : mods.length === 0 ? (
-        <p className="text-sm text-brand-ink/55">Todavía no hay módulos publicados en este nivel.</p>
+        <Vacio titulo="Aún no hay módulos">Todavía no hay módulos publicados en este nivel.</Vacio>
       ) : (
         grupos.map(([unit, group]) => (
           <section key={String(unit)}>
             {unit != null ? (
-              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-brand-ink/55">
-                Unidad {unit}
-              </h2>
+              <SeccionTitulo className="mb-3 text-[15px]">Unidad {unit}</SeccionTitulo>
             ) : null}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {group.map((m: any) => (
@@ -141,27 +137,29 @@ function TeacherContent() {
                   // El nivel viaja con el enlace para que "Volver al contenido"
                   // devuelva a la pestaña desde la que se entró.
                   search={{ ...(studentId ? { studentId } : {}), level } as any}
-                  className="rounded-3xl border border-brand-line bg-white p-5 transition hover:border-brand-ink/30 hover:shadow-soft"
+                  className={cn("block border-2 border-brand-ink bg-white p-5 no-underline transition-colors hover:bg-brand-cream-soft", focusRing)}
                 >
                   <div className="flex items-start justify-between">
-                    <div className="text-3xl">{m.coverEmoji ?? "📘"}</div>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-cream px-2.5 py-1 text-[11px] font-medium text-brand-ink/65">
-                      <BookOpen className="size-3.5" /> {m.lessons?.length ?? 0} lecciones
+                    <span aria-hidden="true" className="grid size-11 place-items-center border-2 border-brand-ink bg-brand-yellow-soft text-brand-ink">
+                      <BookOpen className="size-5" />
+                    </span>
+                    <span className={tagNeutral}>
+                      {m.lessons?.length ?? 0} lecciones
                     </span>
                   </div>
-                  <h3 className="mt-3 text-lg font-bold text-brand-ink">{m.title}</h3>
-                  <p className="mt-1 text-sm text-brand-ink/65">{m.summary ?? m.description}</p>
+                  <h3 className="mt-3 font-display text-[18px] font-extrabold uppercase leading-tight text-brand-ink">{m.title}</h3>
+                  <p className="mt-1 text-sm text-brand-ink/80">{m.summary ?? m.description}</p>
                   {/* Barra de avance del alumno seleccionado, al pie de la
                       tarjeta — como la franja roja de una miniatura de video. */}
                   {studentId && (avancePorModulo.get(m.id) ?? 0) > 0 ? (
                     <div className="mt-4">
-                      <div className="h-1.5 overflow-hidden rounded-full bg-brand-ink/10">
+                      <div className="h-2 overflow-hidden border border-brand-ink bg-white">
                         <div
-                          className="h-full rounded-full bg-brand-yellow"
+                          className="h-full bg-brand-ink"
                           style={{ width: `${Math.round((avancePorModulo.get(m.id) ?? 0) * 100)}%` }}
                         />
                       </div>
-                      <div className="mt-1 text-[11px] text-brand-ink/50">
+                      <div className="mt-1 text-[11px] text-brand-ink/70">
                         Trabajado al {Math.round((avancePorModulo.get(m.id) ?? 0) * 100)}%
                       </div>
                     </div>

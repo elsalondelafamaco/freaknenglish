@@ -7,6 +7,13 @@ import interactionPlugin from "@fullcalendar/interaction";
 import { AlertTriangle, CalendarOff, ExternalLink, Plus, Snowflake, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { classesApi, scheduleApi, teachersApi } from "@/lib/api/endpoints";
+import { diaLargo, diaMes, horaDeClase } from "@/lib/domain/clases-fecha";
+import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  EstadoError, PageHeader, SeccionTitulo, btnChip, btnChipInk, cardPlain, focusRing, tagNeutral,
+} from "@/components/app/AppUi";
+import { btnRow } from "@/components/teacher/TeacherUi";
 
 export const Route = createFileRoute("/_authenticated/teacher/calendar")({
   head: () => ({ meta: [{ title: "Calendario — Freakn for Teachers" }] }),
@@ -46,44 +53,47 @@ function AbsenceDialog({ onClose, onDone }: { onClose: () => void; onDone: () =>
   const valid = startsAt && endsAt && new Date(endsAt) > new Date(startsAt);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/40 px-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-md rounded-3xl border border-brand-line bg-white p-6" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-bold text-brand-ink">Registrar ausencia</h3>
-        <p className="mt-1 text-sm text-brand-ink/65">
-          Indica el rango en el que no estarás disponible. Las clases dentro del rango se
-          cancelan y se avisa a tus estudiantes y al admin.
-        </p>
-        <div className="mt-4 grid gap-3">
-          <label className="text-xs font-semibold text-brand-ink/70">
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="border-2 border-brand-ink bg-white sm:rounded-none">
+        <DialogHeader>
+          <DialogTitle className="font-display text-xl font-extrabold uppercase text-brand-ink">Registrar ausencia</DialogTitle>
+          <DialogDescription className="text-brand-ink/80">
+            Indica el rango en el que no estarás disponible. Las clases dentro del rango se
+            cancelan y se avisa a tus estudiantes y al admin.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3">
+          <label className="text-[13px] font-bold text-brand-ink">
             Desde
             <input type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none" />
+              className="mt-1 min-h-11 w-full border-2 border-brand-ink bg-white px-3 text-sm text-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow" />
           </label>
-          <label className="text-xs font-semibold text-brand-ink/70">
+          <label className="text-[13px] font-bold text-brand-ink">
             Hasta
             <input type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-brand-line px-3 py-2 text-sm focus:border-brand-ink focus:outline-none" />
+              className="mt-1 min-h-11 w-full border-2 border-brand-ink bg-white px-3 text-sm text-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow" />
           </label>
-          <label className="text-xs font-semibold text-brand-ink/70">
+          <label className="text-[13px] font-bold text-brand-ink">
             Motivo
             <select value={reason} onChange={(e) => setReason(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm">
+              className="mt-1 min-h-11 w-full border-2 border-brand-ink bg-white px-3 text-sm text-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow">
               {["Vacaciones", "Cita médica", "Enfermedad", "Otro"].map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
           </label>
         </div>
-        <div className="mt-5 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-full px-4 py-2 text-sm font-medium text-brand-ink/70 hover:bg-brand-cream/40">Cancelar</button>
+        <DialogFooter className="gap-2 sm:space-x-0">
+          <button type="button" onClick={onClose} className={btnChip}>Cancelar</button>
           <button
+            type="button"
             disabled={!valid || createM.isPending}
             onClick={() => createM.mutate()}
-            className="rounded-full bg-brand-ink px-5 py-2 text-sm font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-50"
+            className={btnChipInk}
           >
             {createM.isPending ? "Guardando…" : "Registrar"}
           </button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -261,29 +271,29 @@ function TeacherCalendar() {
 
   return (
     <div className="flex flex-col gap-4">
-      <header className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-brand-ink">Calendario</h1>
-          <p className="mt-1 text-sm text-brand-ink/65">
-            Arrastra una clase para reprogramarla. El borde <span className="font-semibold text-amber-600">ámbar</span> indica estudiante sin pago activo.
-          </p>
-        </div>
-        <div className="flex items-center gap-3 text-[11px] text-brand-ink/60">
-          {Object.entries({ Programada: "scheduled", Reprogramada: "rescheduled", Tomada: "validated", "No tomada": "no_show", "Por reprogramar": "pending_reschedule" }).map(([label, st]) => (
-            <span key={st} className="inline-flex items-center gap-1">
-              <span className="inline-block size-2.5 rounded-full" style={{ background: STATUS_COLOR[st] }} /> {label}
-            </span>
-          ))}
-          <span className="inline-flex items-center gap-1">
-            <span className="inline-block size-2.5 rounded-full" style={{ background: CONGELADA }} /> Plan congelado
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <span className="inline-block size-2.5 rounded-full bg-[#fca5a5]" /> Ausencia
-          </span>
-        </div>
-      </header>
+      <PageHeader title="Calendario" highlight="Calendario">
+        Arrastra una clase para reprogramarla. El borde <span className="font-bold underline decoration-brand-yellow decoration-4 underline-offset-2">ámbar</span> indica estudiante sin pago activo.
+      </PageHeader>
 
-      <div className="freakn-calendar overflow-x-auto rounded-3xl border border-brand-line bg-white p-2 shadow-soft md:p-4">
+      <ul aria-label="Colores del calendario" className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-brand-ink">
+        {Object.entries({ Programada: "scheduled", Reprogramada: "rescheduled", Tomada: "validated", "No tomada": "no_show", "Por reprogramar": "pending_reschedule" }).map(([label, st]) => (
+          <li key={st} className="inline-flex items-center gap-1.5">
+            <span aria-hidden="true" className="inline-block size-3 rounded-full" style={{ background: STATUS_COLOR[st] }} /> {label}
+          </li>
+        ))}
+        <li className="inline-flex items-center gap-1.5">
+          <span aria-hidden="true" className="inline-block size-3 rounded-full" style={{ background: CONGELADA }} /> Plan congelado
+        </li>
+        <li className="inline-flex items-center gap-1.5">
+          <span aria-hidden="true" className="inline-block size-3 rounded-full bg-[#fca5a5]" /> Ausencia
+        </li>
+      </ul>
+
+      {calQ.isError ? (
+        <EstadoError onRetry={() => void calQ.refetch()}>No pudimos cargar tus clases de esta semana.</EstadoError>
+      ) : null}
+
+      <div className="freakn-calendar shadow-hard overflow-x-auto border-2 border-brand-ink bg-white p-2 md:p-4">
         <div className="min-w-[640px]">
         <FullCalendar
           ref={calRef as any}
@@ -347,51 +357,48 @@ function TeacherCalendar() {
       </div>
 
       {/* Ausencias: informativo, integrado al calendario (franja roja). */}
-      <section className="rounded-3xl border border-brand-line bg-white p-5 shadow-soft">
+      <section aria-labelledby="ausencias" className={cn(cardPlain, "p-5")}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="flex items-center gap-2 text-base font-bold text-brand-ink">
-              <CalendarOff className="size-4" /> Mis ausencias
-            </h2>
-            <p className="mt-0.5 text-xs text-brand-ink/55">
+            <SeccionTitulo id="ausencias" className="flex items-center gap-2">
+              <CalendarOff className="size-4" aria-hidden="true" /> Mis ausencias
+            </SeccionTitulo>
+            <p className="mt-1 max-w-xl text-xs text-brand-ink/80">
               Se ven como franja roja en tu calendario. Al registrar una, las clases del
               rango se cancelan, tus estudiantes reciben aviso y el admin coordina la reposición.
             </p>
           </div>
-          <button
-            onClick={() => setAbsOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5"
-          >
-            <Plus className="size-3.5" /> Registrar ausencia
+          <button type="button" onClick={() => setAbsOpen(true)} className={btnChip}>
+            <Plus className="size-3.5" aria-hidden="true" /> Registrar ausencia
           </button>
         </div>
         {(absQ.data ?? []).length === 0 ? (
-          <p className="mt-3 text-sm text-brand-ink/55">No tienes ausencias registradas.</p>
+          <p className="mt-3 text-sm text-brand-ink/80">No tienes ausencias registradas.</p>
         ) : (
-          <ul className="mt-3 divide-y divide-brand-line/60">
+          <ul className="mt-3">
             {(absQ.data ?? []).map((a: any) => {
               const past = new Date(a.endsAt).getTime() < Date.now();
               return (
-                <li key={a.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                <li key={a.id} className="flex items-center justify-between gap-3 border-t border-brand-ink/15 py-2.5 text-sm">
                   <div>
-                    <span className="font-semibold capitalize text-brand-ink">
-                      {new Date(a.startsAt).toLocaleString("es-CO", { weekday: "long", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    <span className="font-bold capitalize text-brand-ink">
+                      {diaLargo(a.startsAt)}, {horaDeClase(a.startsAt)}
                     </span>
-                    <span className="text-brand-ink/55">
+                    <span className="text-brand-ink/80">
                       {" — "}
-                      {new Date(a.endsAt).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      {diaMes(a.endsAt)}, {horaDeClase(a.endsAt)}
                     </span>
-                    <span className="ml-2 rounded-full bg-brand-cream/70 px-2 py-0.5 text-[11px] text-brand-ink/60">
-                      {a.reason ?? "Sin motivo"}
-                    </span>
+                    <span className={cn(tagNeutral, "ml-2")}>{a.reason ?? "Sin motivo"}</span>
                   </div>
                   {!past ? (
                     <button
+                      type="button"
                       onClick={() => delAbsM.mutate(a.id)}
                       disabled={delAbsM.isPending}
-                      className="inline-flex items-center gap-1 rounded-full border border-brand-line px-3 py-1.5 text-[11px] font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                      aria-label={`Eliminar ausencia del ${diaMes(a.startsAt)}`}
+                      className={cn(btnRow, "border-red-700 text-red-800 hover:bg-red-50 hover:text-red-800")}
                     >
-                      <Trash2 className="size-3" /> Eliminar
+                      <Trash2 className="size-3" aria-hidden="true" /> Eliminar
                     </button>
                   ) : null}
                 </li>
@@ -411,195 +418,220 @@ function TeacherCalendar() {
         />
       ) : null}
 
-      {/* Modal: ¿solo esta semana o siempre? (AC-17) */}
-      {pendingMove ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/40 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl border border-brand-line bg-white p-6">
-            <h3 className="text-lg font-bold text-brand-ink">¿Cómo aplicamos el cambio?</h3>
-            <p className="mt-1 text-sm text-brand-ink/65">{pendingMove.label}</p>
-            <div className="mt-5 grid gap-2">
+      {/* Modal: ¿solo esta semana o siempre? (AC-17). Cerrarlo sin elegir = cancelar: la clase vuelve a su sitio. */}
+      <Dialog open={!!pendingMove && !cruce} onOpenChange={(o) => { if (!o && pendingMove) { pendingMove.revert(); setPendingMove(null); } }}>
+        <DialogContent className="border-2 border-brand-ink bg-white sm:rounded-none">
+          {pendingMove ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-display text-xl font-extrabold uppercase text-brand-ink">¿Cómo aplicamos el cambio?</DialogTitle>
+                <DialogDescription className="text-brand-ink/80">{pendingMove.label}</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-2">
+                <button
+                  type="button"
+                  disabled={moveM.isPending}
+                  onClick={() => moveM.mutate({ id: pendingMove.classId, startsAt: pendingMove.startsAt, scope: "once" })}
+                  className={cn("border-2 border-brand-ink bg-white px-4 py-3 text-left text-sm hover:bg-brand-cream-soft disabled:opacity-60", focusRing)}
+                >
+                  <div className="font-bold text-brand-ink">Solo esta semana</div>
+                  <div className="text-xs text-brand-ink/80">Las demás semanas siguen en el horario habitual.</div>
+                </button>
+                <button
+                  type="button"
+                  disabled={moveM.isPending}
+                  onClick={() => moveM.mutate({ id: pendingMove.classId, startsAt: pendingMove.startsAt, scope: "forever" })}
+                  className={cn("border-2 border-brand-ink bg-brand-ink px-4 py-3 text-left text-sm text-brand-cream disabled:opacity-60 dark:text-white", focusRing)}
+                >
+                  <div className="font-bold">Para siempre</div>
+                  <div className="text-xs opacity-90">Mueve el horario fijo del estudiante y todas sus clases futuras.</div>
+                </button>
+              </div>
               <button
-                disabled={moveM.isPending}
-                onClick={() => moveM.mutate({ id: pendingMove.classId, startsAt: pendingMove.startsAt, scope: "once" })}
-                className="rounded-2xl border border-brand-line bg-white px-4 py-3 text-left text-sm hover:bg-brand-cream/40 disabled:opacity-60"
+                type="button"
+                onClick={() => { pendingMove.revert(); setPendingMove(null); }}
+                className={cn(btnChip, "w-full")}
               >
-                <div className="font-semibold text-brand-ink">Solo esta semana</div>
-                <div className="text-xs text-brand-ink/60">Las demás semanas siguen en el horario habitual.</div>
+                Cancelar
               </button>
-              <button
-                disabled={moveM.isPending}
-                onClick={() => moveM.mutate({ id: pendingMove.classId, startsAt: pendingMove.startsAt, scope: "forever" })}
-                className="rounded-2xl border border-brand-ink bg-brand-ink px-4 py-3 text-left text-sm text-white hover:bg-brand-ink-soft disabled:opacity-60"
-              >
-                <div className="font-semibold">Para siempre</div>
-                <div className="text-xs opacity-80">Mueve el horario fijo del estudiante y todas sus clases futuras.</div>
-              </button>
-            </div>
-            <button
-              onClick={() => { pendingMove.revert(); setPendingMove(null); }}
-              className="mt-4 w-full rounded-full px-4 py-2 text-sm font-medium text-brand-ink/70 hover:bg-brand-cream/40"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      ) : null}
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       {/* Confirmación de cruce: dos clases a la misma hora es válido (una
           reposición encima de la que no se tomó), pero nunca por accidente. */}
-      {cruce ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/40 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl border border-brand-line bg-white p-6">
-            <h3 className="text-lg font-bold text-brand-ink">Ya tienes clase a esa hora</h3>
-            <p className="mt-2 text-sm text-brand-ink/70">{cruce.mensaje}</p>
-            <p className="mt-2 text-xs text-brand-ink/55">
-              Se verán las dos en el calendario, una al lado de la otra. Útil cuando el alumno no
-              entró y quieres usar esa hora de reposición con otro.
-            </p>
-            <div className="mt-5 flex flex-wrap justify-end gap-2">
-              <button
-                onClick={() => { cruce.reintentar && pendingMove?.revert(); setCruce(null); setPendingMove(null); invalidate(); }}
-                className="rounded-full border border-brand-line px-4 py-2 text-sm font-semibold text-brand-ink hover:bg-brand-cream/40"
-              >
-                No, dejar como estaba
-              </button>
-              <button
-                disabled={moveM.isPending}
-                onClick={() => moveM.mutate(cruce.reintentar)}
-                className="rounded-full bg-brand-ink px-4 py-2 text-sm font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-60"
-              >
-                Sí, poner las dos
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <Dialog
+        open={!!cruce}
+        onOpenChange={(o) => { if (!o && cruce) { pendingMove?.revert(); setCruce(null); setPendingMove(null); invalidate(); } }}
+      >
+        <DialogContent className="border-2 border-brand-ink bg-white sm:rounded-none">
+          {cruce ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-display text-xl font-extrabold uppercase text-brand-ink">Ya tienes clase a esa hora</DialogTitle>
+                <DialogDescription className="text-brand-ink/90">{cruce.mensaje}</DialogDescription>
+              </DialogHeader>
+              <p className="text-xs text-brand-ink/80">
+                Se verán las dos en el calendario, una al lado de la otra. Útil cuando el alumno no
+                entró y quieres usar esa hora de reposición con otro.
+              </p>
+              <DialogFooter className="gap-2 sm:space-x-0">
+                <button
+                  type="button"
+                  onClick={() => { cruce.reintentar && pendingMove?.revert(); setCruce(null); setPendingMove(null); invalidate(); }}
+                  className={btnChip}
+                >
+                  No, dejar como estaba
+                </button>
+                <button
+                  type="button"
+                  disabled={moveM.isPending}
+                  onClick={() => moveM.mutate(cruce.reintentar)}
+                  className={btnChipInk}
+                >
+                  Sí, poner las dos
+                </button>
+              </DialogFooter>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       {/* Modal detalle de clase */}
-      {selected ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/40 px-4 backdrop-blur-sm" onClick={() => setSelected(null)}>
-          <div className="w-full max-w-md rounded-3xl border border-brand-line bg-white p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-bold text-brand-ink">{selected.student.fullName}</h3>
-                <p className="text-sm text-brand-ink/65">
-                  {new Date(selected.startsAt).toLocaleString("es-CO", { weekday: "long", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
-                </p>
-              </div>
-              <span className="rounded-full px-2.5 py-1 text-[11px] font-semibold text-white" style={{ background: STATUS_COLOR[selected.status] ?? "#111827" }}>
-                {STATUS_LABEL[selected.status] ?? "Programada"}
-              </span>
-            </div>
-            {selected.student.planCongelado ? (
-              <div className="mt-3 flex items-start gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
-                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                Este estudiante tiene el plan congelado: no va a venir, pero la hora sigue siendo
-                suya y nadie más la puede tomar.
-              </div>
-            ) : !selected.student.paymentActive ? (
-              <div className="mt-3 flex items-start gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                Este estudiante no tiene pago activo. Tenlo presente antes de dictar la clase.
-              </div>
-            ) : null}
-            <div className="mt-5 flex flex-wrap gap-2">
-              {selected.student.meetingUrl ? (
-                <a href={selected.student.meetingUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink-soft">
-                  Entrar <ExternalLink className="size-3.5" />
-                </a>
-              ) : null}
-              {selected.meetingUrl ? (
-                <a href={selected.meetingUrl} className="inline-flex items-center gap-1.5 rounded-full border border-brand-line bg-white px-4 py-2 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40">
-                  Board
-                </a>
-              ) : null}
-              {["scheduled", "validated"].includes(selected.status) ? (
-                <button
-                  disabled={noShowM.isPending}
-                  onClick={() => noShowM.mutate(selected.id)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-white px-4 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
-                >
-                  <XCircle className="size-3.5" /> No tomada
-                </button>
-              ) : null}
-              {/* Congelar: la clase sale de circulación (no cuenta como tomada
-                  ni entra a nómina) hasta que se le ponga fecha. Es lo que
-                  hace falta cuando el estudiante pide mover y todavía no se
-                  ha acordado para cuándo. */}
-              {["scheduled", "rescheduled", "validated", "no_show"].includes(selected.status) ? (
-                <button
-                  disabled={freezeM.isPending}
-                  onClick={() => {
-                    const motivo = prompt("¿Por qué se reprograma? (opcional)") ?? undefined;
-                    freezeM.mutate({ id: selected.id, reason: motivo });
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-sky-300 bg-sky-50 px-4 py-2 text-xs font-semibold text-sky-900 hover:bg-sky-100 disabled:opacity-60"
-                >
-                  <Snowflake className="size-3.5" /> Congelar
-                </button>
-              ) : null}
-              {selected.status === "pending_reschedule" ? (
-                <button
-                  disabled={unfreezeM.isPending}
-                  onClick={() => unfreezeM.mutate(selected.id)}
-                  className="inline-flex items-center rounded-full border border-brand-line bg-white px-4 py-2 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40 disabled:opacity-60"
-                >
-                  Volver a su horario
-                </button>
-              ) : null}
-              <Link
-                to="/teacher/students/$studentId"
-                params={{ studentId: selected.student.id }}
-                className="inline-flex items-center rounded-full border border-brand-line bg-white px-4 py-2 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40"
-              >
-                Ver estudiante
-              </Link>
-            </div>
-
-            {/* Mover a otra fecha (incluida OTRA SEMANA) — solo esta clase.
-                También desde `validated`/`no_show`/congelada: el caso real es
-                justamente ese, una clase que el sistema ya dio por tomada y
-                que en realidad hay que correr a una fecha futura. */}
-            {["scheduled", "rescheduled", "pending_reschedule", "validated", "no_show"].includes(selected.status) ? (
-              <div className="mt-4 rounded-2xl border border-brand-line bg-brand-cream/30 p-3">
-                <div className="text-xs font-semibold text-brand-ink">
-                  Mover esta clase (una sola vez, puede ser a otra semana)
+      <Dialog open={!!selected && !cruce} onOpenChange={(o) => { if (!o) setSelected(null); }}>
+        <DialogContent className="border-2 border-brand-ink bg-white sm:rounded-none">
+          {selected ? (
+            <>
+              <DialogHeader>
+                <div className="flex items-start justify-between gap-3 pr-6">
+                  <div className="min-w-0">
+                    <DialogTitle className="font-display text-xl font-extrabold uppercase text-brand-ink">{selected.student.fullName}</DialogTitle>
+                    <DialogDescription className="mt-1 text-brand-ink/80">
+                      <span className="capitalize">${diaLargo(selected.startsAt)}, ${horaDeClase(selected.startsAt)}</span>
+                    </DialogDescription>
+                  </div>
+                  <span className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: STATUS_COLOR[selected.status] ?? "#111827" }}>
+                    {STATUS_LABEL[selected.status] ?? "Programada"}
+                  </span>
                 </div>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <input
-                    type="datetime-local"
-                    value={moveDraft ?? toLocalInput(selected.startsAt)}
-                    onChange={(e) => setMoveDraft(e.target.value)}
-                    className="rounded-xl border border-brand-line bg-white px-3 py-2 text-xs focus:border-brand-ink focus:outline-none"
-                  />
-                  <button
-                    disabled={moveM.isPending || moveDraft === null || !!errorDestino}
-                    // No se cierra aquí: si hay cruce hay que preguntar, y
-                    // cerrando el modal antes se perdía el contexto. Lo cierra
-                    // `onSuccess`.
-                    onClick={() => {
-                      moveM.mutate({ id: selected.id, startsAt: new Date(moveDraft!).toISOString(), scope: "once" });
-                    }}
-                    className="rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-50"
-                  >
-                    Mover clase
-                  </button>
+              </DialogHeader>
+              {selected.student.planCongelado ? (
+                <div className={cn(cardPlain, "flex items-start gap-2 px-3 py-2 text-xs text-brand-ink")}>
+                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                  Este estudiante tiene el plan congelado: no va a venir, pero la hora sigue siendo
+                  suya y nadie más la puede tomar.
                 </div>
-                {/* Aviso antes de mandar: el backend igual lo rechaza, pero
-                    equivocarse de fecha y enterarse solo por un toast rojo es
-                    justo lo que hizo que una clase terminara en un sábado. */}
-                {errorDestino ? (
-                  <p className="mt-1.5 text-[11px] font-semibold text-red-700">{errorDestino}</p>
+              ) : !selected.student.paymentActive ? (
+                <div className={cn(cardPlain, "flex items-start gap-2 bg-brand-yellow-soft px-3 py-2 text-xs text-brand-ink")}>
+                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                  Este estudiante no tiene pago activo. Tenlo presente antes de dictar la clase.
+                </div>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                {selected.student.meetingUrl ? (
+                  <a href={selected.student.meetingUrl} target="_blank" rel="noreferrer" className={btnChipInk}>
+                    Entrar <ExternalLink className="size-3.5" aria-hidden="true" />
+                  </a>
                 ) : null}
-                <p className="mt-1.5 text-[11px] text-brand-ink/55">
-                  El horario recurrente no cambia: la próxima semana la clase vuelve a su franja habitual.
-                  {cfg ? ` Solo ${diasHabiles(cfg.days)}, de ${cfg.startHour}:00 a ${cfg.endHour}:00.` : ""}
-                </p>
+                {selected.meetingUrl ? (
+                  <a href={selected.meetingUrl} className={btnChip}>
+                    Board
+                  </a>
+                ) : null}
+                {["scheduled", "validated"].includes(selected.status) ? (
+                  <button
+                    type="button"
+                    disabled={noShowM.isPending}
+                    onClick={() => noShowM.mutate(selected.id)}
+                    className={btnChip}
+                  >
+                    <XCircle className="size-3.5" aria-hidden="true" /> No tomada
+                  </button>
+                ) : null}
+                {/* Congelar: la clase sale de circulación (no cuenta como tomada
+                    ni entra a nómina) hasta que se le ponga fecha. Es lo que
+                    hace falta cuando el estudiante pide mover y todavía no se
+                    ha acordado para cuándo. */}
+                {["scheduled", "rescheduled", "validated", "no_show"].includes(selected.status) ? (
+                  <button
+                    type="button"
+                    disabled={freezeM.isPending}
+                    onClick={() => {
+                      const motivo = prompt("¿Por qué se reprograma? (opcional)") ?? undefined;
+                      freezeM.mutate({ id: selected.id, reason: motivo });
+                    }}
+                    className={btnChip}
+                  >
+                    <Snowflake className="size-3.5" aria-hidden="true" /> Congelar
+                  </button>
+                ) : null}
+                {selected.status === "pending_reschedule" ? (
+                  <button
+                    type="button"
+                    disabled={unfreezeM.isPending}
+                    onClick={() => unfreezeM.mutate(selected.id)}
+                    className={btnChip}
+                  >
+                    Volver a su horario
+                  </button>
+                ) : null}
+                <Link
+                  to="/teacher/students/$studentId"
+                  params={{ studentId: selected.student.id }}
+                  className={btnChip}
+                >
+                  Ver estudiante
+                </Link>
               </div>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+
+              {/* Mover a otra fecha (incluida OTRA SEMANA) — solo esta clase.
+                  También desde `validated`/`no_show`/congelada: el caso real es
+                  justamente ese, una clase que el sistema ya dio por tomada y
+                  que en realidad hay que correr a una fecha futura. */}
+              {["scheduled", "rescheduled", "pending_reschedule", "validated", "no_show"].includes(selected.status) ? (
+                <div className="border-2 border-brand-ink bg-brand-cream-soft p-3">
+                  <div className="text-xs font-bold text-brand-ink">
+                    Mover esta clase (una sola vez, puede ser a otra semana)
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <input
+                      type="datetime-local"
+                      aria-label="Nueva fecha y hora de la clase"
+                      value={moveDraft ?? toLocalInput(selected.startsAt)}
+                      onChange={(e) => setMoveDraft(e.target.value)}
+                      className="min-h-11 border-2 border-brand-ink bg-white px-3 text-xs text-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
+                    />
+                    <button
+                      type="button"
+                      disabled={moveM.isPending || moveDraft === null || !!errorDestino}
+                      // No se cierra aquí: si hay cruce hay que preguntar, y
+                      // cerrando el modal antes se perdía el contexto. Lo cierra
+                      // `onSuccess`.
+                      onClick={() => {
+                        moveM.mutate({ id: selected.id, startsAt: new Date(moveDraft!).toISOString(), scope: "once" });
+                      }}
+                      className={btnChipInk}
+                    >
+                      Mover clase
+                    </button>
+                  </div>
+                  {/* Aviso antes de mandar: el backend igual lo rechaza, pero
+                      equivocarse de fecha y enterarse solo por un toast rojo es
+                      justo lo que hizo que una clase terminara en un sábado. */}
+                  {errorDestino ? (
+                    <p role="alert" className="mt-1.5 text-[11px] font-bold text-red-800">{errorDestino}</p>
+                  ) : null}
+                  <p className="mt-1.5 text-[11px] text-brand-ink/80">
+                    El horario recurrente no cambia: la próxima semana la clase vuelve a su franja habitual.
+                    {cfg ? ` Solo ${diasHabiles(cfg.days)}, de ${cfg.startHour}:00 a ${cfg.endHour}:00.` : ""}
+                  </p>
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

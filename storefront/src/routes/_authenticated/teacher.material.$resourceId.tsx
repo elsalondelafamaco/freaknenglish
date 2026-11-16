@@ -4,6 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { teachersApi } from "@/lib/api/endpoints";
 import type { EnglishLevel } from "@/lib/domain/types";
 import { LessonFrame } from "@/components/learning/LessonFrame";
+import { cn } from "@/lib/utils";
+import { Cargando, EstadoError, Titulo, eyebrow, focusRing } from "@/components/app/AppUi";
 
 const ES_NIVEL = (v: unknown): v is EnglishLevel =>
   v === "beginner" || v === "intermediate" || v === "advanced";
@@ -32,22 +34,20 @@ function TeacherMaterialDetail() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Link to="/teacher/material" search={{ level }} className="inline-flex w-fit items-center gap-1.5 text-sm text-brand-ink/60 hover:text-brand-ink">
+      <Link to="/teacher/material" search={{ level }} className={cn("inline-flex min-h-11 w-fit items-center gap-1.5 text-sm font-bold text-brand-ink underline underline-offset-2", focusRing)}>
         <ArrowLeft className="size-4" /> Material extra
       </Link>
 
       {q.isLoading ? (
-        <div className="text-sm text-brand-ink/60">Cargando…</div>
+        <Cargando>Cargando material…</Cargando>
       ) : q.isError || !q.data ? (
-        <div className="rounded-2xl border border-dashed border-brand-line bg-white p-8 text-center text-sm text-brand-ink/65">
-          No pudimos abrir este material.
-        </div>
+        <EstadoError onRetry={() => void q.refetch()}>No pudimos abrir este material.</EstadoError>
       ) : (
         <>
           <header>
-            <h1 className="text-2xl font-bold tracking-tight text-brand-ink md:text-3xl">{q.data.title}</h1>
+            <Titulo className="text-[28px] md:text-[34px]">{q.data.title}</Titulo>
             {q.data.description ? (
-              <p className="mt-1 max-w-2xl text-[15px] text-brand-ink/65">{q.data.description}</p>
+              <p className="mt-1 max-w-2xl text-[15px] text-brand-ink/80">{q.data.description}</p>
             ) : null}
           </header>
           {/* El objetivo va AL LADO del material, no encima: la idea es leerlo
@@ -60,8 +60,8 @@ function TeacherMaterialDetail() {
               <LessonFrame title={q.data.title} html={q.data.contentHtml} />
             </div>
             {q.data.objective ? (
-              <aside className="rounded-2xl border border-brand-line bg-white p-5 lg:h-[72vh] lg:w-80 lg:shrink-0 lg:overflow-y-auto">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-ink/60">
+              <aside className="border-2 border-brand-ink bg-white p-5 lg:h-[72vh] lg:w-80 lg:shrink-0 lg:overflow-y-auto">
+                <h2 className={eyebrow}>
                   ¿Para qué sirve?
                 </h2>
                 <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-brand-ink">

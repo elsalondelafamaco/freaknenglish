@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Paintbrush, Save } from "lucide-react";
+import { Check, Save } from "lucide-react";
 import { toast } from "sonner";
 import { scheduleApi, teachersApi } from "@/lib/api/endpoints";
+import { horaEn12 } from "@/lib/domain/zona-horaria";
+import { cn } from "@/lib/utils";
+import { Cargando, EstadoError, PageHeader, btnChip, btnPrimaryAuto, cardPlain, focusRing } from "@/components/app/AppUi";
 
 export const Route = createFileRoute("/_authenticated/teacher/availability")({
   head: () => ({ meta: [{ title: "Disponibilidad — Freakn for Teachers" }] }),
@@ -131,54 +134,97 @@ function AvailabilityEditor() {
     setDirty(true);
   }
 
-  if (cfgQ.isLoading || availQ.isLoading) return <p className="text-sm text-brand-ink/60">Cargando…</p>;
+  if (cfgQ.isLoading || availQ.isLoading) return <Cargando>Cargando tu disponibilidad…</Cargando>;
+  if (cfgQ.isError || availQ.isError) {
+    return (
+      <EstadoError onRetry={() => { void cfgQ.refetch(); void availQ.refetch(); }}>
+        No pudimos cargar tu disponibilidad. Revisa tu conexión e inténtalo de nuevo.
+      </EstadoError>
+    );
+  }
+
+  /** Copia las horas pintadas del lunes a todos los demás días (no guarda hasta que lo pidas). */
+  function copiarLunes() {
+    if (!days.includes(1)) return;
+    const horasLunes = hours.filter((h) => cells.has(cellKey(1, h)));
+    setCells((prev) => {
+      const next = new Set(prev);
+      for (const d of days) {
+        if (d === 1) continue;
+        for (const h of hours) next.delete(cellKey(d, h));
+        for (const h of horasLunes) next.add(cellKey(d, h));
+      }
+      return next;
+    });
+    setDirty(true);
+  }
 
   return (
     <div className="flex flex-col gap-5" onMouseUp={() => (paintMode.current = null)} onMouseLeave={() => (paintMode.current = null)}>
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-brand-ink">Disponibilidad</h1>
-          <p className="mt-1 max-w-xl text-sm text-brand-ink/65">
-            <Paintbrush className="mr-1 inline size-3.5" />
-            Pinta las horas en las que puedes dar clase (click o arrastra). Tus estudiantes actuales no se
-            ven afectados: esto solo aplica para nuevas asignaciones.
-          </p>
-        </div>
-        <button
-          onClick={() => saveM.mutate()}
-          disabled={!dirty || saveM.isPending}
-          className="inline-flex items-center gap-1.5 rounded-full bg-brand-ink px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-50"
-        >
-          <Save className="size-4" /> {saveM.isPending ? "Guardando…" : dirty ? "Guardar cambios" : "Guardado"}
-        </button>
-      </header>
+      <PageHeader
+        eyebrowText="Pinta tus horas libres"
+        title="Tu disponibilidad"
+        highlight="disponibilidad"
+        aside={
+          <div className="flex flex-wrap items-center gap-3">
+            {dirty || saveM.isPending ? (
+              <button
+                type="button"
+                onClick={() => saveM.mutate()}
+                disabled={saveM.isPending}
+                className={btnPrimaryAuto}
+              >
+                <Save className="size-4" aria-hidden="true" /> {saveM.isPending ? "Guardando…" : "Guardar cambios"}
+              </button>
+            ) : (
+              <span role="status" className="inline-flex items-center gap-1.5 text-[13px] font-bold text-brand-ink">
+                <Check className="size-4" aria-hidden="true" /> Guardado
+              </span>
+            )}
+            {days.includes(1) ? (
+              <button type="button" onClick={copiarLunes} className={btnChip}>
+                Copiar lunes a toda la semana
+              </button>
+            ) : null}
+          </div>
+        }
+      />
 
       {descubiertas.length > 0 ? (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3">
-          <p className="text-sm font-semibold text-amber-900">
+        <div role="alert" className={cn(cardPlain, "bg-brand-yellow-soft px-4 py-3")}>
+          <p className="text-sm font-bold text-brand-ink">
             {descubiertas.length} clase(s) tuya(s) quedan fuera de tu disponibilidad
           </p>
-          <p className="mt-1 text-xs text-amber-900/70">
+          <p className="mt-1 text-xs text-brand-ink/80">
             Sigues teniendo estas clases: quitar la hora no reasigna a nadie. Vuelve a pintarla o
             pide al admin que reagende al estudiante.
           </p>
           <ul className="mt-2 flex flex-col gap-1">
             {descubiertas.map((o, i) => (
-              <li key={i} className="text-xs text-amber-950">
-                <span className="font-semibold">{o.studentName ?? "—"}</span>
-                {` · ${DAY_NAMES[o.weekday]} ${o.hour}:00 (${o.durationMin} min)`}
+              <li key={i} className="text-xs text-brand-ink">
+                <span className="font-bold">{o.studentName ?? "—"}</span>
+                {` · ${DAY_NAMES[o.weekday]} ${horaEn12(o.hour)} (${o.durationMin} min)`}
               </li>
             ))}
           </ul>
         </div>
       ) : null}
 
-      <div className="overflow-x-auto rounded-3xl border border-brand-line bg-white p-4 shadow-soft">
-        <div className="min-w-[560px] select-none">
-          <div className="grid" style={{ gridTemplateColumns: `64px repeat(${days.length}, 1fr)` }}>
+      {/* Leyenda: cada estado tiene su forma, no solo su color. */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] font-semibold text-brand-ink">
+        <span className="inline-flex items-center gap-2"><i className="grid size-[18px] place-items-center border-[1.5px] border-brand-ink bg-brand-ink text-brand-cream dark:text-white"><Check className="size-3" aria-hidden="true" /></i>Disponible</span>
+        <span className="inline-flex items-center gap-2"><i className="block size-[18px] border-2 border-brand-ink bg-white" />Estudiante asignado</span>
+        <span className="inline-flex items-center gap-2"><i className="block size-[18px] border-2 border-brand-ink bg-brand-yellow-soft" />Con clase, sin pintar</span>
+        <span className="inline-flex items-center gap-2"><i className="block size-[18px] border-[1.5px] border-dashed border-brand-ink/60 bg-white" />No disponible</span>
+        <span className="font-medium text-brand-ink/70">Click o arrastra para pintar. Tus estudiantes actuales no cambian.</span>
+      </div>
+
+      <div className="shadow-hard overflow-x-auto border-2 border-brand-ink bg-white p-3.5">
+        <div className="min-w-[640px] select-none">
+          <div className="grid gap-[5px]" style={{ gridTemplateColumns: `84px repeat(${days.length}, minmax(0, 1fr))` }}>
             <div />
             {days.map((d) => (
-              <div key={d} className="pb-2 text-center text-xs font-bold uppercase tracking-wide text-brand-ink/70">
+              <div key={d} className="py-1.5 text-center font-display text-[12px] font-extrabold uppercase text-brand-ink">
                 <span className="hidden md:inline">{DAY_NAMES[d]}</span>
                 <span className="md:hidden">{DAY_SHORT[d]}</span>
               </div>
@@ -198,7 +244,7 @@ function AvailabilityEditor() {
         </div>
       </div>
 
-      <p className="text-xs text-brand-ink/55">
+      <p className="text-xs text-brand-ink/70">
         {cells.size} hora(s) disponibles por semana · Clases de {cfg?.durationMin ?? 50} min
       </p>
     </div>
@@ -221,18 +267,31 @@ function RowCells({
   paintMode: React.MutableRefObject<"add" | "remove" | null>;
   onPaint: (d: number, h: number) => void;
 }) {
+  const hora = horaEn12(h);
   return (
     <>
-      <div className="flex items-center justify-end pr-3 text-[11px] font-medium text-brand-ink/55">{h}:00</div>
+      <div className="flex items-center justify-end whitespace-nowrap pr-2 text-xs font-bold text-brand-ink/70">{hora}</div>
       {days.map((d) => {
         const k = cellKey(d, h);
         const on = cells.has(k);
         const estudiante = conClase.get(k);
         // Hora con clase pero sin pintar: el desajuste que hay que ver de una.
         const descubierta = !!estudiante && !on;
+        const asignada = !!estudiante && on;
+        const corto = estudiante ? estudiante.split(" ").slice(0, 2).map((p, i) => (i === 0 ? p : `${p[0]}.`)).join(" ") : "";
+        const estado = descubierta
+          ? `asignado a ${estudiante}, sin pintar en tu disponibilidad`
+          : asignada
+            ? `asignado a ${estudiante}`
+            : on
+              ? "disponible"
+              : "no disponible";
         return (
-          <div
-            key={`${d}:${h}`}
+          // Botón real: el mouse pinta al arrastrar; con teclado, Enter o Espacio alterna la celda.
+          <button
+            key={k}
+            type="button"
+            aria-label={`${DAY_NAMES[d]} ${hora}, ${estado}`}
             onMouseDown={(e) => {
               e.preventDefault();
               paintMode.current = on ? "remove" : "add";
@@ -241,27 +300,28 @@ function RowCells({
             onMouseEnter={() => {
               if (paintMode.current) onPaint(d, h);
             }}
-            className={`relative m-0.5 h-10 cursor-pointer rounded-lg border transition ${
+            onClick={(e) => {
+              // detail 0 = activación por teclado; el clic de mouse ya pintó en mousedown.
+              if (e.detail === 0) {
+                paintMode.current = on ? "remove" : "add";
+                onPaint(d, h);
+                paintMode.current = null;
+              }
+            }}
+            className={cn(
+              "flex h-[34px] cursor-pointer items-center justify-center gap-1 overflow-hidden whitespace-nowrap px-2 text-xs font-bold text-brand-ink transition-colors",
+              focusRing,
               descubierta
-                ? "border-amber-500 bg-amber-100"
-                : on
-                  ? "border-brand-ink bg-brand-ink/90"
-                  : "border-brand-line bg-brand-cream/30 hover:bg-brand-cream/70"
-            }`}
-            title={
-              estudiante
-                ? `${DAY_NAMES[d]} ${h}:00 · clase con ${estudiante}${descubierta ? " — sin pintar en tu disponibilidad" : ""}`
-                : `${DAY_NAMES[d]} ${h}:00–${h}:50`
-            }
+                ? "border-2 border-brand-ink bg-brand-yellow-soft"
+                : asignada
+                  ? "border-2 border-brand-ink bg-white"
+                  : on
+                    ? "border-[1.5px] border-brand-ink bg-brand-ink text-brand-cream dark:text-white"
+                    : "border-[1.5px] border-dashed border-brand-ink/60 bg-white hover:bg-brand-cream-soft",
+            )}
           >
-            {estudiante ? (
-              <span
-                className={`absolute right-1 top-1 size-1.5 rounded-full ${
-                  descubierta ? "bg-amber-600" : "bg-white/70"
-                }`}
-              />
-            ) : null}
-          </div>
+            {estudiante ? corto : on ? <Check className="size-3.5" aria-hidden="true" /> : null}
+          </button>
         );
       })}
     </>

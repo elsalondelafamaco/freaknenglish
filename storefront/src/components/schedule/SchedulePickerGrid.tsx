@@ -1,7 +1,8 @@
-import { Zap } from "lucide-react";
+import { Check, Zap } from "lucide-react";
 import { toast } from "sonner";
 import type { ScheduleConfig, SlotRef } from "@/lib/api/endpoints";
-import { ZONA_BOGOTA, franjaEnZona, zonaDe } from "@/lib/domain/zona-horaria";
+import { ZONA_BOGOTA, franjaEnZona, horaEn12, zonaDe } from "@/lib/domain/zona-horaria";
+import { cn } from "@/lib/utils";
 
 /**
  * Grilla de selección de horario, ÚNICA en toda la app.
@@ -115,10 +116,10 @@ export function SchedulePickerGrid({
   return (
     <div className="shadow-hard overflow-x-auto border-2 border-brand-ink bg-white p-4">
       <div className="min-w-[640px]">
-        <div className="grid" style={{ gridTemplateColumns: `72px repeat(${days.length}, 1fr)` }}>
+        <div className="grid gap-[5px]" style={{ gridTemplateColumns: `84px repeat(${days.length}, minmax(0, 1fr))` }}>
           <div />
           {days.map((d) => (
-            <div key={d} className="pb-2 text-center text-xs font-bold uppercase tracking-wide text-brand-ink/70">
+            <div key={d} className="py-1.5 text-center font-display text-[12px] font-extrabold uppercase text-brand-ink">
               <span className="hidden md:inline">{DAY_NAMES[d]}</span>
               <span className="md:hidden">{DAY_SHORT[d]}</span>
             </div>
@@ -161,21 +162,19 @@ function HourRow({
   // El desfase no cambia entre columnas, así que basta calcularlo UNA vez por
   // fila: dentro de una misma hora de Bogotá, todos los días se corren igual.
   const propia = zonaDe(zona) !== ZONA_BOGOTA ? franjaEnZona(days[0] ?? 1, h, zona) : null;
-  const horaLocal = propia
-    ? `${propia.hour}:${String(propia.minuto).padStart(2, "0")}`
-    : `${h}:00`;
+  const horaLocal = propia ? horaEn12(propia.hour, propia.minuto) : horaEn12(h);
 
   return (
     <>
-      <div className="flex flex-col items-end justify-start pr-3 pt-2 text-[11px] font-medium text-brand-ink/55">
-        <span className={propia ? "text-[12px] font-bold text-brand-ink" : undefined}>{horaLocal}</span>
+      <div className="flex flex-col items-end justify-center whitespace-nowrap pr-2 text-xs font-bold text-brand-ink/70">
+        <span className={propia ? "text-[12px] text-brand-ink" : undefined}>{horaLocal}</span>
         {propia ? (
           <>
-            <span className="text-[10px] leading-tight">{h}:00 Colombia</span>
+            <span className="text-[10px] font-medium leading-tight">{horaEn12(h)} Colombia</span>
             {/* Sin esta marca la cabecera del día estaría mintiendo: en Tokio,
                 el lunes a las 20:00 de Colombia es MARTES a las 10:00. */}
             {propia.cruzaDia !== 0 ? (
-              <span className="mt-0.5 rounded bg-brand-yellow/70 px-1 text-[9px] font-bold text-brand-ink">
+              <span className="mt-0.5 border border-brand-ink bg-brand-yellow-soft px-1 text-[9px] font-bold text-brand-ink">
                 {propia.cruzaDia === 1 ? "+1 día" : "−1 día"}
               </span>
             ) : null}
@@ -191,17 +190,22 @@ function HourRow({
             key={k}
             type="button"
             onClick={() => onToggle({ weekday: d, hour: h })}
-            title={propia ? `${horaLocal} · ${h}:00 en Colombia` : slotTimeRange(h, durationMin)}
-            className={`m-0.5 flex h-11 items-center justify-center gap-1 rounded-xl border text-[11px] font-semibold transition ${
+            aria-pressed={isSel}
+            aria-label={`${DAY_NAMES[d]} ${horaLocal}, ${isSel ? "elegida" : isAuto ? "disponible, inicio inmediato" : "disponible"}`}
+            title={propia ? `${horaLocal} · ${horaEn12(h)} en Colombia` : slotTimeRange(h, durationMin)}
+            className={cn(
+              "flex h-11 items-center justify-center gap-1 whitespace-nowrap text-[11px] font-bold transition-colors",
+              "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow",
               isSel
-                ? "border-brand-ink bg-brand-ink text-brand-cream"
+                ? "border-2 border-brand-ink bg-brand-ink text-brand-cream dark:text-white"
                 : isAuto
-                  ? "border-brand-ink/70 bg-brand-yellow/30 text-brand-ink hover:bg-brand-yellow/60"
-                  : "border-brand-line bg-white text-brand-ink/60 hover:border-brand-ink/40 hover:bg-brand-cream/60"
-            }`}
+                  ? "border-2 border-brand-ink bg-brand-yellow-soft text-brand-ink hover:bg-brand-yellow"
+                  : "border-[1.5px] border-brand-ink/60 bg-white text-brand-ink hover:bg-brand-cream-soft",
+            )}
           >
-            {/* El rayito marca inicio inmediato, pero la hora siempre se ve. */}
-            {!isSel && isAuto ? <Zap className="size-3.5 shrink-0" /> : null}
+            {/* Elegida = visto; el rayito marca inicio inmediato, pero la hora siempre se ve. */}
+            {isSel ? <Check className="size-3.5 shrink-0" aria-hidden="true" /> : null}
+            {!isSel && isAuto ? <Zap className="size-3.5 shrink-0" aria-hidden="true" /> : null}
             {horaLocal}
           </button>
         );

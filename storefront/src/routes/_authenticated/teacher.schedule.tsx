@@ -1,22 +1,25 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Snowflake } from "lucide-react";
+import { Check, Snowflake } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth/AuthProvider";
 import { classesApi, teachersApi } from "@/lib/api/endpoints";
+import { claveDia, diaLargo, duracionMin, horaDeClase } from "@/lib/domain/clases-fecha";
+import { cn } from "@/lib/utils";
+import { Cargando, EstadoError, PageHeader, SeccionTitulo, Vacio, rowLine, tag, tagNeutral } from "@/components/app/AppUi";
+import { btnRow, btnRowInk, pillClass } from "@/components/teacher/TeacherUi";
 
 export const Route = createFileRoute("/_authenticated/teacher/schedule")({
   head: () => ({ meta: [{ title: "Agenda — Freakn for Teachers" }] }),
   component: TeacherSchedule,
 });
 
-const dateFmt = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "2-digit", month: "long" });
-const timeFmt = new Intl.DateTimeFormat("es-CO", { hour: "2-digit", minute: "2-digit" });
-const durMin = (c: any) => Math.max(0, Math.round((new Date(c.endsAt).getTime() - new Date(c.startsAt).getTime()) / 60000)) || 50;
-
 type Filter = "all" | "upcoming" | "past" | "pending" | "frozen";
 
 function TeacherSchedule() {
+  const { user } = useAuth();
+  const zona = user?.timezone;
   const qc = useQueryClient();
   const [filter, setFilter] = useState<Filter>("upcoming");
 
@@ -39,81 +42,97 @@ function TeacherSchedule() {
     onError: (e: any) => toast.error(e?.message ?? "Error"),
   });
 
-  const grouped = useMemo(() => groupByDay((q.data ?? []) as any[]), [q.data]);
+  const grouped = useMemo(() => groupByDay((q.data ?? []) as any[], zona), [q.data, zona]);
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-brand-ink">Agenda</h1>
-          <p className="mt-1 text-brand-ink/70">Tu calendario completo de clases 1-on-1. Valida asistencia desde aquí.</p>
-        </div>
-        <div className="inline-flex rounded-full border border-brand-line bg-white p-1 text-xs">
-          {(["upcoming", "all", "past", "pending", "frozen"] as const).map((f) => (
-            <button key={f} onClick={() => setFilter(f)} className={`rounded-full px-3 py-1.5 font-medium transition ${filter === f ? "bg-brand-ink text-white" : "text-brand-ink/70 hover:text-brand-ink"}`}>
-              {labelFor(f)}
-            </button>
-          ))}
-        </div>
-      </header>
+      <PageHeader title="Agenda" highlight="Agenda">
+        Tu calendario completo de clases 1-on-1. Valida asistencia desde aquí.
+      </PageHeader>
+
+      <div role="group" aria-label="Filtrar clases" className="flex flex-wrap gap-2">
+        {(["upcoming", "all", "past", "pending", "frozen"] as const).map((f) => (
+          <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)} className={pillClass(filter === f)}>
+            {filter === f ? <Check className="size-3.5" aria-hidden="true" /> : null}
+            {labelFor(f)}
+          </button>
+        ))}
+      </div>
 
       {q.isLoading ? (
-        <div className="text-sm text-brand-ink/60">Cargando…</div>
+        <Cargando>Cargando tu agenda…</Cargando>
+      ) : q.isError ? (
+        <EstadoError onRetry={() => void q.refetch()}>No pudimos cargar tu agenda. Revisa tu conexión e inténtalo de nuevo.</EstadoError>
       ) : grouped.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-brand-line bg-white p-8 text-center text-sm text-brand-ink/65">No hay clases en este filtro.</div>
+        <Vacio titulo="Nada por aquí">No hay clases en este filtro.</Vacio>
       ) : (
-        grouped.map(([day, items]) => (
-          <section key={day}>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-ink/60">{day}</h2>
-            <div className="mt-2 flex flex-col gap-2">
-              {items.map((c) => (
-                <div key={c.id} className="flex flex-col gap-3 rounded-2xl border border-brand-line bg-white p-4 md:flex-row md:items-center md:justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="rounded-xl bg-brand-cream px-3 py-2 text-center">
-                      <div className="text-xs uppercase text-brand-ink/55">{timeFmt.format(new Date(c.startsAt))}</div>
-                      <div className="text-[10px] text-brand-ink/50">{durMin(c)}min</div>
+        grouped.map(([clave, label, items]) => (
+          <section key={clave} aria-labelledby={`dia-${clave}`}>
+            <SeccionTitulo id={`dia-${clave}`} className="mb-2 text-[15px]">{label}</SeccionTitulo>
+            <ul className="border-2 border-brand-ink bg-white">
+              {items.map((c, i) => {
+                const nombre = c.student?.fullName ?? `Estudiante #${String(c.studentId).slice(-6)}`;
+                const hora = horaDeClase(c.startsAt, zona);
+                return (
+                  <li
+                    key={c.id}
+                    className={cn(
+                      "flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between",
+                      i > 0 ? rowLine : "",
+                      c.studentConfirmedAt && !c.teacherValidatedAt ? "bg-brand-yellow-soft" : "",
+                    )}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-[88px] shrink-0 text-center">
+                        <div className="text-sm font-extrabold text-brand-ink">{hora}</div>
+                        <div className="text-[11px] text-brand-ink/70">{duracionMin(c)} min</div>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-brand-ink">{nombre}</div>
+                        <div className="text-sm text-brand-ink/80">{c.topic ?? "Sesión 1-on-1"}</div>
+                        <StatusBadge c={c} />
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-semibold text-brand-ink">{c.student?.fullName ?? `Estudiante #${String(c.studentId).slice(-6)}`}</div>
-                      <div className="text-sm text-brand-ink/65">{c.topic ?? "Sesión 1-on-1"}</div>
-                      <StatusBadge c={c} />
+                    <div className="flex flex-wrap gap-2">
+                      {c.status === "scheduled" || c.studentConfirmedAt ? (
+                        <>
+                          <button type="button" onClick={() => validateM.mutate(c.id)} disabled={validateM.isPending} aria-label={`Validar clase de ${nombre}, ${hora}`} className={btnRowInk}>Validar</button>
+                          <button type="button" onClick={() => noShowM.mutate(c.id)} disabled={noShowM.isPending} aria-label={`Marcar que ${nombre} no asistió, ${hora}`} className={btnRow}>No asistió</button>
+                        </>
+                      ) : null}
+                      {/* Congelar: para cuando hay que mover la clase pero todavía
+                          no se sabe para cuándo. Sin esto se auto-validaba al
+                          pasar la hora y quedaba cobrada sin haberse dado. */}
+                      {c.status === "scheduled" || c.status === "rescheduled" ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const motivo = prompt("¿Por qué se reprograma? (opcional)") ?? undefined;
+                            freezeM.mutate({ id: c.id, reason: motivo });
+                          }}
+                          disabled={freezeM.isPending}
+                          aria-label={`Congelar clase de ${nombre}, ${hora}`}
+                          className={btnRow}
+                        >
+                          <Snowflake className="size-3.5" aria-hidden="true" /> Congelar
+                        </button>
+                      ) : null}
+                      {c.status === "pending_reschedule" ? (
+                        <button
+                          type="button"
+                          onClick={() => unfreezeM.mutate(c.id)}
+                          disabled={unfreezeM.isPending}
+                          aria-label={`Devolver a su horario la clase de ${nombre}`}
+                          className={btnRow}
+                        >
+                          Volver a su horario
+                        </button>
+                      ) : null}
                     </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {c.status === "scheduled" || c.studentConfirmedAt ? (
-                      <>
-                        <button onClick={() => validateM.mutate(c.id)} disabled={validateM.isPending} className="rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40 disabled:opacity-50">Validar</button>
-                        <button onClick={() => noShowM.mutate(c.id)} disabled={noShowM.isPending} className="rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">No asistió</button>
-                      </>
-                    ) : null}
-                    {/* Congelar: para cuando hay que mover la clase pero todavía
-                        no se sabe para cuándo. Sin esto se auto-validaba al
-                        pasar la hora y quedaba cobrada sin haberse dado. */}
-                    {c.status === "scheduled" || c.status === "rescheduled" ? (
-                      <button
-                        onClick={() => {
-                          const motivo = prompt("¿Por qué se reprograma? (opcional)") ?? undefined;
-                          freezeM.mutate({ id: c.id, reason: motivo });
-                        }}
-                        disabled={freezeM.isPending}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-50"
-                      >
-                        <Snowflake className="size-3.5" /> Congelar
-                      </button>
-                    ) : null}
-                    {c.status === "pending_reschedule" ? (
-                      <button
-                        onClick={() => unfreezeM.mutate(c.id)}
-                        disabled={unfreezeM.isPending}
-                        className="rounded-full border border-brand-line bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40 disabled:opacity-50"
-                      >
-                        Volver a su horario
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
-            </div>
+                  </li>
+                );
+              })}
+            </ul>
           </section>
         ))
       )}
@@ -129,27 +148,29 @@ function labelFor(f: Filter) {
   return "Pendientes";
 }
 
-function groupByDay(list: any[]): Array<[string, any[]]> {
-  const map = new Map<string, any[]>();
+/** Agrupa por día (en la zona del profe) conservando el orden de la lista: [clave, "lunes 17 de noviembre", clases]. */
+function groupByDay(list: any[], zona?: string | null): Array<[string, string, any[]]> {
+  const map = new Map<string, [string, any[]]>();
   for (const c of list) {
-    const k = dateFmt.format(new Date(c.startsAt));
-    const arr = map.get(k) ?? [];
-    arr.push(c);
-    map.set(k, arr);
+    const k = claveDia(c.startsAt, zona);
+    const e = map.get(k) ?? [diaLargo(c.startsAt, zona), []];
+    e[1].push(c);
+    map.set(k, e);
   }
-  return Array.from(map.entries());
+  return Array.from(map.entries()).map(([k, [label, items]]) => [k, label, items]);
 }
 
+/** Atención (amarillo) solo para lo que pide acción; el resto, neutro. */
 function StatusBadge({ c }: { c: any }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    scheduled: { label: "Programada", cls: "bg-brand-cream text-brand-ink" },
-    validated: { label: "Validada", cls: "bg-green-100 text-green-800" },
-    no_show: { label: "No asistió", cls: "bg-red-100 text-red-800" },
-    pending_reschedule: { label: "Por reprogramar", cls: "bg-amber-100 text-amber-900" },
-    cancelled: { label: "Cancelada", cls: "bg-zinc-100 text-zinc-700" },
-    rescheduled: { label: "Reprogramada", cls: "bg-amber-100 text-amber-800" },
+  const map: Record<string, { label: string; atencion: boolean }> = {
+    scheduled: { label: "Programada", atencion: false },
+    validated: { label: "Validada", atencion: false },
+    no_show: { label: "No asistió", atencion: false },
+    pending_reschedule: { label: "Por reprogramar", atencion: true },
+    cancelled: { label: "Cancelada", atencion: false },
+    rescheduled: { label: "Reprogramada", atencion: true },
   };
-  const m = map[c.status] ?? { label: c.status, cls: "bg-brand-cream text-brand-ink" };
+  const m = map[c.status] ?? { label: c.status, atencion: false };
   const extra = c.teacherValidatedAt ? " · validada" : c.studentConfirmedAt ? " · pendiente validar" : "";
-  return <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${m.cls}`}>{m.label}{extra}</span>;
+  return <span className={cn(m.atencion || (c.studentConfirmedAt && !c.teacherValidatedAt) ? tag : tagNeutral, "mt-1")}>{m.label}{extra}</span>;
 }

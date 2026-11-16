@@ -1,11 +1,18 @@
 import { useMemo, useRef, useState } from "react";
-import { ZONA_BOGOTA, etiquetaDeZona, franjaEnZona, nombreDeZona, zonaDe } from "@/lib/domain/zona-horaria";
+import { ZONA_BOGOTA, etiquetaDeZona, franjaEnZona, horaEn12, nombreDeZona, zonaDe } from "@/lib/domain/zona-horaria";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Eye, Pin, PinOff, Trash2, Video } from "lucide-react";
+import { ArrowLeft, Eye, Flag, MapPin, Pin, PinOff, Trash2, Video } from "lucide-react";
 import { toast } from "sonner";
 import { teachersApi } from "@/lib/api/endpoints";
 import type { EnglishLevel } from "@/lib/domain/types";
+import { diaMes, horaDeClase } from "@/lib/domain/clases-fecha";
+import { cn } from "@/lib/utils";
+import { Cargando, EstadoError, SeccionTitulo, Titulo, Vacio, btnChip, eyebrow, focusRing, tag, tagNeutral } from "@/components/app/AppUi";
+import { CifrasCaja, btnRow, btnRowInk, pillClass, th, td } from "@/components/teacher/TeacherUi";
+
+/** Píldora de resultado (puntaje, estado): tinta = bien, amarillo = ojo, blanco rojo = por reforzar. */
+const pillBase = "inline-flex items-center rounded-full border-2 border-brand-ink px-2.5 py-1 text-xs font-bold";
 
 export const Route = createFileRoute("/_authenticated/teacher/students/$studentId")({
   head: () => ({ meta: [{ title: "Estudiante — Freakn for Teachers" }] }),
@@ -44,17 +51,24 @@ function TeacherStudentDetail() {
     onError: (e: any) => toast.error(e?.message ?? "No se pudo guardar el link"),
   });
 
-  if (q.isLoading) return <div className="text-sm text-brand-ink/60">Cargando…</div>;
+  if (q.isLoading) return <Cargando>Cargando estudiante…</Cargando>;
+  if (q.isError) {
+    return <EstadoError onRetry={() => void q.refetch()}>No pudimos cargar a este estudiante. Revisa tu conexión e inténtalo de nuevo.</EstadoError>;
+  }
   if (!student) {
     return (
-      <div className="rounded-2xl border border-brand-line bg-white p-6 text-sm text-brand-ink/65">
-        Estudiante no encontrado. <Link to="/teacher/students" className="font-semibold text-brand-ink hover:underline">Volver</Link>
-      </div>
+      <Vacio
+        titulo="Estudiante no encontrado"
+        accion={<Link to="/teacher/students" className={btnChip}>Volver a mis estudiantes</Link>}
+      >
+        No encontramos a este estudiante entre los tuyos.
+      </Vacio>
     );
   }
 
   const completed = classes.filter((c) => c.status === "validated").length;
   const missed = classes.filter((c) => c.status === "no_show").length;
+  const primerNombre = String(student.fullName ?? "").split(" ")[0];
 
   function saveNote() {
     if (!body.trim()) return;
@@ -64,53 +78,60 @@ function TeacherStudentDetail() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link to="/teacher/students" className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-ink/70 hover:text-brand-ink">
-          <ArrowLeft className="size-3.5" /> Volver
+        <Link to="/teacher/students" className={cn("inline-flex min-h-11 items-center gap-1.5 text-sm font-bold text-brand-ink underline underline-offset-2", focusRing)}>
+          <ArrowLeft className="size-3.5" aria-hidden="true" /> Volver a mis estudiantes
         </Link>
       </div>
 
-      <header className="flex flex-col gap-2 rounded-2xl border border-brand-line bg-white p-6 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-brand-ink">{student.fullName}</h1>
-          <p className="text-sm text-brand-ink/65">{student.email}</p>
-          <p className="mt-1 text-xs uppercase tracking-wide text-brand-ink/55">Nivel actual: {student.englishLevel ?? "sin nivelar"}</p>
+      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0">
+          <p className={cn(eyebrow, "mb-1.5")}>Nivel actual: {student.englishLevel ?? "sin nivelar"}</p>
+          <Titulo className="text-[28px] md:text-[36px]" highlight={primerNombre}>{student.fullName}</Titulo>
+          <p className="mt-2 text-sm text-brand-ink/80">{student.email}</p>
           {/* Que el profe sepa dónde está su alumno: si le escribe "nos vemos a
               las 11" y ella está en San Francisco, para ella son las 9. Todas
               las horas del portal del profe siguen siendo de Colombia. */}
           {student.timezone && zonaDe(student.timezone) !== ZONA_BOGOTA ? (
-            <p className="mt-1 text-xs text-brand-ink/60">
-              📍 {nombreDeZona(student.timezone)} ({etiquetaDeZona(student.timezone)}) — tu clase de
-              las 11:00 son sus {String(franjaEnZona(1, 11, student.timezone).hour).padStart(2, "0")}:00
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-brand-ink/80">
+              <MapPin className="size-3.5 shrink-0" aria-hidden="true" />
+              {nombreDeZona(student.timezone)} ({etiquetaDeZona(student.timezone)}) — tu clase de
+              las {horaEn12(11)} son sus {(() => { const f = franjaEnZona(1, 11, student.timezone); return horaEn12(f.hour, f.minuto); })()}
             </p>
           ) : null}
         </div>
-        <div className="flex gap-2">
-          <Mini label="Clases" value={classes.length} />
-          <Mini label="Validadas" value={completed} />
-          <Mini label="No asistió" value={missed} tone={missed > 0 ? "warn" : undefined} />
+        <div className="md:w-[420px]">
+          <CifrasCaja
+            items={[
+              { label: "Clases", value: classes.length },
+              { label: "Validadas", value: completed },
+              { label: "No asistió", value: missed, atencion: missed > 0 },
+            ]}
+          />
         </div>
       </header>
 
       {/* Link de Meet/Zoom del estudiante: con él entra a clase desde su calendario. */}
-      <section className="rounded-2xl border border-brand-line bg-white p-5">
-        <div className="flex items-center gap-2 text-sm font-semibold text-brand-ink">
-          <Video className="size-4" /> Link de clase (Meet / Zoom)
-        </div>
-        <p className="mt-1 text-xs text-brand-ink/55">
-          Este es el link con el que {student.fullName.split(" ")[0]} entra a todas sus clases contigo.
+      <section aria-labelledby="link-clase" className="border-2 border-brand-ink bg-white p-5">
+        <SeccionTitulo id="link-clase" className="flex items-center gap-2">
+          <Video className="size-4" aria-hidden="true" /> Link de clase (Meet / Zoom)
+        </SeccionTitulo>
+        <p className="mt-1 text-xs text-brand-ink/80">
+          Este es el link con el que {primerNombre} entra a todas sus clases contigo.
           Puedes pegar la invitación completa de Zoom o Meet: extraemos el enlace solo.
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <input
             value={meetDraft ?? student.meetingUrl ?? ""}
             onChange={(e) => setMeetDraft(e.target.value)}
+            aria-label="Link de la clase"
             placeholder="https://meet.google.com/…"
-            className="w-full max-w-md rounded-xl border border-brand-line px-4 py-2 text-sm focus:border-brand-ink focus:outline-none"
+            className="min-h-11 w-full max-w-md border-2 border-brand-ink bg-white px-3 text-sm text-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           />
           <button
+            type="button"
             onClick={() => meetM.mutate((meetDraft ?? student.meetingUrl ?? "").trim())}
             disabled={meetM.isPending || meetDraft === null}
-            className="rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white shadow-soft transition hover:-translate-y-0.5 disabled:opacity-50"
+            className={cn(btnRowInk, "min-h-11")}
           >
             {meetM.isPending ? "Guardando…" : "Guardar link"}
           </button>
@@ -119,7 +140,7 @@ function TeacherStudentDetail() {
               href={student.meetingUrl}
               target="_blank"
               rel="noreferrer"
-              className="rounded-full border border-brand-line px-4 py-2 text-xs font-semibold text-brand-ink transition hover:bg-brand-cream/40"
+              className={cn(btnRow, "min-h-11")}
             >
               Probar link
             </a>
@@ -128,58 +149,62 @@ function TeacherStudentDetail() {
       </section>
 
       <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <h2 className="text-lg font-semibold text-brand-ink">Historial de clases</h2>
-          <div className="mt-3 max-h-[60vh] overflow-y-auto overflow-hidden rounded-2xl border border-brand-line bg-white">
+        <div className="min-w-0 lg:col-span-2">
+          <h2 className="font-display text-[18px] font-extrabold uppercase leading-tight tracking-[-0.01em] text-brand-ink">Historial de clases</h2>
+          <div className="mt-3 max-h-[60vh] overflow-y-auto border-2 border-brand-ink bg-white">
             {classes.length === 0 ? (
-              <div className="p-6 text-sm text-brand-ink/65">Sin clases aún.</div>
+              <div className="p-6 text-sm text-brand-ink/80">Sin clases aún.</div>
             ) : (
               <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="sticky top-0 bg-brand-cream/60 text-xs uppercase tracking-wide text-brand-ink/60 backdrop-blur">
-                  <tr><th className="px-4 py-3">Fecha</th><th className="px-4 py-3">Tema</th><th className="px-4 py-3">Estado</th></tr>
-                </thead>
-                <tbody className="divide-y divide-brand-line">
-                  {classes.map((c) => (
-                    <tr key={c.id}>
-                      <td className="px-4 py-3 text-brand-ink/80">{new Date(c.startsAt).toLocaleString("es-CO", { day: "2-digit", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
-                      <td className="px-4 py-3">{c.topic ?? "—"}</td>
-                      <td className="px-4 py-3 capitalize text-brand-ink/70">
-                        {c.status === "validated" ? "validada" : c.status === "no_show" ? "no asistió" : c.status === "cancelled" ? "cancelada" : c.status === "rescheduled" ? "reprogramada" : "programada"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                <table className="w-full min-w-[420px] border-collapse text-left">
+                  <thead className="sticky top-0">
+                    <tr><th className={th}>Fecha</th><th className={th}>Tema</th><th className={th}>Estado</th></tr>
+                  </thead>
+                  <tbody>
+                    {classes.map((c) => (
+                      <tr key={c.id}>
+                        <td className={cn(td, "whitespace-nowrap")}>{diaMes(c.startsAt)}, {horaDeClase(c.startsAt)}</td>
+                        <td className={td}>{c.topic ?? "—"}</td>
+                        <td className={td}>
+                          <span className={c.status === "validated" || c.status === "scheduled" ? tagNeutral : tag}>
+                            {c.status === "validated" ? "Validada" : c.status === "no_show" ? "No asistió" : c.status === "cancelled" ? "Cancelada" : c.status === "rescheduled" ? "Reprogramada" : "Programada"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
         </div>
 
-        <aside>
-          <h2 className="text-lg font-semibold text-brand-ink">Notas privadas</h2>
-          <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-brand-line bg-white p-4">
-            <textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Progreso, observaciones, vocabulario a reforzar…" className="w-full rounded-xl border border-brand-line bg-white p-3 text-sm focus:border-brand-ink focus:outline-none" />
+        <aside aria-labelledby="notas-privadas" className="min-w-0">
+          <h2 id="notas-privadas" className="font-display text-[18px] font-extrabold uppercase leading-tight tracking-[-0.01em] text-brand-ink">Notas privadas</h2>
+          <div className="mt-3 flex flex-col gap-3 border-2 border-brand-ink bg-white p-4">
+            <textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} aria-label="Nueva nota privada" placeholder="Progreso, observaciones, vocabulario a reforzar…" className="w-full border-2 border-brand-ink bg-white p-3 text-sm text-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow" />
             <div className="flex justify-end">
-              <button onClick={saveNote} disabled={!body.trim() || addM.isPending} className="rounded-full bg-brand-ink px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-50">
+              <button type="button" onClick={saveNote} disabled={!body.trim() || addM.isPending} className={btnRowInk}>
                 Guardar nota
               </button>
             </div>
 
             <div className="mt-2 flex max-h-[45vh] flex-col gap-3 overflow-y-auto pr-1">
               {notes.length === 0 ? (
-                <p className="text-xs text-brand-ink/55">Aún no hay notas guardadas.</p>
+                <p className="text-xs text-brand-ink/70">Aún no hay notas guardadas.</p>
               ) : (
                 notes.map((n) => (
-                  <div key={n.id} className={`rounded-xl p-3 ${n.pinned ? "border border-brand-ink/20 bg-brand-yellow/20" : "bg-brand-cream/40"}`}>
-                    <div className="flex items-center justify-between text-[10px] uppercase text-brand-ink/55">
-                      <span>{new Date(n.createdAt).toLocaleDateString("es-CO", { day: "2-digit", month: "short" })}</span>
+                  <div key={n.id} className={cn("border border-brand-ink/30 p-3", n.pinned ? "bg-brand-yellow-soft" : "bg-brand-cream-soft")}>
+                    <div className="flex items-center justify-between text-[11px] uppercase text-brand-ink/70">
+                      <span>{diaMes(n.createdAt)}</span>
                       <button
+                        type="button"
                         onClick={() => pinM.mutate({ id: n.id, pinned: !n.pinned })}
-                        title={n.pinned ? "Quitar fijado" : "Fijar nota"}
-                        className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 ${n.pinned ? "text-brand-ink" : "text-brand-ink/40 hover:text-brand-ink"}`}
+                        aria-pressed={!!n.pinned}
+                        aria-label={n.pinned ? "Quitar fijado de la nota" : "Fijar nota"}
+                        className={cn("inline-flex size-9 items-center justify-center rounded-full text-brand-ink", n.pinned ? "" : "opacity-60 hover:opacity-100", focusRing)}
                       >
-                        {n.pinned ? <Pin className="size-3.5 fill-brand-ink/80" /> : <PinOff className="size-3.5" />}
+                        {n.pinned ? <Pin className="size-3.5 fill-brand-ink" aria-hidden="true" /> : <PinOff className="size-3.5" aria-hidden="true" />}
                       </button>
                     </div>
                     <p className="mt-1 whitespace-pre-wrap text-sm text-brand-ink">{n.notes}</p>
@@ -307,20 +332,21 @@ export function StudentResourcesSection({ studentId }: { studentId: string }) {
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-brand-ink">Material extra del estudiante</h2>
-      <p className="mt-1 text-sm text-brand-ink/65">
+      <h2 className="font-display text-[18px] font-extrabold uppercase leading-tight tracking-[-0.01em] text-brand-ink">Material extra del estudiante</h2>
+      <p className="mt-1 text-sm text-brand-ink/80">
         Links y PDFs de refuerzo. Sólo los ve este estudiante en su portal.
       </p>
 
-      <div className="mt-3 grid gap-4 rounded-2xl border border-brand-line bg-white p-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+      <div className="mt-3 grid gap-4 border-2 border-brand-ink bg-white p-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
         <div className="flex flex-col gap-3">
-          <div className="inline-flex w-fit rounded-full border border-brand-line p-1 text-xs">
+          <div role="group" aria-label="Tipo de material" className="flex flex-wrap gap-2">
             {(["link", "file"] as const).map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setTipo(t)}
-                className={`rounded-full px-3 py-1.5 font-medium transition ${tipo === t ? "bg-brand-ink text-white" : "text-brand-ink/70 hover:text-brand-ink"}`}
+                aria-pressed={tipo === t}
+                className={pillClass(tipo === t)}
               >
                 {t === "link" ? "Enlace" : "Archivo"}
               </button>
@@ -330,22 +356,25 @@ export function StudentResourcesSection({ studentId }: { studentId: string }) {
           <input
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
+            aria-label="Título del material"
             placeholder="Título (ej. Guía de past simple)"
-            className="w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+            className="w-full min-h-11 border-2 border-brand-ink bg-white px-3 py-2 text-sm text-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           />
           <input
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
+            aria-label="Descripción del material"
             placeholder="Descripción corta (opcional)"
-            className="w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+            className="w-full min-h-11 border-2 border-brand-ink bg-white px-3 py-2 text-sm text-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
           />
 
           {tipo === "link" ? (
             <input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
+              aria-label="Enlace del material"
               placeholder="https://…"
-              className="w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm focus:border-brand-ink focus:outline-none"
+              className="w-full min-h-11 border-2 border-brand-ink bg-white px-3 py-2 text-sm text-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow"
             />
           ) : (
             <div className="flex flex-col gap-1">
@@ -354,16 +383,16 @@ export function StudentResourcesSection({ studentId }: { studentId: string }) {
                 type="file"
                 accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.mp3,.m4a"
                 onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
-                className="w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-xs file:mr-3 file:rounded-full file:border-0 file:bg-brand-cream file:px-3 file:py-1 file:text-xs file:font-semibold"
+                className="w-full border-2 border-brand-ink bg-white px-3 py-2 text-xs file:mr-3 file:rounded-full file:border-0 file:bg-brand-yellow-soft file:px-3 file:py-1 file:text-xs file:font-semibold"
               />
               {archivo ? (
-                <span className="text-[11px] text-brand-ink/55">{archivo.name} · {pesoLegible(archivo.size)}</span>
+                <span className="text-[11px] text-brand-ink/70">{archivo.name} · {pesoLegible(archivo.size)}</span>
               ) : null}
             </div>
           )}
 
           {alumnos.length > 1 ? (
-            <details className="rounded-xl border border-brand-line bg-brand-cream/30 p-2 text-xs">
+            <details className="border-2 border-brand-ink bg-brand-cream-soft p-2 text-xs">
               <summary className="cursor-pointer font-semibold text-brand-ink">
                 Enviar también a otros ({destinatarios.length} seleccionado{destinatarios.length === 1 ? "" : "s"})
               </summary>
@@ -390,7 +419,7 @@ export function StudentResourcesSection({ studentId }: { studentId: string }) {
             type="button"
             onClick={() => void guardar()}
             disabled={subiendo}
-            className="rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-50"
+            className={btnRowInk}
           >
             {subiendo ? "Guardando…" : "Agregar material"}
           </button>
@@ -398,18 +427,18 @@ export function StudentResourcesSection({ studentId }: { studentId: string }) {
 
         <div className="flex flex-col gap-2">
           {q.isLoading ? (
-            <p className="text-sm text-brand-ink/60">Cargando…</p>
+            <p className="text-sm text-brand-ink/70">Cargando…</p>
           ) : items.length === 0 ? (
-            <p className="text-sm text-brand-ink/55">Este estudiante todavía no tiene material.</p>
+            <p className="text-sm text-brand-ink/70">Este estudiante todavía no tiene material.</p>
           ) : (
             items.map((m) => (
-              <div key={m.id} className="flex items-start justify-between gap-3 rounded-xl bg-brand-cream/40 p-3">
+              <div key={m.id} className="flex items-start justify-between gap-3 bg-brand-cream-soft p-3">
                 <div className="min-w-0">
                   <a href={m.url} target="_blank" rel="noreferrer" className="font-medium text-brand-ink hover:underline">
                     {m.title}
                   </a>
-                  {m.description ? <div className="text-xs text-brand-ink/65">{m.description}</div> : null}
-                  <div className="mt-0.5 text-[10px] uppercase tracking-wide text-brand-ink/45">
+                  {m.description ? <div className="text-xs text-brand-ink/80">{m.description}</div> : null}
+                  <div className="mt-0.5 text-[10px] uppercase tracking-wide text-brand-ink/70">
                     {m.kind === "file" ? "Archivo" : "Enlace"}
                     {m.sizeBytes ? ` · ${pesoLegible(m.sizeBytes)}` : ""}
                     {" · "}
@@ -420,10 +449,10 @@ export function StudentResourcesSection({ studentId }: { studentId: string }) {
                   type="button"
                   onClick={() => borrarM.mutate(m.id)}
                   disabled={borrarM.isPending}
-                  className="shrink-0 rounded-lg p-1.5 text-red-500/70 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                  aria-label="Eliminar material"
+                  className={cn(btnRow, "shrink-0 border-red-700 px-2.5 text-red-800 hover:bg-red-50 hover:text-red-800")}
+                  aria-label={`Eliminar material ${m.title}`}
                 >
-                  <Trash2 className="size-4" />
+                  <Trash2 className="size-4" aria-hidden="true" />
                 </button>
               </div>
             ))
@@ -523,29 +552,29 @@ export function StudentReportsSection({ studentId }: { studentId: string }) {
     setAbierto(true);
   }
 
-  const campo = "w-full rounded-xl border border-brand-line bg-white px-3 py-2 text-sm focus:border-brand-ink focus:outline-none";
+  const campo = "w-full min-h-11 border-2 border-brand-ink bg-white px-3 py-2 text-sm text-brand-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-brand-ink focus-visible:ring-[6px] focus-visible:ring-brand-yellow";
   const reportes = q.data ?? [];
 
   return (
     <section>
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold text-brand-ink">Reportes de progreso</h2>
-          <p className="mt-1 text-sm text-brand-ink/65">
+          <h2 className="font-display text-[18px] font-extrabold uppercase leading-tight tracking-[-0.01em] text-brand-ink">Reportes de progreso</h2>
+          <p className="mt-1 text-sm text-brand-ink/80">
             El estudiante los lee en su portal. Al publicarlo le llega aviso por correo y campana.
           </p>
         </div>
         <button
           type="button"
           onClick={() => void nuevo()}
-          className="rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink-soft"
+          className={btnRowInk}
         >
           Nuevo reporte
         </button>
       </div>
 
       {abierto ? (
-        <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-brand-ink/20 bg-brand-cream/30 p-4">
+        <div className="mt-3 flex flex-col gap-3 border-2 border-brand-ink bg-brand-cream-soft p-4">
           <div className="grid gap-3 sm:grid-cols-4">
             <label className="text-xs font-semibold text-brand-ink/70 sm:col-span-2">
               Periodo
@@ -561,7 +590,7 @@ export function StudentReportsSection({ studentId }: { studentId: string }) {
               Clases (tomadas / programadas)
               <div className="mt-1 flex items-center gap-1">
                 <input type="number" min={0} value={borrador.classesTaken} onChange={(e) => setBorrador({ ...borrador, classesTaken: e.target.value === "" ? "" : Number(e.target.value) })} className={`font-normal ${campo}`} />
-                <span className="text-brand-ink/50">/</span>
+                <span className="text-brand-ink/70">/</span>
                 <input type="number" min={0} value={borrador.classesTotal} onChange={(e) => setBorrador({ ...borrador, classesTotal: e.target.value === "" ? "" : Number(e.target.value) })} className={`font-normal ${campo}`} />
               </div>
             </label>
@@ -586,13 +615,13 @@ export function StudentReportsSection({ studentId }: { studentId: string }) {
           ))}
 
           <div className="flex flex-wrap justify-end gap-2">
-            <button type="button" onClick={() => setAbierto(false)} className="rounded-full border border-brand-line px-4 py-2 text-xs font-semibold text-brand-ink hover:bg-white">
+            <button type="button" onClick={() => setAbierto(false)} className={btnRow}>
               Cancelar
             </button>
-            <button type="button" onClick={() => guardarM.mutate(false)} disabled={guardarM.isPending} className="rounded-full border border-brand-line bg-white px-4 py-2 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40 disabled:opacity-50">
+            <button type="button" onClick={() => guardarM.mutate(false)} disabled={guardarM.isPending} className={btnRow}>
               Guardar borrador
             </button>
-            <button type="button" onClick={() => guardarM.mutate(true)} disabled={guardarM.isPending} className="rounded-full bg-brand-ink px-4 py-2 text-xs font-semibold text-white hover:bg-brand-ink-soft disabled:opacity-50">
+            <button type="button" onClick={() => guardarM.mutate(true)} disabled={guardarM.isPending} className={btnRowInk}>
               Publicar y avisar
             </button>
           </div>
@@ -601,24 +630,24 @@ export function StudentReportsSection({ studentId }: { studentId: string }) {
 
       <div className="mt-3 flex flex-col gap-2">
         {q.isLoading ? (
-          <p className="text-sm text-brand-ink/60">Cargando…</p>
+          <p className="text-sm text-brand-ink/70">Cargando…</p>
         ) : reportes.length === 0 ? (
-          <p className="text-sm text-brand-ink/55">Todavía no le has escrito ningún reporte.</p>
+          <p className="text-sm text-brand-ink/70">Todavía no le has escrito ningún reporte.</p>
         ) : (
           reportes.map((r) => (
-            <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brand-line bg-white p-3">
+            <div key={r.id} className="flex flex-wrap items-center justify-between gap-2 border border-brand-ink/30 bg-white p-3">
               <div>
                 <div className="font-medium text-brand-ink">{r.periodLabel}</div>
-                <div className="text-[10px] uppercase tracking-wide text-brand-ink/45">
+                <div className="text-[10px] uppercase tracking-wide text-brand-ink/70">
                   {r.teacher?.fullName ?? ""}
                   {r.classesTaken != null ? ` · ${r.classesTaken}/${r.classesTotal ?? "—"} clases` : ""}
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${r.publishedAt ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-900"}`}>
+                <span className={r.publishedAt ? tagNeutral : tag}>
                   {r.publishedAt ? `Publicado ${new Date(r.publishedAt).toLocaleDateString("es-CO", { day: "2-digit", month: "short" })}` : "Borrador"}
                 </span>
-                <button type="button" onClick={() => editar(r)} className="rounded-full border border-brand-line px-3 py-1 text-xs font-semibold text-brand-ink hover:bg-brand-cream/40">
+                <button type="button" onClick={() => editar(r)} className={btnRow}>
                   {r.publishedAt ? "Editar" : "Continuar"}
                 </button>
               </div>
@@ -644,17 +673,17 @@ export function ActivityResultsSection({ studentId }: { studentId: string }) {
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-brand-ink">Actividades de aprendizaje</h2>
-      <p className="mt-0.5 text-xs text-brand-ink/55">
+      <h2 className="font-display text-[18px] font-extrabold uppercase leading-tight tracking-[-0.01em] text-brand-ink">Actividades de aprendizaje</h2>
+      <p className="mt-0.5 text-xs text-brand-ink/70">
         Respuestas y resultados de las actividades interactivas de las lecciones.
       </p>
-      <div className="mt-3 overflow-hidden rounded-2xl border border-brand-line bg-white">
+      <div className="mt-3 overflow-hidden border-2 border-brand-ink bg-white">
         {q.isLoading ? (
-          <p className="p-5 text-sm text-brand-ink/55">Cargando…</p>
+          <p className="p-5 text-sm text-brand-ink/70">Cargando…</p>
         ) : rows.length === 0 ? (
-          <p className="p-5 text-sm text-brand-ink/55">Aún no ha completado actividades.</p>
+          <p className="p-5 text-sm text-brand-ink/70">Aún no ha completado actividades.</p>
         ) : (
-          <ul className="divide-y divide-brand-line/70">
+          <ul className="divide-y divide-brand-ink/15">
             {rows.map((r) => {
               const pct = r.score != null && r.maxScore ? Math.round((r.score / r.maxScore) * 100) : null;
               const open = expanded === r.id;
@@ -662,11 +691,12 @@ export function ActivityResultsSection({ studentId }: { studentId: string }) {
                 <li key={r.id}>
                   <button
                     onClick={() => setExpanded(open ? null : r.id)}
-                    className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-3 text-left text-sm transition hover:bg-brand-cream/30"
+                    aria-expanded={open}
+                    className={cn("flex min-h-11 w-full flex-wrap items-center justify-between gap-2 px-4 py-3 text-left text-sm transition-colors hover:bg-brand-cream-soft", focusRing)}
                   >
                     <div>
                       <div className="font-semibold text-brand-ink">{r.title ?? r.activityId}</div>
-                      <div className="text-xs text-brand-ink/55">
+                      <div className="text-xs text-brand-ink/70">
                         {r.lesson?.module?.title ? `${r.lesson.module.title} · ` : ""}
                         {r.lesson?.title ?? r.lessonId}
                         {" · "}
@@ -676,28 +706,26 @@ export function ActivityResultsSection({ studentId }: { studentId: string }) {
                     </div>
                     {pct != null ? (
                       <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                          pct >= 80 ? "bg-emerald-100 text-emerald-800" : pct >= 50 ? "bg-amber-100 text-amber-900" : "bg-red-100 text-red-700"
-                        }`}
+                        className={cn(pillBase, pct >= 80 ? "bg-brand-ink text-brand-cream dark:text-white" : pct >= 50 ? "bg-brand-yellow-soft text-brand-ink" : "border-red-700 bg-white text-red-800")}
                       >
                         {r.score}/{r.maxScore} · {pct}%
                       </span>
                     ) : (
-                      <span className="rounded-full bg-brand-cream px-2.5 py-1 text-xs font-semibold text-brand-ink/70">Completada</span>
+                      <span className={tagNeutral}>Completada</span>
                     )}
                   </button>
                   {open && Array.isArray(r.answers) && r.answers.length > 0 ? (
-                    <div className="border-t border-brand-line/60 bg-brand-cream/20 px-4 py-3">
+                    <div className="border-t border-brand-ink/15 bg-brand-cream-soft px-4 py-3">
                       <ul className="space-y-2 text-sm">
                         {r.answers.map((a: any, i: number) => (
-                          <li key={a.id ?? i} className="rounded-xl bg-white p-2.5">
-                            {a.question ? <div className="text-xs text-brand-ink/60">{a.question}</div> : null}
+                          <li key={a.id ?? i} className="bg-white p-2.5">
+                            {a.question ? <div className="text-xs text-brand-ink/70">{a.question}</div> : null}
                             <div className="mt-0.5 flex flex-wrap items-center gap-2">
                               <span className="font-medium text-brand-ink">{String(a.answer ?? "—")}</span>
                               {a.correct === true ? (
-                                <span className="text-xs font-semibold text-emerald-600">✓ correcta</span>
+                                <span className="text-xs font-semibold text-emerald-700">✓ correcta</span>
                               ) : a.correct === false ? (
-                                <span className="text-xs font-semibold text-red-600">
+                                <span className="text-xs font-semibold text-red-700">
                                   ✗ incorrecta{a.expected != null ? ` (era: ${String(a.expected)})` : ""}
                                 </span>
                               ) : null}
@@ -777,8 +805,8 @@ export function LessonPlanSection({ studentId }: { studentId: string }) {
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-brand-ink">Contenido habilitado</h2>
-      <p className="mt-0.5 text-xs text-brand-ink/55">
+      <h2 className="font-display text-[18px] font-extrabold uppercase leading-tight tracking-[-0.01em] text-brand-ink">Contenido habilitado</h2>
+      <p className="mt-0.5 text-xs text-brand-ink/70">
         Todo el programa arranca bloqueado. Ve abriendo lo que corresponda a medida que avanzas en
         clase — así el estudiante no se adelanta ni se pierde. {totalAbiertas} de {total} habilitadas.
         Los niveles por debajo del suyo ya van abiertos automáticamente.
@@ -791,21 +819,17 @@ export function LessonPlanSection({ studentId }: { studentId: string }) {
           {porNivel.map((n) => (
             <div
               key={n.level}
-              className="inline-flex items-center gap-2 rounded-full border border-brand-line bg-white px-3 py-1.5"
+              className="inline-flex items-center gap-2 rounded-full border-2 border-brand-ink bg-white px-3 py-1.5"
             >
               <span className="text-xs font-semibold capitalize text-brand-ink">{n.label}</span>
-              <span className="text-[11px] text-brand-ink/55">
+              <span className="text-[11px] text-brand-ink/70">
                 {n.abiertas}/{n.total}
               </span>
               <button
                 type="button"
                 onClick={() => m.mutate({ lessonIds: n.ids, unlock: n.abiertas < n.total })}
                 disabled={m.isPending}
-                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition disabled:opacity-50 ${
-                  n.abiertas < n.total
-                    ? "bg-brand-ink text-white hover:bg-brand-ink-soft"
-                    : "border border-brand-line text-brand-ink/70 hover:bg-brand-cream/40"
-                }`}
+                className={n.abiertas < n.total ? btnRowInk : btnRow}
               >
                 {n.abiertas < n.total ? "Habilitar nivel" : "Bloquear nivel"}
               </button>
@@ -814,13 +838,13 @@ export function LessonPlanSection({ studentId }: { studentId: string }) {
         </div>
       ) : null}
 
-      <div className="mt-3 overflow-hidden rounded-2xl border border-brand-line bg-white">
+      <div className="mt-3 overflow-hidden border-2 border-brand-ink bg-white">
         {q.isLoading ? (
-          <p className="p-5 text-sm text-brand-ink/55">Cargando…</p>
+          <p className="p-5 text-sm text-brand-ink/70">Cargando…</p>
         ) : mods.length === 0 ? (
-          <p className="p-5 text-sm text-brand-ink/55">No hay contenido publicado todavía.</p>
+          <p className="p-5 text-sm text-brand-ink/70">No hay contenido publicado todavía.</p>
         ) : (
-          <ul className="divide-y divide-brand-line/70">
+          <ul className="divide-y divide-brand-ink/15">
             {mods.map((mod) => {
               const abiertas = mod.lessons.filter((l) => l.unlocked).length;
               const todas = mod.lessons.length;
@@ -831,12 +855,13 @@ export function LessonPlanSection({ studentId }: { studentId: string }) {
                   <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
                     <button
                       onClick={() => setAbierto(open ? null : mod.moduleId)}
-                      className="flex-1 text-left text-sm"
+                      aria-expanded={open}
+                      className={cn("min-h-11 flex-1 text-left text-sm", focusRing)}
                     >
                       <span className="font-semibold text-brand-ink">
                         {mod.unit != null ? `U${mod.unit} · ` : ""}{mod.title}
                       </span>
-                      <span className="ml-2 text-xs text-brand-ink/55">
+                      <span className="ml-2 text-xs text-brand-ink/70">
                         {abiertas}/{todas} habilitadas
                       </span>
                     </button>
@@ -846,28 +871,30 @@ export function LessonPlanSection({ studentId }: { studentId: string }) {
                       to="/teacher/content/$moduleId"
                       params={{ moduleId: mod.moduleId }}
                       search={{ studentId } as any}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-brand-line px-3 py-1.5 text-xs font-semibold text-brand-ink/70 transition hover:bg-brand-cream/40"
+                      className={btnRow}
                     >
                       <Eye className="size-3.5" /> Ver contenido
                     </Link>
                     <button
                       onClick={() => m.mutate({ lessonIds: ids, unlock: abiertas < todas })}
                       disabled={m.isPending}
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
-                        abiertas < todas
-                          ? "bg-brand-ink text-white hover:bg-brand-ink-soft"
-                          : "border border-brand-line text-brand-ink/70 hover:bg-brand-cream/40"
-                      }`}
+                      className={abiertas < todas ? btnRowInk : btnRow}
                     >
                       {abiertas < todas ? "Habilitar módulo" : "Bloquear módulo"}
                     </button>
                   </div>
                   {open ? (
-                    <ul className="border-t border-brand-line/60 bg-brand-cream/20 px-4 py-2">
+                    <ul className="border-t border-brand-ink/15 bg-brand-cream-soft px-4 py-2">
                       {mod.lessons.map((l) => (
                         <li key={l.lessonId} className="flex items-center justify-between gap-3 py-1.5 text-sm">
-                          <span className={l.completedAt ? "text-brand-ink/50 line-through" : "text-brand-ink"}>
-                            {l.isCheckpoint ? "🏁 " : ""}{l.title}
+                          <span className={l.completedAt ? "text-brand-ink/70 line-through" : "text-brand-ink"}>
+                            {l.isCheckpoint ? (
+                              <>
+                                <Flag className="mr-1 inline size-3.5" aria-hidden="true" />
+                                <span className="sr-only">Punto de control: </span>
+                              </>
+                            ) : null}
+                            {l.title}
                             {l.completedAt ? (
                               <span className="ml-1.5 text-[11px] text-emerald-700">completada</span>
                             ) : null}
@@ -875,11 +902,8 @@ export function LessonPlanSection({ studentId }: { studentId: string }) {
                           <button
                             onClick={() => m.mutate({ lessonIds: [l.lessonId], unlock: !l.unlocked })}
                             disabled={m.isPending}
-                            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition disabled:opacity-50 ${
-                              l.unlocked
-                                ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                                : "border border-brand-line text-brand-ink/60 hover:bg-white"
-                            }`}
+                            aria-label={`${l.title}: ${l.unlocked ? "habilitada, pulsa para bloquear" : "bloqueada, pulsa para habilitar"}`}
+                            className={l.unlocked ? btnRowInk : btnRow}
                           >
                             {l.unlocked ? "Habilitada" : "Bloqueada"}
                           </button>
@@ -925,18 +949,18 @@ export function CheckpointGatesSection({ studentId }: { studentId: string }) {
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-brand-ink">Checkpoints · habilitación</h2>
-      <p className="mt-0.5 text-xs text-brand-ink/55">
+      <h2 className="font-display text-[18px] font-extrabold uppercase leading-tight tracking-[-0.01em] text-brand-ink">Checkpoints · habilitación</h2>
+      <p className="mt-0.5 text-xs text-brand-ink/70">
         Hasta que habilites un checkpoint, tu estudiante no puede presentarlo ni ver el contenido
         que viene después. Así avanza a tu ritmo y no se come el programa de una sentada.
       </p>
-      <div className="mt-3 overflow-hidden rounded-2xl border border-brand-line bg-white">
+      <div className="mt-3 overflow-hidden border-2 border-brand-ink bg-white">
         {q.isLoading ? (
-          <p className="p-5 text-sm text-brand-ink/55">Cargando…</p>
+          <p className="p-5 text-sm text-brand-ink/70">Cargando…</p>
         ) : rows.length === 0 ? (
-          <p className="p-5 text-sm text-brand-ink/55">No hay checkpoints configurados en el contenido.</p>
+          <p className="p-5 text-sm text-brand-ink/70">No hay checkpoints configurados en el contenido.</p>
         ) : (
-          <ul className="divide-y divide-brand-line/70">
+          <ul className="divide-y divide-brand-ink/15">
             {rows.map((r) => {
               const hecho = !!r.completedAt;
               return (
@@ -945,7 +969,7 @@ export function CheckpointGatesSection({ studentId }: { studentId: string }) {
                     <div className="text-sm font-semibold text-brand-ink">
                       {r.unit != null ? `Unidad ${r.unit} · ` : ""}{r.moduleTitle}
                     </div>
-                    <div className="text-xs text-brand-ink/55">
+                    <div className="text-xs text-brand-ink/70">
                       {hecho ? (
                         <>Superado el {new Date(r.completedAt!).toLocaleDateString("es-CO", { dateStyle: "medium" })}</>
                       ) : r.unlocked ? (
@@ -959,18 +983,14 @@ export function CheckpointGatesSection({ studentId }: { studentId: string }) {
                     </div>
                   </div>
                   {hecho ? (
-                    <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">
+                    <span className={cn(pillBase, "bg-brand-ink text-brand-cream dark:text-white")}>
                       Superado
                     </span>
                   ) : (
                     <button
                       onClick={() => m.mutate({ lessonId: r.lessonId, unlock: !r.unlocked })}
                       disabled={m.isPending}
-                      className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
-                        r.unlocked
-                          ? "border border-brand-line text-brand-ink/70 hover:bg-brand-cream/40"
-                          : "bg-brand-ink text-white hover:bg-brand-ink-soft"
-                      }`}
+                      className={r.unlocked ? btnRow : btnRowInk}
                     >
                       {r.unlocked ? "Bloquear" : "Habilitar"}
                     </button>
@@ -996,17 +1016,17 @@ export function CheckpointAttemptsSection({ studentId }: { studentId: string }) 
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-brand-ink">Checkpoints (exámenes de nivel)</h2>
-      <p className="mt-0.5 text-xs text-brand-ink/55">
+      <h2 className="font-display text-[18px] font-extrabold uppercase leading-tight tracking-[-0.01em] text-brand-ink">Checkpoints (exámenes de nivel)</h2>
+      <p className="mt-0.5 text-xs text-brand-ink/70">
         Cada intento con su puntaje y corrección pregunta a pregunta.
       </p>
-      <div className="mt-3 overflow-hidden rounded-2xl border border-brand-line bg-white">
+      <div className="mt-3 overflow-hidden border-2 border-brand-ink bg-white">
         {q.isLoading ? (
-          <p className="p-5 text-sm text-brand-ink/55">Cargando…</p>
+          <p className="p-5 text-sm text-brand-ink/70">Cargando…</p>
         ) : rows.length === 0 ? (
-          <p className="p-5 text-sm text-brand-ink/55">Aún no ha presentado checkpoints.</p>
+          <p className="p-5 text-sm text-brand-ink/70">Aún no ha presentado checkpoints.</p>
         ) : (
-          <ul className="divide-y divide-brand-line/70">
+          <ul className="divide-y divide-brand-ink/15">
             {rows.map((a) => {
               const open = expanded === a.id;
               const feedback = (a.answers as any)?.feedback as
@@ -1016,43 +1036,42 @@ export function CheckpointAttemptsSection({ studentId }: { studentId: string }) 
                 <li key={a.id}>
                   <button
                     onClick={() => setExpanded(open ? null : a.id)}
-                    className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-3 text-left text-sm transition hover:bg-brand-cream/30"
+                    aria-expanded={open}
+                    className={cn("flex min-h-11 w-full flex-wrap items-center justify-between gap-2 px-4 py-3 text-left text-sm transition-colors hover:bg-brand-cream-soft", focusRing)}
                   >
                     <div>
                       <div className="font-semibold text-brand-ink">
                         {a.checkpoint?.module?.title ?? "Checkpoint"} · {a.checkpoint?.fromLevel} → {a.checkpoint?.toLevel}
                       </div>
-                      <div className="text-xs text-brand-ink/55">
+                      <div className="text-xs text-brand-ink/70">
                         {new Date(a.createdAt).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}
                         {feedback ? ` · ${feedback.filter((f) => f.correct).length}/${feedback.length} correctas` : ""}
                       </div>
                     </div>
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-bold ${
-                        a.passed ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-700"
-                      }`}
+                      className={cn(pillBase, a.passed ? "bg-brand-ink text-brand-cream dark:text-white" : "border-red-700 bg-white text-red-800")}
                     >
                       {a.score}% · {a.passed ? "Aprobado" : "No aprobado"}
                     </span>
                   </button>
                   {open && feedback ? (
-                    <div className="border-t border-brand-line/60 bg-brand-cream/20 px-4 py-3">
+                    <div className="border-t border-brand-ink/15 bg-brand-cream-soft px-4 py-3">
                       <ul className="space-y-1.5 text-sm">
                         {feedback.map((f, i) => (
-                          <li key={f.id ?? i} className="rounded-xl bg-white p-2.5">
-                            <span className={f.correct ? "font-semibold text-emerald-600" : "font-semibold text-red-600"}>
+                          <li key={f.id ?? i} className="bg-white p-2.5">
+                            <span className={f.correct ? "font-semibold text-emerald-700" : "font-semibold text-red-700"}>
                               {f.correct ? "✓" : "✗"}
                             </span>{" "}
                             <span className="text-brand-ink">{f.given}</span>
                             {!f.correct && f.expected ? (
-                              <span className="text-xs text-brand-ink/55"> · correcta: {f.expected}</span>
+                              <span className="text-xs text-brand-ink/70"> · correcta: {f.expected}</span>
                             ) : null}
                           </li>
                         ))}
                       </ul>
                     </div>
                   ) : open ? (
-                    <p className="border-t border-brand-line/60 bg-brand-cream/20 px-4 py-3 text-xs text-brand-ink/55">
+                    <p className="border-t border-brand-ink/15 bg-brand-cream-soft px-4 py-3 text-xs text-brand-ink/70">
                       Intento antiguo sin corrección detallada.
                     </p>
                   ) : null}
@@ -1068,9 +1087,9 @@ export function CheckpointAttemptsSection({ studentId }: { studentId: string }) 
 
 function Mini({ label, value, tone }: { label: string; value: number; tone?: "warn" }) {
   return (
-    <div className="rounded-xl border border-brand-line bg-white px-4 py-2 text-center">
+    <div className="border-2 border-brand-ink bg-white px-4 py-2 text-center">
       <div className={`text-xl font-bold ${tone === "warn" ? "text-red-700" : "text-brand-ink"}`}>{value}</div>
-      <div className="text-[10px] uppercase tracking-wide text-brand-ink/55">{label}</div>
+      <div className="text-[10px] uppercase tracking-wide text-brand-ink/70">{label}</div>
     </div>
   );
 }

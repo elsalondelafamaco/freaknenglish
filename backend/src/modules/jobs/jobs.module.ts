@@ -6,6 +6,7 @@ import { AutomationsService } from './automations.service'
 import { NotificationsModule } from '../notifications/notifications.module'
 import { SchedulingModule } from '../scheduling/scheduling.module'
 import { AdminModule } from '../admin/admin.module'
+import { WompiModule } from '../wompi/wompi.module'
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AdminModule } from '../admin/admin.module'
     NotificationsModule,
     SchedulingModule,
     AdminModule,
+    WompiModule,
   ],
   providers: [AutomationsProcessor, AutomationsService],
   exports: [AutomationsService],

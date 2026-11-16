@@ -253,6 +253,20 @@ model PaymentIntent {
   esRenovacion Boolean @default(false) @map("es_renovacion")
   wompiId         String?       @unique @map("wompi_id")
   approvedAt      DateTime?     @map("approved_at")
+  /// Pago directo (dentro del sitio). La llave de acceso es lo que pide el
+  /// navegador para pagar o retomar este intento: la referencia sola se ve en
+  /// URLs y correos, y no debe bastar para disparar un cobro.
+  accessKey        String?   @map("access_key")
+  /// Intentos de cobro: cada uno va a Wompi con su propia referencia
+  /// `<reference>-<n>`, porque Wompi rechaza una referencia repetida. Se cuenta
+  /// ANTES de llamar a Wompi, así un reintento nunca repite la anterior.
+  attempts         Int       @default(0)
+  wompiMethod      String?   @map("wompi_method")
+  paymentStartedAt DateTime? @map("payment_started_at")
+  /// Algo que una persona tiene que mirar: un pago aprobado por otro monto o una
+  /// segunda aprobación del mismo intento (doble cobro a devolver). Mientras
+  /// esté puesto, el pago NO activa nada por su cuenta.
+  reviewReason     String?   @map("review_reason")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 

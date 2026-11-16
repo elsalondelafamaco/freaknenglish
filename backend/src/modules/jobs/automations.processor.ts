@@ -7,6 +7,7 @@ import { env } from '../../config/env'
 import { SchedulingService } from '../scheduling/scheduling.service'
 import { SlotsService } from '../scheduling/slots.service'
 import { AdminService } from '../admin/admin.service'
+import { WompiService } from '../wompi/wompi.service'
 
 /**
  * Runs the actual automation logic. Triggered by the repeating jobs in
@@ -22,6 +23,7 @@ export class AutomationsProcessor extends WorkerHost {
     private scheduling: SchedulingService,
     private slots: SlotsService,
     private admin: AdminService,
+    private wompi: WompiService,
   ) {
     super()
   }
@@ -57,6 +59,12 @@ export class AutomationsProcessor extends WorkerHost {
 
     // Libera reservas de pago (pending) vencidas.
     await this.slots.cleanupExpiredPending()
+    // Pagos que quedaron pendientes sin que nadie volviera a mirarlos (aprobó
+    // en Nequi y cerró Instagram, volvió del banco a otra pestaña): se le
+    // pregunta a Wompi en vez de depender solo del webhook.
+    await this.wompi.conciliarPendientes().catch((e) =>
+      this.log.error(`[conciliacion] ${(e as Error).message}`),
+    )
     const in24 = new Date(now.getTime() + 24 * 60 * 60 * 1000)
     const in1 = new Date(now.getTime() + 60 * 60 * 1000)
 

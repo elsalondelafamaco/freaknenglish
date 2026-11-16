@@ -6,6 +6,7 @@ import { env } from '../../config/env'
 import { ExchangeService } from '../exchange/exchange.service'
 import { SlotsService, SlotRef, PENDING_HOLD_MINUTES } from '../scheduling/slots.service'
 import { esZonaValida } from '../../common/zona-horaria'
+import { configuracionDirecta } from '../wompi/wompi-api'
 
 @Injectable()
 export class CheckoutService {
@@ -132,6 +133,9 @@ export class CheckoutService {
         clientUserAgent: input.clientUserAgent?.slice(0, 500) || undefined,
         // Credenciales elegidas en el checkout: solo se guarda el hash.
         passwordHash: input.password ? await argon2.hash(input.password) : undefined,
+        // Llave para pagar o retomar este intento desde el navegador (cobro
+        // directo). La referencia sola no alcanza: se ve en correos y URLs.
+        accessKey: crypto.randomBytes(24).toString('base64url'),
       },
     })
 
@@ -192,6 +196,10 @@ export class CheckoutService {
       redirectUrl,
       checkoutUrl,
       assignmentMode,
+      // Cómo cobrar: `direct` dentro del sitio, `hosted` con la pasarela. La
+      // URL de la pasarela viaja siempre, de salida por si el directo falla.
+      modo: configuracionDirecta().ok ? ('direct' as const) : ('hosted' as const),
+      accessKey: intent.accessKey,
     }
   }
 }

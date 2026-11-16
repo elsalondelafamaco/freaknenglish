@@ -262,6 +262,54 @@ export const exchangeApi = {
   trm: () => apiGet<{ valueCop: number; validFrom: string; source: string }>("/public/exchange/trm"),
 };
 
+// ─── Cobro directo con Wompi ───────────────────────────────────────────
+export type InfoDePago =
+  | { modo: "hosted" }
+  | {
+      modo: "direct";
+      llavePublica: string;
+      apiUrl: string;
+      medios: Array<"CARD" | "NEQUI" | "PSE" | "BANCOLOMBIA_TRANSFER" | "DAVIPLATA">;
+      bancos: Array<{ codigo: string; nombre: string }>;
+      terminosUrl: string;
+      datosUrl: string;
+    };
+
+export type DatosDePago = {
+  metodo: "CARD" | "NEQUI" | "PSE" | "BANCOLOMBIA_TRANSFER" | "DAVIPLATA";
+  token?: string;
+  cuotas?: number;
+  browserInfo?: Record<string, string>;
+  sessionId?: string;
+  deviceId?: string;
+  telefono?: string;
+  banco?: string;
+  tipoPersona?: 0 | 1;
+  tipoDocumento?: string;
+  documento?: string;
+};
+
+export type EstadoDePago = {
+  reference: string;
+  /** SIN_PAGO: aún no se intentó; REVISION: aprobado pero algo no cuadra, lo revisa una persona. */
+  estado: "SIN_PAGO" | "PENDING" | "APPROVED" | "DECLINED" | "VOIDED" | "ERROR" | "REVISION";
+  metodo: string | null;
+  enCurso: boolean;
+  /** PSE y Bancolombia: a dónde ir para pagar en el banco. */
+  irAlBanco: string | null;
+  /** Tarjeta con reto 3D Secure: HTML del banco. */
+  tresDs: string | null;
+  /** Daviplata: URLs para enviar y validar el código. */
+  otp: { token: string; enviar: string; validar: string } | null;
+  mensaje: string | null;
+  planId: string;
+  amountInCents: number;
+  currency: string;
+  esRenovacion: boolean;
+  /** El cobro pedido no se creó porque ya había uno en curso: se retoma ese. */
+  reanudado?: boolean;
+};
+
 export const checkoutApi = {
   createIntent: (body: { planId: string; customerEmail: string; customerName: string; customerPhone: string; customerDocument: string; userId?: string; slots?: SlotRef[]; password?: string; timezone?: string; fbp?: string; fbc?: string; eventSourceUrl?: string }) =>
     apiPost<{
@@ -274,7 +322,19 @@ export const checkoutApi = {
       redirectUrl: string;
       checkoutUrl: string;
       assignmentMode: "auto" | "manual" | null;
+      /** `direct` = se cobra en el sitio; `hosted` = se va a la pasarela (`checkoutUrl`). */
+      modo: "direct" | "hosted";
+      /** Llave para pagar o retomar este intento. Se guarda en el navegador. */
+      accessKey: string;
     }>("/checkout/intents", body),
+  /** Cómo se cobra y, en directo, lo que el paso de pago necesita. */
+  pagoInfo: () => apiGet<InfoDePago>("/checkout/pago/info"),
+  /** Cobra dentro del sitio con el medio elegido. */
+  pagar: (reference: string, body: DatosDePago & { llave: string }) =>
+    apiPost<EstadoDePago>(`/checkout/pago/${encodeURIComponent(reference)}`, body),
+  /** Estado del pago consultando a Wompi; sirve para esperar y para retomar. */
+  estadoDePago: (reference: string, llave: string) =>
+    apiPost<EstadoDePago>(`/checkout/pago/${encodeURIComponent(reference)}/estado`, { llave }),
   status: (params: { reference?: string; id?: string }) =>
     apiGet<{
       reference: string;

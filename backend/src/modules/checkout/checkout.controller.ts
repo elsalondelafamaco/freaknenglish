@@ -1,10 +1,13 @@
-import { Body, Controller, Get, NotFoundException, Post, Query, Req } from '@nestjs/common'
+import { Body, Controller, Get, NotFoundException, Param, Post, Query, Req } from '@nestjs/common'
 import type { Request } from 'express'
 import { ApiTags } from '@nestjs/swagger'
-import { Throttle } from '@nestjs/throttler'
-import { IsArray, IsEmail, IsOptional, IsString, MinLength } from 'class-validator'
+import { SkipThrottle, Throttle } from '@nestjs/throttler'
+import { IsArray, IsEmail, IsIn, IsInt, IsObject, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator'
+import { Type } from 'class-transformer'
 import { CheckoutService } from './checkout.service'
 import { WompiService } from '../wompi/wompi.service'
+import { PagoDirectoService } from './pago-directo.service'
+import { MEDIOS_SOPORTADOS, MedioDePago } from '../wompi/wompi-api'
 import { PrismaService } from '../../prisma/prisma.service'
 
 class CreateIntentDto {
@@ -25,6 +28,36 @@ class CreateIntentDto {
   @IsString() @IsOptional() eventSourceUrl?: string
 }
 
+/** La llave de acceso al pago: la devuelve `/checkout/intents` y la guarda el navegador. */
+class LlaveDto {
+  @IsString() @MinLength(20) @MaxLength(100) llave!: string
+}
+
+/** Lo que manda el navegador para cobrar dentro del sitio. */
+class PagarDto extends LlaveDto {
+  @IsIn(MEDIOS_SOPORTADOS as unknown as string[]) metodo!: MedioDePago
+  @IsString() @IsOptional() @MaxLength(200) token?: string
+  @Type(() => Number) @IsInt() @Min(1) @Max(36) @IsOptional() cuotas?: number
+  @IsObject() @IsOptional() browserInfo?: Record<string, unknown>
+  @IsString() @IsOptional() @MaxLength(200) sessionId?: string
+  @IsString() @IsOptional() @MaxLength(200) deviceId?: string
+  @IsString() @IsOptional() @MaxLength(30) telefono?: string
+  @IsString() @IsOptional() @MaxLength(10) banco?: string
+  @Type(() => Number) @IsIn([0, 1]) @IsOptional() tipoPersona?: number
+  @IsString() @IsOptional() @MaxLength(5) tipoDocumento?: string
+  @IsString() @IsOptional() @MaxLength(30) documento?: string
+}
+
+/**
+ * IP para Wompi (antifraude): la del cliente, o nada si es local. Una IP de
+ * loopback no le sirve a Wompi y no vale la pena arriesgar un rechazo por ella.
+ */
+function ipParaWompi(req: Request): string | undefined {
+  const ip = ipDelCliente(req)?.replace(/^::ffff:/, '')
+  if (!ip || ip === '::1' || ip.startsWith('127.')) return undefined
+  return ip
+}
+
 /**
  * IP real de quien compra. El sitio va detrás de Cloudflare y de Railway, así
  * que la del socket es la de un proxy: se toma la que Cloudflare dice que vio, y
@@ -41,7 +74,51 @@ function ipDelCliente(req: Request): string | undefined {
 @ApiTags('checkout')
 @Controller('checkout')
 export class CheckoutController {
-  constructor(private svc: CheckoutService, private prisma: PrismaService, private wompi: WompiService) {}
+  constructor(
+    private svc: CheckoutService,
+    private prisma: PrismaService,
+    private wompi: WompiService,
+    private pago: PagoDirectoService,
+  ) {}
+
+  /**
+   * @endpoint GET /api/v1/checkout/pago/info (public)
+   * Cómo se cobra (`direct` o `hosted`) y, en directo, los medios activos, los
+   * bancos de PSE, los enlaces de términos y la llave PÚBLICA para tokenizar.
+   */
+  @Get('pago/info')
+  infoDePago() {
+    return this.pago.info()
+  }
+
+  /**
+   * @endpoint POST /api/v1/checkout/pago/:reference (public, con llave)
+   * Cobra dentro del sitio. Un cobro en curso bloquea otro: devuelve el que está
+   * en curso para retomarlo, con `reanudado: true`.
+   */
+  // Sin el límite "auth" (20/min por IP, que en throttler v6 cuenta TODA la
+  // API): la página ya hizo varias llamadas antes de pagar y el cobro no puede
+  // caer en un 429 por eso. Lo protege la llave y su propio tope de 10/min.
+  @SkipThrottle({ auth: true })
+  @Throttle({ burst: { ttl: 60_000, limit: 10 } })
+  @Post('pago/:reference')
+  pagar(@Param('reference') reference: string, @Body() dto: PagarDto, @Req() req: Request) {
+    const { llave, ...datos } = dto
+    return this.pago.pagar(reference, llave, datos, { ip: ipParaWompi(req) })
+  }
+
+  /**
+   * @endpoint POST /api/v1/checkout/pago/:reference/estado (public, con llave)
+   * Estado del pago consultando a Wompi. Es POST para que la llave no quede en
+   * la URL ni en los logs de acceso.
+   */
+  // Se sondea cada 2,5 s mientras se espera a Nequi o al banco: con el límite
+  // "auth" (20/min) se cortaba al minuto. Quedan el general y el anti-ráfaga.
+  @SkipThrottle({ auth: true })
+  @Post('pago/:reference/estado')
+  estadoDePago(@Param('reference') reference: string, @Body() dto: LlaveDto) {
+    return this.pago.estado(reference, dto.llave)
+  }
   /**
    * @endpoint POST /api/v1/checkout/intents (public)
    * Endpoint público que crea registros y puede crear usuarios: se limita para

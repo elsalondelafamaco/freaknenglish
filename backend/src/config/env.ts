@@ -42,6 +42,12 @@ const schema = z.object({
   // Wompi rechaza redirect-urls a localhost. Siempre apuntamos a producción,
   // independientemente de PUBLIC_SITE_URL (que en dev puede ser localhost).
   WOMPI_REDIRECT_URL: z.string().url().default('https://freaknenglish.com/checkout/return'),
+  // Cómo se cobra: `hosted` manda a la pasarela de Wompi (lo de siempre);
+  // `direct` cobra dentro del sitio. Por defecto `hosted`: el cobro directo se
+  // enciende a mano cuando está probado, y apagarlo es cambiar esta variable.
+  // Aunque diga `direct`, solo se usa si las cuatro llaves están y son del mismo
+  // ambiente (ver wompi-api.ts); si no, se sigue con la pasarela.
+  WOMPI_CHECKOUT: z.enum(['direct', 'hosted']).default('hosted'),
   // Dispersión de nómina vía Wompi (Payouts). Deshabilitado por defecto:
   // el admin aprueba/gestiona cada pago manualmente hasta habilitarlo.
   WOMPI_PAYOUTS_ENABLED: z.enum(['true','false']).default('false').transform((v) => v === 'true'),

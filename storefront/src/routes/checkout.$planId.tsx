@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ShieldCheck, LogOut, UserCog } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { Field, inputClass, ErrorBox } from "@/components/site/AuthShell";
@@ -16,12 +16,19 @@ import { cookiesDeMeta, useRastrearUnaVez } from "@/lib/meta-pixel";
 import { useRenovacion } from "@/lib/domain/renovacion";
 import { ZONA_BOGOTA, franjaEnZona, zonaDe } from "@/lib/domain/zona-horaria";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { PasoDePago } from "@/components/pago/PasoDePago";
+import { borrarPago, guardarPago, leerPago, tomarLlaveDeLaUrl } from "@/lib/pago/pago-en-curso";
 
 export const Route = createFileRoute("/checkout/$planId")({
   head: () => ({ meta: [{ title: "Checkout — FreaknEnglish" }] }),
   // `.catch`: un `slots` raro se ignora (y la página vuelve al selector) en vez
   // de devolver la página de error del servidor.
-  validateSearch: z.object({ slots: z.string().optional().catch(undefined) }),
+  validateSearch: z.object({
+    slots: z.string().optional().catch(undefined),
+    // Pago en curso (cobro dentro del sitio): con esto la página lo retoma al
+    // recargar o al volver de Nequi o del banco.
+    pago: z.string().optional().catch(undefined),
+  }),
   component: CheckoutPage,
 });
 
@@ -37,7 +44,7 @@ const copFmt = new Intl.NumberFormat("es-CO", { style: "currency", currency: "CO
 
 function CheckoutPage() {
   const { planId } = Route.useParams();
-  const { slots: slotsRaw } = Route.useSearch();
+  const { slots: slotsRaw, pago: pagoRaw } = Route.useSearch();
   const { user, signOut } = useAuth();
   const nav = useNavigate();
   const selSlots = useMemo(() => decodeSlots(slotsRaw), [slotsRaw]);
@@ -52,10 +59,46 @@ function CheckoutPage() {
   // en el primer pintado, antes de que responda la consulta del horario, y
   // devuelve al selector justo a quien queríamos ahorrarle ese paso. Solo se
   // reproduce con caché frío — es decir, con quien llega desde el correo.
+  // Pago en curso de este plan: viene en la URL (y la llave, guardada en este
+  // navegador o en el enlace copiado desde Instagram). Solo se retoma si la URL
+  // lo pide: entrar de cero al checkout empieza un pago nuevo.
+  const [pago, setPago] = useState<{ reference: string; llave: string } | null>(null);
+  const [buscandoPago, setBuscandoPago] = useState(!!pagoRaw);
   useEffect(() => {
-    if (cargandoRenovacion || esRenovacion) return;
+    let vigente = true;
+    const p = tomarLlaveDeLaUrl(planId) ?? (pagoRaw ? leerPago(planId, pagoRaw) : null);
+    if (p) {
+      setPago({ reference: p.reference, llave: p.llave });
+      setBuscandoPago(false);
+    } else if (pagoRaw) {
+      // La referencia sin la llave: este navegador ya no la tiene (se aprobó y
+      // se borró, u otro navegador). Si ya está aprobado, a la confirmación;
+      // si no, sigue como un checkout normal.
+      checkoutApi
+        .status({ reference: pagoRaw })
+        .then((r) => {
+          if (!vigente) return;
+          // Aprobado: se queda "buscando" para no rebotar al selector mientras navega.
+          if (r.status === "APPROVED") nav({ to: "/checkout/return", search: { reference: pagoRaw }, replace: true });
+          else setBuscandoPago(false);
+        })
+        .catch(() => vigente && setBuscandoPago(false));
+    } else {
+      setBuscandoPago(false);
+    }
+    return () => {
+      vigente = false;
+    };
+  }, [planId, pagoRaw, nav]);
+
+  const infoQ = useQuery({ queryKey: ["checkout", "pago-info"], queryFn: () => checkoutApi.pagoInfo(), staleTime: 5 * 60_000 });
+  const directo = infoQ.data?.modo === "direct" ? infoQ.data : null;
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    if (cargandoRenovacion || esRenovacion || buscandoPago || pago) return;
     if (selSlots.length === 0) nav({ to: "/checkout/schedule/$planId", params: { planId }, replace: true });
-  }, [selSlots.length, planId, nav, esRenovacion, cargandoRenovacion]);
+  }, [selSlots.length, planId, nav, esRenovacion, cargandoRenovacion, buscandoPago, pago]);
 
   const availQ = useQuery({
     queryKey: ["schedule", "hints", "confirm", !!user, slotsRaw],
@@ -173,7 +216,17 @@ function CheckoutPage() {
         ...cookiesDeMeta(),
         eventSourceUrl: window.location.href,
       });
-      window.location.href = created.checkoutUrl;
+      // Cobro en el sitio: se queda aquí y muestra el paso de pago. Si el
+      // modo directo no está (o no cargó su configuración), la pasarela.
+      const info = created.modo === "direct" ? (directo ?? (await checkoutApi.pagoInfo().catch(() => null))) : null;
+      if (info?.modo !== "direct") {
+        window.location.href = created.checkoutUrl;
+        return;
+      }
+      guardarPago({ reference: created.reference, llave: created.accessKey, planId });
+      setPago({ reference: created.reference, llave: created.accessKey });
+      nav({ to: "/checkout/$planId", params: { planId }, search: { slots: slotsRaw, pago: created.reference }, replace: true });
+      setLoading(false);
     } catch (err: any) {
       setError(err?.message ?? "No pudimos iniciar el pago. Intenta de nuevo.");
       setLoading(false);
@@ -181,6 +234,16 @@ function CheckoutPage() {
   }
 
   const lockField = loggedIn; // datos del usuario logueado no se editan
+  const pagando = !!pago && !!directo;
+
+  function alAprobar() {
+    if (!pago) return;
+    borrarPago();
+    qc.invalidateQueries({ queryKey: ["me"] });
+    // La misma confirmación que al volver de la pasarela: registra la compra
+    // en el píxel y lleva al portal.
+    nav({ to: "/checkout/return", search: { reference: pago.reference }, replace: true });
+  }
 
   return (
     <main className="min-h-screen bg-brand-cream px-5 py-10 md:py-14">
@@ -208,13 +271,28 @@ function CheckoutPage() {
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
           <div className="rounded-3xl border border-brand-line bg-white p-6 shadow-soft md:p-8">
+            {pagando ? (
+              <>
+                <h1 className="text-2xl font-bold text-brand-ink md:text-3xl">Paga tu plan</h1>
+                <p className="mt-1 mb-5 text-sm text-brand-ink/65">Elige cómo quieres pagar. No sales de esta página.</p>
+                <PasoDePago
+                  info={directo!}
+                  pago={pago!}
+                  datos={{ telefono: form.phone, documento: form.document, nombre: form.fullName }}
+                  onAprobado={alAprobar}
+                />
+              </>
+            ) : buscandoPago || (pago && infoQ.isLoading) ? (
+              <p className="py-10 text-sm text-brand-ink/60">Cargando…</p>
+            ) : (
+            <>
             <h1 className="text-2xl font-bold text-brand-ink md:text-3xl">
               {loggedIn ? "Confirma tus datos" : "Completa tus datos"}
             </h1>
             <p className="mt-1 text-sm text-brand-ink/65">
               {loggedIn
-                ? "Compras con tu cuenta. Al continuar irás a la pasarela de pago segura."
-                : "Los necesitamos para crear tu cuenta. Al continuar irás a la pasarela de pago segura."}
+                ? `Compras con tu cuenta. ${directo ? "Al continuar eliges cómo pagar." : "Al continuar irás a la pasarela de pago segura."}`
+                : `Los necesitamos para crear tu cuenta. ${directo ? "Al continuar eliges cómo pagar." : "Al continuar irás a la pasarela de pago segura."}`}
             </p>
 
             {loggedIn ? (
@@ -285,10 +363,12 @@ function CheckoutPage() {
               <ErrorBox>{error}</ErrorBox>
               <button type="submit" disabled={loading}
                 className="mt-2 inline-flex h-12 items-center justify-center rounded-full bg-brand-ink text-sm font-semibold text-white transition hover:bg-brand-ink-soft disabled:opacity-60">
-                {loading ? "Redirigiendo al pago…" : "Continuar al pago"}
+                {loading ? (directo ? "Preparando el pago…" : "Redirigiendo al pago…") : "Continuar al pago"}
               </button>
               <LegalLinks />
             </form>
+            </>
+            )}
           </div>
 
           <aside className="rounded-3xl bg-brand-yellow-soft p-6 md:p-7 lg:sticky lg:top-6 lg:h-fit">

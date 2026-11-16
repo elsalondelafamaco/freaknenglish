@@ -8,6 +8,17 @@ import { SchedulingService } from '../scheduling/scheduling.service'
 import { SlotsService } from '../scheduling/slots.service'
 import { MetaCapiService } from '../meta/meta-capi.service'
 import { env } from '../../config/env'
+import { WompiApi, TransaccionWompi } from './wompi-api'
+
+/**
+ * Referencia del INTENTO a partir de la del cobro. El cobro directo manda una
+ * por intento, `<referencia>-<n>`, porque Wompi no acepta repetirla; la
+ * pasarela manda la del intento tal cual.
+ */
+export function referenciaBase(ref: string): string {
+  const m = /^(FREAKN-\d+-[0-9a-f]{8})-\d+$/.exec(ref ?? '')
+  return m ? m[1] : ref
+}
 
 type WompiEvent = {
   event: string
@@ -35,6 +46,7 @@ export class WompiService {
     private scheduling: SchedulingService,
     private slots: SlotsService,
     private meta: MetaCapiService,
+    private api: WompiApi,
   ) {}
 
   /**
@@ -73,7 +85,11 @@ export class WompiService {
       .digest('hex')
     // Wompi envía el checksum en mayúsculas; comparamos sin case para no
     // rechazar firmas válidas (era la causa de webhooks 400 en prod).
-    if (expected.toLowerCase() !== payload.signature.checksum.toLowerCase()) {
+    // Comparación en tiempo constante: con `!==` el tiempo de respuesta delata
+    // cuántos caracteres del checksum acertó quien prueba firmas falsas.
+    const a = Buffer.from(expected.toLowerCase())
+    const b = Buffer.from(String(payload.signature.checksum).toLowerCase())
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
       this.log.error(
         `[webhook] FIRMA INVÁLIDA txId=${tx?.id} ref=${tx?.reference}: ` +
           `esperado=${expected} recibido=${payload.signature.checksum} ` +
@@ -86,40 +102,19 @@ export class WompiService {
   }
 
   async handleEvent(event: WompiEvent) {
+    // Un evento de hace más de un día es una repetición: la firma no lleva hora
+    // de emisión, así que sin esto un evento viejo capturado se podría reenviar.
+    const ts = Number(event.timestamp)
+    if (Number.isFinite(ts) && ts > 0 && Math.abs(Date.now() / 1000 - ts) > 24 * 60 * 60) {
+      this.log.warn(`[webhook] evento de hace más de 24 h descartado ref=${event.data?.transaction?.reference}`)
+      return { ok: true, ignored: true }
+    }
     return this.finalizeTransaction(event.data.transaction, event.event, event)
   }
 
-  private wompiApiBase(): string {
-    return env.WOMPI_ENV === 'production'
-      ? 'https://production.wompi.co/v1'
-      : 'https://sandbox.wompi.co/v1'
-  }
-
-  /** Consulta el estado real de la transacción directamente en Wompi (GET público). */
-  async fetchTransaction(id: string): Promise<WompiEvent['data']['transaction'] | null> {
-    try {
-      const res = await fetch(`${this.wompiApiBase()}/transactions/${id}`, {
-        headers: { Accept: 'application/json' },
-      })
-      if (!res.ok) {
-        this.log.warn(`Wompi tx ${id} fetch -> ${res.status}`)
-        return null
-      }
-      const json = (await res.json()) as any
-      const d = json?.data
-      if (!d) return null
-      return {
-        id: d.id,
-        reference: d.reference,
-        status: d.status,
-        amount_in_cents: d.amount_in_cents,
-        currency: d.currency,
-        customer_email: d.customer_email,
-      }
-    } catch (e) {
-      this.log.warn(`Wompi tx fetch failed: ${(e as Error).message}`)
-      return null
-    }
+  /** Consulta el estado real de la transacción directamente en Wompi. */
+  async fetchTransaction(id: string): Promise<TransaccionWompi | null> {
+    return this.api.transaccion(id)
   }
 
   /**
@@ -130,7 +125,61 @@ export class WompiService {
     const tx = await this.fetchTransaction(id)
     if (!tx) return { status: 'PENDING', reference: null }
     await this.finalizeTransaction(tx)
-    return { status: tx.status, reference: tx.reference }
+    // La referencia del INTENTO, no la del cobro: el cobro directo agrega `-n`.
+    return { status: tx.status, reference: referenciaBase(tx.reference) }
+  }
+
+  /**
+   * Pagos que quedaron pendientes y nadie volvió a mirar: quien aprobó en Nequi
+   * y cerró Instagram, quien volvió del banco a otra pestaña. Los rescata el
+   * tick de 5 minutos consultando Wompi directamente, sin esperar al webhook.
+   */
+  async conciliarPendientes(): Promise<number> {
+    const ahora = Date.now()
+    const pendientes = await this.prisma.paymentIntent.findMany({
+      where: {
+        status: 'PENDING',
+        wompiId: { not: null },
+        reviewReason: null,
+        updatedAt: { gte: new Date(ahora - 24 * 60 * 60 * 1000), lte: new Date(ahora - 2 * 60 * 1000) },
+      },
+      select: { wompiId: true },
+      orderBy: { updatedAt: 'asc' },
+      take: 25,
+    })
+    let resueltos = 0
+    for (const p of pendientes) {
+      const tx = await this.api.transaccion(p.wompiId!)
+      if (!tx || tx.status === 'PENDING') continue
+      await this.finalizeTransaction(tx, 'conciliacion').catch((e) =>
+        this.log.error(`[conciliacion] ${p.wompiId}: ${(e as Error).message}`),
+      )
+      resueltos++
+    }
+    if (resueltos > 0) this.log.log(`[conciliacion] ${resueltos} pago(s) pendiente(s) resuelto(s)`)
+    return resueltos
+  }
+
+  /** Aviso interno a los admins de un pago que una persona tiene que revisar. */
+  private async avisarRevision(intentId: string, reference: string, motivo: string) {
+    const admins = await this.prisma.user.findMany({
+      where: { role: 'admin', deletedAt: null },
+      select: { id: true, email: true },
+    })
+    for (const a of admins) {
+      await this.notifications.enqueue({
+        userId: a.id,
+        toEmail: a.email,
+        template: 'welcome',
+        subject: 'Pago para revisar',
+        dedupeKey: `pago-revision:${intentId}:${a.id}`,
+        inAppOnly: true,
+        type: 'payment',
+        title: 'Pago para revisar',
+        body: `${motivo} Referencia ${reference}.`,
+        linkUrl: '/admin',
+      }).catch(() => null)
+    }
   }
 
   /**
@@ -139,12 +188,14 @@ export class WompiService {
    * ocurra EXACTAMENTE una vez aunque ambos caminos lleguen a la vez.
    */
   async finalizeTransaction(
-    tx: WompiEvent['data']['transaction'],
+    tx: WompiEvent['data']['transaction'] | TransaccionWompi,
     eventName = 'transaction.updated',
     rawEvent?: unknown,
   ) {
     this.log.log(`[finalize] txId=${tx.id} ref=${tx.reference} status=${tx.status} via=${eventName}`)
-    const intent = await this.prisma.paymentIntent.findUnique({ where: { reference: tx.reference } })
+    // El cobro directo manda `<referencia>-<n>` (uno por intento); la pasarela,
+    // la referencia tal cual. Las dos apuntan al mismo intento.
+    const intent = await this.prisma.paymentIntent.findUnique({ where: { reference: referenciaBase(tx.reference) } })
     if (!intent) {
       this.log.warn(`[finalize] SIN paymentIntent para ref=${tx.reference} txId=${tx.id} — evento ignorado`)
       return { ok: true, ignored: true, status: tx.status }
@@ -170,6 +221,63 @@ export class WompiService {
       return { ok: true, duplicate: true, status: tx.status }
     }
 
+    // Lo que NO debe mover el estado del intento:
+    //
+    // 1. Un intento anterior que se resuelve tarde. Se paga con tarjeta, se
+    //    rechaza, se prueba Nequi; si el rechazo de la tarjeta llega después,
+    //    no puede pisar el Nequi que está en curso. Una aprobación SÍ pasa
+    //    siempre: es plata que entró.
+    //    Solo en el cobro directo (`attempts > 0`), donde `wompiId` es siempre
+    //    el cobro en curso. En la pasarela manda el último evento, como siempre.
+    const directo = intent.attempts > 0
+    const esOtroCobro = !!intent.wompiId && intent.wompiId !== tx.id
+    if (directo && esOtroCobro && tx.status !== 'APPROVED') {
+      this.log.log(`[finalize] ${tx.status} de un cobro anterior (${tx.id}) — el actual es ${intent.wompiId}, no se toca`)
+      return { ok: true, ignored: true, status: tx.status }
+    }
+    // 2. Una anulación o rechazo DESPUÉS de aprobado. El plan ya se activó con
+    //    ese pago; quitárselo en silencio no es decisión del sistema.
+    if (intent.status === 'APPROVED' && tx.status !== 'APPROVED') {
+      this.log.error(`[finalize] ${tx.status} sobre un pago ya APROBADO intent=${intent.id} — a revisión`)
+      await this.prisma.paymentIntent.update({
+        where: { id: intent.id },
+        data: { reviewReason: `Llegó ${tx.status} sobre un pago ya aprobado (${tx.id}).` },
+      })
+      await this.avisarRevision(intent.id, intent.reference, `Wompi marcó ${tx.status} un pago que ya estaba aprobado.`)
+      return { ok: true, review: true, status: tx.status }
+    }
+
+    if (tx.status === 'APPROVED') {
+      // 3. Una SEGUNDA aprobación del mismo intento: dos cobros que pasaron.
+      //    No se extiende el plan otra vez; hay que devolver uno.
+      if (intent.status === 'APPROVED' && esOtroCobro) {
+        this.log.error(`[finalize] DOBLE COBRO intent=${intent.id}: ya aprobado con ${intent.wompiId}, ahora ${tx.id}`)
+        await this.prisma.paymentIntent.update({
+          where: { id: intent.id },
+          data: { reviewReason: `Doble cobro: aprobado con ${intent.wompiId} y con ${tx.id}. Devolver uno.` },
+        })
+        await this.avisarRevision(intent.id, intent.reference, 'Se cobró dos veces el mismo plan: hay que devolver uno de los pagos.')
+        return { ok: true, review: true, status: tx.status }
+      }
+      // 4. Monto o moneda distintos a los del intento. Hasta hoy no se miraba:
+      //    un pago por otro valor activaba el plan igual.
+      if (tx.amount_in_cents !== intent.amountInCents || tx.currency !== intent.currency) {
+        this.log.error(
+          `[finalize] APROBADO CON OTRO MONTO intent=${intent.id}: esperado ${intent.amountInCents} ${intent.currency}, ` +
+            `llegó ${tx.amount_in_cents} ${tx.currency} — no se activa`,
+        )
+        await this.prisma.paymentIntent.update({
+          where: { id: intent.id },
+          data: {
+            wompiId: tx.id,
+            reviewReason: `Aprobado por ${tx.amount_in_cents} ${tx.currency}; se esperaba ${intent.amountInCents} ${intent.currency}.`,
+          },
+        })
+        await this.avisarRevision(intent.id, intent.reference, 'Llegó un pago aprobado por un monto distinto al del plan; no se activó nada.')
+        return { ok: true, review: true, status: tx.status }
+      }
+    }
+
     await this.prisma.paymentIntent.update({
       where: { id: intent.id },
       data: {
@@ -179,7 +287,11 @@ export class WompiService {
       },
     })
 
-    if (['DECLINED', 'VOIDED', 'ERROR'].includes(tx.status)) {
+    // Un rechazo en el cobro directo NO suelta las franjas: lo normal es que
+    // pruebe otro medio en seguida, y soltarlas le daría la hora a otro en ese
+    // minuto. La reserva vence sola si no vuelve. En la pasarela se sueltan
+    // como siempre, porque ahí un rechazo suele ser el final.
+    if (['DECLINED', 'VOIDED', 'ERROR'].includes(tx.status) && !directo) {
       this.log.warn(`[finalize] pago ${tx.status} intent=${intent.id} — liberando slots reservados`)
       await this.slots.releasePendingForIntent(intent.id).catch((e) =>
         this.log.error(`[finalize] releasePendingForIntent falló: ${(e as Error).message}`),

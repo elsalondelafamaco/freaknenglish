@@ -6,6 +6,7 @@ import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Logo } from "@/components/site/Logo";
 import { checkoutApi } from "@/lib/api/endpoints";
 import { rastrearCompra } from "@/lib/meta-pixel";
+import { borrarPago } from "@/lib/pago/pago-en-curso";
 
 /**
  * Wompi devuelve al usuario con `?id=<transaction_id>` (y a veces `env=...`).
@@ -60,6 +61,8 @@ function ReturnPage() {
           // La compra al píxel. Si no llega a salir (bloqueador, cierra rápido),
           // la manda igual el servidor desde el webhook con la misma referencia.
           rastrearCompra(r);
+          // Pago en el sitio que terminó en el banco (PSE/Bancolombia): ya no hay nada que retomar.
+          borrarPago();
           // Refresca sesión/suscripción y lleva al portal automáticamente.
           qc.invalidateQueries({ queryKey: ["me"] });
           setTimeout(() => nav({ to: "/app" }), 2500);

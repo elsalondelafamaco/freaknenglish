@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common'
+import { ExecutionContext, Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { ScheduleModule } from '@nestjs/schedule'
 import { ThrottlerModule } from '@nestjs/throttler'
@@ -27,6 +27,15 @@ import { SchedulingModule } from './modules/scheduling/scheduling.module'
 import { ExchangeModule } from './modules/exchange/exchange.module'
 import { PromotionsModule } from './modules/promotions/promotions.module'
 
+/**
+ * ¿El endpoint (o su controlador) pidió este límite con @Throttle? @Throttle
+ * deja su tope como metadato `THROTTLER:LIMIT<nombre>`.
+ */
+function pideLimite(ctx: ExecutionContext, nombre: string): boolean {
+  const clave = `THROTTLER:LIMIT${nombre}`
+  return Reflect.getMetadata(clave, ctx.getHandler()) != null || Reflect.getMetadata(clave, ctx.getClass()) != null
+}
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -40,9 +49,9 @@ import { PromotionsModule } from './modules/promotions/promotions.module'
       },
     }),
     ScheduleModule.forRoot(),
-    // Límites por IP en tres escalones. El `default` aplica a toda la API;
-    // los otros dos se piden explícitamente con @Throttle en los endpoints
-    // sensibles (login, registro, recuperación de clave, checkout).
+    // Límites por IP en tres escalones. `default` y `burst` aplican a toda la
+    // API; `auth` solo a los endpoints que lo piden con @Throttle (login,
+    // registro, recuperación de clave).
     ThrottlerModule.forRoot([
       // Los límites anteriores (100/min, 20/10s, 5/min) se quedaban cortos en
       // uso normal: el admin y el profe disparan muchas llamadas por pantalla
@@ -54,7 +63,13 @@ import { PromotionsModule } from './modules/promotions/promotions.module'
       { name: 'burst', ttl: 10_000, limit: 120 },
       // Autenticación y correo: protege contra fuerza bruta de contraseñas y
       // contra quemar la cuota de Resend, sin castigar un par de reintentos.
-      { name: 'auth', ttl: 60_000, limit: 20 },
+      //
+      // En @nestjs/throttler v6 TODOS los límites con nombre aplican a todas
+      // las rutas: este, pensado solo para login, contaba cada llamada de la
+      // API y cortaba con 429 a quien navegaba rápido (home → plan → horario)
+      // o a una pantalla del admin con varias consultas. Ahora solo cuenta
+      // donde el endpoint lo pide con @Throttle({ auth: … }).
+      { name: 'auth', ttl: 60_000, limit: 20, skipIf: (ctx) => !pideLimite(ctx, 'auth') },
     ]),
     PrismaModule,
     AuthModule,

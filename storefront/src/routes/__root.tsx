@@ -102,14 +102,20 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-const SITE_URL = "https://interface-joy-flow.lovable.app";
+// El dominio público. Antes apuntaba al subdominio de Lovable, y Google tomaba
+// esa URL como la oficial (canonical, og:url y el logo de los datos
+// estructurados salían de ahí).
+const SITE_URL = "https://freaknenglish.com";
+/** Imagen para Google y para compartir en redes (1200×630). */
+const OG_IMAGE = `${SITE_URL}/og-image.png`;
 
 const ORGANIZATION_JSONLD = {
   "@context": "https://schema.org",
   "@type": "EducationalOrganization",
   name: "FreaknEnglish",
   url: SITE_URL,
-  logo: `${SITE_URL}/apple-touch-icon.png`,
+  logo: `${SITE_URL}/icon-512.png`,
+  image: OG_IMAGE,
   description:
     "Clases 1 a 1 en vivo de inglés con profesores reales. Plataforma para hablar inglés con confianza desde el día 1.",
   sameAs: [],
@@ -129,7 +135,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:url", content: SITE_URL },
       { property: "og:site_name", content: "FreaknEnglish" },
       { property: "og:locale", content: "es_CO" },
-      { name: "twitter:card", content: "summary" },
+      { property: "og:image", content: OG_IMAGE },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "FreaknEnglish: clases de inglés 1 a 1 en vivo" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: OG_IMAGE },
       { name: "twitter:site", content: "@FreaknEnglish" },
       { name: "theme-color", content: "#FBE34B" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
@@ -150,7 +161,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", href: "/favicon.ico", sizes: "any" },
-      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      // Google pide un ícono cuadrado de múltiplo de 48 px.
+      { rel: "icon", href: "/favicon.png", type: "image/png", sizes: "96x96" },
+      { rel: "icon", href: "/icon-192.png", type: "image/png", sizes: "192x192" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
       { rel: "canonical", href: SITE_URL },
     ],
@@ -171,7 +184,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="es">
       <head>
         <HeadContent />
       </head>
